@@ -60,3 +60,4 @@ CLAUDE.md
 
 # agent tooling
 .claude/
+skills-lock.json
