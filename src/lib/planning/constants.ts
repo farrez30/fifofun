@@ -393,3 +393,147 @@ export const RETURNS_SOURCE = sourced(
   'industry',
   { note: 'Ranges, not promises. The base figure is what projections use by default.' },
 )
+
+// --- Cost of raising a child -------------------------------------------
+
+export type SchoolStage = 'tk' | 'sd' | 'smp' | 'sma' | 'kuliah'
+export type SchoolTrack = 'negeri' | 'swasta' | 'internasional'
+
+export interface StageCost {
+  stage: SchoolStage
+  label: string
+  /** Age the child starts this stage. */
+  entryAge: number
+  durationYears: number
+  /** Recurring cost per year, in sen, at today's prices, state track. */
+  annual: bigint
+  /** One-off entry fee, in sen, at today's prices, state track. */
+  entryFee: bigint
+}
+
+/**
+ * The recurring figures come from BPS Susenas MSBP 2024, which measures what
+ * households actually spent per student per year. They are national averages
+ * across state and private schools, so they sit closer to the state track than
+ * to a private one.
+ *
+ * The entry fees do not come from BPS, which does not publish them separately.
+ * They are market observations for Jabodetabek and are the figure most worth
+ * overriding with a real quote from a real school, which is why the app lets a
+ * user replace every one of them.
+ */
+export const EDUCATION_STAGES: StageCost[] = [
+  { stage: 'tk', label: 'TK', entryAge: SCHOOL_ENTRY_AGES.tk, durationYears: 2, annual: 3_000_000_00n, entryFee: 2_500_000_00n },
+  { stage: 'sd', label: 'SD', entryAge: SCHOOL_ENTRY_AGES.sd, durationYears: 6, annual: 4_560_000_00n, entryFee: 3_000_000_00n },
+  { stage: 'smp', label: 'SMP', entryAge: SCHOOL_ENTRY_AGES.smp, durationYears: 3, annual: 7_340_000_00n, entryFee: 5_000_000_00n },
+  { stage: 'sma', label: 'SMA', entryAge: SCHOOL_ENTRY_AGES.sma, durationYears: 3, annual: 10_190_000_00n, entryFee: 7_500_000_00n },
+  { stage: 'kuliah', label: 'Perguruan tinggi', entryAge: SCHOOL_ENTRY_AGES.kuliah, durationYears: 4, annual: 19_010_000_00n, entryFee: 15_000_000_00n },
+]
+
+export const EDUCATION_SOURCE = sourced(
+  'BPS Susenas MSBP 2024 for annual spending per student; entry fees are Jabodetabek market observations',
+  'BPS and market survey',
+  'regulator',
+  {
+    url: 'https://www.bps.go.id/',
+    note: 'BPS publishes annual spending only. Entry fees carry far more uncertainty and should be replaced with a quote from the actual school.',
+  },
+)
+
+/**
+ * How much more the private and international tracks cost than the state one.
+ * Ranges rather than points, because the spread inside each track is wider than
+ * the gap between them.
+ */
+export const TRACK_MULTIPLIERS: Record<SchoolTrack, Sourced<{ annual: number; entry: number }>> = {
+  negeri: sourced({ annual: 1, entry: 1 }, 'BPS baseline', 'regulator'),
+  swasta: sourced({ annual: 3, entry: 8 }, 'Jabodetabek private school fee survey', 'industry', {
+    note: 'Entry fees scale much harder than annual fees, which is exactly what makes two children entering school in the same year painful.',
+  }),
+  internasional: sourced({ annual: 12, entry: 20 }, 'Jakarta international school fee survey', 'industry'),
+}
+
+export const BIRTH_COSTS = {
+  normal: sourced(8_000_000_00n, 'Private hospital, Jabodetabek, 2026', 'industry'),
+  caesar: sourced(25_000_000_00n, 'Private hospital, Jabodetabek, 2026', 'industry'),
+  bpjsCovered: sourced(0n, 'BPJS Kesehatan', 'regulator', {
+    note: 'Delivery is covered when the referral path is followed. The out-of-pocket figures apply to going direct to a private hospital.',
+  }),
+  antenatal: sourced(5_000_000_00n, 'Nine antenatal visits plus scans', 'industry'),
+} as const
+
+/** Recurring non-school cost of a child, over and above the household total. */
+export const CHILD_MONTHLY_BASELINE = sourced(
+  1_500_000_00n,
+  'Derived from the OECD-modified 0,3 weight applied to a median Jabodetabek household',
+  'derived',
+  { note: 'Nappies, milk, clothing, healthcare and childcare. Replaced by the household equivalence scale once real spending exists.' },
+)
+
+// --- Hajj --------------------------------------------------------------
+
+/**
+ * Hajj is the goal most calculators get wrong, because they treat it as one
+ * lump sum. It is two payments separated by decades: a deposit that buys a place
+ * in the queue, and the balance that falls due once the departure year arrives.
+ * Paying the deposit sooner does not just save money, it moves the departure
+ * year forward, which no ordinary savings goal does.
+ */
+export const HAJJ = {
+  initialDeposit: sourced(25_000_000_00n, 'Kementerian Agama, setoran awal', 'regulator', {
+    url: 'https://haji.kemenag.go.id/',
+    note: 'Paid once to enter the queue. The queue position is set by the date this clears, not by the total saved.',
+  }),
+  totalBipih: sourced(56_046_172_00n, 'Bipih 2026, national average', 'regulator', {
+    note: 'The pilgrim portion. The rest is covered from the value accrued on funds already deposited.',
+  }),
+  waitingYears: sourced([25, 30] as [number, number], 'Kementerian Agama queue estimates', 'regulator', {
+    note: 'Varies widely by province; South Sulawesi and Kalimantan Selatan run far longer than Jakarta.',
+  }),
+  umrahTypical: sourced(35_000_000_00n, 'Travel agent pricing, 2026', 'industry'),
+} as const
+
+// --- Income tax --------------------------------------------------------
+
+export interface TaxBracket {
+  /** Upper bound of annual taxable income, in sen. Null means no upper bound. */
+  upTo: bigint | null
+  rate: number
+}
+
+/** Annual personal allowance by marital status and dependants, in sen. */
+export const PTKP: Record<string, bigint> = {
+  'TK/0': 54_000_000_00n,
+  'TK/1': 58_500_000_00n,
+  'TK/2': 63_000_000_00n,
+  'TK/3': 67_500_000_00n,
+  'K/0': 58_500_000_00n,
+  'K/1': 63_000_000_00n,
+  'K/2': 67_500_000_00n,
+  'K/3': 72_000_000_00n,
+}
+
+export const PTKP_SOURCE = sourced(
+  'PMK 101/PMK.010/2016, unchanged through 2026',
+  'Direktorat Jenderal Pajak',
+  'regulator',
+  { url: 'https://www.pajak.go.id/', note: 'A maximum of three dependants may be claimed.' },
+)
+
+export const PPH21_BRACKETS: TaxBracket[] = [
+  { upTo: 60_000_000_00n, rate: 0.05 },
+  { upTo: 250_000_000_00n, rate: 0.15 },
+  { upTo: 500_000_000_00n, rate: 0.25 },
+  { upTo: 5_000_000_000_00n, rate: 0.3 },
+  { upTo: null, rate: 0.35 },
+]
+
+export const PPH21_SOURCE = sourced(
+  'UU 7/2021 Harmonisasi Peraturan Perpajakan',
+  'Direktorat Jenderal Pajak',
+  'regulator',
+  {
+    url: 'https://www.pajak.go.id/',
+    note: 'Employers withhold monthly using the TER A/B/C tables and settle the difference in December. The annual brackets are what the year actually owes.',
+  },
+)
