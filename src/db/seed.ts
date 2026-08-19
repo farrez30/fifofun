@@ -184,6 +184,8 @@ async function main(): Promise<void> {
   let inserted = 0
   let skipped = 0
   let flagged = 0
+  let walletSeen = 0
+  let walletMatched = 0
 
   for (const file of files) {
     const bytes = readFileSync(file)
@@ -222,10 +224,10 @@ async function main(): Promise<void> {
       continue
     }
 
-    const { entries, classifications, passThroughIds, review } = statementToLedger(
-      statement,
-      options,
-    )
+    const { entries, classifications, passThroughIds, review, walletCoverage } =
+      statementToLedger(statement, options)
+    walletSeen += walletCoverage.seen
+    walletMatched += walletCoverage.matchedOwn
     const reviewIds = new Set(review.map((item) => item.entryId))
     const passThrough = new Set(passThroughIds)
 

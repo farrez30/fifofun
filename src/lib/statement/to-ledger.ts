@@ -41,6 +41,13 @@ export interface ReviewItem {
   confidence: Classification['confidence']
 }
 
+export interface WalletCoverage {
+  /** Payments to an e-wallet biller seen in this statement. */
+  seen: number
+  /** How many of those were recognised as the household's own top-ups. */
+  matchedOwn: number
+}
+
 export interface ConversionResult {
   entries: LedgerEntry[]
   review: ReviewItem[]
@@ -52,6 +59,14 @@ export interface ConversionResult {
    * classify a second time.
    */
   classifications: Classification[]
+  /**
+   * Whether the configured own-identifiers actually matched anything. A wrong
+   * phone number looks exactly like a right one at the row level: every top-up
+   * simply classifies as a payment to somebody else, quietly inflating spending
+   * and leaving the wallet accounts empty. Callers should refuse to proceed when
+   * wallet payments were seen and none of them matched.
+   */
+  walletCoverage: WalletCoverage
 }
 
 /** Which cashflow bucket each bank-level kind lands in by default. */
@@ -249,5 +264,17 @@ export function statementToLedger(
     }
   }
 
-  return { entries, review, passThroughIds: [...passThrough], classifications: classes }
+  const walletRules = classes.filter((c) => c.ruleId.startsWith('wallet.'))
+  const walletCoverage: WalletCoverage = {
+    seen: walletRules.length,
+    matchedOwn: walletRules.filter((c) => c.ownFunds).length,
+  }
+
+  return {
+    entries,
+    review,
+    passThroughIds: [...passThrough],
+    classifications: classes,
+    walletCoverage,
+  }
 }
