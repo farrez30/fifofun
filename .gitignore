@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -56,3 +57,6 @@ graphify-out/
 
 # agent tooling config (regenerated locally by next dev)
 CLAUDE.md
+
+# agent tooling
+.claude/
