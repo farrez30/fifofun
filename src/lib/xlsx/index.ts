@@ -194,8 +194,45 @@ export function parseSheetXml(xml: string, shared: string[] = [], name = 'Sheet1
 }
 
 /** Unzips a workbook and returns its first worksheet as a dense grid. */
-export function readXlsx(data: Uint8Array): Sheet {
-  const zip = unzipSync(data)
+/** Only these parts are ever read, so nothing else is decompressed. */
+const WANTED_PART = /^xl\/(worksheets\/sheet\d+\.xml|sharedStrings\.xml)$/
+
+/**
+ * Largest single part accepted after decompression.
+ *
+ * A real statement sheet runs a few hundred kilobytes. This ceiling exists for
+ * the archive that is small on disk and enormous once expanded, which would
+ * otherwise exhaust memory before any of our code ran.
+ */
+export const MAX_PART_BYTES = 32 * 1024 * 1024
+
+export interface ReadOptions {
+  maxPartBytes?: number
+}
+
+export function readXlsx(data: Uint8Array, options: ReadOptions = {}): Sheet {
+  const limit = options.maxPartBytes ?? MAX_PART_BYTES
+
+  /*
+    Two guards, applied before anything is decompressed.
+
+    The filter means a part we never read is never expanded, and the size check
+    rejects a small archive that claims to expand into something enormous. The
+    declared size comes from the archive's own directory and an attacker can lie
+    in it, but fflate sizes its output buffer from that declaration and fails
+    when the stream overruns it, so a lie is caught rather than believed.
+  */
+  const zip = unzipSync(data, {
+    filter: (file) => {
+      if (!WANTED_PART.test(file.name)) return false
+      if (file.originalSize > limit) {
+        throw new Error(
+          `Workbook part ${file.name} expands to ${file.originalSize} bytes, over the ${limit} byte limit`,
+        )
+      }
+      return true
+    },
+  })
 
   const sheetPath = Object.keys(zip)
     .filter((path) => /^xl\/worksheets\/sheet\d+\.xml$/.test(path))

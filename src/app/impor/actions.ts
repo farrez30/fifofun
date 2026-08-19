@@ -1,0 +1,285 @@
+'use server'
+
+import { createHash } from 'node:crypto'
+import { revalidatePath } from 'next/cache'
+import { formatIdr } from '@/lib/money'
+import { DEFAULT_CATEGORY_BY_KIND, SEED_ACCOUNTS } from '@/lib/ledger/seed-data'
+import { parseMandiriStatement } from '@/lib/statement/mandiri-xlsx'
+import { statementToLedger } from '@/lib/statement/to-ledger'
+import { createClient } from '@/lib/supabase/server'
+import { readXlsx } from '@/lib/xlsx'
+
+/**
+ * Importing a statement.
+ *
+ * Two rules shape everything here.
+ *
+ * The first is that nothing is written unless the file reconciles. A statement
+ * whose rows do not add up to the balance the bank printed has been misread, and
+ * importing it anyway would put wrong numbers into a ledger whose entire purpose
+ * is to be right. Refusing costs the user a second attempt; accepting costs them
+ * a figure they will trust and should not.
+ *
+ * The second is that every write goes through PostgREST rather than Drizzle.
+ * Drizzle connects as the database owner and bypasses row level security
+ * entirely, which is correct for a seed script run from a laptop and completely
+ * wrong for a request arriving from a browser. Going through the user's own
+ * token means the policies decide what may be written, so a mistake in this file
+ * cannot reach another household's data.
+ */
+
+/** A statement is a few hundred kilobytes. This is generous and still bounded. */
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+
+/** Every .xlsx is a ZIP, and every ZIP starts with these four bytes. */
+const ZIP_MAGIC = [0x50, 0x4b, 0x03, 0x04]
+
+export interface ImportIssue {
+  kind: string
+  /** Absent where the mismatch is in a total rather than in one row. */
+  sheetRow?: number
+  expected: string
+  actual: string
+}
+
+export interface ImportReport {
+  ok: boolean
+  filename?: string
+  message: string
+  detail?: string
+  period?: { start: string; end: string }
+  inserted?: number
+  duplicates?: number
+  needsReview?: number
+  openingBalance?: string
+  closingBalance?: string
+  issues?: ImportIssue[]
+}
+
+function fail(message: string, detail?: string): ImportReport {
+  return { ok: false, message, detail }
+}
+
+function isoDate(date: { year: number; month: number; day: number }): string {
+  return `${date.year}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`
+}
+
+export async function importStatement(
+  _previous: ImportReport | null,
+  formData: FormData,
+): Promise<ImportReport> {
+  const file = formData.get('statement')
+  if (!(file instanceof File) || file.size === 0) {
+    return fail('Pilih satu berkas e-Statement lebih dulu.')
+  }
+
+  if (file.size > MAX_UPLOAD_BYTES) {
+    return fail(
+      'Berkasnya terlalu besar.',
+      `Batasnya ${Math.round(MAX_UPLOAD_BYTES / 1024 / 1024)} MB, berkas ini ${(file.size / 1024 / 1024).toFixed(1)} MB. E-Statement Mandiri biasanya di bawah 100 KB, jadi kemungkinan besar ini bukan berkas yang dimaksud.`,
+    )
+  }
+
+  const bytes = new Uint8Array(await file.arrayBuffer())
+
+  // The extension is a claim by whoever uploaded; the first four bytes are not.
+  if (!ZIP_MAGIC.every((byte, index) => bytes[index] === byte)) {
+    return fail(
+      'Berkas ini bukan .xlsx.',
+      'Sebuah .xlsx sebenarnya arsip ZIP, dan berkas ini tidak diawali penanda ZIP. Kalau yang kamu punya PDF, gunakan menu impor PDF.',
+    )
+  }
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return fail('Sesi kamu sudah berakhir. Masuk lagi lalu ulangi.')
+
+  const { data: household } = await supabase
+    .from('households')
+    .select('id')
+    .limit(1)
+    .maybeSingle()
+  if (!household) {
+    return fail('Akun ini belum terhubung ke rumah tangga mana pun.')
+  }
+
+  let statement
+  try {
+    statement = parseMandiriStatement(readXlsx(bytes))
+  } catch (error) {
+    return fail(
+      'Berkasnya tidak bisa dibaca sebagai e-Statement Mandiri.',
+      error instanceof Error ? error.message : undefined,
+    )
+  }
+
+  const { header, reconciliation } = statement
+
+  // Nothing is written when the file does not reconcile. The row number is the
+  // point: "totalnya tidak cocok" is unactionable, "baris 47" is not.
+  if (!reconciliation.ok) {
+    return {
+      ok: false,
+      filename: file.name,
+      message: 'Berkasnya terbaca, tapi angkanya tidak cocok dengan saldo yang dicetak bank.',
+      detail:
+        'Tidak ada satu pun transaksi yang disimpan. Impor dihentikan supaya angka yang salah tidak masuk ke catatanmu.',
+      issues: reconciliation.issues.map((issue) => ({
+        kind: issue.kind,
+        sheetRow: issue.sheetRow,
+        expected: formatIdr(issue.expected),
+        actual: formatIdr(issue.actual),
+      })),
+    }
+  }
+
+  const fileHash = createHash('sha256').update(bytes).digest('hex')
+
+  const { data: accounts } = await supabase
+    .from('accounts')
+    .select('id, name, own_identifiers')
+    .eq('household_id', household.id)
+
+  const { data: categories } = await supabase
+    .from('categories')
+    .select('id, name')
+    .eq('household_id', household.id)
+
+  const idByName = new Map((accounts ?? []).map((row) => [row.name as string, row.id as string]))
+  const idByKey = new Map(
+    SEED_ACCOUNTS.map((seed) => [seed.key, idByName.get(seed.name)]).filter(
+      (pair): pair is [string, string] => Boolean(pair[1]),
+    ),
+  )
+  const categoryByName = new Map(
+    (categories ?? []).map((row) => [row.name as string, row.id as string]),
+  )
+
+  const bank = (accounts ?? []).find((row) => row.name === 'Bank Mandiri')
+  const ownIdentifiers = ((bank?.own_identifiers as string[] | null) ?? []).filter(Boolean)
+
+  const { entries, classifications, passThroughIds, review, walletCoverage } = statementToLedger(
+    statement,
+    {
+      ownIdentifiers,
+      employerNames: [],
+      accounts: {
+        bankAccountId: 'mandiri',
+        cashAccountId: 'cash',
+        wallets: {
+          GoPay: 'gopay',
+          DANA: 'dana',
+          ShopeePay: 'shopeepay',
+          OVO: 'ovo',
+          LinkAja: 'linkaja',
+          'e-Money': 'emoney',
+        },
+      },
+    },
+  )
+
+  const { data: batch, error: batchError } = await supabase
+    .from('import_batches')
+    .insert({
+      household_id: household.id,
+      account_id: idByKey.get('mandiri') ?? null,
+      filename: file.name,
+      file_hash: fileHash,
+      format: 'mandiri_livin_xlsx_v1',
+      period_start: isoDate(header.periodStart),
+      period_end: isoDate(header.periodEnd),
+      opening_balance: header.openingBalance.toString(),
+      closing_balance: header.closingBalance.toString(),
+      row_count: statement.rows.length,
+      status: 'reconciled',
+      issues: [],
+    })
+    .select('id')
+    .single()
+
+  if (batchError || !batch) {
+    // The unique index on (household, file hash) is what makes re-uploading the
+    // same statement harmless rather than duplicating it.
+    const duplicate = batchError?.code === '23505'
+    return {
+      ok: duplicate,
+      filename: file.name,
+      message: duplicate
+        ? 'Berkas ini sudah pernah diimpor.'
+        : 'Gagal menyimpan berkas impor.',
+      detail: duplicate
+        ? 'Tidak ada yang berubah. Mengunggah statement yang sama dua kali memang aman.'
+        : batchError?.message,
+    }
+  }
+
+  const reviewIds = new Set(review.map((item) => item.entryId))
+  const passThrough = new Set(passThroughIds)
+
+  const rows = entries.map((entry, index) => {
+    const categoryName = DEFAULT_CATEGORY_BY_KIND[classifications[index].kind]
+    const fromAccountId = entry.fromAccountId ? (idByKey.get(entry.fromAccountId) ?? null) : null
+    const toAccountId = entry.toAccountId ? (idByKey.get(entry.toAccountId) ?? null) : null
+
+    // A transfer whose other side has no account here would violate the check
+    // constraint, so it is recorded as an ordinary movement and flagged rather
+    // than failing the whole import.
+    const unmappedTransfer =
+      entry.cashflow === 'transfer' && (!fromAccountId || !toAccountId)
+
+    return {
+      household_id: household.id,
+      occurred_at: entry.occurredAt.toISOString(),
+      description: entry.description,
+      amount: entry.amount.toString(),
+      cashflow: unmappedTransfer ? 'spending' : entry.cashflow,
+      category_id: categoryName ? (categoryByName.get(categoryName) ?? null) : null,
+      from_account_id: fromAccountId,
+      to_account_id: toAccountId,
+      source: 'xlsx',
+      external_ref: entry.externalRef ?? null,
+      import_batch_id: batch.id,
+      dedupe_key: entry.id,
+      note: entry.note ?? null,
+      is_pass_through: passThrough.has(entry.id),
+      needs_review: unmappedTransfer || reviewIds.has(entry.id),
+      raw_description: statement.rows[index].description,
+    }
+  })
+
+  const { data: written, error: writeError } = await supabase
+    .from('transactions')
+    .upsert(rows, { onConflict: 'household_id,dedupe_key', ignoreDuplicates: true })
+    .select('id')
+
+  if (writeError) {
+    return {
+      ok: false,
+      filename: file.name,
+      message: 'Transaksinya gagal disimpan.',
+      detail: writeError.message,
+    }
+  }
+
+  const inserted = written?.length ?? 0
+  revalidatePath('/')
+  revalidatePath('/rencana')
+
+  return {
+    ok: true,
+    filename: file.name,
+    message: `${inserted} transaksi masuk, dan saldonya cocok sampai ke sen terakhir.`,
+    detail:
+      walletCoverage.seen > 0 && walletCoverage.matchedOwn === 0
+        ? `Ada ${walletCoverage.seen} pembayaran ke e-wallet yang tidak dikenali sebagai top-up milikmu sendiri, jadi semuanya tercatat sebagai pengeluaran. Isi nomor telepon di balik akun e-wallet kamu pada pengaturan akun Bank Mandiri agar tidak menggelembungkan pengeluaran.`
+        : undefined,
+    period: { start: isoDate(header.periodStart), end: isoDate(header.periodEnd) },
+    inserted,
+    duplicates: rows.length - inserted,
+    needsReview: rows.filter((row) => row.needs_review).length,
+    openingBalance: formatIdr(header.openingBalance),
+    closingBalance: formatIdr(header.closingBalance),
+  }
+}

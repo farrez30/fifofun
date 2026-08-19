@@ -197,12 +197,12 @@ export function suggestInstrument(months: number) {
     instrument: chosen,
     rationale:
       years < 1
-        ? 'Under a year away, so the only thing that matters is that the money is there on the day. Return is a rounding error at this horizon.'
+        ? 'Kurang dari setahun lagi, jadi yang penting hanya uangnya ada pada harinya. Imbal hasil tidak berarti apa-apa di jangka sependek ini.'
         : years < 3
-          ? 'A few years out. Bonds and fixed income beat a deposit without putting the date at risk.'
+          ? 'Beberapa tahun lagi. Obligasi dan pendapatan tetap mengalahkan deposito tanpa membahayakan tanggalnya.'
           : years < 5
-            ? 'Long enough for a balanced fund to ride out a bad year, short enough that pure equity is a gamble against a deadline.'
-            : 'More than five years, which is long enough that equity volatility has time to average out.',
+            ? 'Cukup panjang bagi reksadana campuran untuk melewati satu tahun buruk, cukup pendek sehingga saham murni jadi taruhan melawan tenggat.'
+            : 'Lebih dari lima tahun, cukup panjang bagi gejolak saham untuk merata dengan sendirinya.',
   }
 }
 
@@ -259,7 +259,7 @@ export function hajjPlan(
       monthsInQueue: null,
       monthlyForBalance: null,
       insight:
-        'Nothing is going towards the deposit, so the queue has not started. The queue is the binding constraint, not the money: every month without a deposit is a month added to the departure date.',
+        'Belum ada yang disisihkan untuk setoran awal, jadi antreannya belum dimulai. Yang mengikat di sini antreannya, bukan uangnya: setiap bulan tanpa setoran adalah satu bulan tambahan pada tanggal keberangkatan.',
     }
   }
 
@@ -280,8 +280,8 @@ export function hajjPlan(
   const yearsOfSaving = Math.ceil(monthsToDeposit / 12)
   const insight =
     monthsToDeposit === 0
-      ? `The deposit is already covered, so the queue can be joined now and departure falls between ${departureYears[0]} and ${departureYears[1]}. Every month it is left unpaid pushes both of those dates back by a month.`
-      : `Reaching the deposit takes about ${yearsOfSaving} ${yearsOfSaving === 1 ? 'year' : 'years'}, putting departure between ${departureYears[0]} and ${departureYears[1]}. Bringing the deposit forward by a year brings departure forward by a year, which is worth more than the return on any account the money could sit in meanwhile.`
+      ? `Setoran awalnya sudah terpenuhi, jadi antrean bisa dimulai sekarang dan keberangkatan jatuh antara ${departureYears[0]} dan ${departureYears[1]}. Setiap bulan ia dibiarkan belum disetor menggeser kedua tanggal itu mundur satu bulan.`
+      : `Setoran awal tercapai sekitar ${yearsOfSaving} tahun lagi, sehingga keberangkatan jatuh antara ${departureYears[0]} dan ${departureYears[1]}. Memajukan setoran satu tahun memajukan keberangkatan satu tahun, dan itu lebih berharga daripada imbal hasil rekening mana pun tempat uangnya menunggu.`
 
   return {
     depositTarget,

@@ -57,7 +57,7 @@ describe('analyseGap', () => {
       expect(gap.bySpending!.feasible).toBe(false)
       expect(gap.bySpending!.cutNeeded).toBe(500_000_00n)
       expect(gap.bySpending!.shortfall).toBe(1_500_000_00n)
-      expect(gap.bySpending!.reason).toMatch(/cannot close/)
+      expect(gap.bySpending!.reason).toMatch(/tidak bisa menutup/)
     })
 
     it('is infeasible when the floor is already at or above the target', () => {
@@ -149,13 +149,13 @@ describe('monthsUntilClosed', () => {
   it('never closes when both grow at the same rate', () => {
     const projection = monthsUntilClosed(SHORT, 0.05, 0.05)
     expect(projection.months).toBeNull()
-    expect(projection.reason).toMatch(/stays exactly where it is/)
+    expect(projection.reason).toMatch(/tetap di tempat/)
   })
 
   it('widens rather than closes when costs outgrow income', () => {
     const projection = monthsUntilClosed(SHORT, 0.03, 0.08)
     expect(projection.months).toBeNull()
-    expect(projection.reason).toMatch(/widens/)
+    expect(projection.reason).toMatch(/melebar/)
   })
 
   it('is immediate when the plan already fits', () => {
@@ -179,7 +179,7 @@ describe('monthsUntilClosed', () => {
     // A hair above cost inflation would take centuries.
     const projection = monthsUntilClosed(SHORT, 0.0351, 0.035, { maxYears: 10 })
     expect(projection.months).toBeNull()
-    expect(projection.reason).toMatch(/does not close within 10 years/)
+    expect(projection.reason).toMatch(/tidak menutup dalam 10 tahun/)
   })
 
   it('omits a calendar year when it was not given a starting one', () => {

@@ -100,7 +100,7 @@ export function analyseGap(input: GapInput): GapAnalysis {
   const byIncome: IncomeRoute = {
     extraNeeded: monthlyGap,
     percentIncrease,
-    reason: `Earning ${percentIncrease.toFixed(1).replace('.', ',')}% more, and changing nothing else, closes this. On a salary that is a raise or a second income rather than something to decide this month, which is why it is worth knowing the other route as well.`,
+    reason: `Menaikkan penghasilan ${percentIncrease.toFixed(1).replace('.', ',')}% sudah menutup kekurangan ini tanpa mengubah apa pun yang lain. Bagi karyawan itu berarti kenaikan gaji atau penghasilan kedua, bukan sesuatu yang bisa diputuskan bulan ini, dan karena itulah jalur satunya juga perlu diketahui.`,
   }
 
   // The cut comes out of target spending, not current spending: the target is
@@ -117,15 +117,15 @@ export function analyseGap(input: GapInput): GapAnalysis {
     feasible,
     shortfall: feasible ? 0n : monthlyGap - maximumCut,
     reason: feasible
-      ? `Cutting ${percentCut.toFixed(1).replace('.', ',')}% from the target lifestyle closes this without earning a rupiah more. The categories worth looking at first are the largest ones, not the easiest ones.`
-      : `Even cutting all the way to the floor leaves the plan short. Spending alone cannot close this gap, so either income has to move or the plan itself does.`,
+      ? `Memangkas ${percentCut.toFixed(1).replace('.', ',')}% dari gaya hidup yang dituju sudah menutupnya tanpa tambahan penghasilan sepeser pun. Yang perlu dilihat lebih dulu kategori terbesarnya, bukan yang paling mudah dilepas.`
+      : `Dipangkas sampai batas paling hemat pun rencananya masih kurang. Pengeluaran saja tidak bisa menutup jarak ini, jadi entah penghasilannya yang bergerak atau rencananya yang berubah.`,
   }
 
   const balanced: BalancedRoute = {
     extraIncome: half(monthlyGap),
     spendingCut: monthlyGap - half(monthlyGap),
     reason:
-      'Half from each side. This is usually the route that actually happens, and asking for half a raise while cutting half as deeply is easier than either extreme.',
+      'Setengah dari masing-masing sisi. Ini jalur yang biasanya benar-benar terjadi, dan meminta kenaikan separuh sambil memangkas separuh lebih ringan daripada salah satu ujungnya.',
   }
 
   return {
@@ -212,7 +212,7 @@ export function monthsUntilClosed(
     return {
       months: 0,
       year: options.fromYear ?? null,
-      reason: 'The plan already fits inside current income.',
+      reason: 'Rencana ini sudah muat di dalam penghasilan sekarang.',
     }
   }
 
@@ -222,8 +222,8 @@ export function monthsUntilClosed(
       year: null,
       reason:
         incomeGrowthRate === costInflationRate
-          ? 'Income and costs are growing at the same rate, so the gap stays exactly where it is however long you wait. Waiting is not a strategy here.'
-          : 'Costs are growing faster than income, so the gap widens rather than closes. Something has to change deliberately.',
+          ? 'Penghasilan dan biaya tumbuh dengan laju yang sama, jadi jaraknya tetap di tempat berapa lama pun ditunggu. Menunggu bukan strategi di sini.'
+          : 'Biaya tumbuh lebih cepat daripada penghasilan, jadi jaraknya melebar, bukan menutup. Ada yang harus diubah dengan sengaja.',
     }
   }
 
@@ -242,15 +242,15 @@ export function monthsUntilClosed(
       const remainder = month % 12
       const spelled =
         years === 0
-          ? `${month} months`
+          ? `${month} bulan`
           : remainder === 0
-            ? `${years} ${years === 1 ? 'year' : 'years'}`
-            : `${years} ${years === 1 ? 'year' : 'years'} and ${remainder} months`
+            ? `${years} tahun`
+            : `${years} tahun ${remainder} bulan`
 
       return {
         months: month,
         year: options.fromYear === undefined ? null : options.fromYear + years,
-        reason: `At ${(incomeGrowthRate * 100).toFixed(1).replace('.', ',')}% income growth against ${(costInflationRate * 100).toFixed(1).replace('.', ',')}% cost inflation, the gap closes on its own in about ${spelled}. Every rupiah of the gap closed deliberately brings that date forward.`,
+        reason: `Dengan pertumbuhan penghasilan ${(incomeGrowthRate * 100).toFixed(1).replace('.', ',')}% melawan inflasi biaya ${(costInflationRate * 100).toFixed(1).replace('.', ',')}%, jaraknya menutup sendiri sekitar ${spelled} lagi. Setiap rupiah yang ditutup dengan sengaja memajukan tanggal itu.`,
       }
     }
   }
@@ -258,6 +258,6 @@ export function monthsUntilClosed(
   return {
     months: null,
     year: null,
-    reason: `The gap does not close within ${maxYears} years at these rates. Growth is too slow to be the plan; it can only support one.`,
+    reason: `Dengan laju ini jaraknya tidak menutup dalam ${maxYears} tahun. Pertumbuhan terlalu lambat untuk dijadikan rencana; ia hanya bisa menyokong rencana.`,
   }
 }

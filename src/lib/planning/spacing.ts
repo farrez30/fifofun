@@ -85,13 +85,13 @@ function describe(option: Omit<SpacingOption, 'reason'>): string {
   const minimum = CHILD_SPACING.healthMinimumYears.value
 
   if (!option.meetsHealthMinimum) {
-    return `Under the ${minimum} years BKKBN advises between births. Whatever the schedule of fees looks like, this one is decided on health grounds first.`
+    return `Di bawah ${minimum} tahun yang disarankan BKKBN antar kelahiran. Bagaimanapun jadwal biayanya, yang ini diputuskan dari sisi kesehatan lebih dulu.`
   }
 
   if (option.collisions.length === 0) {
     return option.withinIdealRange
-      ? `No entry fees fall in the same year, and ${option.years} years sits inside the ${idealLow} to ${idealHigh} band USAID identifies as ideal for both mother and child. This is the spacing that costs least without asking anything of anyone's health.`
-      : `No entry fees fall in the same year. Wider than the ${idealLow} to ${idealHigh} ideal band, which is a matter of preference rather than a problem, though it does stretch the years of dependent children out further.`
+      ? `Tidak ada uang pangkal yang jatuh di tahun yang sama, dan ${option.years} tahun berada di dalam rentang ${idealLow} sampai ${idealHigh} tahun yang disebut USAID ideal bagi ibu maupun anak. Inilah jarak yang paling murah tanpa mengorbankan kesehatan siapa pun.`
+      : `Tidak ada uang pangkal yang jatuh di tahun yang sama. Lebih lebar dari rentang ideal ${idealLow} sampai ${idealHigh} tahun, dan itu soal selera bukan masalah, walau memang memanjangkan tahun-tahun menanggung anak.`
   }
 
   const worst = option.collisions[0]
@@ -99,7 +99,7 @@ function describe(option: Omit<SpacingOption, 'reason'>): string {
     .map((c) => `${c.elderStage.toUpperCase()} dan ${c.youngerStage.toUpperCase()}`)
     .join(', ')
 
-  return `${option.collisions.length} ${option.collisions.length === 1 ? 'clash' : 'clashes'} where two entry fees land in the same year: ${stages}. The worst of them asks for both fees at once, and the heavier the school track the harder that lands, since entry fees scale faster than annual ones. Shifting by a single year removes ${worst.elderStage.toUpperCase()} and ${worst.youngerStage.toUpperCase()} from the same budget.`
+  return `Ada ${option.collisions.length} tabrakan di mana dua uang pangkal jatuh di tahun yang sama: ${stages}. Yang terberat menagih kedua biaya sekaligus, dan makin mahal jalur sekolahnya makin keras pukulannya, karena uang pangkal naik jauh lebih tajam daripada biaya tahunan. Menggeser satu tahun saja sudah mengeluarkan ${worst.elderStage.toUpperCase()} dan ${worst.youngerStage.toUpperCase()} dari anggaran yang sama.`
 }
 
 /** Every spacing from one year up to a limit, with what each one costs. */
@@ -163,7 +163,7 @@ export function recommendSpacing(maxYears = 15, track: SchoolTrack = 'negeri'): 
 
   const minimum = CHILD_SPACING.healthMinimumYears.value
   const list = (values: number[]) =>
-    values.length === 0 ? 'none' : values.join(', ')
+    values.length === 0 ? 'tidak ada' : values.join(', ')
 
   return {
     recommended,
@@ -171,7 +171,7 @@ export function recommendSpacing(maxYears = 15, track: SchoolTrack = 'negeri'): 
     collides,
     reason:
       ideal.length > 0
-        ? `Spacing of ${list(ideal)} years clears the ${minimum}-year health minimum, sits inside the published ideal band, and puts no two entry fees in the same calendar year. Spacings of ${list(collides)} years each collide at least once, and ${minimum > 1 ? `anything under ${minimum} years is ruled out on health grounds before cost is considered` : 'health is the binding constraint at the short end'}.`
-        : `No spacing satisfies every constraint at once. The ones without a fee clash are ${list(recommended)} years.`,
+        ? `Jarak ${list(ideal)} tahun melewati batas kesehatan ${minimum} tahun, berada di dalam rentang ideal yang dipublikasikan, dan tidak menaruh dua uang pangkal di tahun kalender yang sama. Jarak ${list(collides)} tahun masing-masing bertabrakan setidaknya sekali, dan apa pun di bawah ${minimum} tahun sudah gugur dari sisi kesehatan sebelum biayanya sempat dihitung.`
+        : `Tidak ada jarak yang memenuhi semua syarat sekaligus. Yang tanpa tabrakan biaya adalah ${list(recommended)} tahun.`,
   }
 }

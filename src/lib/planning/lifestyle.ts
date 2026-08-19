@@ -96,7 +96,7 @@ export const LIFESTYLE_TEMPLATES: LifestyleTemplate[] = [
 ]
 
 export const LIFESTYLE_TEMPLATE_SOURCE =
-  'Reference figures for one adult in Jabodetabek, 2026. Replace them with derived history as soon as there is any, which is always more accurate than a template.'
+  'Angka acuan untuk satu orang dewasa di Jabodetabek, 2026. Ganti dengan turunan dari riwayat begitu ada, karena riwayat selalu lebih akurat daripada template.'
 
 export interface LifestyleProfile {
   /** Where the numbers came from, so the UI never presents a guess as a measurement. */
@@ -224,7 +224,7 @@ export function deriveLifestyle(
 
   return {
     origin: 'history',
-    label: `Rata-rata ${recent.length} bulan terakhir`,
+    label: `Kebiasaan ${recent.length} bulan terakhir`,
     byCategory,
     total: totalOf(byCategory),
     monthsUsed: recent.length,

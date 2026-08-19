@@ -38,14 +38,14 @@ function sourced<T>(
 // --- Inflation ---------------------------------------------------------
 
 export const INFLATION = {
-  general: sourced(0.035, 'BPS, long-run planning figure', 'regulator', {
+  general: sourced(0.035, 'BPS, angka perencanaan jangka panjang', 'regulator', {
     url: 'https://www.bps.go.id/',
-    note: 'Headline inflation was 2,88% year on year in July 2026; 3,5% is used for projections so plans are not built on a favourable year.',
+    note: 'Inflasi umum 2,88% year on year pada Juli 2026; 3,5% dipakai untuk proyeksi supaya rencana tidak dibangun di atas tahun yang kebetulan bagus.',
   }),
-  generalCurrent: sourced(0.0288, 'BPS, July 2026', 'regulator', {
+  generalCurrent: sourced(0.0288, 'BPS, Juli 2026', 'regulator', {
     url: 'https://www.bps.go.id/',
   }),
-  bankIndonesiaTarget: sourced(0.025, 'Bank Indonesia target, ±1%', 'regulator', {
+  bankIndonesiaTarget: sourced(0.025, 'Sasaran Bank Indonesia, ±1%', 'regulator', {
     url: 'https://www.bi.go.id/',
   }),
   /**
@@ -60,17 +60,17 @@ export const INFLATION = {
    * reason, so that is what the projections use, with the CPI shown alongside.
    */
   education: {
-    conservative: sourced(0.08, 'Insurance industry projection', 'industry'),
-    default: sourced(0.1, 'Indonesian financial planner consensus', 'industry', {
-      note: 'Applies to entry fees (uang pangkal), not to the BPS education CPI.',
+    conservative: sourced(0.08, 'Proyeksi industri asuransi', 'industry'),
+    default: sourced(0.1, 'Konsensus perencana keuangan Indonesia', 'industry', {
+      note: 'Berlaku untuk uang pangkal, bukan untuk indeks harga pendidikan BPS.',
     }),
-    aggressive: sourced(0.15, 'Private and international schools, major cities', 'industry'),
-    cpiReference: sourced(0.0288, 'BPS education CPI component', 'regulator', {
-      note: 'Shown for context. Not used for projections; see above.',
+    aggressive: sourced(0.15, 'Sekolah swasta dan internasional di kota besar', 'industry'),
+    cpiReference: sourced(0.0288, 'Komponen pendidikan pada IHK BPS', 'regulator', {
+      note: 'Ditampilkan sebagai konteks. Tidak dipakai untuk proyeksi, lihat penjelasan di atas.',
     }),
   },
-  medical: sourced(0.178, 'Medical inflation projection 2026', 'industry', {
-    note: 'Highest in Southeast Asia, roughly five times headline inflation.',
+  medical: sourced(0.178, 'Proyeksi inflasi medis 2026', 'industry', {
+    note: 'Tertinggi di Asia Tenggara, sekitar lima kali inflasi umum.',
   }),
 } as const
 
@@ -109,17 +109,17 @@ export const FRAMEWORKS: AllocationFramework[] = [
     id: '50-30-20',
     partition: true,
     name: '50 / 30 / 20',
-    origin: 'Popularised in Indonesia by DJKN Kemenkeu and Bibit',
+    origin: 'Dipopulerkan di Indonesia oleh DJKN Kemenkeu dan Bibit',
     confidence: 'regulator',
     url: 'https://www.djkn.kemenkeu.go.id/kpknl-metro/baca-artikel/17112/Budget-503020-Apa-Itu-dan-Manfaatnya.html',
-    suitsWhen: 'Single, little or no debt, budgeting for the first time',
+    suitsWhen: 'Lajang, utang ringan atau tidak ada, baru mulai menyusun anggaran',
     buckets: [
-      { key: 'needs', label: 'Kebutuhan', share: 0.5, bound: 'target', description: 'Housing, food, transport, utilities, minimum debt payments' },
-      { key: 'wants', label: 'Keinginan', share: 0.3, bound: 'target', description: 'Eating out, entertainment, subscriptions, travel' },
-      { key: 'savings', label: 'Tabungan & investasi', share: 0.2, bound: 'min', description: 'Emergency fund, investment, extra debt principal' },
+      { key: 'needs', label: 'Kebutuhan', share: 0.5, bound: 'target', description: 'Tempat tinggal, makan, transport, utilitas, cicilan minimum' },
+      { key: 'wants', label: 'Keinginan', share: 0.3, bound: 'target', description: 'Makan di luar, hiburan, langganan, jalan-jalan' },
+      { key: 'savings', label: 'Tabungan & investasi', share: 0.2, bound: 'min', description: 'Dana darurat, investasi, pelunasan pokok utang lebih cepat' },
     ],
     caveat:
-      'Breaks down when housing alone exceeds half of income, which is common on entry-level pay in Jabodetabek.',
+      'Rontok begitu tempat tinggal saja sudah memakan lebih dari separuh penghasilan, dan itu lazim pada gaji pemula di Jabodetabek.',
   },
   {
     id: '40-30-20-10',
@@ -128,12 +128,12 @@ export const FRAMEWORKS: AllocationFramework[] = [
     origin: 'DJKN Kementerian Keuangan',
     confidence: 'regulator',
     url: 'https://www.djkn.kemenkeu.go.id/kpknl-metro/baca-artikel/13811/Tips-Alokasi-Penghasilan-Bulanan.html',
-    suitsWhen: 'Carrying a mortgage or vehicle instalment',
+    suitsWhen: 'Sedang menanggung KPR atau cicilan kendaraan',
     buckets: [
-      { key: 'living', label: 'Biaya hidup', share: 0.4, bound: 'target', description: 'Food, transport, utilities, internet' },
-      { key: 'debt', label: 'Cicilan', share: 0.3, bound: 'max', description: 'House, vehicle, furniture, gadget instalments' },
-      { key: 'savings', label: 'Tabungan & investasi', share: 0.2, bound: 'min', description: 'Emergency fund, insurance, investment, education fund' },
-      { key: 'social', label: 'Sosial & hiburan', share: 0.1, bound: 'target', description: 'Charity, dining out, gifts, leisure' },
+      { key: 'living', label: 'Biaya hidup', share: 0.4, bound: 'target', description: 'Makan, transport, utilitas, internet' },
+      { key: 'debt', label: 'Cicilan', share: 0.3, bound: 'max', description: 'Cicilan rumah, kendaraan, perabot, gawai' },
+      { key: 'savings', label: 'Tabungan & investasi', share: 0.2, bound: 'min', description: 'Dana darurat, asuransi, investasi, dana pendidikan' },
+      { key: 'social', label: 'Sosial & hiburan', share: 0.1, bound: 'target', description: 'Sedekah, makan di luar, hadiah, rekreasi' },
     ],
   },
   {
@@ -143,31 +143,31 @@ export const FRAMEWORKS: AllocationFramework[] = [
     origin: 'Otoritas Jasa Keuangan (sikapiuangmu)',
     confidence: 'regulator',
     url: 'https://sikapiuangmu.ojk.go.id/',
-    suitsWhen: 'A general-purpose Indonesian default',
+    suitsWhen: 'Pilihan bawaan yang cocok untuk kebanyakan keadaan di Indonesia',
     buckets: [
-      { key: 'needs', label: 'Kebutuhan pokok', share: 0.4, bound: 'target', description: 'Food, transport, housing, electricity, water, internet' },
-      { key: 'debt', label: 'Cicilan produktif', share: 0.3, bound: 'max', description: 'Mortgage, vehicle and other productive credit' },
-      { key: 'future', label: 'Asuransi, investasi & dana darurat', share: 0.2, bound: 'min', description: 'Emergency fund, insurance, retirement, education' },
-      { key: 'social', label: 'Kebaikan', share: 0.1, bound: 'target', description: 'Charity, supporting family, community' },
+      { key: 'needs', label: 'Kebutuhan pokok', share: 0.4, bound: 'target', description: 'Makan, transport, tempat tinggal, listrik, air, internet' },
+      { key: 'debt', label: 'Cicilan produktif', share: 0.3, bound: 'max', description: 'KPR, kendaraan, dan kredit produktif lainnya' },
+      { key: 'future', label: 'Asuransi, investasi & dana darurat', share: 0.2, bound: 'min', description: 'Dana darurat, asuransi, pensiun, pendidikan' },
+      { key: 'social', label: 'Kebaikan', share: 0.1, bound: 'target', description: 'Sedekah, membantu keluarga, kegiatan sosial' },
     ],
   },
   {
     id: 'zapfin',
     partition: true,
     name: 'ZAPFIN (adaptasi)',
-    origin: 'Attributed to Prita Ghozie, ZAP Finance',
+    origin: 'Dinisbatkan kepada Prita Ghozie, ZAP Finance',
     confidence: 'industry',
-    suitsWhen: 'Muslim households, and anyone who wants sinking funds kept separate from long-term investing',
+    suitsWhen: 'Rumah tangga muslim, dan siapa pun yang ingin sinking fund dipisah dari investasi jangka panjang',
     buckets: [
-      { key: 'zakat', label: 'Zakat & sosial', share: 0.05, bound: 'min', description: 'Zakat, sedekah, supporting parents' },
-      { key: 'assurance', label: 'Assurance', share: 0.05, bound: 'min', description: 'Insurance premiums and emergency fund' },
-      { key: 'present', label: 'Present consumption', share: 0.65, bound: 'max', description: 'Monthly living costs and instalments' },
-      { key: 'future', label: 'Future spending', share: 0.05, bound: 'min', description: 'Sinking funds for planned large purchases' },
-      { key: 'investment', label: 'Investment', share: 0.1, bound: 'min', description: 'Retirement and education, long horizon' },
-      { key: 'lifestyle', label: 'Lifestyle', share: 0.1, bound: 'max', description: 'Leisure and discretionary spending' },
+      { key: 'zakat', label: 'Zakat & sosial', share: 0.05, bound: 'min', description: 'Zakat, sedekah, menyokong orang tua' },
+      { key: 'assurance', label: 'Assurance', share: 0.05, bound: 'min', description: 'Premi asuransi dan dana darurat' },
+      { key: 'present', label: 'Present consumption', share: 0.65, bound: 'max', description: 'Biaya hidup bulanan dan cicilan' },
+      { key: 'future', label: 'Future spending', share: 0.05, bound: 'min', description: 'Sinking fund untuk pengeluaran besar yang sudah direncanakan' },
+      { key: 'investment', label: 'Investment', share: 0.1, bound: 'min', description: 'Pensiun dan pendidikan, jangka panjang' },
+      { key: 'lifestyle', label: 'Lifestyle', share: 0.1, bound: 'max', description: 'Rekreasi dan pengeluaran yang sifatnya pilihan' },
     ],
     caveat:
-      'Labelled an adaptation on purpose: ZAP Finance has published no canonical percentage table, so every figure in circulation is a media interpretation.',
+      'Sengaja diberi label adaptasi: ZAP Finance tidak pernah menerbitkan tabel persentase resmi, jadi angka yang beredar adalah tafsir media.',
   },
   {
     id: 'qm-1234',
@@ -176,15 +176,15 @@ export const FRAMEWORKS: AllocationFramework[] = [
     origin: 'Ligwina Hananto, QM Financial',
     confidence: 'industry',
     url: 'https://qmfinancial.com/2020/11/prinsip-blueprint-of-your-money/',
-    suitsWhen: 'Irregular income, or any income level where fixed percentages stop fitting',
+    suitsWhen: 'Penghasilan tidak tetap, atau level penghasilan yang sudah tidak cocok dengan persentase kaku',
     buckets: [
-      { key: 'savings', label: 'Menabung & investasi', share: 0.1, bound: 'min', description: 'The floor, whatever else happens' },
-      { key: 'lifestyle', label: 'Lifestyle', share: 0.2, bound: 'max', description: 'Discretionary spending ceiling' },
-      { key: 'debt', label: 'Cicilan', share: 0.3, bound: 'max', description: 'Total instalment ceiling' },
-      { key: 'routine', label: 'Pengeluaran rutin', share: 0.5, bound: 'target', description: 'Regular household running costs' },
+      { key: 'savings', label: 'Menabung & investasi', share: 0.1, bound: 'min', description: 'Batas bawah, apa pun yang terjadi' },
+      { key: 'lifestyle', label: 'Lifestyle', share: 0.2, bound: 'max', description: 'Batas atas pengeluaran gaya hidup' },
+      { key: 'debt', label: 'Cicilan', share: 0.3, bound: 'max', description: 'Batas atas total cicilan' },
+      { key: 'routine', label: 'Pengeluaran rutin', share: 0.5, bound: 'target', description: 'Biaya rutin rumah tangga' },
     ],
     caveat:
-      'Published as benchmarks rather than fixed rules. Floors and ceilings survive changes in income better than exact percentages, which is why it is the default for irregular earnings.',
+      'Diterbitkan sebagai patokan, bukan aturan kaku. Batas bawah dan batas atas lebih tahan terhadap perubahan penghasilan daripada persentase pasti, dan itulah sebabnya kerangka ini jadi pilihan untuk penghasilan yang naik turun.',
   },
 ]
 
@@ -247,7 +247,7 @@ export const RATIOS: RatioThreshold[] = [
     warning: 3,
     unit: 'months',
     formula: 'Aset likuid ÷ pengeluaran bulanan',
-    source: 'OJK minimum three months; six is the common planner target',
+    source: 'OJK menetapkan minimum tiga bulan; enam bulan adalah target yang lazim dipakai perencana',
     confidence: 'regulator',
   },
   {
@@ -286,7 +286,7 @@ export const EMERGENCY_FUND: { rules: EmergencyFundRule[]; source: Sourced<strin
     { id: 'irregular', label: 'Penghasilan tidak tetap', months: 12 },
   ],
   source: sourced(
-    'Household-size ladder used by Indonesian planners and insurers; OJK sets three months as the absolute floor.',
+    'Tangga berdasarkan jumlah anggota rumah tangga yang dipakai perencana dan perusahaan asuransi di Indonesia; OJK menetapkan tiga bulan sebagai batas paling bawah.',
     'OJK, Allianz, Treasury, Finansialku',
     'industry',
   ),
@@ -301,10 +301,10 @@ export const EMERGENCY_FUND: { rules: EmergencyFundRule[]; source: Sourced<strin
  * there is no Indonesian alternative to use instead.
  */
 export const EQUIVALENCE_SCALE = {
-  firstAdult: sourced(1.0, 'OECD-modified equivalence scale', 'industry'),
-  additionalAdult: sourced(0.5, 'OECD-modified equivalence scale', 'industry'),
-  perChild: sourced(0.3, 'OECD-modified equivalence scale', 'industry', {
-    note: 'A couple costs about 1,5 times a single person, not 2. Marrying therefore saves roughly a quarter of what the two were spending apart.',
+  firstAdult: sourced(1.0, 'Skala ekuivalensi OECD yang dimodifikasi', 'industry'),
+  additionalAdult: sourced(0.5, 'Skala ekuivalensi OECD yang dimodifikasi', 'industry'),
+  perChild: sourced(0.3, 'Skala ekuivalensi OECD yang dimodifikasi', 'industry', {
+    note: 'Pasangan menghabiskan sekitar 1,5 kali satu orang, bukan 2. Menikah karena itu menghemat sekitar seperempat dari yang tadinya dibelanjakan terpisah.',
   }),
 } as const
 
@@ -315,9 +315,9 @@ export const SCHOOL_ENTRY_AGES = { tk: 4, sd: 6, smp: 12, sma: 15, kuliah: 18 } 
 
 export const CHILD_SPACING = {
   healthMinimumYears: sourced(3, 'BKKBN', 'regulator', {
-    note: 'WHO advises at least 24 months between a birth and the next conception; BKKBN states three years.',
+    note: 'WHO menyarankan jarak minimal 24 bulan antara kelahiran dan kehamilan berikutnya; BKKBN menyebut tiga tahun.',
   }),
-  idealRangeYears: sourced([3, 5] as [number, number], 'USAID birth spacing study', 'industry'),
+  idealRangeYears: sourced([3, 5] as [number, number], 'Studi jarak kelahiran USAID', 'industry'),
 } as const
 
 // --- Zakat, statutory contributions and retirement ---------------------
@@ -325,37 +325,37 @@ export const CHILD_SPACING = {
 export const ZAKAT = {
   rate: sourced(0.025, 'BAZNAS', 'regulator', { url: 'https://baznas.go.id/zakatpenghasilan' }),
   nisabMonthly: sourced(7_640_144_00n, 'BAZNAS 2026', 'regulator', {
-    note: 'In sen. Reissued annually, so it must be updatable without a deployment.',
+    note: 'Dalam sen. Diterbitkan ulang tiap tahun, jadi harus bisa diperbarui tanpa deploy.',
   }),
 } as const
 
 export const BPJS_KESEHATAN_MONTHLY = {
-  class1: sourced(150_000_00n, 'Perpres, 2026 rates', 'regulator'),
-  class2: sourced(100_000_00n, 'Perpres, 2026 rates', 'regulator'),
-  class3: sourced(42_000_00n, 'Perpres, 2026 rates', 'regulator', {
-    note: 'Participant pays Rp35.000; the government subsidises Rp7.000.',
+  class1: sourced(150_000_00n, 'Perpres, tarif 2026', 'regulator'),
+  class2: sourced(100_000_00n, 'Perpres, tarif 2026', 'regulator'),
+  class3: sourced(42_000_00n, 'Perpres, tarif 2026', 'regulator', {
+    note: 'Peserta membayar Rp35.000; pemerintah menyubsidi Rp7.000.',
   }),
 } as const
 
 export const BPJS_KETENAGAKERJAAN = {
   workerJht: sourced(0.02, 'BPJS Ketenagakerjaan', 'regulator'),
   workerJp: sourced(0.01, 'BPJS Ketenagakerjaan', 'regulator'),
-  jpWageCap: sourced(10_547_400_00n, 'BPJS Ketenagakerjaan 2026 cap', 'regulator'),
+  jpWageCap: sourced(10_547_400_00n, 'Batas upah JP BPJS Ketenagakerjaan 2026', 'regulator'),
 } as const
 
 export const LIFE_INSURANCE_MULTIPLIER = sourced(
   [10, 12] as [number, number],
-  'AAJI-cited rule of thumb',
+  'Patokan praktis yang dikutip AAJI',
   'industry',
-  { note: 'Sum assured as a multiple of annual income. Human Life Value and DIME are the underlying methods.' },
+  { note: 'Uang pertanggungan sebagai kelipatan penghasilan setahun. Metode dasarnya Human Life Value dan DIME.' },
 )
 
 export const RETIREMENT = {
-  safeWithdrawalRate: sourced(0.04, 'The 4% rule', 'industry', {
-    note: 'Derived from United States market history. Indonesian planners treat it as a starting point, not a formula.',
+  safeWithdrawalRate: sourced(0.04, 'Aturan 4%', 'industry', {
+    note: 'Diturunkan dari sejarah pasar Amerika Serikat. Perencana di Indonesia memperlakukannya sebagai titik awal, bukan rumus.',
   }),
-  multipleStandard: sourced(25, 'Inverse of the 4% rule', 'derived'),
-  multipleConservative: sourced(30, 'Indonesian planner variant', 'industry'),
+  multipleStandard: sourced(25, 'Kebalikan dari aturan 4%', 'derived'),
+  multipleConservative: sourced(30, 'Varian perencana Indonesia', 'industry'),
 } as const
 
 // --- Expected returns --------------------------------------------------
@@ -388,10 +388,10 @@ export const EXPECTED_RETURNS: ExpectedReturn[] = [
 ]
 
 export const RETURNS_SOURCE = sourced(
-  'Kontan, Bareksa, Bibit, FEB UI and CNBC Indonesia, compiled August 2026',
-  'Indonesian market reporting',
+  'Kontan, Bareksa, Bibit, FEB UI dan CNBC Indonesia, dihimpun Agustus 2026',
+  'Liputan pasar Indonesia',
   'industry',
-  { note: 'Ranges, not promises. The base figure is what projections use by default.' },
+  { note: 'Rentang, bukan janji. Angka dasarnya yang dipakai proyeksi secara bawaan.' },
 )
 
 // --- Cost of raising a child -------------------------------------------
@@ -431,12 +431,12 @@ export const EDUCATION_STAGES: StageCost[] = [
 ]
 
 export const EDUCATION_SOURCE = sourced(
-  'BPS Susenas MSBP 2024 for annual spending per student; entry fees are Jabodetabek market observations',
-  'BPS and market survey',
+  'BPS Susenas MSBP 2024 untuk belanja tahunan per siswa; uang pangkal adalah pengamatan pasar Jabodetabek',
+  'BPS dan survei pasar',
   'regulator',
   {
     url: 'https://www.bps.go.id/',
-    note: 'BPS publishes annual spending only. Entry fees carry far more uncertainty and should be replaced with a quote from the actual school.',
+    note: 'BPS hanya menerbitkan belanja tahunan. Uang pangkal jauh lebih tidak pasti dan sebaiknya diganti dengan penawaran dari sekolah yang benar-benar dituju.',
   },
 )
 
@@ -446,28 +446,28 @@ export const EDUCATION_SOURCE = sourced(
  * the gap between them.
  */
 export const TRACK_MULTIPLIERS: Record<SchoolTrack, Sourced<{ annual: number; entry: number }>> = {
-  negeri: sourced({ annual: 1, entry: 1 }, 'BPS baseline', 'regulator'),
-  swasta: sourced({ annual: 3, entry: 8 }, 'Jabodetabek private school fee survey', 'industry', {
-    note: 'Entry fees scale much harder than annual fees, which is exactly what makes two children entering school in the same year painful.',
+  negeri: sourced({ annual: 1, entry: 1 }, 'Dasar BPS', 'regulator'),
+  swasta: sourced({ annual: 3, entry: 8 }, 'Survei biaya sekolah swasta Jabodetabek', 'industry', {
+    note: 'Uang pangkal naik jauh lebih tajam daripada biaya tahunan, dan justru itulah yang membuat dua anak masuk sekolah di tahun yang sama terasa berat.',
   }),
-  internasional: sourced({ annual: 12, entry: 20 }, 'Jakarta international school fee survey', 'industry'),
+  internasional: sourced({ annual: 12, entry: 20 }, 'Survei biaya sekolah internasional Jakarta', 'industry'),
 }
 
 export const BIRTH_COSTS = {
-  normal: sourced(8_000_000_00n, 'Private hospital, Jabodetabek, 2026', 'industry'),
-  caesar: sourced(25_000_000_00n, 'Private hospital, Jabodetabek, 2026', 'industry'),
+  normal: sourced(8_000_000_00n, 'Rumah sakit swasta, Jabodetabek, 2026', 'industry'),
+  caesar: sourced(25_000_000_00n, 'Rumah sakit swasta, Jabodetabek, 2026', 'industry'),
   bpjsCovered: sourced(0n, 'BPJS Kesehatan', 'regulator', {
-    note: 'Delivery is covered when the referral path is followed. The out-of-pocket figures apply to going direct to a private hospital.',
+    note: 'Persalinan ditanggung selama jalur rujukannya diikuti. Angka di atas berlaku untuk yang langsung ke rumah sakit swasta.',
   }),
-  antenatal: sourced(5_000_000_00n, 'Nine antenatal visits plus scans', 'industry'),
+  antenatal: sourced(5_000_000_00n, 'Sembilan kali kontrol kehamilan beserta USG', 'industry'),
 } as const
 
 /** Recurring non-school cost of a child, over and above the household total. */
 export const CHILD_MONTHLY_BASELINE = sourced(
   1_500_000_00n,
-  'Derived from the OECD-modified 0,3 weight applied to a median Jabodetabek household',
+  'Diturunkan dari bobot 0,3 skala OECD yang dimodifikasi, diterapkan pada rumah tangga median Jabodetabek',
   'derived',
-  { note: 'Nappies, milk, clothing, healthcare and childcare. Replaced by the household equivalence scale once real spending exists.' },
+  { note: 'Popok, susu, pakaian, kesehatan dan penitipan. Digantikan skala ekuivalensi rumah tangga begitu ada data belanja yang sebenarnya.' },
 )
 
 // --- Hajj --------------------------------------------------------------
@@ -482,15 +482,15 @@ export const CHILD_MONTHLY_BASELINE = sourced(
 export const HAJJ = {
   initialDeposit: sourced(25_000_000_00n, 'Kementerian Agama, setoran awal', 'regulator', {
     url: 'https://haji.kemenag.go.id/',
-    note: 'Paid once to enter the queue. The queue position is set by the date this clears, not by the total saved.',
+    note: 'Dibayar sekali untuk masuk antrean. Nomor antrean ditentukan tanggal setoran ini masuk, bukan oleh total yang sudah terkumpul.',
   }),
   totalBipih: sourced(56_046_172_00n, 'Bipih 2026, national average', 'regulator', {
-    note: 'The pilgrim portion. The rest is covered from the value accrued on funds already deposited.',
+    note: 'Bagian yang ditanggung jemaah. Sisanya ditutup dari nilai manfaat dana yang sudah disetorkan.',
   }),
   waitingYears: sourced([25, 30] as [number, number], 'Kementerian Agama queue estimates', 'regulator', {
-    note: 'Varies widely by province; South Sulawesi and Kalimantan Selatan run far longer than Jakarta.',
+    note: 'Sangat berbeda antar provinsi; Sulawesi Selatan dan Kalimantan Selatan jauh lebih panjang daripada Jakarta.',
   }),
-  umrahTypical: sourced(35_000_000_00n, 'Travel agent pricing, 2026', 'industry'),
+  umrahTypical: sourced(35_000_000_00n, 'Harga biro perjalanan, 2026', 'industry'),
 } as const
 
 // --- Income tax --------------------------------------------------------
@@ -514,10 +514,10 @@ export const PTKP: Record<string, bigint> = {
 }
 
 export const PTKP_SOURCE = sourced(
-  'PMK 101/PMK.010/2016, unchanged through 2026',
+  'PMK 101/PMK.010/2016, tidak berubah sampai 2026',
   'Direktorat Jenderal Pajak',
   'regulator',
-  { url: 'https://www.pajak.go.id/', note: 'A maximum of three dependants may be claimed.' },
+  { url: 'https://www.pajak.go.id/', note: 'Tanggungan yang bisa diklaim maksimal tiga orang.' },
 )
 
 export const PPH21_BRACKETS: TaxBracket[] = [
@@ -534,6 +534,6 @@ export const PPH21_SOURCE = sourced(
   'regulator',
   {
     url: 'https://www.pajak.go.id/',
-    note: 'Employers withhold monthly using the TER A/B/C tables and settle the difference in December. The annual brackets are what the year actually owes.',
+    note: 'Pemberi kerja memotong bulanan memakai tabel TER A/B/C dan melunasi selisihnya di Desember. Lapisan tahunan inilah yang benar-benar terutang setahun.',
   },
 )

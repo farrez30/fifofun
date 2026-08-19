@@ -244,7 +244,7 @@ describe('hajjPlan', () => {
     expect(plan.monthsToDeposit).toBeNull()
     expect(plan.queueEntryYear).toBeNull()
     expect(plan.departureYears).toBeNull()
-    expect(plan.insight).toMatch(/queue/i)
+    expect(plan.insight).toMatch(/antrean/i)
   })
 
   it('prices the balance in the money of the departure year, not today', () => {
@@ -260,7 +260,7 @@ describe('hajjPlan', () => {
   })
 
   it('says why the deposit outranks a larger goal', () => {
-    expect(hajjPlan(2_000_000_00n, 2026).insight).toMatch(/forward/i)
+    expect(hajjPlan(2_000_000_00n, 2026).insight).toMatch(/memajukan/i)
   })
 })
 

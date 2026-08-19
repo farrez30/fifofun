@@ -50,12 +50,12 @@ export function getFramework(id: string): AllocationFramework {
 function rationaleFor(bucket: AllocationBucket, framework: AllocationFramework): string {
   const percent = `${Math.round(bucket.share * 100)}%`
   if (bucket.bound === 'min') {
-    return `${framework.name} treats ${percent} as a floor for ${bucket.label.toLowerCase()}: ${bucket.description}. Going below it is the compromise to avoid.`
+    return `${framework.name} menaruh ${percent} sebagai batas bawah untuk ${bucket.label.toLowerCase()}: ${bucket.description}. Turun di bawahnya adalah kompromi yang paling mahal belakangan.`
   }
   if (bucket.bound === 'max') {
-    return `${framework.name} treats ${percent} as a ceiling for ${bucket.label.toLowerCase()}: ${bucket.description}. Staying under it is what keeps the rest of the plan viable.`
+    return `${framework.name} menaruh ${percent} sebagai batas atas untuk ${bucket.label.toLowerCase()}: ${bucket.description}. Bertahan di bawahnya yang membuat pos-pos lain tetap masuk akal.`
   }
-  return `${framework.name} targets ${percent} for ${bucket.label.toLowerCase()}: ${bucket.description}.`
+  return `${framework.name} menargetkan ${percent} untuk ${bucket.label.toLowerCase()}: ${bucket.description}.`
 }
 
 /** Allocates take-home income across a framework's buckets. */
@@ -112,36 +112,36 @@ export function recommendFramework(profile: HouseholdProfile): FrameworkRecommen
   if (profile.irregularIncome) {
     return pick(
       'qm-1234',
-      'Income varies month to month, so floors and ceilings hold up better than fixed percentages. Apply them to a trailing six-month average rather than to whatever arrived this month.',
+      'Penghasilanmu berubah tiap bulan, jadi batas bawah dan batas atas lebih bertahan daripada persentase kaku. Terapkan pada rata-rata enam bulan terakhir, bukan pada apa pun yang masuk bulan ini.',
     )
   }
   if ((profile.debtServiceRatio ?? 0) > 0.2) {
     return pick(
       '40-30-20-10',
-      'Instalments already take a substantial share of income, and this framework is the one that budgets for them explicitly rather than folding them into general needs.',
+      'Cicilan sudah mengambil bagian besar dari penghasilan, dan kerangka ini satu-satunya yang menganggarkannya secara terpisah alih-alih melebur ke kebutuhan umum.',
     )
   }
   if (profile.wantsZakatBucket) {
     return pick(
       'zapfin',
-      'Zakat is treated as a bucket in its own right, and sinking funds are kept separate from long-term investing, which suits planning around recurring religious and family obligations.',
+      'Zakat diperlakukan sebagai pos tersendiri, dan sinking fund dipisah dari investasi jangka panjang. Cocok untuk perencanaan yang berputar pada kewajiban keagamaan dan keluarga yang berulang.',
     )
   }
   if (profile.children > 0) {
     return pick(
       'ojk-10-20-30-40',
-      'With children in the household, the future bucket has to cover education alongside the emergency fund and insurance, which this split sizes explicitly.',
+      'Dengan anak di rumah, pos masa depan harus menanggung pendidikan bersama dana darurat dan asuransi, dan pembagian inilah yang menakarnya secara eksplisit.',
     )
   }
   if (profile.adults === 1) {
     return pick(
       '50-30-20',
-      'A single earner with no dependants and no instalments has the fewest constraints, so the simplest framework is the one most likely to be followed.',
+      'Satu pencari nafkah tanpa tanggungan dan tanpa cicilan punya paling sedikit batasan, jadi kerangka paling sederhana adalah yang paling mungkin benar-benar dijalankan.',
     )
   }
   return pick(
     'ojk-10-20-30-40',
-    'A general-purpose Indonesian default, published by the financial regulator.',
+    'Pilihan bawaan untuk keadaan umum di Indonesia, diterbitkan oleh otoritas jasa keuangan.',
   )
 }
 
@@ -174,7 +174,7 @@ export function householdScaling(
     return {
       method,
       multiplier,
-      explanation: `Counts every person as a full extra household. Simple, but it ignores that housing, utilities and internet are shared, so it overstates the cost of living together.`,
+      explanation: `Menghitung setiap orang sebagai satu rumah tangga penuh. Sederhana, tapi mengabaikan bahwa tempat tinggal, utilitas dan internet dipakai bersama, sehingga biaya hidup bersama jadi terlalu besar.`,
     }
   }
 
@@ -183,7 +183,7 @@ export function householdScaling(
     return {
       method,
       multiplier: Number(multiplier.toFixed(3)),
-      explanation: `The square root of household size, used in recent OECD work. Assumes economies of scale grow with every additional member.`,
+      explanation: `Akar kuadrat dari jumlah anggota, dipakai dalam kajian OECD terbaru. Mengasumsikan penghematan skala bertambah seiring setiap anggota baru.`,
     }
   }
 
@@ -195,7 +195,7 @@ export function householdScaling(
   return {
     method,
     multiplier: Number(multiplier.toFixed(3)),
-    explanation: `OECD-modified scale: the first adult counts as 1, each further adult as 0,5 and each child as 0,3. A couple therefore costs about 1,5 times one person rather than 2, which is the real financial case for sharing a household.`,
+    explanation: `Skala OECD yang dimodifikasi: dewasa pertama dihitung 1, dewasa berikutnya 0,5 dan tiap anak 0,3. Pasangan karena itu menghabiskan sekitar 1,5 kali satu orang, bukan 2, dan di situlah letak alasan finansial berbagi rumah tangga.`,
   }
 }
 
@@ -257,17 +257,17 @@ export function emergencyFundTarget(
   const rule = EMERGENCY_FUND.rules.find((r) => r.months === months)
 
   const because = profile.irregularIncome
-    ? 'income that varies month to month means a bad stretch can last longer than a salaried gap'
+    ? 'penghasilan yang berubah tiap bulan berarti masa paceklik bisa lebih panjang daripada jeda gaji'
     : profile.children > 0
-      ? `${profile.children} ${profile.children === 1 ? 'child depends' : 'children depend'} on this income`
+      ? `${profile.children} anak bergantung pada penghasilan ini`
       : profile.adults >= 2
-        ? 'two adults share the household, so a single income shock affects both'
-        : 'a single earner with no dependants can recover faster'
+        ? 'dua orang dewasa berbagi rumah tangga, jadi satu guncangan penghasilan mengenai keduanya'
+        : 'satu pencari nafkah tanpa tanggungan bisa pulih lebih cepat'
 
   return {
     months,
     amount: monthlyExpenses * BigInt(months),
     rule: rule?.label ?? 'Custom',
-    rationale: `${months} months of expenses, because ${because}. OJK sets three months as the absolute floor regardless of circumstances.`,
+    rationale: `${months} bulan pengeluaran, karena ${because}. OJK menetapkan tiga bulan sebagai batas paling bawah, apa pun keadaannya.`,
   }
 }

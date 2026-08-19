@@ -139,6 +139,6 @@ describe('recommendSpacing', () => {
   it('explains the recommendation rather than just asserting it', () => {
     const reason = recommendSpacing().reason
     expect(reason).toMatch(/4, 5/)
-    expect(reason).toMatch(/health/)
+    expect(reason).toMatch(/kesehatan/)
   })
 })

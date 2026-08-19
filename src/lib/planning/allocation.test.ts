@@ -106,7 +106,7 @@ describe('recommendFramework', () => {
   it('puts irregular income on floors and ceilings, not fixed percentages', () => {
     const result = recommendFramework({ adults: 1, children: 0, irregularIncome: true })
     expect(result.framework.id).toBe('qm-1234')
-    expect(result.reason).toContain('six-month')
+    expect(result.reason).toContain('enam bulan')
   })
 
   it('prefers the framework that budgets instalments explicitly when debt is heavy', () => {
@@ -192,7 +192,7 @@ describe('emergency fund', () => {
     const target = emergencyFundTarget(parseIdAmount('8.000.000,00'), { adults: 2, children: 1 })
     expect(target.months).toBe(9)
     expect(target.amount).toBe(parseIdAmount('72.000.000,00'))
-    expect(target.rationale).toContain('child depends')
-    expect(target.rationale).toContain('three months')
+    expect(target.rationale).toContain('anak bergantung')
+    expect(target.rationale).toContain('tiga bulan')
   })
 })
