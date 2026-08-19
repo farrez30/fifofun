@@ -285,6 +285,24 @@ async function main(): Promise<void> {
   }
 
   console.log(`\nInserted ${inserted}, skipped ${skipped} already present, ${flagged} need review.`)
+
+  // A wrong phone number is indistinguishable from a right one row by row: every
+  // top-up simply reads as a payment to somebody else. It is obvious in the
+  // aggregate, so the aggregate is what gets checked.
+  if (walletSeen > 0) {
+    console.log(`Wallet payments: ${walletSeen} seen, ${walletMatched} recognised as your own.`)
+
+    if (walletMatched === 0) {
+      console.error(
+        `\nWARNING: none of the ${walletSeen} wallet payments matched --own.\n` +
+          `Every top-up has been recorded as spending, which overstates it and\n` +
+          `leaves the wallet accounts empty. Re-run with the phone numbers behind\n` +
+          `your e-wallet accounts.`,
+      )
+      process.exit(2)
+    }
+  }
+
   process.exit(0)
 }
 
