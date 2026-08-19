@@ -1,1 +1,184 @@
-@import "tailwindcss";
+@import 'tailwindcss';
+
+/*
+  FiFoFun design tokens.
+
+  Three rules drive the choices below, each one a reaction to how AI-generated
+  interfaces tend to look:
+
+  1. The page is never pure white and never near-black-with-purple. The base is
+     warm paper; the ink is a warm near-black. Both carry a trace of chroma so
+     the screen reads as a considered surface rather than a default.
+  2. Separation comes from 1px borders, not drop shadows. It is the idiom that
+     makes dense financial tables legible, and it survives dark mode intact.
+  3. Money is never coloured by hue alone. Over and under budget carry an icon
+     and a position as well, because red and green are the pair roughly one man
+     in twelve cannot reliably tell apart.
+*/
+
+@theme {
+  --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+  /* Figures sit in a monospace with true tabular widths so columns of Rupiah
+     line up on the decimal without any per-cell alignment work. */
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', monospace;
+
+  /* A deliberate radius scale rather than rounded-xl on everything. */
+  --radius-xs: 0.1875rem;
+  --radius-sm: 0.3125rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+
+  /* Surfaces */
+  --color-paper: oklch(98.6% 0.004 85);
+  --color-surface: oklch(100% 0 0);
+  --color-sunken: oklch(96.4% 0.006 85);
+  --color-line: oklch(90.5% 0.006 85);
+  --color-line-strong: oklch(83% 0.008 85);
+
+  /* Ink */
+  --color-ink: oklch(24% 0.012 75);
+  --color-ink-muted: oklch(48% 0.012 75);
+  --color-ink-faint: oklch(62% 0.01 75);
+
+  /* One accent, not a rainbow. A deep teal reads as money without resorting
+     to the green that every finance template reaches for first. */
+  --color-accent: oklch(52% 0.098 196);
+  --color-accent-strong: oklch(44% 0.105 196);
+  --color-accent-wash: oklch(95.5% 0.022 196);
+
+  /* Semantic money colours. Always paired with an icon in the markup. */
+  --color-over: oklch(56% 0.16 32);
+  --color-over-wash: oklch(95.5% 0.03 32);
+  --color-under: oklch(50% 0.09 172);
+  --color-under-wash: oklch(95.5% 0.028 172);
+  --color-warn: oklch(66% 0.13 75);
+  --color-warn-wash: oklch(96% 0.035 75);
+}
+
+@layer base {
+  :root {
+    color-scheme: light dark;
+  }
+
+  /*
+    Dark mode is designed, not inverted. The surfaces keep the same warm hue as
+    the light theme and separate by lightness, so the two feel like one product
+    seen under different light.
+  */
+  @media (prefers-color-scheme: dark) {
+    @theme {
+      --color-paper: oklch(17.5% 0.008 75);
+      --color-surface: oklch(21% 0.009 75);
+      --color-sunken: oklch(14.5% 0.007 75);
+      --color-line: oklch(28% 0.009 75);
+      --color-line-strong: oklch(36% 0.011 75);
+
+      --color-ink: oklch(93% 0.006 85);
+      --color-ink-muted: oklch(70% 0.008 85);
+      --color-ink-faint: oklch(56% 0.008 85);
+
+      --color-accent: oklch(72% 0.095 196);
+      --color-accent-strong: oklch(80% 0.09 196);
+      --color-accent-wash: oklch(28% 0.045 196);
+
+      --color-over: oklch(70% 0.14 32);
+      --color-over-wash: oklch(29% 0.06 32);
+      --color-under: oklch(72% 0.09 172);
+      --color-under-wash: oklch(27% 0.05 172);
+      --color-warn: oklch(78% 0.12 75);
+      --color-warn-wash: oklch(30% 0.055 75);
+    }
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    /* Slightly tighter than default; IBM Plex sets a touch loose for UI. */
+    line-height: 1.5;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Every figure in the app is tabular, so columns align without extra work. */
+  .tnum,
+  table {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+  }
+
+  /* A focus ring that is actually visible, on every interactive element. */
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+    border-radius: var(--radius-xs);
+  }
+
+  /* Respect a stated preference for less motion rather than overriding it. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* Touch targets stay finger-sized on coarse pointers. */
+  @media (pointer: coarse) {
+    :where(button, a[role='button'], input[type='checkbox'], input[type='radio']) {
+      min-height: 2.75rem;
+      min-width: 2.75rem;
+    }
+  }
+
+  ::selection {
+    background-color: var(--color-accent-wash);
+    color: var(--color-ink);
+  }
+}
+
+@layer components {
+  /*
+    The loading skeleton. Its absence is one of the clearest signs a page was
+    generated rather than designed, so it is a primitive here rather than an
+    afterthought.
+  */
+  .skeleton {
+    background-color: var(--color-sunken);
+    border-radius: var(--radius-sm);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in oklch, var(--color-line) 60%, transparent),
+      transparent
+    );
+    animation: skeleton-sweep 1.4s ease-in-out infinite;
+  }
+
+  @keyframes skeleton-sweep {
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton::after {
+      display: none;
+    }
+  }
+}
