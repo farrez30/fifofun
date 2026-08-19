@@ -53,3 +53,6 @@ graphify-out/
 # local tooling scratch
 .nextdocs
 /tmp/
+
+# agent tooling config (regenerated locally by next dev)
+CLAUDE.md
