@@ -46,6 +46,12 @@ export interface ConversionResult {
   review: ReviewItem[]
   /** Rows whose money never really belonged to the user. */
   passThroughIds: string[]
+  /**
+   * The classification behind each entry, positionally aligned with `entries`.
+   * Returned so callers can map to their own categories without paying to
+   * classify a second time.
+   */
+  classifications: Classification[]
 }
 
 /** Which cashflow bucket each bank-level kind lands in by default. */
@@ -243,5 +249,5 @@ export function statementToLedger(
     }
   }
 
-  return { entries, review, passThroughIds: [...passThrough] }
+  return { entries, review, passThroughIds: [...passThrough], classifications: classes }
 }
