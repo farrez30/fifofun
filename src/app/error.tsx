@@ -46,6 +46,16 @@ export default function Error({
         >
           Coba lagi
         </button>
+        {/*
+          A plain anchor rather than <Link>, deliberately.
+
+          This is a recovery path. A client-side navigation reuses the router
+          state that the page just failed inside; a full document load throws all
+          of it away and starts clean. Slower, and far likelier to work, which is
+          the trade worth making on the one screen a user reaches only when
+          something already went wrong.
+        */}
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
         <a
           href="/"
           className="flex h-11 items-center rounded-sm border border-line px-5 text-sm text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
