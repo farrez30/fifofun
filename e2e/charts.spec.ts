@@ -795,6 +795,111 @@ test.describe('jalan ke tujuan', () => {
   })
 })
 
+test.describe('anjuran dibanding kenyataan', () => {
+  /** Each row's bar, its marker and the shaded side, in document order. */
+  function rows(page: import('@playwright/test').Page) {
+    return page.evaluate(`(() => {
+      const box = (el) => { const b = el.getBoundingClientRect(); return { left: b.left, right: b.right, width: b.width } }
+      return [...document.querySelectorAll('[data-group]')].map((bar) => {
+        const track = bar.parentElement
+        return {
+          verdict: bar.getAttribute('data-verdict'),
+          bound: bar.getAttribute('data-bound'),
+          bar: box(bar),
+          track: box(track),
+          marker: box(track.querySelector('[data-marker]')),
+          offside: box(track.querySelector('[data-offside]')),
+          side: track.querySelector('[data-offside]').getAttribute('data-offside'),
+        }
+      })
+    })()`) as Promise<
+      {
+        verdict: string
+        bound: string
+        bar: { left: number; right: number; width: number }
+        track: { left: number; right: number; width: number }
+        marker: { left: number; right: number; width: number }
+        offside: { left: number; right: number; width: number }
+        side: string
+      }[]
+    >
+  }
+
+  for (const fixture of ['adherence', 'adherence-healthy', 'adherence-hypothetical']) {
+    test(`has every bar agree with its own verdict on ${fixture}`, async ({ page }) => {
+      await open(page, fixture)
+      const all = await rows(page)
+      expect(all.length).toBeGreaterThan(0)
+
+      for (const row of all) {
+        // The verdict is arithmetic and the crossing is geometry, and a reader
+        // takes the crossing at face value. If they ever disagreed the chart
+        // would be contradicting the sentence printed under it.
+        if (row.verdict === 'over') {
+          expect(row.bar.right, row.bound).toBeGreaterThan(row.marker.left)
+        } else if (row.verdict === 'short') {
+          expect(row.bar.right, row.bound).toBeLessThan(row.marker.left)
+        } else if (row.bound === 'min') {
+          expect(row.bar.right).toBeGreaterThanOrEqual(row.marker.left - 1)
+        } else {
+          expect(row.bar.right).toBeLessThanOrEqual(row.marker.right + 1)
+        }
+      }
+    })
+
+    test(`shades the wrong side of the marker on ${fixture}`, async ({ page }) => {
+      await open(page, fixture)
+
+      for (const row of await rows(page)) {
+        // The budget panel shares this bullet row, and there a bar past its
+        // marker always means a breach. Here passing a floor is the household
+        // doing well, so the track has to say which side is the wrong one.
+        if (row.bound === 'min') {
+          expect(row.side).toBe('below')
+          expect(Math.abs(row.offside.left - row.track.left)).toBeLessThan(2)
+          expect(Math.abs(row.offside.right - row.marker.left)).toBeLessThan(2)
+        } else {
+          expect(row.side).toBe('above')
+          expect(Math.abs(row.offside.left - row.marker.left)).toBeLessThan(2)
+          expect(Math.abs(row.offside.right - row.track.right)).toBeLessThan(2)
+        }
+      }
+    })
+  }
+
+  test('names the two buckets it had to fold together, and only there', async ({ page }) => {
+    await open(page, 'adherence-healthy')
+
+    // Three groups on OJK: needs and kebaikan share the spending pot, while
+    // instalments and the future pot are each readable on their own. Only the
+    // folded row may carry the explanation, or the note stops meaning anything.
+    await expect(page.locator('[data-group]')).toHaveCount(3)
+    await expect(page.getByText(/dibaca sebagai satu angka/)).toHaveCount(1)
+    await expect(page.getByText(/Kebutuhan pokok dan Kebaikan dibaca sebagai satu angka/)).toBeVisible()
+  })
+
+  test('says out loud when the verdict is against an income nobody earned', async ({ page }) => {
+    await open(page, 'adherence-hypothetical')
+
+    // Typing a hopeful salary into the simulator otherwise buys a flattering
+    // verdict about spending that has not moved at all.
+    await expect(page.getByText(/penghasilan yang kamu ketik/)).toBeVisible()
+
+    await open(page, 'adherence')
+    await expect(page.getByText(/penghasilan yang kamu ketik/)).toHaveCount(0)
+  })
+
+  test('reports a month that outspent its income rather than clamping it', async ({ page }) => {
+    await open(page, 'adherence')
+    await expect(page.getByText(/Rp2\.114\.946 lebih besar daripada penghasilan/)).toBeVisible()
+  })
+
+  test('reports income that never got a job', async ({ page }) => {
+    await open(page, 'adherence-healthy')
+    await expect(page.getByText(/Rp4\.000\.000 dari penghasilan bulan itu tidak masuk pos mana pun/)).toBeVisible()
+  })
+})
+
 test.describe('lebar halaman', () => {
   test('nothing pushes the page sideways on a narrow screen', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 })
@@ -810,6 +915,8 @@ test.describe('lebar halaman', () => {
       'funds',
       'glidepath',
       'glidepath-soon',
+      'adherence',
+      'adherence-healthy',
     ]) {
       await open(page, fixture)
 

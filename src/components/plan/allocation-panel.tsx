@@ -2,6 +2,9 @@
 
 import { FRAMEWORKS } from '@/lib/planning/constants'
 import { allocateIncome, recommendFramework, type HouseholdProfile } from '@/lib/planning/allocation'
+import { assessAdherence } from '@/lib/planning/adherence'
+import type { FinancialSnapshot } from '@/lib/planning/ratios'
+import { AdherenceBullet } from '@/components/chart/adherence-bullet'
 import { formatIdr } from '@/lib/money'
 import { SelectField, SourceNote } from './field'
 
@@ -19,6 +22,10 @@ interface Props {
   frameworkId: string
   onFrameworkChange: (id: string) => void
   profile: HouseholdProfile
+  /** What the ledger says actually happens, carrying the income above. */
+  snapshot: FinancialSnapshot
+  /** The income the ledger observed, to flag figures run against a typed one. */
+  observedIncome: bigint
 }
 
 const BOUND_LABEL = {
@@ -27,8 +34,16 @@ const BOUND_LABEL = {
   target: 'target',
 } as const
 
-export function AllocationPanel({ income, frameworkId, onFrameworkChange, profile }: Props) {
+export function AllocationPanel({
+  income,
+  frameworkId,
+  onFrameworkChange,
+  profile,
+  snapshot,
+  observedIncome,
+}: Props) {
   const allocation = allocateIncome(income, frameworkId)
+  const adherence = assessAdherence(snapshot, frameworkId)
   const recommendation = recommendFramework(profile)
   const isRecommended = recommendation.framework.id === frameworkId
 
@@ -113,6 +128,12 @@ export function AllocationPanel({ income, frameworkId, onFrameworkChange, profil
           </p>
         ) : null}
       </div>
+
+      <AdherenceBullet
+        adherence={adherence}
+        observedIncome={observedIncome}
+        caption="Anjurannya dibandingkan dengan yang sebenarnya terjadi"
+      />
 
       <div className="space-y-1">
         <SourceNote

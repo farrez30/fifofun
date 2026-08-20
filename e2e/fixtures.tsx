@@ -18,6 +18,9 @@ import { buildCategoryTrends } from '@/lib/ledger/category-trend'
 import { reviewFunds } from '@/lib/ledger/funds'
 import type { MonthlySeries, MonthlyStatement } from '@/lib/ledger/monthly'
 import { parseIdAmount as idr } from '@/lib/money'
+import { AdherenceBullet } from '@/components/chart/adherence-bullet'
+import { assessAdherence } from '@/lib/planning/adherence'
+import type { FinancialSnapshot } from '@/lib/planning/ratios'
 import { GoalGlidepath } from '@/components/chart/goal-glidepath'
 import { projectFamily } from '@/lib/planning/children'
 import { monthlyContribution, suggestInstrument } from '@/lib/planning/goals'
@@ -321,6 +324,31 @@ const OVERDRAWN: MonthlyStatement = {
   sisaUang: -idr('600.000,00'),
 }
 
+/*
+  March 2026 as it really was: Rp6,17jt earned against Rp8,29jt of spending and
+  nothing set aside. The month the whole quality problem was found in, and the
+  one every bound in every framework fails at once.
+*/
+const TIGHT_MONTH: FinancialSnapshot = {
+  monthlyIncome: idr('6.172.514,00'),
+  monthlyDebtService: 0n,
+  monthlySavings: 0n,
+  monthlyExpenses: idr('8.287.460,00'),
+  liquidAssets: idr('3.980.551,31'),
+  totalAssets: idr('3.980.551,31'),
+  totalDebt: 0n,
+}
+
+const ROOMY: FinancialSnapshot = {
+  monthlyIncome: idr('20.000.000,00'),
+  monthlyDebtService: idr('2.000.000,00'),
+  monthlySavings: idr('5.000.000,00'),
+  monthlyExpenses: idr('11.000.000,00'),
+  liquidAssets: idr('100.000.000,00'),
+  totalAssets: idr('100.000.000,00'),
+  totalDebt: idr('50.000.000,00'),
+}
+
 export const FIXTURES = {
   bills: <BillsPanel review={BILLS} />,
   'bills-untouched': <BillsPanel review={BILLS_UNTOUCHED} />,
@@ -430,6 +458,32 @@ export const FIXTURES = {
     <GoalGlidepath
       {...goal(idr('35.000.000,00'), 5, idr('40.000.000,00'))}
       caption="Sudah tertutup"
+    />
+  ),
+  // Every bound missed at once, on the household's own worst real month.
+  adherence: (
+    <AdherenceBullet
+      adherence={assessAdherence(TIGHT_MONTH, '50-30-20')}
+      observedIncome={TIGHT_MONTH.monthlyIncome}
+      caption="Anjurannya dibandingkan dengan yang sebenarnya terjadi"
+    />
+  ),
+  // Inside every bound, and with instalments readable on their own because OJK
+  // is one of the frameworks that lets them be.
+  'adherence-healthy': (
+    <AdherenceBullet
+      adherence={assessAdherence(ROOMY, 'ojk-10-20-30-40')}
+      observedIncome={ROOMY.monthlyIncome}
+      caption="Anjurannya dibandingkan dengan yang sebenarnya terjadi"
+    />
+  ),
+  // Run against an income somebody typed rather than one the ledger saw, which
+  // has to be said out loud or the verdict flatters a salary that does not exist.
+  'adherence-hypothetical': (
+    <AdherenceBullet
+      adherence={assessAdherence({ ...TIGHT_MONTH, monthlyIncome: idr('30.000.000,00') }, '50-30-20')}
+      observedIncome={TIGHT_MONTH.monthlyIncome}
+      caption="Anjurannya dibandingkan dengan yang sebenarnya terjadi"
     />
   ),
 }

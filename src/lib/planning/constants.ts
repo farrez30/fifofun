@@ -76,6 +76,18 @@ export const INFLATION = {
 
 // --- Budget allocation frameworks --------------------------------------
 
+/**
+ * The three pots a ledger can tell apart on its own.
+ *
+ * A cashflow type is something the household already assigned, so reading a pot
+ * off it states a fact rather than a guess. Splitting `spend` any further, into
+ * needs against wants, is not something a bank statement can support: a
+ * subscription and a rent payment are both Bills, and only a person can say
+ * which of them is optional. The panel says so rather than inventing a taxonomy
+ * and quoting it beside figures that carry real citations.
+ */
+export type BucketSource = 'spend' | 'debt' | 'save'
+
 export interface AllocationBucket {
   key: string
   label: string
@@ -84,6 +96,13 @@ export interface AllocationBucket {
   /** Treat `share` as a floor, a ceiling, or a target. */
   bound: 'min' | 'max' | 'target'
   description: string
+  /**
+   * Which pots this bucket is paid out of, read off its own description above.
+   * Writing them down here rather than deriving them elsewhere keeps the claim
+   * the framework's own: OJK is the one saying cicilan produktif means
+   * instalments, and this field only puts that in a checkable form.
+   */
+  sources: BucketSource[]
 }
 
 export interface AllocationFramework {
@@ -114,9 +133,9 @@ export const FRAMEWORKS: AllocationFramework[] = [
     url: 'https://www.djkn.kemenkeu.go.id/kpknl-metro/baca-artikel/17112/Budget-503020-Apa-Itu-dan-Manfaatnya.html',
     suitsWhen: 'Lajang, utang ringan atau tidak ada, baru mulai menyusun anggaran',
     buckets: [
-      { key: 'needs', label: 'Kebutuhan', share: 0.5, bound: 'target', description: 'Tempat tinggal, makan, transport, utilitas, cicilan minimum' },
-      { key: 'wants', label: 'Keinginan', share: 0.3, bound: 'target', description: 'Makan di luar, hiburan, langganan, jalan-jalan' },
-      { key: 'savings', label: 'Tabungan & investasi', share: 0.2, bound: 'min', description: 'Dana darurat, investasi, pelunasan pokok utang lebih cepat' },
+      { key: 'needs', label: 'Kebutuhan', share: 0.5, bound: 'target', description: 'Tempat tinggal, makan, transport, utilitas, cicilan minimum', sources: ['spend', 'debt'] },
+      { key: 'wants', label: 'Keinginan', share: 0.3, bound: 'target', description: 'Makan di luar, hiburan, langganan, jalan-jalan', sources: ['spend'] },
+      { key: 'savings', label: 'Tabungan & investasi', share: 0.2, bound: 'min', description: 'Dana darurat, investasi, pelunasan pokok utang lebih cepat', sources: ['save'] },
     ],
     caveat:
       'Rontok begitu tempat tinggal saja sudah memakan lebih dari separuh penghasilan, dan itu lazim pada gaji pemula di Jabodetabek.',
@@ -130,10 +149,10 @@ export const FRAMEWORKS: AllocationFramework[] = [
     url: 'https://www.djkn.kemenkeu.go.id/kpknl-metro/baca-artikel/13811/Tips-Alokasi-Penghasilan-Bulanan.html',
     suitsWhen: 'Sedang menanggung KPR atau cicilan kendaraan',
     buckets: [
-      { key: 'living', label: 'Biaya hidup', share: 0.4, bound: 'target', description: 'Makan, transport, utilitas, internet' },
-      { key: 'debt', label: 'Cicilan', share: 0.3, bound: 'max', description: 'Cicilan rumah, kendaraan, perabot, gawai' },
-      { key: 'savings', label: 'Tabungan & investasi', share: 0.2, bound: 'min', description: 'Dana darurat, asuransi, investasi, dana pendidikan' },
-      { key: 'social', label: 'Sosial & hiburan', share: 0.1, bound: 'target', description: 'Sedekah, makan di luar, hadiah, rekreasi' },
+      { key: 'living', label: 'Biaya hidup', share: 0.4, bound: 'target', description: 'Makan, transport, utilitas, internet', sources: ['spend'] },
+      { key: 'debt', label: 'Cicilan', share: 0.3, bound: 'max', description: 'Cicilan rumah, kendaraan, perabot, gawai', sources: ['debt'] },
+      { key: 'savings', label: 'Tabungan & investasi', share: 0.2, bound: 'min', description: 'Dana darurat, asuransi, investasi, dana pendidikan', sources: ['save'] },
+      { key: 'social', label: 'Sosial & hiburan', share: 0.1, bound: 'target', description: 'Sedekah, makan di luar, hadiah, rekreasi', sources: ['spend'] },
     ],
   },
   {
@@ -145,10 +164,10 @@ export const FRAMEWORKS: AllocationFramework[] = [
     url: 'https://sikapiuangmu.ojk.go.id/',
     suitsWhen: 'Pilihan bawaan yang cocok untuk kebanyakan keadaan di Indonesia',
     buckets: [
-      { key: 'needs', label: 'Kebutuhan pokok', share: 0.4, bound: 'target', description: 'Makan, transport, tempat tinggal, listrik, air, internet' },
-      { key: 'debt', label: 'Cicilan produktif', share: 0.3, bound: 'max', description: 'KPR, kendaraan, dan kredit produktif lainnya' },
-      { key: 'future', label: 'Asuransi, investasi & dana darurat', share: 0.2, bound: 'min', description: 'Dana darurat, asuransi, pensiun, pendidikan' },
-      { key: 'social', label: 'Kebaikan', share: 0.1, bound: 'target', description: 'Sedekah, membantu keluarga, kegiatan sosial' },
+      { key: 'needs', label: 'Kebutuhan pokok', share: 0.4, bound: 'target', description: 'Makan, transport, tempat tinggal, listrik, air, internet', sources: ['spend'] },
+      { key: 'debt', label: 'Cicilan produktif', share: 0.3, bound: 'max', description: 'KPR, kendaraan, dan kredit produktif lainnya', sources: ['debt'] },
+      { key: 'future', label: 'Asuransi, investasi & dana darurat', share: 0.2, bound: 'min', description: 'Dana darurat, asuransi, pensiun, pendidikan', sources: ['save'] },
+      { key: 'social', label: 'Kebaikan', share: 0.1, bound: 'target', description: 'Sedekah, membantu keluarga, kegiatan sosial', sources: ['spend'] },
     ],
   },
   {
@@ -159,12 +178,12 @@ export const FRAMEWORKS: AllocationFramework[] = [
     confidence: 'industry',
     suitsWhen: 'Rumah tangga muslim, dan siapa pun yang ingin sinking fund dipisah dari investasi jangka panjang',
     buckets: [
-      { key: 'zakat', label: 'Zakat & sosial', share: 0.05, bound: 'min', description: 'Zakat, sedekah, menyokong orang tua' },
-      { key: 'assurance', label: 'Assurance', share: 0.05, bound: 'min', description: 'Premi asuransi dan dana darurat' },
-      { key: 'present', label: 'Present consumption', share: 0.65, bound: 'max', description: 'Biaya hidup bulanan dan cicilan' },
-      { key: 'future', label: 'Future spending', share: 0.05, bound: 'min', description: 'Sinking fund untuk pengeluaran besar yang sudah direncanakan' },
-      { key: 'investment', label: 'Investment', share: 0.1, bound: 'min', description: 'Pensiun dan pendidikan, jangka panjang' },
-      { key: 'lifestyle', label: 'Lifestyle', share: 0.1, bound: 'max', description: 'Rekreasi dan pengeluaran yang sifatnya pilihan' },
+      { key: 'zakat', label: 'Zakat & sosial', share: 0.05, bound: 'min', description: 'Zakat, sedekah, menyokong orang tua', sources: ['spend'] },
+      { key: 'assurance', label: 'Assurance', share: 0.05, bound: 'min', description: 'Premi asuransi dan dana darurat', sources: ['spend'] },
+      { key: 'present', label: 'Present consumption', share: 0.65, bound: 'max', description: 'Biaya hidup bulanan dan cicilan', sources: ['spend', 'debt'] },
+      { key: 'future', label: 'Future spending', share: 0.05, bound: 'min', description: 'Sinking fund untuk pengeluaran besar yang sudah direncanakan', sources: ['save'] },
+      { key: 'investment', label: 'Investment', share: 0.1, bound: 'min', description: 'Pensiun dan pendidikan, jangka panjang', sources: ['save'] },
+      { key: 'lifestyle', label: 'Lifestyle', share: 0.1, bound: 'max', description: 'Rekreasi dan pengeluaran yang sifatnya pilihan', sources: ['spend'] },
     ],
     caveat:
       'Sengaja diberi label adaptasi: ZAP Finance tidak pernah menerbitkan tabel persentase resmi, jadi angka yang beredar adalah tafsir media.',
@@ -178,10 +197,10 @@ export const FRAMEWORKS: AllocationFramework[] = [
     url: 'https://qmfinancial.com/2020/11/prinsip-blueprint-of-your-money/',
     suitsWhen: 'Penghasilan tidak tetap, atau level penghasilan yang sudah tidak cocok dengan persentase kaku',
     buckets: [
-      { key: 'savings', label: 'Menabung & investasi', share: 0.1, bound: 'min', description: 'Batas bawah, apa pun yang terjadi' },
-      { key: 'lifestyle', label: 'Lifestyle', share: 0.2, bound: 'max', description: 'Batas atas pengeluaran gaya hidup' },
-      { key: 'debt', label: 'Cicilan', share: 0.3, bound: 'max', description: 'Batas atas total cicilan' },
-      { key: 'routine', label: 'Pengeluaran rutin', share: 0.5, bound: 'target', description: 'Biaya rutin rumah tangga' },
+      { key: 'savings', label: 'Menabung & investasi', share: 0.1, bound: 'min', description: 'Batas bawah, apa pun yang terjadi', sources: ['save'] },
+      { key: 'lifestyle', label: 'Lifestyle', share: 0.2, bound: 'max', description: 'Batas atas pengeluaran gaya hidup', sources: ['spend'] },
+      { key: 'debt', label: 'Cicilan', share: 0.3, bound: 'max', description: 'Batas atas total cicilan', sources: ['debt'] },
+      { key: 'routine', label: 'Pengeluaran rutin', share: 0.5, bound: 'target', description: 'Biaya rutin rumah tangga', sources: ['spend'] },
     ],
     caveat:
       'Diterbitkan sebagai patokan, bukan aturan kaku. Batas bawah dan batas atas lebih tahan terhadap perubahan penghasilan daripada persentase pasti, dan itulah sebabnya kerangka ini jadi pilihan untuk penghasilan yang naik turun.',

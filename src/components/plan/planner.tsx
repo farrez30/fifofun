@@ -172,6 +172,8 @@ export function Planner({ history, observedIncome, snapshot, currentYear }: Prop
           frameworkId={frameworkId}
           onFrameworkChange={setFrameworkId}
           profile={profile}
+          snapshot={liveSnapshot}
+          observedIncome={observedIncome}
         />
       </Section>
 
