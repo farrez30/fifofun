@@ -18,7 +18,9 @@ import { buildCategoryTrends } from '@/lib/ledger/category-trend'
 import { reviewFunds } from '@/lib/ledger/funds'
 import type { MonthlySeries, MonthlyStatement } from '@/lib/ledger/monthly'
 import { parseIdAmount as idr } from '@/lib/money'
+import { GoalGlidepath } from '@/components/chart/goal-glidepath'
 import { projectFamily } from '@/lib/planning/children'
+import { monthlyContribution, suggestInstrument } from '@/lib/planning/goals'
 import { documentFor, FIXTURE_DIR } from './render'
 
 /**
@@ -401,6 +403,52 @@ export const FIXTURES = {
       ]}
     />
   ),
+  // Half a milliard over a decade, the panel's own default, with the marker.
+  glidepath: (
+    <GoalGlidepath
+      {...goal(idr('500.000.000,00'), 10)}
+      onYearsChange={() => undefined}
+      caption="Jalan ke targetnya"
+    />
+  ),
+  // Forty years, where the return does most of the work and money left alone
+  // never gets there at all. The chart has to say so rather than draw nothing.
+  'glidepath-patient': (
+    <GoalGlidepath {...goal(idr('500.000.000,00'), 40)} caption="Jangka terpanjang" />
+  ),
+  // Two years, which is below the narrowest axis the chart will draw, and where
+  // the two arrivals sit close enough to collide.
+  'glidepath-soon': (
+    <GoalGlidepath
+      {...goal(idr('35.000.000,00'), 2)}
+      onYearsChange={() => undefined}
+      caption="Tujuan dekat"
+    />
+  ),
+  // Already paid for, so there is no instalment and no second arrival.
+  'glidepath-covered': (
+    <GoalGlidepath
+      {...goal(idr('35.000.000,00'), 5, idr('40.000.000,00'))}
+      caption="Sudah tertutup"
+    />
+  ),
+}
+
+
+/*
+  Built the way the panel builds it, so a fixture cannot drift into showing a
+  contribution the app would never produce for that target and horizon.
+*/
+function goal(target: bigint, years: number, saved = 0n) {
+  const rate = suggestInstrument(years * 12).instrument.base
+  return {
+    target,
+    years,
+    startingBalance: saved,
+    annualRate: rate,
+    monthly: monthlyContribution(target, years * 12, rate, saved).monthly,
+    currentYear: 2026,
+  }
 }
 
 async function write() {

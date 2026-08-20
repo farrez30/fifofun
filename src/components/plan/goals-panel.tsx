@@ -5,6 +5,7 @@ import { formatIdr, formatIdrCompact } from '@/lib/money'
 import { hajjPlan, monthlyContribution, suggestInstrument } from '@/lib/planning/goals'
 import { HAJJ, RETURNS_SOURCE } from '@/lib/planning/constants'
 import { emergencyFundTarget, type HouseholdProfile } from '@/lib/planning/allocation'
+import { GoalGlidepath } from '@/components/chart/goal-glidepath'
 import { MoneyInput, NumberField, SourceNote } from './field'
 
 /**
@@ -82,6 +83,19 @@ export function GoalsPanel({ monthlyExpenses, profile, currentYear }: Props) {
             label="Sumbangan imbal hasil"
             value={formatIdrCompact(plan.fromReturns > 0n ? plan.fromReturns : 0n)}
             hint="Bagian target yang tidak perlu kamu setorkan sendiri."
+          />
+        </div>
+
+        <div className="mt-4">
+          <GoalGlidepath
+            target={target}
+            monthly={plan.monthly}
+            annualRate={instrument.instrument.base}
+            currentYear={currentYear}
+            years={years}
+            startingBalance={saved}
+            onYearsChange={setYears}
+            caption="Jalan ke targetnya, dengan dan tanpa imbal hasil"
           />
         </div>
 

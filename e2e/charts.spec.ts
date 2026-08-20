@@ -649,6 +649,152 @@ test.describe('pos dana', () => {
   })
 })
 
+test.describe('jalan ke tujuan', () => {
+  /** Every drawn mark that has to agree about where the target line is. */
+  function onTarget(page: import('@playwright/test').Page) {
+    return page.evaluate(`(() => {
+      const mid = (el) => { const b = el.getBoundingClientRect(); return { x: b.left + b.width / 2, y: b.top + b.height / 2 } }
+      const plot = document.querySelector('svg').getBoundingClientRect()
+      const tail = (i) => {
+        const points = [...document.querySelectorAll('polyline')][i].getAttribute('points').split(' ')
+        const [x, y] = points[points.length - 1].split(',').map(Number)
+        return { x: plot.left + (x / 100) * plot.width, y: plot.top + (y / 100) * plot.height }
+      }
+      const span = document.querySelector('[data-earned]')
+      const spanBox = span ? span.getBoundingClientRect() : null
+      return {
+        investedMark: mid(document.querySelector('[data-mark="arrival-invested"]')),
+        idleMark: mid(document.querySelector('[data-mark="arrival-idle"]')),
+        investedTail: tail(1),
+        idleTail: tail(0),
+        span: spanBox ? { left: spanBox.left, right: spanBox.right, months: Number(span.getAttribute('data-earned')) } : null,
+        pin: mid(document.querySelector('[role="slider"]')),
+        pinYear: document.querySelector('[role="slider"]').getAttribute('aria-valuenow'),
+      }
+    })()`) as Promise<{
+      investedMark: { x: number; y: number }
+      idleMark: { x: number; y: number }
+      investedTail: { x: number; y: number }
+      idleTail: { x: number; y: number }
+      span: { left: number; right: number; months: number } | null
+      pin: { x: number; y: number }
+      pinYear: string
+    }>
+  }
+
+  test('lands both curves on the target, and both markers with them', async ({ page }) => {
+    await open(page, 'glidepath')
+    await expectMarksToRender(page)
+    const marks = await onTarget(page)
+
+    // The whole reading depends on this. If either curve stopped short of the
+    // target, the distance measured off along it would be between two points
+    // that mean different things.
+    for (const [name, point] of [
+      ['invested curve', marks.investedTail],
+      ['idle curve', marks.idleTail],
+      ['idle marker', marks.idleMark],
+    ] as const) {
+      expect(Math.abs(point.y - marks.investedMark.y), `${name} left the target line`).toBeLessThan(2)
+    }
+    expect(Math.abs(marks.investedTail.x - marks.investedMark.x)).toBeLessThan(2)
+    expect(Math.abs(marks.idleTail.x - marks.idleMark.x)).toBeLessThan(2)
+  })
+
+  test('puts the marker on the year its own arrival lands in', async ({ page }) => {
+    await open(page, 'glidepath')
+    await expectMarksToRender(page)
+    const marks = await onTarget(page)
+
+    // The marker sets the deadline and the chart draws the consequence, so a
+    // marker sitting anywhere other than on the arrival would be a control that
+    // does not point at what it controls. Both are placed through `slotFraction`
+    // for exactly this reason.
+    expect(Math.abs(marks.pin.x - marks.investedMark.x)).toBeLessThan(2)
+    expect(marks.pinYear).toBe('2036')
+  })
+
+  test('measures the years earned between the two arrivals', async ({ page }) => {
+    await open(page, 'glidepath')
+    await expectMarksToRender(page)
+    const marks = await onTarget(page)
+
+    expect(marks.span).not.toBeNull()
+    expect(marks.span!.months).toBeGreaterThan(0)
+    // Within a marker's width of each end, since the span is inset by its own
+    // border so the dots read as caps rather than as part of the bar.
+    expect(Math.abs(marks.span!.left - marks.investedMark.x)).toBeLessThan(6)
+    expect(Math.abs(marks.span!.right - marks.idleMark.x)).toBeLessThan(6)
+  })
+
+  test('draws nothing above the target', async ({ page }) => {
+    await open(page, 'glidepath')
+
+    const above = await page.evaluate(`(() => {
+      const target = document.querySelector('[data-mark="arrival-invested"]').getBoundingClientRect()
+      const line = target.top + target.height / 2
+      const plot = document.querySelector('svg').getBoundingClientRect()
+      const ys = [...document.querySelectorAll('polyline, polygon')].flatMap((node) =>
+        node.getAttribute('points').split(' ').map((pair) => plot.top + (Number(pair.split(',')[1]) / 100) * plot.height),
+      )
+      return Math.min(...ys) - line
+    })()`)
+
+    // A curve allowed to keep compounding past its target tripled the height of
+    // the plot and squashed the approach, which is the only part anybody reads.
+    expect(Number(above)).toBeGreaterThan(-2)
+  })
+
+  test('separates the two curves without relying on colour', async ({ page }) => {
+    await open(page, 'glidepath')
+    const dashes = await page
+      .locator('polyline')
+      .evaluateAll((nodes) => nodes.map((node) => node.getAttribute('stroke-dasharray')))
+
+    // Red and green are the pair that roughly one man in twelve cannot separate,
+    // and these two are not that pair, but a legend resting on hue alone is a
+    // legend that works for most people rather than for everybody.
+    expect(dashes.filter(Boolean)).toHaveLength(1)
+    expect(dashes.filter((dash) => dash === null)).toHaveLength(1)
+  })
+
+  test('says so when money left alone never arrives at all', async ({ page }) => {
+    await open(page, 'glidepath-patient')
+    await expectMarksToRender(page)
+
+    await expect(page.locator('[data-mark="arrival-idle"]')).toHaveCount(0)
+    await expect(page.locator('[data-mark="arrival-invested"]')).toHaveCount(1)
+    await expect(page.getByText(/tidak sampai ke sana dalam 40 tahun/i)).toBeVisible()
+  })
+
+  test('drops the plot entirely for a goal already paid for', async ({ page }) => {
+    await open(page, 'glidepath-covered')
+
+    // An empty plot with both markers stacked in one corner reads as a chart
+    // that is broken, not as a goal that is finished.
+    await expect(page.locator('svg')).toHaveCount(0)
+    await expect(page.getByText(/Tidak ada yang perlu disetor/i)).toBeVisible()
+    await expect(page.getByText(/Kelebihannya Rp5\.000\.000/)).toBeVisible()
+  })
+
+  test('keeps a finger-sized marker', async ({ page }) => {
+    await open(page, 'glidepath')
+    const width = await page
+      .getByRole('slider')
+      .evaluate((pin) => pin.getBoundingClientRect().width)
+    expect(width).toBeGreaterThanOrEqual(44)
+  })
+
+  test('is a real slider, announced and reachable', async ({ page }) => {
+    await open(page, 'glidepath')
+    const pin = page.getByRole('slider')
+    await expect(pin).toHaveCount(1)
+    await expect(pin).toHaveAttribute('aria-label', /Tahun target/)
+    await expect(pin).toHaveAttribute('aria-valuenow', /^\d{4}$/)
+    await expect(pin).toHaveAttribute('aria-valuemin', '2026')
+  })
+})
+
 test.describe('lebar halaman', () => {
   test('nothing pushes the page sideways on a narrow screen', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 })
@@ -662,6 +808,8 @@ test.describe('lebar halaman', () => {
       'balance-trend',
       'category-sparks',
       'funds',
+      'glidepath',
+      'glidepath-soon',
     ]) {
       await open(page, fixture)
 
