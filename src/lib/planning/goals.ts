@@ -70,6 +70,29 @@ export function inflateTo(
 
 // --- Contributions -----------------------------------------------------
 
+/**
+ * What a run of month-end contributions grows to.
+ *
+ * The forward direction of `monthlyContribution`, and the arithmetic any chart
+ * of a goal has to draw. Keeping the pair in one place is what stops a picture
+ * from contradicting the figure printed beside it.
+ */
+export function futureBalance(
+  startingBalance: bigint,
+  monthly: bigint,
+  annualRate: number,
+  months: number,
+): bigint {
+  if (months < 0) throw new Error('Months cannot be negative')
+
+  const rate = monthlyRate(annualRate)
+  const growth = Math.pow(1 + rate, months)
+  const grown = scaleBy(startingBalance, growth)
+
+  if (rate === 0) return grown + monthly * BigInt(months)
+  return grown + scaleBy(monthly, (growth - 1) / rate)
+}
+
 export interface ContributionPlan {
   target: bigint
   months: number
@@ -116,6 +139,31 @@ export function monthlyContribution(
   } else {
     // Ordinary annuity: FV = PMT × ((1+i)^n − 1) ÷ i, solved for PMT.
     monthly = scaleByCeil(shortfall, rate / (growth - 1))
+  }
+
+  /*
+    Then settled against the arithmetic it will be checked by.
+
+    Rounding the payment up is not enough on its own. The annuity factor is
+    quantised to nine decimals before the payment is multiplied by it, so
+    against a target of half a milliard the answer can be a couple of dozen sen
+    out in either direction, and the rounding has nothing left to catch: forty
+    years of compounding turned that into a plan stopping two thousand rupiah
+    short of its own target.
+
+    One pass in whichever direction is needed, priced off what a single extra
+    sen a month grows to. The two divisions are deliberately lopsided so that
+    neither can ever leave the plan short. `perSen` is a floor, so dividing the
+    deficit by it overstates the correction; dividing the excess by one more
+    than it understates the trim.
+  */
+  const perSen = futureBalance(0n, 1n, annualRate, months)
+  // Skipped when no payment is needed at all: there the excess is the whole of
+  // the starting balance's own growth, and trimming against it would bill the
+  // household for having already arrived.
+  if (perSen > 0n && monthly > 0n) {
+    const gap = target - futureBalance(startingBalance, monthly, annualRate, months)
+    monthly += gap > 0n ? divideUp(gap, perSen) : -(-gap / (perSen + 1n))
   }
 
   const totalContributed = monthly * BigInt(months)

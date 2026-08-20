@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { HAJJ } from './constants'
 import {
+  futureBalance,
   futureValue,
   hajjPlan,
   inflateTo,
@@ -100,11 +101,78 @@ describe('inflateTo', () => {
   })
 })
 
+describe('futureBalance', () => {
+  it('matches a month by month simulation', () => {
+    for (const rate of [0, 0.045, 0.09, 0.11]) {
+      for (const months of [1, 12, 60, 240]) {
+        const closed = futureBalance(5_000_000_00n, 1_000_000_00n, rate, months)
+        const stepped = simulate(1_000_000_00n, months, rate, 5_000_000_00n)
+        const gap = closed - stepped
+        /*
+          One part in a million, and the tolerance has to be relative rather
+          than a fixed number of sen. The stepped path applies a rate that has
+          been quantised to nine decimals once per month, and that error
+          compounds along with the money, so its drift grows with both the
+          horizon and the balance. Getting the annuity itself wrong, by paying
+          at the start of the month instead of the end, would show up here as
+          most of a percent, three orders of magnitude clear of this.
+        */
+        expect(gap < 0n ? -gap : gap).toBeLessThan(closed / 1_000_000n + 100n)
+      }
+    }
+  })
+
+  it('is the starting balance at month zero', () => {
+    expect(futureBalance(7_500_000_00n, 2_000_000_00n, 0.11, 0)).toBe(7_500_000_00n)
+  })
+
+  it('is plain multiplication without a return', () => {
+    expect(futureBalance(0n, 1_500_000_00n, 0, 24)).toBe(36_000_000_00n)
+  })
+
+  it('refuses to run backwards', () => {
+    expect(() => futureBalance(0n, 1n, 0.1, -1)).toThrow(/negative/i)
+  })
+
+  it('confirms every plan the contribution solver builds', () => {
+    // The round trip that found the shortfall. The closed form on its own left
+    // a forty year plan about two thousand rupiah short of its target, which
+    // the payment being rounded up could not recover because the loss happened
+    // upstream of the rounding.
+    for (const target of [7_500_000_00n, 50_000_000_00n, 500_000_000_00n, 1_000_000_000_00n]) {
+      for (const months of [1, 12, 36, 120, 240, 480]) {
+        for (const rate of [0, 0.025, 0.045, 0.09, 0.11]) {
+          for (const saved of [0n, 5_000_000_00n]) {
+            const plan = monthlyContribution(target, months, rate, saved)
+            expect(
+              futureBalance(saved, plan.monthly, rate, months),
+            ).toBeGreaterThanOrEqual(target)
+          }
+        }
+      }
+    }
+  })
+
+  it('does not buy the coverage with a wildly overpriced instalment', () => {
+    // One sen a month less has to fall short, or the correction has overshot
+    // and every plan in the app is quietly asking for more than it needs.
+    const plan = monthlyContribution(500_000_000_00n, 480, 0.09)
+    expect(futureBalance(0n, plan.monthly - 1n, 0.09, 480)).toBeLessThan(500_000_000_00n)
+  })
+})
+
 describe('monthlyContribution', () => {
   it('reaches the target when simulated month by month', () => {
     const plan = monthlyContribution(500_000_000_00n, 240, 0.09)
     const ending = simulate(plan.monthly, 240, 0.09)
-    expect(ending).toBeGreaterThanOrEqual(plan.target)
+    /*
+      Within the drift the stepped simulation is entitled to. It is the check
+      on the algebra, not the app's own answer: nothing here computes a balance
+      by walking the months, and doing so with a rate quantised to nine decimals
+      loses about a part in ten million over twenty years. The exact claim, that
+      a plan covers its target, is made against `futureBalance` above.
+    */
+    expect(ending).toBeGreaterThan(plan.target - plan.target / 1_000_000n)
   })
 
   it('does not overshoot by more than one instalment', () => {
