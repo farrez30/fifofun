@@ -45,15 +45,23 @@ next-env.d.ts
 graphify-out/
 
 # never commit real financial data
+#
+# The extension list catches a statement dropped anywhere in the tree. The
+# directories are listed separately because they exist only to hold the real
+# thing, and guessing which extensions a bank will export next is the wrong way
+# to protect a path whose entire contents are already known to be private.
 *.xlsx
 *.xls
 *.pdf
+*.csv
+/e_statement_mandiri/
 /data/
 /fixtures/private/
 
 # local tooling scratch
 .nextdocs
 /tmp/
+.vscode/
 
 # agent tooling config (regenerated locally by next dev)
 CLAUDE.md
