@@ -14,6 +14,9 @@ import { defineConfig, devices } from '@playwright/test'
  */
 export default defineConfig({
   testDir: './e2e',
+  // Whole-page tests need a build and a server, so they live in their own
+  // config. Keeping them out of this one is what lets this one stay fast.
+  testIgnore: '**/pages/**',
   fullyParallel: true,
   // A test that only passes on the second attempt is a test nobody can trust.
   retries: 0,

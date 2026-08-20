@@ -88,6 +88,45 @@ jobs:
           path: playwright-report/
           retention-days: 7
 
+  pages:
+    name: Page accessibility and security policy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      # A real build, because the content security policy this asserts is the
+      # production one and `next dev` ships a looser policy on purpose.
+      - name: Build
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_unused
+
+      # Only the routes that need neither a session nor a database. The server
+      # env is set by playwright.pages.config.ts and points nowhere real.
+      - name: Page tests
+        run: pnpm test:e2e:pages
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report-pages
+          path: playwright-report/
+          retention-days: 7
+
   audit:
     name: Dependency audit
     runs-on: ubuntu-latest
