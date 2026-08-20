@@ -12,6 +12,9 @@ import { FIXTURE_DIR } from './render'
 
 async function open(page: import('@playwright/test').Page, fixture: string) {
   await page.setContent(await readFile(`${FIXTURE_DIR}/${fixture}.html`, 'utf8'))
+  // Every assertion below is a measurement, and a measurement taken before the
+  // real face has been applied is a measurement of the fallback.
+  await page.evaluate(() => document.fonts.ready)
 }
 
 test.describe('pemasukan dan pengeluaran', () => {
