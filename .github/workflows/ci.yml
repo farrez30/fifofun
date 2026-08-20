@@ -54,6 +54,40 @@ jobs:
       - name: Build
         run: pnpm build
 
+  browser:
+    name: Chart geometry and accessibility
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # Chromium only. These tests measure layout and run axe; neither answer
+      # changes across engines enough to pay for three browser downloads on
+      # every push.
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      # Needs no build, no database and no session: every spec renders one
+      # component onto a page of its own. See e2e/render.ts.
+      - name: Browser tests
+        run: pnpm test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
   audit:
     name: Dependency audit
     runs-on: ubuntu-latest

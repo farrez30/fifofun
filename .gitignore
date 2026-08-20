@@ -63,3 +63,8 @@ CLAUDE.md
 skills-lock.json
 # axe-core copied here on demand for accessibility audits against a real build
 public/_axe.js
+
+# browser test output; the fixture pages are rendered by `pnpm test:e2e`
+/e2e/.fixtures/
+/test-results/
+/playwright-report/
