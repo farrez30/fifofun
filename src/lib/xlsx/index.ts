@@ -48,6 +48,20 @@ export function columnToIndex(label: string): number {
   return index - 1
 }
 
+/**
+ * Largest grid this will build, counted in cells.
+ *
+ * The decompression ceiling below bounds how much XML arrives, and it does not
+ * bound what that XML asks for. A single cell at XFD1048576 is forty bytes and
+ * describes a grid of seventeen billion slots, which exhausts the heap before
+ * any statement is read. The sheet is dense because every consumer wants
+ * rows[r][c], so the area is what has to be checked rather than the input size.
+ *
+ * A statement runs a few hundred cells. This is four orders of magnitude above
+ * that and still a fraction of what Excel itself allows.
+ */
+export const MAX_SHEET_CELLS = 2_000_000
+
 const CELL_REF = /^([A-Za-z]+)(\d+)$/
 
 /** Splits a cell reference such as "AB12" into zero-based row and column. */
@@ -157,6 +171,10 @@ function parseMerges(sheet: unknown): MergeRange[] {
   })
 }
 
+function tooBig(what: string, size: number): string {
+  return `Worksheet declares ${what} ${size} cells, over the ${MAX_SHEET_CELLS} cell limit`
+}
+
 /** Parses one worksheet XML document into a dense grid. */
 export function parseSheetXml(xml: string, shared: string[] = [], name = 'Sheet1'): Sheet {
   const sheet = child(parser.parse(xml), 'worksheet')
@@ -180,10 +198,16 @@ export function parseSheetXml(xml: string, shared: string[] = [], name = 'Sheet1
       if (cell.kind === 'empty') continue
 
       cells.push({ ...position, cell })
+      if (cells.length > MAX_SHEET_CELLS) throw new Error(tooBig('cells', cells.length))
       if (position.row > maxRow) maxRow = position.row
       if (position.col > maxCol) maxCol = position.col
     }
   }
+
+  // Checked before allocating rather than after: the point of failure is the
+  // allocation itself, and by then the process is already gone.
+  const area = (maxRow + 1) * (maxCol + 1)
+  if (area > MAX_SHEET_CELLS) throw new Error(tooBig('a grid of', area))
 
   const rows: Cell[][] = Array.from({ length: maxRow + 1 }, () =>
     Array.from({ length: maxCol + 1 }, () => EMPTY_CELL),

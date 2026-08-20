@@ -77,6 +77,41 @@ describe('parseSheetXml', () => {
     expect(cellAt(parseSheetXml(xml, ['nol', 'satu']), 0, 0).text).toBe('satu')
   })
 
+  describe('grid ceiling', () => {
+    /*
+      The decompression limit stops an archive that expands into something
+      enormous. It does nothing about XML that is genuinely tiny and asks for
+      something enormous, which is a different attack on the same resource.
+    */
+    const far = (ref: string, row: string) =>
+      `<worksheet><sheetData><row r="${row}"><c r="${ref}" t="str"><v>x</v></c></row></sheetData></worksheet>`
+
+    it('refuses one far cell rather than allocating the grid it implies', () => {
+      // Forty bytes of XML, seventeen billion slots, and no heap left.
+      expect(() => parseSheetXml(far('XFD1048576', '1048576'))).toThrow(/over the .* cell limit/)
+    })
+
+    it('refuses a row number too large to be a row number', () => {
+      expect(() => parseSheetXml(far('A99999999999999999999', '99999999999999999999'))).toThrow(
+        /cell limit/,
+      )
+    })
+
+    it('refuses a column label too long to be a column', () => {
+      expect(() => parseSheetXml(far('AAAAAAAAAA1', '1'))).toThrow(/cell limit/)
+    })
+
+    it('still reads a sheet the size a statement actually is', () => {
+      const cells = Array.from(
+        { length: 200 },
+        (_, index) => `<row r="${index + 1}"><c r="J${index + 1}" t="str"><v>x</v></c></row>`,
+      ).join('')
+      const sheet = parseSheetXml(`<worksheet><sheetData>${cells}</sheetData></worksheet>`)
+      expect(sheet.rows).toHaveLength(200)
+      expect(sheet.rows[199][9].text).toBe('x')
+    })
+  })
+
   it('returns an empty sheet rather than throwing on no rows', () => {
     const sheet = parseSheetXml('<worksheet><sheetData/></worksheet>')
     expect(sheet.rows).toEqual([])
