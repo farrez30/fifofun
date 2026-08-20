@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { BillsPanel } from '@/components/bills-panel'
 import { ReceivablesPanel } from '@/components/receivables-panel'
+import { Stat } from '@/components/money'
 import { reviewBills } from '@/lib/ledger/bills'
 import { reviewReceivables } from '@/lib/ledger/receivables'
 import type { CashflowType, LedgerEntry } from '@/lib/ledger/types'
@@ -70,6 +71,22 @@ const DERIVED_REVIEW = reviewBudget(
     'Biaya Bank': idr('45.700,00'),
   },
   'derived',
+)
+
+/** A budget somebody actually set, with Rp1,2 juta of the month still unassigned. */
+const MANUAL_REVIEW = reviewBudget(
+  '2026-07',
+  { Belanja: idr('4.000.000,00'), Jajan: idr('500.000,00'), Wifi: idr('300.000,00') },
+  { Belanja: idr('4.225.031,00'), Jajan: idr('120.000,00'), Wifi: idr('271.950,00') },
+  'manual',
+)
+
+/** The same household having budgeted more than it earns. */
+const OVERCOMMITTED = reviewBudget(
+  '2026-07',
+  { Belanja: idr('4.000.000,00'), Kosan: idr('2.500.000,00'), Kendaraan: idr('1.000.000,00') },
+  { Belanja: idr('4.225.031,00') },
+  'manual',
 )
 
 const FAMILY = projectFamily(
@@ -243,6 +260,33 @@ export const FIXTURES = {
   receivables: <ReceivablesPanel review={RECEIVABLES} />,
   cashflow: <CashflowChart series={SERIES} />,
   'budget-derived': <BudgetBullet review={DERIVED_REVIEW} caption="Per kategori" />,
+  'budget-manual': (
+    <BudgetBullet review={MANUAL_REVIEW} caption="Per kategori" income={idr('6.000.000,00')} />
+  ),
+  'budget-overcommitted': (
+    <BudgetBullet review={OVERCOMMITTED} caption="Per kategori" income={idr('6.000.000,00')} />
+  ),
+  stats: (
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <Stat
+        label="Pemasukan"
+        sen={idr('8.171.629,00')}
+        previous={idr('6.587.500,00')}
+        previousLabel="2026-01"
+      />
+      <Stat
+        label="Pengeluaran"
+        sen={idr('3.830.737,00')}
+        previous={idr('4.324.411,00')}
+        previousLabel="2026-01"
+      />
+      {/* Unchanged from one month to the next, which is a third thing to say
+          and not a rise of nothing. */}
+      <Stat label="Tagihan" sen={idr('2.690.151,00')} previous={idr('2.690.151,00')} />
+      {/* No earlier month at all, on the first month a household records. */}
+      <Stat label="Sisa uang" sen={idr('5.151.154,00')} emphasis />
+    </div>
+  ),
   waterfall: <Waterfall statement={FEBRUARY} caption="Sisa uang Februari" />,
   'balance-trend': <BalanceTrend series={BALANCES} caption="Saldo di akhir tiap bulan" />,
   'balance-trend-long': <BalanceTrend series={LONG_RUN} caption="Saldo dua tahun" />,

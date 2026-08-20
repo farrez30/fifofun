@@ -162,6 +162,9 @@ async function Dashboard() {
 
   const series = computeMonthlySeries(transactions, openingBalance)
   const latest = series[series.length - 1]
+  // The month before, for the comparison beside each headline figure. Undefined
+  // on the first month recorded, where there is honestly nothing to compare to.
+  const previous = series.length > 1 ? series[series.length - 2] : undefined
   const movements = computeAccountMovements(transactions, accounts)
   const overdrawn = findOverdrawnAccounts(movements)
   const stalled = findStalledAccounts(movements)
@@ -221,13 +224,30 @@ async function Dashboard() {
           <span className="ml-2 font-normal text-ink-muted">{latest.month}</span>
         </h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Stat label="Pemasukan" sen={latest.statement.income} />
-          <Stat label="Pengeluaran" sen={latest.statement.spending} />
-          <Stat label="Tagihan" sen={latest.statement.bills} />
+          <Stat
+            label="Pemasukan"
+            sen={latest.statement.income}
+            previous={previous?.statement.income}
+            previousLabel={previous?.month}
+          />
+          <Stat
+            label="Pengeluaran"
+            sen={latest.statement.spending}
+            previous={previous?.statement.spending}
+            previousLabel={previous?.month}
+          />
+          <Stat
+            label="Tagihan"
+            sen={latest.statement.bills}
+            previous={previous?.statement.bills}
+            previousLabel={previous?.month}
+          />
           <Stat
             label="Sisa uang"
             sen={latest.statement.sisaUang}
             emphasis
+            previous={previous?.statement.sisaUang}
+            previousLabel={previous?.month}
             hint="Turunan dari bulan sebelumnya, tidak diketik ulang"
           />
         </div>
@@ -306,7 +326,11 @@ async function Dashboard() {
           <span className="ml-2 font-normal text-ink-muted">{latest.month}</span>
         </h2>
         <div className="space-y-4">
-          <BudgetBullet review={budgetReview} caption={`Per kategori, ${latest.month}`} />
+          <BudgetBullet
+            review={budgetReview}
+            caption={`Per kategori, ${latest.month}`}
+            income={latest.statement.income}
+          />
           {/* The panel above says a category is above its usual. This says
               whether that is an accident or the fourth month of a climb, which
               is what decides whether anything needs doing about it. */}

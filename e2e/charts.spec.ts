@@ -82,6 +82,82 @@ test.describe('anggaran per kategori', () => {
   })
 })
 
+test.describe('uang yang belum diberi pos', () => {
+  test('separates what was never assigned from what survived the month', async ({ page }) => {
+    await open(page, 'budget-manual')
+    const text = await page.locator('figure').innerText()
+
+    // Rp6 juta earned against Rp4,8 juta budgeted.
+    expect(text).toContain('Rp1.200.000')
+    expect(text).toContain('belum diberi pos')
+    // Sisa uang is a different figure and the panel has to say so, or the two
+    // get read as the same number in two places.
+    expect(text).toContain('bukan sisa uang')
+  })
+
+  test('says outright when the plan cannot close', async ({ page }) => {
+    await open(page, 'budget-overcommitted')
+    const text = await page.locator('figure').innerText()
+
+    // Rp7,5 juta budgeted against Rp6 juta of income. Every row looks fine on
+    // its own, which is exactly why the total needs saying.
+    expect(text).toContain('Rp1.500.000 lebih besar dari pemasukan')
+    expect(text).not.toContain('belum diberi pos')
+  })
+
+  test('stays silent where nothing was ever allocated', async ({ page }) => {
+    await open(page, 'budget-derived')
+    // The derived figures are a median of past months, not an allocation, so
+    // there is no such thing as money left over from it.
+    expect(await page.locator('figure').innerText()).not.toContain('belum diberi pos')
+  })
+})
+
+test.describe('perbandingan dengan bulan sebelumnya', () => {
+  test('says which way each headline moved, and by how much', async ({ page }) => {
+    await open(page, 'stats')
+    const cards = await page.locator('div.border').allInnerTexts()
+
+    // Case insensitive: the labels are uppercased in CSS, and innerText reports
+    // what the screen shows rather than what the markup says.
+    // Rp6.587.500 to Rp8.171.629 is a rise of Rp1,6 juta, twenty four percent.
+    expect(cards.some((card) => /Pemasukan[\s\S]*▲[\s\S]*Rp1,6jt[\s\S]*\(24%\)/i.test(card))).toBe(
+      true,
+    )
+    // Rp4.324.411 down to Rp3.830.737.
+    expect(cards.some((card) => /Pengeluaran[\s\S]*▼[\s\S]*Rp493,7rb/i.test(card))).toBe(true)
+  })
+
+  test('has a third thing to say when nothing changed', async ({ page }) => {
+    await open(page, 'stats')
+    await expect(page.getByText('Sama persis dari bulan sebelumnya')).toBeVisible()
+  })
+
+  test('says nothing at all on the first month recorded', async ({ page }) => {
+    await open(page, 'stats')
+    const card = page.locator('div.border', { hasText: 'Sisa uang' }).last()
+    await expect(card).not.toContainText('bulan sebelumnya')
+    await expect(card).not.toContainText('▲')
+  })
+
+  test('leaves the judgement to the household, and uses no colour for it', async ({ page }) => {
+    await open(page, 'stats')
+
+    /*
+      More spending is not automatically worse and more income is not
+      automatically better. A month with a large Kesehatan bill and a month with
+      a large Belanja bill move this line identically.
+    */
+    const colours = await page.$$eval('p', (nodes) =>
+      nodes
+        .filter((node) => /bulan sebelumnya|dari 2026-01/.test(node.textContent ?? ''))
+        .map((node) => getComputedStyle(node).color),
+    )
+    expect(colours.length).toBeGreaterThan(0)
+    expect(new Set(colours).size).toBeLessThanOrEqual(2)
+  })
+})
+
 test.describe('sankey', () => {
   test('gives every flow a ribbon with area', async ({ page }) => {
     await open(page, 'sankey')

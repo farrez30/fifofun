@@ -58,9 +58,20 @@ function styleFor(line: BudgetLine) {
 interface Props {
   review: BudgetReview
   caption: string
+  /**
+   * What came in this month, so the panel can say how much of it has not been
+   * given a job yet. The spreadsheet calls that Free Money and keeps it apart
+   * from Sisa uang, which is a different thing: Sisa uang is what survived the
+   * month, this is what was never assigned in the first place.
+   *
+   * Only meaningful against a budget somebody set. Where the figures are
+   * derived from past months, nothing was ever allocated and there is no such
+   * thing as money left over from the allocation.
+   */
+  income?: bigint
 }
 
-export function BudgetBullet({ review, caption }: Props) {
+export function BudgetBullet({ review, caption, income }: Props) {
   const { lines } = review
 
   if (lines.length === 0) {
@@ -93,11 +104,17 @@ export function BudgetBullet({ review, caption }: Props) {
         </span>
       </figcaption>
 
-      <p className="mb-4 text-xs text-ink-muted">
-        {review.source === 'derived'
-          ? 'Pembandingnya median enam bulan terakhirmu, bukan angka yang kamu tetapkan sendiri. Tetapkan anggaranmu kapan saja untuk menggantinya.'
-          : 'Pembandingnya anggaran yang kamu tetapkan sendiri.'}
-      </p>
+      <div className="mb-4 space-y-2">
+        <p className="text-xs text-ink-muted">
+          {review.source === 'derived'
+            ? 'Pembandingnya median enam bulan terakhirmu, bukan angka yang kamu tetapkan sendiri. Tetapkan anggaranmu kapan saja untuk menggantinya.'
+            : 'Pembandingnya anggaran yang kamu tetapkan sendiri.'}
+        </p>
+
+        {review.source === 'manual' && income !== undefined ? (
+          <FreeMoney income={income} allocated={review.totalBudget} />
+        ) : null}
+      </div>
 
       <ul className="space-y-3">
         {lines.map((line) => (
@@ -112,6 +129,45 @@ export function BudgetBullet({ review, caption }: Props) {
         </p>
       ) : null}
     </figure>
+  )
+}
+
+/**
+ * Income that has not been given a job.
+ *
+ * Three outcomes, and the middle one is the point of drawing it: budgeting more
+ * than came in is a plan that cannot hold, and it is invisible in a list of
+ * category rows that each look perfectly reasonable on their own.
+ */
+function FreeMoney({ income, allocated }: { income: bigint; allocated: bigint }) {
+  const free = income - allocated
+
+  if (free < 0n) {
+    return (
+      <p className="border border-over/40 bg-over-wash px-3 py-2 text-xs text-ink">
+        <span aria-hidden="true" className="mr-1.5 text-over">
+          ▲
+        </span>
+        Anggaranmu {formatIdr(-free)} lebih besar dari pemasukan bulan ini. Rencananya sudah tidak
+        bisa ditutup sebelum satu transaksi pun terjadi.
+      </p>
+    )
+  }
+
+  if (free === 0n) {
+    return (
+      <p className="text-xs text-ink-muted">
+        Seluruh pemasukan bulan ini sudah ada posnya, tidak ada yang menganggur.
+      </p>
+    )
+  }
+
+  return (
+    <p className="text-xs text-ink-muted">
+      <span className="tnum font-mono text-ink">{formatIdr(free)}</span> belum diberi pos apa pun
+      bulan ini. Ini bukan sisa uang: sisa uang adalah yang selamat sampai akhir bulan, yang ini
+      belum pernah ditugaskan sejak awal.
+    </p>
   )
 }
 
