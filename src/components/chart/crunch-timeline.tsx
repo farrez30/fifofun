@@ -79,13 +79,24 @@ export function CrunchTimeline({ projection, caption, onBirthYearChange }: Props
       </figcaption>
 
       <div
-        className="overflow-x-auto pb-1"
+        className="relative overflow-x-auto pb-1"
         tabIndex={0}
         role="region"
         aria-label="Linimasa biaya anak, bisa digeser ke samping"
       >
-        {/* Stretches rather than ending, for the reason spelled out in cashflow-chart. */}
-        <div className="flex min-w-full gap-px" style={{ height: '13rem' }}>
+        {/*
+          The columns and the markers share one width box.
+
+          Each is `min-w-full` on its own, which agrees only while the columns
+          fit: once twenty seven years stop fitting, the columns grow to their
+          own minimum and the marker track stays at the width of the screen, so
+          every marker points at the wrong year. `w-max` takes the width from the
+          columns and `min-w-full` floors it at the viewport, and both halves
+          read the same number.
+        */}
+        <div className="w-max min-w-full">
+          {/* Stretches rather than ending, for the reason spelled out in cashflow-chart. */}
+          <div className="flex min-w-full gap-px" style={{ height: '13rem' }}>
           {years.map((year) => {
             const crunch = crunchSet.has(year.year)
             return (
@@ -124,19 +135,20 @@ export function CrunchTimeline({ projection, caption, onBirthYearChange }: Props
           })}
         </div>
 
-        {onBirthYearChange ? (
-          <DragAxis values={years.map((year) => year.year)} className="mt-1 h-10 min-w-full">
-            {children.map((child, index) => (
-              <DragPin
-                key={child.label}
-                value={child.plan.birthYear}
-                onChange={(year) => onBirthYearChange(index, year)}
-                label={`Tahun lahir ${child.label}`}
-                color={CHILD_FILLS[index % CHILD_FILLS.length]}
-              />
-            ))}
-          </DragAxis>
-        ) : null}
+          {onBirthYearChange ? (
+            <DragAxis values={years.map((year) => year.year)} className="mt-1 h-10 w-full">
+              {children.map((child, index) => (
+                <DragPin
+                  key={child.label}
+                  value={child.plan.birthYear}
+                  onChange={(year) => onBirthYearChange(index, year)}
+                  label={`Tahun lahir ${child.label}`}
+                  color={CHILD_FILLS[index % CHILD_FILLS.length]}
+                />
+              ))}
+            </DragAxis>
+          ) : null}
+        </div>
       </div>
 
       {onBirthYearChange ? (
@@ -175,31 +187,39 @@ export function CrunchTimeline({ projection, caption, onBirthYearChange }: Props
         </p>
       )}
 
-      <table className="sr-only">
-        <caption>{caption}</caption>
-        <thead>
-          <tr>
-            <th scope="col">Tahun</th>
-            {labels.map((label) => (
-              <th key={label} scope="col">
-                {label}
-              </th>
-            ))}
-            <th scope="col">Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          {years.map((year) => (
-            <tr key={year.year}>
-              <th scope="row">{year.year}</th>
+      {/*
+        Wrapped rather than marked directly. A table ignores the one pixel width
+        that sr-only sets and lays itself out to fit its content, so the hidden
+        table stretched the document and every narrow screen scrolled sideways
+        for text nobody can see. A div honours the width and clips it.
+      */}
+      <div className="sr-only">
+        <table>
+          <caption>{caption}</caption>
+          <thead>
+            <tr>
+              <th scope="col">Tahun</th>
               {labels.map((label) => (
-                <td key={label}>{formatIdr(year.byChild[label] ?? 0n)}</td>
+                <th key={label} scope="col">
+                  {label}
+                </th>
               ))}
-              <td>{formatIdr(year.total)}</td>
+              <th scope="col">Total</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {years.map((year) => (
+              <tr key={year.year}>
+                <th scope="row">{year.year}</th>
+                {labels.map((label) => (
+                  <td key={label}>{formatIdr(year.byChild[label] ?? 0n)}</td>
+                ))}
+                <td>{formatIdr(year.total)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </figure>
   )
 }

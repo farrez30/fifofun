@@ -170,7 +170,7 @@ export function ChildrenPanel({
         <p className="mt-1 max-w-2xl text-sm text-ink-muted">{recommendation.reason}</p>
 
         <div
-          className="mt-3 overflow-x-auto border border-line bg-surface"
+          className="relative mt-3 overflow-x-auto border border-line bg-surface"
           tabIndex={0}
           role="region"
           aria-label="Tabel jarak antar anak, bisa digeser ke samping"

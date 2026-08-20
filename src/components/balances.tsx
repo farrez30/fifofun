@@ -132,7 +132,7 @@ export function Balances({ movements, reconciliation, stalled, statementDate }: 
       ) : null}
 
       <div
-        className="overflow-x-auto border border-line bg-surface"
+        className="relative overflow-x-auto border border-line bg-surface"
         tabIndex={0}
         role="region"
         aria-label="Tabel saldo per akun, bisa digeser ke samping"

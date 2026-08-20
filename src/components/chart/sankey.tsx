@@ -198,7 +198,7 @@ export function Sankey({ nodes, links, height = 420, caption }: Props) {
       <figcaption className="mb-3 text-sm font-medium text-ink">{caption}</figcaption>
 
       <div
-        className="overflow-x-auto"
+        className="relative overflow-x-auto"
         tabIndex={0}
         role="region"
         aria-label={caption}
@@ -271,25 +271,33 @@ export function Sankey({ nodes, links, height = 420, caption }: Props) {
       </div>
 
       {/* The picture carries the shape; the table carries the facts. */}
-      <table className="sr-only">
-        <caption>{caption}</caption>
-        <thead>
-          <tr>
-            <th scope="col">Dari</th>
-            <th scope="col">Ke</th>
-            <th scope="col">Jumlah</th>
-          </tr>
-        </thead>
-        <tbody>
-          {ordered.map((link) => (
-            <tr key={`${link.source}-${link.target}`}>
-              <td>{placed.get(link.source)?.label ?? link.source}</td>
-              <td>{placed.get(link.target)?.label ?? link.target}</td>
-              <td>{formatIdr(link.value)}</td>
+      {/*
+        Wrapped rather than marked directly. A table ignores the one pixel width
+        that sr-only sets and lays itself out to fit its content, so the hidden
+        table stretched the document and every narrow screen scrolled sideways
+        for text nobody can see. A div honours the width and clips it.
+      */}
+      <div className="sr-only">
+        <table>
+          <caption>{caption}</caption>
+          <thead>
+            <tr>
+              <th scope="col">Dari</th>
+              <th scope="col">Ke</th>
+              <th scope="col">Jumlah</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {ordered.map((link) => (
+              <tr key={`${link.source}-${link.target}`}>
+                <td>{placed.get(link.source)?.label ?? link.source}</td>
+                <td>{placed.get(link.target)?.label ?? link.target}</td>
+                <td>{formatIdr(link.value)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </figure>
   )
 }

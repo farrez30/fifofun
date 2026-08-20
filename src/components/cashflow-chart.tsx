@@ -1,13 +1,20 @@
-import { formatIdrCompact, senToRupiahNumber } from '@/lib/money'
+import { median } from '@/lib/planning/lifestyle'
+import { buildScale } from '@/lib/ledger/scale'
 import type { MonthlySeries } from '@/lib/ledger/monthly'
+import { formatIdrCompact } from '@/lib/money'
+import { CashflowChartView, type MonthView, type Tick } from './cashflow-chart-view'
 
 /**
  * Income against spending, month by month.
  *
- * Drawn as inline SVG rather than pulled from a chart library. The chart has one
- * job and the library default look is itself a tell; hand-drawing also means the
- * bars inherit the theme tokens directly and dark mode needs no separate
- * configuration.
+ * Drawn by hand rather than pulled from a chart library. The chart has one job,
+ * the library default look is itself a tell, and hand drawing means the bars
+ * inherit the theme tokens directly so dark mode needs no separate configuration.
+ *
+ * This half does every calculation, because every calculation is in `bigint` sen
+ * and React cannot pass a `bigint` across the boundary into a client component.
+ * What crosses is a percentage and a printed string per bar, so no amount is
+ * ever added up in floating point.
  */
 
 const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
@@ -30,88 +37,66 @@ export function CashflowChart({ series }: Props) {
     )
   }
 
-  const peak = series.reduce((max, { statement }) => {
-    const local = statement.income > statement.spending ? statement.income : statement.spending
-    return local > max ? local : max
-  }, 1n)
+  const incomes = series.map(({ statement }) => statement.income)
+  const spendings = series.map(({ statement }) => statement.spending)
+  const nets = series.map(({ statement }) => statement.income - statement.spending)
 
-  const peakRupiah = senToRupiahNumber(peak)
-  const heightOf = (sen: bigint) => Math.max(1, (senToRupiahNumber(sen) / peakRupiah) * 100)
+  const peak = [...incomes, ...spendings].reduce((max, value) => (value > max ? value : max), 1n)
+  const scale = buildScale(peak)
+
+  const hasDeficit = nets.some((net) => net < 0n)
+  // The difference view has its own magnitudes, an order smaller than the gross
+  // figures, so it gets its own scale rather than a mostly empty plot.
+  const netPeak = nets.reduce((max, net) => {
+    const size = net < 0n ? -net : net
+    return size > max ? size : max
+  }, 1n)
+  const netScale = buildScale(netPeak, 2)
+
+  const medianIncome = median(incomes)
+  const medianSpending = median(spendings)
+
+  const months: MonthView[] = series.map(({ month, statement }, index) => {
+    const net = statement.income - statement.spending
+    const negative = net < 0n
+    const size = negative ? -net : net
+
+    return {
+      month,
+      label: shortMonth(month),
+      year: month.slice(2, 4),
+      // The year is printed only where it turns over, so twenty three columns
+      // carry the information without twenty three repetitions of it.
+      startsYear: index === 0 || month.slice(0, 4) !== series[index - 1].month.slice(0, 4),
+      income: { pct: scale.percentOf(statement.income), text: formatIdrCompact(statement.income) },
+      spending: {
+        pct: scale.percentOf(statement.spending),
+        text: formatIdrCompact(statement.spending),
+      },
+      net: { pct: netScale.percentOf(size), text: formatIdrCompact(size) },
+      netNegative: negative,
+      overspent: statement.spending > statement.income,
+    }
+  })
+
+  const toTicks = (built: typeof scale): Tick[] =>
+    built.ticks.map((value) => ({
+      pct: built.percentOf(value),
+      text: value === 0n ? '0' : formatIdrCompact(value),
+    }))
 
   return (
-    <figure className="border border-line bg-surface p-4">
-      <figcaption className="mb-4 flex items-baseline justify-between gap-4">
-        <span className="text-sm font-medium text-ink">Pemasukan dan pengeluaran</span>
-        <span className="flex items-center gap-3 text-xs text-ink-muted">
-          <span className="flex items-center gap-1.5">
-            <span aria-hidden="true" className="inline-block h-2.5 w-2.5 bg-under" />
-            Masuk
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span aria-hidden="true" className="inline-block h-2.5 w-2.5 bg-accent" />
-            Keluar
-          </span>
-        </span>
-      </figcaption>
-
-      <div
-        className="overflow-x-auto"
-        tabIndex={0}
-        role="region"
-        aria-label="Grafik pemasukan dan pengeluaran, bisa digeser ke samping"
-      >
-        {/*
-          No `items-end` on this row. It sizes each column to its own content
-          instead of stretching it, and a percentage height inside a column of
-          indefinite height resolves to nothing, which drew twenty three months
-          of bars exactly zero pixels tall.
-        */}
-        <div className="flex min-w-full gap-1" style={{ height: '11rem' }}>
-          {series.map(({ month, statement }) => {
-            const overspent = statement.spending > statement.income
-            return (
-              <div key={month} className="flex min-w-10 flex-1 flex-col items-center gap-1">
-                <div className="flex min-h-0 w-full flex-1 items-end justify-center gap-0.5">
-                  <div
-                    className="w-1/2 bg-under"
-                    style={{ height: `${heightOf(statement.income)}%` }}
-                    title={`Masuk ${formatIdrCompact(statement.income)}`}
-                  />
-                  <div
-                    className={`w-1/2 ${overspent ? 'bg-over' : 'bg-accent'}`}
-                    style={{ height: `${heightOf(statement.spending)}%` }}
-                    title={`Keluar ${formatIdrCompact(statement.spending)}`}
-                  />
-                </div>
-                <span className="text-[0.625rem] tabular-nums text-ink-faint">
-                  {shortMonth(month)}
-                </span>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* The visual is decorative; the numbers themselves stay reachable. */}
-      <table className="sr-only">
-        <caption>Pemasukan dan pengeluaran per bulan</caption>
-        <thead>
-          <tr>
-            <th scope="col">Bulan</th>
-            <th scope="col">Masuk</th>
-            <th scope="col">Keluar</th>
-          </tr>
-        </thead>
-        <tbody>
-          {series.map(({ month, statement }) => (
-            <tr key={month}>
-              <th scope="row">{month}</th>
-              <td>{formatIdrCompact(statement.income)}</td>
-              <td>{formatIdrCompact(statement.spending)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </figure>
+    <CashflowChartView
+      months={months}
+      ticks={toTicks(scale)}
+      netTicks={toTicks(netScale)}
+      medianIncome={{ pct: scale.percentOf(medianIncome), text: formatIdrCompact(medianIncome) }}
+      medianSpending={{
+        pct: scale.percentOf(medianSpending),
+        text: formatIdrCompact(medianSpending),
+      }}
+      hasDeficit={hasDeficit}
+      caption="Pemasukan dan pengeluaran"
+    />
   )
 }

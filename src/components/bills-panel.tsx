@@ -77,7 +77,7 @@ export function BillsPanel({ review }: Props) {
       </div>
 
       <div
-        className="overflow-x-auto"
+        className="relative overflow-x-auto"
         tabIndex={0}
         role="region"
         aria-label="Tabel tagihan, bisa digeser ke samping"

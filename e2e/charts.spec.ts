@@ -18,8 +18,8 @@ test.describe('pemasukan dan pengeluaran', () => {
   test('draws a bar for every month, tallest where the money is', async ({ page }) => {
     await open(page, 'cashflow')
 
-    const income = await heightsOf(page, '[title^="Masuk "]')
-    const spending = await heightsOf(page, '[title^="Keluar "]')
+    const income = await heightsOf(page, '[data-series="masuk"]')
+    const spending = await heightsOf(page, '[data-series="keluar"]')
 
     expect(income).toHaveLength(4)
     expect(spending).toHaveLength(4)
@@ -37,7 +37,7 @@ test.describe('pemasukan dan pengeluaran', () => {
 
   test('scales bars in proportion to the amounts', async ({ page }) => {
     await open(page, 'cashflow')
-    const income = await heightsOf(page, '[title^="Masuk "]')
+    const income = await heightsOf(page, '[data-series="masuk"]')
 
     // Rp6,1jt against Rp11,4jt is 0,535. Allow a pixel of rounding either way.
     const ratio = income[0] / income[2]
@@ -193,5 +193,29 @@ test.describe('penanda tahun lahir', () => {
       .getByRole('slider')
       .evaluateAll((pins) => pins.map((pin) => pin.getBoundingClientRect().width))
     for (const width of boxes) expect(width).toBeGreaterThanOrEqual(44)
+  })
+})
+
+test.describe('lebar halaman', () => {
+  test('nothing pushes the page sideways on a narrow screen', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 })
+
+    for (const fixture of ['cashflow', 'bills', 'crunch-interactive', 'sankey']) {
+      await open(page, fixture)
+
+      const { doc, body } = await page.evaluate(() => ({
+        doc: document.documentElement.scrollWidth,
+        body: document.body.scrollWidth,
+      }))
+
+      /*
+        `sr-only` is position:absolute, and overflow only clips a descendant
+        whose containing block is inside the scroller. A scroll region left
+        static therefore lets its screen-reader text escape and stretch the
+        document, and the whole page scrolls sideways for text nobody can see.
+      */
+      expect(doc, `${fixture} widened the document`).toBeLessThanOrEqual(375)
+      expect(body, `${fixture} widened the body`).toBeLessThanOrEqual(375)
+    }
   })
 })
