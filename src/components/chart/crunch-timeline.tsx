@@ -117,17 +117,27 @@ export function CrunchTimeline({ projection, caption }: Props) {
       </div>
 
       {crunchYears.length > 0 ? (
-        <ul className="mt-3 space-y-1 border-t border-line pt-3 text-sm text-ink-muted">
-          {crunchYears.map((year) => (
-            <li key={year.year}>
-              <span className="tnum font-mono text-ink">{year.year}</span>{' '}
-              {year.entryFees
-                .map((fee) => `${fee.child} masuk ${fee.stage.toUpperCase()}`)
-                .join(' dan ')}
-              , total {formatIdr(year.total)} dalam satu tahun.
-            </li>
-          ))}
-        </ul>
+        /* One row per year rather than one sentence per year. Every sentence
+           carried the same three slots in the same order, so the sentence was a
+           table row wearing prose, and the years never lined up to be compared. */
+        <div className="mt-3 border-t border-line pt-3">
+          <p className="mb-2 text-sm text-ink">
+            {crunchYears.length} tahun memikul dua biaya masuk sekaligus
+          </p>
+          <dl className="space-y-1.5 text-sm">
+            {crunchYears.map((year) => (
+              <div key={year.year} className="flex flex-wrap items-baseline gap-x-3">
+                <dt className="tnum font-mono w-12 shrink-0 text-ink">{year.year}</dt>
+                <dd className="flex-1 text-ink-muted">
+                  {year.entryFees
+                    .map((fee) => `${fee.child} masuk ${fee.stage.toUpperCase()}`)
+                    .join(' + ')}
+                </dd>
+                <dd className="tnum font-mono shrink-0 text-ink">{formatIdr(year.total)}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
       ) : (
         <p className="mt-3 border-t border-line pt-3 text-sm text-ink-muted">
           Tidak ada tahun dengan dua biaya masuk sekaligus. Ini yang membuat jarak

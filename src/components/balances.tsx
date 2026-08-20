@@ -1,4 +1,3 @@
-import { Money } from '@/components/money'
 import { formatJakarta } from '@/lib/datetime'
 import type { AccountMovement, BankReconciliation, StalledAccount } from '@/lib/ledger/monthly'
 import { formatIdr } from '@/lib/money'
@@ -27,6 +26,7 @@ interface Props {
 
 export function Balances({ movements, reconciliation, stalled, statementDate }: Props) {
   const stalledIds = new Set(stalled.map((account) => account.accountId))
+  const stranded = stalled.reduce((sum, account) => sum + account.stranded, 0n)
   const confirmed = reconciliation?.computed ?? 0n
   const inferred = movements
     .filter((account) => account.accountId !== reconciliation?.accountId)
@@ -34,6 +34,25 @@ export function Balances({ movements, reconciliation, stalled, statementDate }: 
 
   return (
     <div className="space-y-4">
+      {/* The split comes first because it is the answer. Everything below is
+          the evidence for one half and the explanation for the other. */}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Split
+          label="Dipastikan bank"
+          sen={confirmed}
+          hint="Rekening yang punya e-statement di belakangnya."
+        />
+        <Split
+          label="Hanya perkiraan"
+          sen={inferred}
+          hint={
+            stranded > 0n
+              ? `Akun tanpa statement. Termasuk ${formatIdr(stranded)} yang hampir pasti sudah terpakai.`
+              : 'Akun tanpa statement. Dihitung dari uang yang masuk, bukan dari yang tersisa.'
+          }
+        />
+      </div>
+
       {reconciliation ? (
         <div
           className={`border p-4 ${
@@ -44,61 +63,73 @@ export function Balances({ movements, reconciliation, stalled, statementDate }: 
             <span aria-hidden="true" className={reconciliation.ok ? 'text-under' : 'text-over'}>
               {reconciliation.ok ? '●' : '▲'}
             </span>
-            {reconciliation.ok
-              ? 'Saldo Bank Mandiri di app cocok dengan yang dicetak bank'
-              : 'Saldo Bank Mandiri di app tidak cocok dengan yang dicetak bank'}
+            Saldo Bank Mandiri {reconciliation.ok ? 'cocok' : 'tidak cocok'} dengan yang dicetak
+            bank
           </p>
-          <p className="mt-1.5 text-sm text-ink-muted">
-            App menghitung{' '}
-            <span className="tnum font-mono text-ink">{formatIdr(reconciliation.computed)}</span>,
-            bank mencetak{' '}
-            <span className="tnum font-mono text-ink">{formatIdr(reconciliation.printed)}</span>
-            {statementDate ? ` per ${formatJakarta(statementDate, 'date')}` : ''}
+
+          {/* Two labelled figures rather than one sentence containing both. The
+              comparison is the point, and a reader can only compare two numbers
+              they can see at once. */}
+          <dl className="mt-3 flex flex-wrap gap-x-10 gap-y-2 text-sm">
+            <div>
+              <dt className="text-xs uppercase tracking-wide text-ink-faint">App menghitung</dt>
+              <dd className="tnum font-mono text-ink">{formatIdr(reconciliation.computed)}</dd>
+            </div>
+            <div>
+              <dt className="text-xs uppercase tracking-wide text-ink-faint">
+                Bank mencetak
+                {statementDate ? ` · ${formatJakarta(statementDate, 'date')}` : ''}
+              </dt>
+              <dd className="tnum font-mono text-ink">{formatIdr(reconciliation.printed)}</dd>
+            </div>
+            {reconciliation.ok ? null : (
+              <div>
+                <dt className="text-xs uppercase tracking-wide text-ink-faint">Selisih</dt>
+                <dd className="tnum font-mono text-over">
+                  {formatIdr(reconciliation.difference)}
+                </dd>
+              </div>
+            )}
+          </dl>
+
+          <p className="mt-3 text-xs text-ink-muted">
             {reconciliation.ok
-              ? '. Ini satu-satunya angka di halaman ini yang dicek terhadap sumber di luar app, jadi ia yang paling bisa dipegang.'
-              : `. Selisihnya ${formatIdr(reconciliation.difference)}, yang berarti ada baris yang belum masuk atau salah terbaca.`}
+              ? 'Satu-satunya angka di halaman ini yang dicek ke sumber di luar app.'
+              : 'Ada baris yang belum masuk atau salah terbaca.'}
           </p>
         </div>
       ) : null}
 
       {stalled.length > 0 ? (
         <div className="border border-warn/40 bg-warn-wash p-4">
-          <p className="flex items-center gap-2 text-sm font-medium text-ink">
+          <p className="flex items-baseline gap-2 text-sm font-medium text-ink">
             <span aria-hidden="true" className="text-warn">
               ◆
             </span>
-            Ada saldo yang kelihatannya ada, padahal kemungkinan besar sudah terpakai
+            <span>
+              <span className="tnum font-mono">{formatIdr(stranded)}</span> tercatat ada,
+              kemungkinan besar sudah terpakai
+            </span>
           </p>
-          <ul className="mt-2 space-y-1 text-sm text-ink-muted">
-            {stalled.map((account) => (
-              <li key={account.accountId}>
-                <span className="text-ink">{account.name}</span> menerima{' '}
-                <Money sen={account.credit} /> dan hampir tidak pernah mengeluarkan apa pun, jadi{' '}
-                <Money sen={account.stranded} /> tercatat masih ada di sana.
-              </li>
-            ))}
-          </ul>
+
           <p className="mt-2 text-sm text-ink-muted">
-            E-statement Mandiri hanya merekam sisi keluarnya, yaitu saat kamu top-up. Belanja dari
-            e-wallet tidak pernah lewat Mandiri, jadi app tidak bisa melihatnya. Sampai kanal
-            pencatatan e-wallet ada, angka ini terhitung di Sisa uang padahal uangnya sudah habis.
+            {stalled.length} akun menerima uang dan hampir tidak pernah mengeluarkannya:{' '}
+            <span className="text-ink">
+              {stalled.map((account) => account.name).join(', ')}
+            </span>
+            .
+          </p>
+
+          <p className="mt-2 text-sm text-ink-muted">
+            E-statement Mandiri hanya merekam saat kamu top-up. Belanja dari e-wallet tidak lewat
+            Mandiri, jadi app tidak bisa melihatnya.
+          </p>
+
+          <p className="mt-2 text-xs text-ink-faint">
+            Nominal per akun ada di tabel bawah, ditandai ◆.
           </p>
         </div>
       ) : null}
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Split
-          label="Dipastikan bank"
-          sen={confirmed}
-          hint="Rekening yang punya e-statement di belakangnya."
-        />
-        <Split
-          label="Hanya perkiraan"
-          sen={inferred}
-          hint="Akun tanpa statement. Dihitung dari uang yang masuk, bukan dari yang tersisa."
-          uncertain
-        />
-      </div>
 
       <div
         className="overflow-x-auto border border-line bg-surface"
@@ -153,27 +184,10 @@ export function Balances({ movements, reconciliation, stalled, statementDate }: 
   )
 }
 
-function Split({
-  label,
-  sen,
-  hint,
-  uncertain = false,
-}: {
-  label: string
-  sen: bigint
-  hint: string
-  uncertain?: boolean
-}) {
+function Split({ label, sen, hint }: { label: string; sen: bigint; hint: string }) {
   return (
     <div className="border border-line bg-surface p-4">
-      <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-ink-faint">
-        {uncertain ? (
-          <span aria-hidden="true" className="text-warn">
-            ◆
-          </span>
-        ) : null}
-        {label}
-      </p>
+      <p className="text-xs font-medium uppercase tracking-wide text-ink-faint">{label}</p>
       <p className="mt-1.5 tnum font-mono text-lg text-ink">{formatIdr(sen)}</p>
       <p className="mt-1 text-xs text-ink-muted">{hint}</p>
     </div>

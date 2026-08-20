@@ -216,17 +216,36 @@ async function Dashboard() {
             </span>
             Perlu perhatian
           </h2>
-          <ul className="mt-2 space-y-1 text-sm text-ink-muted">
-            {overdrawn.map((account) => (
-              <li key={account.accountId}>
-                Saldo {account.name} minus <Money sen={account.closing} />, yang selalu berarti
-                ada pencatatan yang salah.
-              </li>
-            ))}
-            {needsReview > 0 ? (
-              <li>{needsReview} transaksi belum dipastikan kategorinya oleh manusia.</li>
+
+          <div className="mt-3 space-y-3 text-sm">
+            {overdrawn.length > 0 ? (
+              <div>
+                <p className="text-ink">
+                  Saldo minus di {overdrawn.length} akun:{' '}
+                  {overdrawn.map((account, index) => (
+                    <span key={account.accountId}>
+                      {index > 0 ? ', ' : ''}
+                      {account.name} <Money sen={account.closing} />
+                    </span>
+                  ))}
+                </p>
+                <p className="mt-0.5 text-ink-muted">
+                  Saldo negatif selalu berarti ada pencatatan yang salah.
+                </p>
+              </div>
             ) : null}
-          </ul>
+
+            {needsReview > 0 ? (
+              <div>
+                <p className="text-ink">
+                  {needsReview} transaksi belum dipastikan kategorinya.
+                </p>
+                <p className="mt-0.5 text-ink-muted">
+                  Kategorinya diterka dari keterangan bank, dan yang belum yakin ditandai.
+                </p>
+              </div>
+            ) : null}
+          </div>
         </section>
       ) : null}
 
