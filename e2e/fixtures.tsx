@@ -25,6 +25,14 @@ import type { FinancialSnapshot } from '@/lib/planning/ratios'
 import { GoalGlidepath } from '@/components/chart/goal-glidepath'
 import { projectFamily } from '@/lib/planning/children'
 import { monthlyContribution, suggestInstrument } from '@/lib/planning/goals'
+import { AllocationPanel } from '@/components/plan/allocation-panel'
+import { ChildrenPanel } from '@/components/plan/children-panel'
+import { GapPanel } from '@/components/plan/gap-panel'
+import { GoalsPanel } from '@/components/plan/goals-panel'
+import { RatioPanel } from '@/components/plan/ratio-panel'
+import type { HouseholdProfile } from '@/lib/planning/allocation'
+import type { ChildPlan } from '@/lib/planning/children'
+import { templateProfile } from '@/lib/planning/lifestyle'
 import { documentFor, FIXTURE_DIR } from './render'
 
 /**
@@ -394,6 +402,30 @@ const FLOW = buildFlow(
   })),
 )
 
+/*
+  The planner's own panels, which had never been rendered here at all.
+
+  Everything under src/components/chart was covered and everything under
+  src/components/plan was not, so a whole page of the app had never been through
+  axe. The first thing checking it found was a ten pixel label sitting at 3.9:1
+  against its own selected row, in dark mode only.
+
+  The callbacks are inert. A static render never calls them, and giving them
+  behaviour would be testing React rather than the markup.
+*/
+const inert = () => undefined
+
+const PROFILE: HouseholdProfile = { adults: 2, children: 1, debtServiceRatio: 0.18 }
+
+const CHILD_PLANS: ChildPlan[] = [
+  { label: 'Anak pertama', birthYear: 2027, track: 'negeri' },
+  // Four years apart: past BKKBN's minimum and clear of every entry fee that
+  // would otherwise land in the same year as another.
+  { label: 'Anak kedua', birthYear: 2031, track: 'negeri' },
+]
+
+const LIFESTYLE = templateProfile('seimbang')
+
 export const FIXTURES = {
   bills: <BillsPanel review={BILLS} />,
   'bills-untouched': <BillsPanel review={BILLS_UNTOUCHED} />,
@@ -540,6 +572,48 @@ export const FIXTURES = {
       caption="Aliran uang 2026-02"
       note={<FoldedCategories folded={FLOW.folded} into={FLOW.foldedInto} />}
     />
+  ),
+  // The framework picker, and the household measured against whatever it picks.
+  'plan-allocation': (
+    <AllocationPanel
+      income={ROOMY.monthlyIncome}
+      frameworkId="ojk-10-20-30-40"
+      onFrameworkChange={inert}
+      profile={PROFILE}
+      snapshot={ROOMY}
+      observedIncome={ROOMY.monthlyIncome}
+    />
+  ),
+  // Five ratios against their OJK thresholds. Both months, because the failing
+  // verdicts and the healthy ones are drawn in different colours.
+  'plan-ratios': <RatioPanel snapshot={TIGHT_MONTH} />,
+  'plan-ratios-healthy': <RatioPanel snapshot={ROOMY} />,
+  // Two children, which is what draws the selected spacing row: the state that
+  // carried the contrast failure and that nothing had ever rendered.
+  'plan-children': (
+    <ChildrenPanel
+      plans={CHILD_PLANS}
+      onPlansChange={inert}
+      track="negeri"
+      onTrackChange={inert}
+      currentYear={2026}
+    />
+  ),
+  'plan-gap': (
+    <GapPanel
+      currentProfile={LIFESTYLE}
+      currentIncome={ROOMY.monthlyIncome}
+      targetTier="nyaman"
+      onTargetTierChange={inert}
+      targetSavings={(ROOMY.monthlyIncome * 20n) / 100n}
+      onTargetSavingsChange={inert}
+      adults={2}
+      childCount={1}
+      currentYear={2026}
+    />
+  ),
+  'plan-goals': (
+    <GoalsPanel monthlyExpenses={LIFESTYLE.total} profile={PROFILE} currentYear={2026} />
   ),
 }
 
