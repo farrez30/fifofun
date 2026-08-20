@@ -7,8 +7,12 @@ import { Balances } from '@/components/balances'
 import { CashflowChart } from '@/components/cashflow-chart'
 import { BudgetBullet } from '@/components/chart/budget-bullet'
 import { Sankey, type SankeyLink, type SankeyNode } from '@/components/chart/sankey'
+import { BillsPanel } from '@/components/bills-panel'
 import { Money, SignedMoney, Stat } from '@/components/money'
+import { ReceivablesPanel } from '@/components/receivables-panel'
 import { formatJakarta } from '@/lib/datetime'
+import { reviewBills } from '@/lib/ledger/bills'
+import { reviewReceivables } from '@/lib/ledger/receivables'
 import { proposeBudget, reviewBudget } from '@/lib/ledger/budget'
 import { rollUpByMonthAndCategory, totalsByCategory } from '@/lib/ledger/categories'
 import {
@@ -24,6 +28,7 @@ import {
   getAccounts,
   getAllTransactions,
   getBudgets,
+  getCategories,
   getHousehold,
   getLatestClosingBalance,
   getOpeningBalance,
@@ -141,8 +146,9 @@ async function Dashboard() {
     )
   }
 
-  const [accounts, transactions, openingBalance, printed] = await Promise.all([
+  const [accounts, categories, transactions, openingBalance, printed] = await Promise.all([
     getAccounts(household.id),
+    getCategories(household.id),
     getAllTransactions(household.id),
     getOpeningBalance(household.id),
     getLatestClosingBalance(household.id),
@@ -184,6 +190,23 @@ async function Dashboard() {
     currentIndex === -1 ? {} : history[currentIndex].byCategory,
     hasSetBudgets ? 'manual' : 'derived',
   )
+
+  // Which account a bill left from is part of the answer, and the ledger carries
+  // the id rather than the name. Resolved here from the accounts already loaded
+  // instead of joining it onto every transaction query in the app.
+  const accountNameById = new Map(accounts.map((account) => [account.id, account.name]))
+  const billsReview = reviewBills(
+    transactions.map((tx) => ({
+      ...tx,
+      accountName: tx.fromAccountId ? (accountNameById.get(tx.fromAccountId) ?? null) : null,
+    })),
+    latest.month,
+    // Every bill the household has set up, so one that has never been paid is
+    // still visible rather than absent.
+    { known: categories.filter((c) => c.cashflow === 'bills').map((c) => c.name) },
+  )
+
+  const receivables = reviewReceivables(transactions)
 
   return (
     <div className="space-y-10">
@@ -268,6 +291,23 @@ async function Dashboard() {
         </h2>
         <BudgetBullet review={budgetReview} caption={`Per kategori, ${latest.month}`} />
       </section>
+
+      <section aria-labelledby="tagihan">
+        <h2 id="tagihan" className="mb-3 text-sm font-medium text-ink">
+          Tagihan rutin
+          <span className="ml-2 font-normal text-ink-muted">{latest.month}</span>
+        </h2>
+        <BillsPanel review={billsReview} />
+      </section>
+
+      {receivables.receivables.length > 0 ? (
+        <section aria-labelledby="piutang">
+          <h2 id="piutang" className="mb-3 text-sm font-medium text-ink">
+            Piutang
+          </h2>
+          <ReceivablesPanel review={receivables} />
+        </section>
+      ) : null}
 
       <section aria-labelledby="aliran">
         <h2 id="aliran" className="mb-3 text-sm font-medium text-ink">

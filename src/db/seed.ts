@@ -12,6 +12,11 @@ import { config } from 'dotenv'
  * what makes it safe to re-run after a parser change.
  *
  *   pnpm db:seed -- --dir e_statement_mandiri --email you@example.com
+ *
+ * A household that already exists picks up categories added to the seed since,
+ * without touching a single statement:
+ *
+ *   pnpm db:seed -- --setup-only
  */
 
 interface Args {
@@ -21,6 +26,15 @@ interface Args {
   ownIdentifiers: string[]
   employers: string[]
   dryRun: boolean
+  /**
+   * Stop after the household, accounts and categories.
+   *
+   * This is how a household that was set up months ago picks up categories added
+   * to the seed since. Adding eleven Bills categories is useless to somebody who
+   * already ran the seed once, and re-importing every statement to get at them
+   * is a lot of work for a few rows.
+   */
+  setupOnly: boolean
 }
 
 function parseArgs(argv: string[]): Args {
@@ -35,6 +49,7 @@ function parseArgs(argv: string[]): Args {
     ownIdentifiers: (get('--own') ?? '').split(',').map((s) => s.trim()).filter(Boolean),
     employers: (get('--employer') ?? '').split(',').map((s) => s.trim()).filter(Boolean),
     dryRun: argv.includes('--dry-run'),
+    setupOnly: argv.includes('--setup-only'),
   }
 }
 
@@ -61,12 +76,12 @@ async function main(): Promise<void> {
   )
   const { formatIdr } = await import('@/lib/money')
 
-  const files = walk(args.dir).sort()
-  if (files.length === 0) {
+  const files = args.setupOnly ? [] : walk(args.dir).sort()
+  if (!args.setupOnly && files.length === 0) {
     console.error(`No .xlsx statements found under ${args.dir}`)
     process.exit(1)
   }
-  console.log(`Found ${files.length} statements under ${args.dir}`)
+  if (!args.setupOnly) console.log(`Found ${files.length} statements under ${args.dir}`)
 
   // --- household ---------------------------------------------------------
   let [household] = await db
@@ -137,7 +152,12 @@ async function main(): Promise<void> {
   }
   console.log(`${accountIds.size} accounts ready`)
 
+  // Keyed by cashflow and name, which is what the unique index is. Piutang
+  // exists under both sides of a loan, and a map keyed on the name alone would
+  // hand every lookup whichever of the two happened to be seeded second.
   const categoryIds = new Map<string, string>()
+  const keyOf = (cashflow: string, name: string) => `${cashflow} ${name}`
+
   for (const seed of SEED_CATEGORIES) {
     const [created] = await db
       .insert(schema.categories)
@@ -146,22 +166,29 @@ async function main(): Promise<void> {
       .returning()
 
     if (created) {
-      categoryIds.set(seed.name, created.id)
-    } else {
-      const [existing] = await db
-        .select()
-        .from(schema.categories)
-        .where(
-          and(
-            eq(schema.categories.householdId, household.id),
-            eq(schema.categories.name, seed.name),
-          ),
-        )
-        .limit(1)
-      if (existing) categoryIds.set(seed.name, existing.id)
+      categoryIds.set(keyOf(seed.cashflow, seed.name), created.id)
+      continue
     }
+
+    const [existing] = await db
+      .select()
+      .from(schema.categories)
+      .where(
+        and(
+          eq(schema.categories.householdId, household.id),
+          eq(schema.categories.name, seed.name),
+          eq(schema.categories.cashflow, seed.cashflow),
+        ),
+      )
+      .limit(1)
+    if (existing) categoryIds.set(keyOf(seed.cashflow, seed.name), existing.id)
   }
   console.log(`${categoryIds.size} categories ready`)
+
+  if (args.setupOnly) {
+    console.log('Setup only, statements left alone.')
+    return
+  }
 
   // --- statements --------------------------------------------------------
   const options = {
@@ -240,7 +267,9 @@ async function main(): Promise<void> {
         description: entry.description,
         amount: entry.amount,
         cashflow: entry.cashflow,
-        categoryId: categoryName ? (categoryIds.get(categoryName) ?? null) : null,
+        categoryId: categoryName
+          ? (categoryIds.get(keyOf(entry.cashflow, categoryName)) ?? null)
+          : null,
         fromAccountId: entry.fromAccountId ? accountIds.get(entry.fromAccountId) ?? null : null,
         toAccountId: entry.toAccountId ? accountIds.get(entry.toAccountId) ?? null : null,
         source: 'xlsx' as const,

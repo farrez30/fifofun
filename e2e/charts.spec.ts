@@ -99,3 +99,39 @@ test.describe('sankey', () => {
     expect(areas.filter((area) => area === 0)).toEqual([])
   })
 })
+
+test.describe('tagihan rutin', () => {
+  test('separates paid from due, and never by colour alone', async ({ page }) => {
+    await open(page, 'bills')
+    await expectMarksToRender(page)
+
+    const rows = await page.locator('tbody tr').allInnerTexts()
+    expect(rows.length).toBeGreaterThan(0)
+
+    // Every row carries the state in words as well as in a glyph and a hue.
+    for (const row of rows) {
+      expect(row).toMatch(/Sudah dibayar|Belum dibayar|Lama tidak muncul/)
+    }
+  })
+
+  test('quotes what an unpaid bill is going to cost', async ({ page }) => {
+    await open(page, 'bills')
+    const spotify = page.locator('tbody tr', { hasText: 'Langganan Spotify' })
+    await expect(spotify).toContainText('Belum dibayar')
+    // The usual amount is the point: an unpaid bill that cannot say what it
+    // costs leaves the reader to go and look it up.
+    await expect(spotify).toContainText('Rp104.900')
+  })
+})
+
+test.describe('piutang', () => {
+  test('reads the state from the ledger, not from the name', async ({ page }) => {
+    await open(page, 'receivables')
+    const text = await page.locator('body').innerText()
+
+    // Alma paid the same day. The panel has to say so even though nothing in
+    // the debt's own name changed.
+    expect(text).toContain('Lunas')
+    expect(text).toContain('Baru sebagian')
+  })
+})

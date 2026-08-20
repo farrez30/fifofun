@@ -1,4 +1,9 @@
 import { mkdir, writeFile } from 'node:fs/promises'
+import { BillsPanel } from '@/components/bills-panel'
+import { ReceivablesPanel } from '@/components/receivables-panel'
+import { reviewBills } from '@/lib/ledger/bills'
+import { reviewReceivables } from '@/lib/ledger/receivables'
+import type { CashflowType, LedgerEntry } from '@/lib/ledger/types'
 import { CashflowChart } from '@/components/cashflow-chart'
 import { BudgetBullet } from '@/components/chart/budget-bullet'
 import { CrunchTimeline } from '@/components/chart/crunch-timeline'
@@ -71,7 +76,61 @@ const FAMILY = projectFamily(
   2026,
 )
 
+/** March 2026, where three bills were paid and eight were not. */
+let seq = 0
+function ledgerRow(
+  date: string,
+  category: string,
+  amount: bigint,
+  cashflow: CashflowType,
+  extra: Record<string, unknown> = {},
+): LedgerEntry & { categoryName: string; accountName?: string | null } {
+  seq += 1
+  return {
+    id: `f${seq}`,
+    occurredAt: new Date(`${date}T05:00:00.000Z`),
+    description: category,
+    amount,
+    cashflow,
+    categoryId: null,
+    fromAccountId: null,
+    toAccountId: null,
+    source: 'xlsx',
+    externalRef: null,
+    note: null,
+    categoryName: category,
+    ...extra,
+  }
+}
+
+const BILLS = reviewBills(
+  [
+    ledgerRow('2026-02-05', 'Wifi', idr('271.950,00'), 'bills'),
+    ledgerRow('2026-03-05', 'Wifi', idr('271.950,00'), 'bills', { accountName: 'Bank Mandiri' }),
+    ledgerRow('2026-03-06', 'Langganan Youtube', idr('25.925,00'), 'bills', {
+      accountName: 'Bank Mandiri',
+    }),
+    ledgerRow('2026-02-08', 'Langganan Spotify', idr('104.900,00'), 'bills'),
+    ledgerRow('2025-09-01', 'Langganan DanceFitMe', idr('49.000,00'), 'bills'),
+  ],
+  '2026-03',
+  { known: ['Bayar Kontrakan', 'Aeropolis Gym & Pool'] },
+)
+
+const RECEIVABLES = reviewReceivables(
+  [
+    ledgerRow('2026-03-01', 'Patungan Spotify - Alma', idr('17.500,00'), 'receivable_new'),
+    ledgerRow('2026-03-01', 'Patungan Spotify - Alma', idr('17.500,00'), 'receivable_settled'),
+    ledgerRow('2026-03-01', 'Patungan Spotify - Hafidz', idr('17.500,00'), 'receivable_new'),
+    ledgerRow('2026-01-04', 'Sambal Bakar Om Ben - Wafi', idr('120.000,00'), 'receivable_new'),
+    ledgerRow('2026-02-01', 'Sambal Bakar Om Ben - Wafi', idr('40.000,00'), 'receivable_settled'),
+  ],
+  { asOf: new Date('2026-03-31T05:00:00.000Z') },
+)
+
 export const FIXTURES = {
+  bills: <BillsPanel review={BILLS} />,
+  receivables: <ReceivablesPanel review={RECEIVABLES} />,
   cashflow: <CashflowChart series={SERIES} />,
   'budget-derived': <BudgetBullet review={DERIVED_REVIEW} caption="Per kategori" />,
   crunch: <CrunchTimeline projection={FAMILY} caption="Biaya anak" />,
