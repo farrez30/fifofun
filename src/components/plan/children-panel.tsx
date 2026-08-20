@@ -105,6 +105,9 @@ export function ChildrenPanel({
       </div>
 
       {plans.length > 0 ? (
+        /* The fields stay. Dragging is the faster way to find an arrangement and
+           typing is the only way to enter one you already know, so neither can
+           replace the other. Both write to the same state. */
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {plans.map((plan, index) => (
             <NumberField
@@ -154,7 +157,11 @@ export function ChildrenPanel({
             />
           </div>
 
-          <CrunchTimeline projection={family} caption="Biaya anak per tahun kalender" />
+          <CrunchTimeline
+            projection={family}
+            caption="Biaya anak per tahun kalender"
+            onBirthYearChange={setBirthYear}
+          />
         </>
       ) : null}
 

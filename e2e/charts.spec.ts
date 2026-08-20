@@ -145,3 +145,53 @@ test('never reports nothing-recorded as everything-paid', async ({ page }) => {
   // And it says what to do about it, rather than leaving a dead end.
   await expect(page.getByRole('link', { name: /antrean tinjau/i })).toBeVisible()
 })
+
+test.describe('penanda tahun lahir', () => {
+  test('is a real slider, announced and reachable', async ({ page }) => {
+    await open(page, 'crunch-interactive')
+
+    const pins = page.getByRole('slider')
+    await expect(pins).toHaveCount(2)
+
+    for (const pin of await pins.all()) {
+      // A marker that cannot say where it is is useless without eyes.
+      await expect(pin).toHaveAttribute('aria-label', /Tahun lahir/)
+      await expect(pin).toHaveAttribute('aria-valuenow', /^\d{4}$/)
+      await expect(pin).toHaveAttribute('aria-valuetext', /^\d{4}$/)
+    }
+  })
+
+  test('puts each marker on the column it names', async ({ page }) => {
+    await open(page, 'crunch-interactive')
+    await expectMarksToRender(page)
+
+    const offsets = await page.getByRole('slider').evaluateAll((pins) =>
+      pins.map((pin) => {
+        const box = pin.getBoundingClientRect()
+        const centre = box.left + box.width / 2
+        const label = pin.getAttribute('aria-valuenow')
+        const column = [...document.querySelectorAll('[title]')].find((node) =>
+          node.getAttribute('title')?.includes(`, ${label}:`),
+        )
+        if (!column) return null
+        const target = column.getBoundingClientRect()
+        return Math.abs(centre - (target.left + target.width / 2))
+      }),
+    )
+
+    // Within a column's width of the bar it points at. Dividing by count - 1
+    // instead of centring put these half a column out at both ends.
+    for (const offset of offsets) {
+      if (offset === null) continue
+      expect(offset).toBeLessThan(12)
+    }
+  })
+
+  test('keeps a finger-sized target', async ({ page }) => {
+    await open(page, 'crunch-interactive')
+    const boxes = await page
+      .getByRole('slider')
+      .evaluateAll((pins) => pins.map((pin) => pin.getBoundingClientRect().width))
+    for (const width of boxes) expect(width).toBeGreaterThanOrEqual(44)
+  })
+})

@@ -1,4 +1,5 @@
 import { formatIdr, formatIdrCompact, senToRupiahNumber } from '@/lib/money'
+import { DragAxis, DragPin } from './drag-axis'
 import type { FamilyProjection } from '@/lib/planning/children'
 
 /**
@@ -25,9 +26,16 @@ const CHILD_FILLS = [
 interface Props {
   projection: FamilyProjection
   caption: string
+  /**
+   * When given, each child gets a marker that can be dragged along the year
+   * axis. The argument this chart makes is about spacing, and spacing is a thing
+   * you feel by moving one child and watching the spikes pull apart or collide.
+   * Reading the same claim in a sentence is not the same experience.
+   */
+  onBirthYearChange?: (index: number, year: number) => void
 }
 
-export function CrunchTimeline({ projection, caption }: Props) {
+export function CrunchTimeline({ projection, caption, onBirthYearChange }: Props) {
   const { years, children, crunchYears } = projection
 
   if (years.length === 0) {
@@ -115,7 +123,28 @@ export function CrunchTimeline({ projection, caption }: Props) {
             )
           })}
         </div>
+
+        {onBirthYearChange ? (
+          <DragAxis values={years.map((year) => year.year)} className="mt-1 h-10 min-w-full">
+            {children.map((child, index) => (
+              <DragPin
+                key={child.label}
+                value={child.plan.birthYear}
+                onChange={(year) => onBirthYearChange(index, year)}
+                label={`Tahun lahir ${child.label}`}
+                color={CHILD_FILLS[index % CHILD_FILLS.length]}
+              />
+            ))}
+          </DragAxis>
+        ) : null}
       </div>
+
+      {onBirthYearChange ? (
+        <p className="mt-1 text-xs text-ink-muted">
+          Seret penanda tahun lahir, atau pilih salah satunya lalu pakai tombol panah. Puncak
+          biayanya akan saling menjauh atau bertabrakan mengikuti jaraknya.
+        </p>
+      ) : null}
 
       {crunchYears.length > 0 ? (
         /* One row per year rather than one sentence per year. Every sentence

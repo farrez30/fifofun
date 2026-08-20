@@ -144,6 +144,15 @@ export const FIXTURES = {
   cashflow: <CashflowChart series={SERIES} />,
   'budget-derived': <BudgetBullet review={DERIVED_REVIEW} caption="Per kategori" />,
   crunch: <CrunchTimeline projection={FAMILY} caption="Biaya anak" />,
+  // The same chart with its markers, so axe sees the sliders and the geometry
+  // check sees whether they landed on their columns.
+  'crunch-interactive': (
+    <CrunchTimeline
+      projection={FAMILY}
+      caption="Biaya anak"
+      onBirthYearChange={() => undefined}
+    />
+  ),
   sankey: (
     <Sankey
       caption="Ke mana uangnya"
