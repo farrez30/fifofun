@@ -23,14 +23,35 @@ const mono = IBM_Plex_Mono({
   display: 'swap',
 })
 
+/**
+ * Absolute base for social image URLs.
+ *
+ * Without it Next falls back to localhost, and every shared link points at a
+ * card nobody outside this machine can load.
+ */
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: {
     default: 'FiFoFun',
     template: '%s · FiFoFun',
   },
   description:
-    'Perencana keuangan pribadi yang memeriksa catatanmu terhadap mutasi bank, bukan hanya menampilkannya kembali.',
+    'Perencana keuangan pribadi yang mencocokkan setiap catatan dengan mutasi bank, lalu menghitung berapa yang sebaiknya masuk ke tiap pos.',
   applicationName: 'FiFoFun',
+  openGraph: {
+    type: 'website',
+    locale: 'id_ID',
+    siteName: 'FiFoFun',
+    title: 'FiFoFun',
+    description:
+      'Perencana keuangan pribadi yang mencocokkan setiap catatan dengan mutasi bank.',
+  },
+  twitter: { card: 'summary_large_image' },
+  // The app holds one household's finances and has nothing to gain from being
+  // indexed, so it asks not to be.
+  robots: { index: false, follow: false },
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
