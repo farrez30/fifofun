@@ -63,6 +63,14 @@ interface Props {
 export function FundsPanel({ review, idOf, caption }: Props) {
   const { funds, totalSaved, totalTarget, behind } = review
   const targeted = funds.filter((fund) => fund.target !== null).length
+  /*
+    Every pot set up and not one of them ever fed. That is the state a household
+    is in on the day it arrives, and the panel used to answer it with seven rows
+    of Rp0 and no way out. An import files a transfer to a savings account as a
+    transfer, which is what it is at the bank, and only a person can say that the
+    one going to Reksadana was an investment.
+  */
+  const untouched = funds.every((fund) => fund.contributed === 0n)
 
   if (funds.length === 0) {
     return (
@@ -80,10 +88,25 @@ export function FundsPanel({ review, idOf, caption }: Props) {
     <div className="border border-line bg-surface">
       <div className="border-b border-line p-4">
         <p className="text-sm font-medium text-ink">
-          {behind.length > 0
-            ? `${behind.length} pos tidak akan sampai tepat waktu dengan setoran sekarang.`
-            : 'Setoran sekarang cukup untuk semua tenggat yang kamu tetapkan.'}
+          {untouched
+            ? 'Belum ada setoran yang tercatat masuk ke satu pos pun.'
+            : behind.length > 0
+              ? `${behind.length} pos tidak akan sampai tepat waktu dengan setoran sekarang.`
+              : 'Setoran sekarang cukup untuk semua tenggat yang kamu tetapkan.'}
         </p>
+
+        {untouched ? (
+          <p className="mt-1 text-sm text-ink-muted">
+            Impor mencatat setoran ke rekening tabungan sebagai transfer, karena di bank memang
+            itu yang terjadi. Hanya kamu yang bisa bilang bahwa yang ke Reksadana adalah
+            investasi.{' '}
+            <a href="/tinjau" className="text-accent underline underline-offset-2">
+              Pindahkan lewat antrean tinjau
+            </a>
+            .
+          </p>
+        ) : null}
+
         <p className="mt-1 text-sm text-ink-muted">
           {formatIdr(totalSaved)} terkumpul di {funds.length} pos
           {/* The two totals cover different pots, and adding them into one

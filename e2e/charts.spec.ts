@@ -622,6 +622,17 @@ test.describe('pos dana', () => {
     for (const width of widths) expect(width).toBeGreaterThan(1)
   })
 
+  test('does not leave a household of empty pots at a dead end', async ({ page }) => {
+    await open(page, 'funds-untouched')
+    const text = await page.locator('body').innerText()
+
+    // Every pot set up and none of them ever fed. Answering that with rows of
+    // Rp0 and nothing else is the same failure the bills panel had.
+    expect(text).toContain('Belum ada setoran yang tercatat masuk ke satu pos pun')
+    expect(text).toContain('mencatat setoran ke rekening tabungan sebagai transfer')
+    await expect(page.getByRole('link', { name: /antrean tinjau/i })).toBeVisible()
+  })
+
   test('offers the one figure a person decides, and no others', async ({ page }) => {
     await open(page, 'funds')
 

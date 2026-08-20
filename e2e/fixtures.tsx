@@ -201,6 +201,27 @@ const FUNDS = reviewFunds(
   { asOf: '2026-03' },
 )
 
+const FUNDS_UNTOUCHED = reviewFunds(
+  [],
+  [
+    {
+      name: 'Dana Darurat',
+      cashflow: 'invest_savings',
+      openingBalance: 0n,
+      target: null,
+      targetMonth: null,
+    },
+    {
+      name: 'Reksadana',
+      cashflow: 'invest_savings',
+      openingBalance: 0n,
+      target: null,
+      targetMonth: null,
+    },
+  ],
+  { asOf: '2026-07' },
+)
+
 
 /** February 2026 exactly as the spreadsheet has it, receivable coming back and all. */
 const FEBRUARY: MonthlyStatement = {
@@ -337,6 +358,15 @@ export const FIXTURES = {
   funds: (
     <FundsPanel
       review={FUNDS}
+      idOf={(fund) => `id-${fund.name}`}
+      caption="Targetnya satu-satunya angka di halaman ini yang diketik sendiri."
+    />
+  ),
+  // The state a household is actually in on arrival: every pot set up, not one
+  // of them ever fed. Seven rows of Rp0 and no way out is a dead end.
+  'funds-untouched': (
+    <FundsPanel
+      review={FUNDS_UNTOUCHED}
       idOf={(fund) => `id-${fund.name}`}
       caption="Targetnya satu-satunya angka di halaman ini yang diketik sendiri."
     />
