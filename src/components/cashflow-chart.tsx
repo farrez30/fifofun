@@ -60,12 +60,18 @@ export function CashflowChart({ series }: Props) {
         role="region"
         aria-label="Grafik pemasukan dan pengeluaran, bisa digeser ke samping"
       >
-        <div className="flex min-w-full items-end gap-1" style={{ height: '11rem' }}>
+        {/*
+          No `items-end` on this row. It sizes each column to its own content
+          instead of stretching it, and a percentage height inside a column of
+          indefinite height resolves to nothing, which drew twenty three months
+          of bars exactly zero pixels tall.
+        */}
+        <div className="flex min-w-full gap-1" style={{ height: '11rem' }}>
           {series.map(({ month, statement }) => {
             const overspent = statement.spending > statement.income
             return (
               <div key={month} className="flex min-w-10 flex-1 flex-col items-center gap-1">
-                <div className="flex h-full w-full items-end justify-center gap-0.5">
+                <div className="flex min-h-0 w-full flex-1 items-end justify-center gap-0.5">
                   <div
                     className="w-1/2 bg-under"
                     style={{ height: `${heightOf(statement.income)}%` }}

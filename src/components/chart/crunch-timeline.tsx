@@ -76,7 +76,8 @@ export function CrunchTimeline({ projection, caption }: Props) {
         role="region"
         aria-label="Linimasa biaya anak, bisa digeser ke samping"
       >
-        <div className="flex min-w-full items-end gap-px" style={{ height: '13rem' }}>
+        {/* Stretches rather than ending, for the reason spelled out in cashflow-chart. */}
+        <div className="flex min-w-full gap-px" style={{ height: '13rem' }}>
           {years.map((year) => {
             const crunch = crunchSet.has(year.year)
             return (
@@ -88,7 +89,7 @@ export function CrunchTimeline({ projection, caption }: Props) {
                   ▲
                 </span>
 
-                <div className="flex h-full w-full flex-col justify-end">
+                <div className="flex min-h-0 w-full flex-1 flex-col justify-end">
                   {children.map((child, index) => {
                     const amount = year.byChild[child.label] ?? 0n
                     if (amount === 0n) return null
