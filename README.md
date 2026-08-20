@@ -64,6 +64,14 @@ pnpm install
 pnpm test
 ```
 
+## Deployment
+
+Vercel, with the functions pinned to the same region as the Supabase project so
+a server-rendered page is not paying for a round trip across an ocean per query.
+The runbook, including which environment variable belongs where and why
+`DATABASE_URL` deliberately does not belong on the platform, is in
+[docs/deploy.md](docs/deploy.md).
+
 ## Privacy
 
 No financial data lives in this repository, and none ever will. Statements are

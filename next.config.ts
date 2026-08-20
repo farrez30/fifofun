@@ -29,6 +29,19 @@ const nextConfig: NextConfig = {
       an import is idempotent by file hash regardless.
     */
     useOffline: true,
+
+    serverActions: {
+      /*
+        The default is 1MB, which is below the cap the import action enforces
+        for itself: a file between the two would be rejected by the framework
+        before the action ran, with a message that says nothing about
+        statements. Vercel refuses a request body over 4.5MB at the edge no
+        matter what is configured here, so this sits just under that and the
+        action's own limit sits under this. A real Mandiri statement is around
+        45KB.
+      */
+      bodySizeLimit: '4mb',
+    },
   },
 
   async headers() {

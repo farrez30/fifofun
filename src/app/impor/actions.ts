@@ -29,8 +29,14 @@ import { readXlsx } from '@/lib/xlsx'
  * cannot reach another household's data.
  */
 
-/** A statement is a few hundred kilobytes. This is generous and still bounded. */
-const MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+/**
+ * A statement is a few hundred kilobytes. This is generous and still bounded.
+ *
+ * It has to stay under `serverActions.bodySizeLimit`, or a file between the two
+ * is rejected by the framework and the caller sees a transport error instead of
+ * the message below.
+ */
+const MAX_UPLOAD_BYTES = 3 * 1024 * 1024
 
 /** Every .xlsx is a ZIP, and every ZIP starts with these four bytes. */
 const ZIP_MAGIC = [0x50, 0x4b, 0x03, 0x04]
