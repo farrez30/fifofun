@@ -43,6 +43,32 @@ export const SEED_CATEGORIES: SeedCategory[] = [
   { name: 'Other spending', cashflow: 'spending' },
   { name: 'Penyesuaian Spending', cashflow: 'spending' },
 
+  /*
+    The eleven recurring bills from the Setup sheet, verbatim apart from the
+    last one, where the spreadsheet cell holds a note to self rather than a name.
+
+    These were missing entirely until now, and their absence was not a cosmetic
+    one: with no category of cashflow `bills` to file anything under, the
+    importer had nowhere to put a subscription, so electricity and internet
+    landed in Belanja and every Bills figure in the app read zero against a
+    spreadsheet showing Rp532.883 for March alone.
+  */
+  { name: 'Bayar Kontrakan', cashflow: 'bills' },
+  { name: 'Langganan Parkee', cashflow: 'bills' },
+  { name: 'Aeropolis Gym & Pool', cashflow: 'bills' },
+  { name: 'Wifi', cashflow: 'bills' },
+  { name: 'Langganan Youtube', cashflow: 'bills' },
+  { name: 'Langganan Spotify', cashflow: 'bills' },
+  { name: 'Langganan MileageTrk', cashflow: 'bills' },
+  { name: 'Langganan Groupy', cashflow: 'bills' },
+  { name: 'Langganan Gdrive', cashflow: 'bills' },
+  { name: 'Langganan DanceFitMe', cashflow: 'bills' },
+  { name: 'Google Workspace', cashflow: 'bills' },
+  // Not in the spreadsheet, which has no bills for these. Every e-statement
+  // does, and they are bills by every definition the Setup sheet gives.
+  { name: 'Listrik', cashflow: 'bills' },
+  { name: 'Pulsa & Data', cashflow: 'bills' },
+
   { name: 'Tabungan', cashflow: 'invest_savings' },
   { name: 'Dana Darurat', cashflow: 'invest_savings' },
   { name: 'Reksadana', cashflow: 'invest_savings' },
@@ -54,7 +80,10 @@ export const SEED_CATEGORIES: SeedCategory[] = [
   { name: 'Dana Mobil', cashflow: 'financial_goal' },
 
   { name: 'Antar Account', cashflow: 'transfer' },
+  // Two sides of the same arrangement. The spreadsheet files a settlement under
+  // the name of the debt it settles, so the pair has to exist under both.
   { name: 'Piutang', cashflow: 'receivable_new' },
+  { name: 'Piutang', cashflow: 'receivable_settled' },
 ]
 
 export interface SeedAccount {

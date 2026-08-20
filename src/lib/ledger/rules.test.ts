@@ -75,9 +75,14 @@ describe('matching', () => {
   })
 
   it('falls back to the description when there is no raw text', () => {
-    expect(matches(rule({ pattern: 'tokopedia' }), { id: 'e1', description: 'Tokopedia' })).toBe(
-      true,
-    )
+    expect(matches(rule({ pattern: 'tokopedia' }), { description: 'Tokopedia' })).toBe(true)
+  })
+
+  it('matches a row that has not been saved yet, which is what an import has', () => {
+    // The import needs the same verdict before it writes anything, so the
+    // matcher must not require a primary key it cannot have.
+    const unsaved = { description: 'PLN IconPay', rawDescription: 'Pembayaran PLN IconPay 5301' }
+    expect(matches(rule({ pattern: 'pln iconpay' }), unsaved)).toBe(true)
   })
 })
 

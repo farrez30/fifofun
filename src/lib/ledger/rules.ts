@@ -47,8 +47,15 @@ export interface RuleOutcome {
   categoryId: string | null
 }
 
-export interface Matchable {
-  id: string
+/**
+ * Enough of a row to run a rule against it.
+ *
+ * Deliberately without an id. Matching an unsaved row, which is what an import
+ * does before it writes anything, is the same operation as matching a saved
+ * one, and requiring a primary key would have meant either inventing one or
+ * writing the matcher twice.
+ */
+export interface Describable {
   /**
    * The bank's untouched text. Matching happens here rather than on the tidied
    * description, because the tidied one is derived and can change when the
@@ -58,16 +65,21 @@ export interface Matchable {
   description: string
 }
 
+/** A row that has been saved, so a rule's verdict can be recorded against it. */
+export interface Matchable extends Describable {
+  id: string
+}
+
 /** Folded to lower case and with runs of whitespace collapsed. */
 export function normalise(text: string): string {
   return text.toLowerCase().replace(/\s+/g, ' ').trim()
 }
 
-function subject(entry: Matchable): string {
+function subject(entry: Describable): string {
   return normalise(entry.rawDescription || entry.description)
 }
 
-export function matches(rule: Rule, entry: Matchable): boolean {
+export function matches(rule: Rule, entry: Describable): boolean {
   const pattern = normalise(rule.pattern)
   if (pattern === '') return false
 
@@ -85,7 +97,7 @@ export function matches(rule: Rule, entry: Matchable): boolean {
  * priority explicit means a surprising result is something the household can see
  * and reorder, not something the engine decided on its own.
  */
-export function firstMatch(rules: Rule[], entry: Matchable): Rule | null {
+export function firstMatch(rules: Rule[], entry: Describable): Rule | null {
   const ordered = [...rules].sort((a, b) => a.priority - b.priority || a.id.localeCompare(b.id))
   return ordered.find((rule) => matches(rule, entry)) ?? null
 }

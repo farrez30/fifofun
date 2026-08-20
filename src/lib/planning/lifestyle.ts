@@ -296,6 +296,9 @@ export function scaleLifestyle(
 export const CATEGORY_ALIASES: Record<string, string> = {
   Kosan: 'Tempat tinggal',
   Kontrakan: 'Tempat tinggal',
+  // The spreadsheet's own name for the same thing. Without it the alias never
+  // fired on real data, which is the only data it was written for.
+  'Bayar Kontrakan': 'Tempat tinggal',
 }
 
 export function normaliseCategory(category: string): string {

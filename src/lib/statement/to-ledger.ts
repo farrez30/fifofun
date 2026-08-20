@@ -69,8 +69,14 @@ export interface ConversionResult {
   walletCoverage: WalletCoverage
 }
 
-/** Which cashflow bucket each bank-level kind lands in by default. */
-const CASHFLOW_BY_KIND: Record<TransactionKind, CashflowType> = {
+/**
+ * Which cashflow bucket each bank-level kind lands in by default.
+ *
+ * Exported so a test can hold it against `DEFAULT_CATEGORY_BY_KIND`, which sits
+ * in another module and decides the category for the same kinds. The two are
+ * read independently at import time and nothing else makes them agree.
+ */
+export const CASHFLOW_BY_KIND: Record<TransactionKind, CashflowType> = {
   salary: 'income',
   bonus: 'income',
   refund: 'income',

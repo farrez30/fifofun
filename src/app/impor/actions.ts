@@ -3,6 +3,7 @@
 import { createHash } from 'node:crypto'
 import { revalidatePath } from 'next/cache'
 import { formatIdr } from '@/lib/money'
+import { firstMatch, type Rule } from '@/lib/ledger/rules'
 import { DEFAULT_CATEGORY_BY_KIND, SEED_ACCOUNTS } from '@/lib/ledger/seed-data'
 import { parseMandiriStatement } from '@/lib/statement/mandiri-xlsx'
 import { statementToLedger } from '@/lib/statement/to-ledger'
@@ -144,8 +145,28 @@ export async function importStatement(
 
   const { data: categories } = await supabase
     .from('categories')
-    .select('id, name')
+    .select('id, name, cashflow')
     .eq('household_id', household.id)
+
+  // What the household has already taught the app. Without this, the line shown
+  // after teaching a rule, that the next import will file the pattern by itself,
+  // was simply untrue: the import only ever read the defaults below.
+  const { data: ruleRows } = await supabase
+    .from('categorization_rules')
+    .select('id, priority, match_type, pattern, cashflow, category_id, hit_count')
+    .eq('household_id', household.id)
+    .eq('auto_apply', true)
+
+  const rules: Rule[] = (ruleRows ?? []).map((row) => ({
+    id: row.id as string,
+    priority: row.priority as number,
+    matchType: row.match_type as Rule['matchType'],
+    pattern: row.pattern as string,
+    cashflow: row.cashflow as Rule['cashflow'],
+    categoryId: (row.category_id as string | null) ?? null,
+    autoApply: true,
+    hitCount: (row.hit_count as number) ?? 0,
+  }))
 
   const idByName = new Map((accounts ?? []).map((row) => [row.name as string, row.id as string]))
   const idByKey = new Map(
@@ -153,8 +174,14 @@ export async function importStatement(
       (pair): pair is [string, string] => Boolean(pair[1]),
     ),
   )
+  // Keyed by cashflow and name together, because that is what the unique index
+  // is. Two categories may share a name across cashflows, and a map keyed on the
+  // name alone silently keeps whichever row came back last.
   const categoryByName = new Map(
-    (categories ?? []).map((row) => [row.name as string, row.id as string]),
+    (categories ?? []).map((row) => [
+      `${row.cashflow as string} ${row.name as string}`,
+      row.id as string,
+    ]),
   )
 
   const bank = (accounts ?? []).find((row) => row.name === 'Bank Mandiri')
@@ -218,8 +245,27 @@ export async function importStatement(
   const reviewIds = new Set(review.map((item) => item.entryId))
   const passThrough = new Set(passThroughIds)
 
+  const ruleHits = new Map<string, number>()
+  const importedAt = new Date().toISOString()
+
   const rows = entries.map((entry, index) => {
-    const categoryName = DEFAULT_CATEGORY_BY_KIND[classifications[index].kind]
+    const fallbackName = DEFAULT_CATEGORY_BY_KIND[classifications[index].kind]
+
+    /*
+      A taught rule beats the default, except on transfers. Which accounts a
+      transfer moves money between is a fact about the row rather than an opinion
+      about it, and a pattern that happens to match must not overrule it.
+    */
+    const rule =
+      entry.cashflow === 'transfer'
+        ? null
+        : firstMatch(rules, {
+            description: entry.description,
+            rawDescription: statement.rows[index].description,
+          })
+
+    if (rule) ruleHits.set(rule.id, (ruleHits.get(rule.id) ?? 0) + 1)
+
     const fromAccountId = entry.fromAccountId ? (idByKey.get(entry.fromAccountId) ?? null) : null
     const toAccountId = entry.toAccountId ? (idByKey.get(entry.toAccountId) ?? null) : null
 
@@ -234,8 +280,10 @@ export async function importStatement(
       occurred_at: entry.occurredAt.toISOString(),
       description: entry.description,
       amount: entry.amount.toString(),
-      cashflow: unmappedTransfer ? 'spending' : entry.cashflow,
-      category_id: categoryName ? (categoryByName.get(categoryName) ?? null) : null,
+      cashflow: unmappedTransfer ? 'spending' : (rule?.cashflow ?? entry.cashflow),
+      category_id:
+        rule?.categoryId ??
+        (fallbackName ? (categoryByName.get(`${entry.cashflow} ${fallbackName}`) ?? null) : null),
       from_account_id: fromAccountId,
       to_account_id: toAccountId,
       source: 'xlsx',
@@ -244,7 +292,11 @@ export async function importStatement(
       dedupe_key: entry.id,
       note: entry.note ?? null,
       is_pass_through: passThrough.has(entry.id),
-      needs_review: unmappedTransfer || reviewIds.has(entry.id),
+      // A rule match is a decision the household already made in words. Leaving
+      // the row unconfirmed would put it back in the review queue to ask a
+      // question that has been answered, every month, for ever.
+      confirmed_at: rule ? importedAt : null,
+      needs_review: !rule && (unmappedTransfer || reviewIds.has(entry.id)),
       raw_description: statement.rows[index].description,
     }
   })
@@ -264,8 +316,30 @@ export async function importStatement(
   }
 
   const inserted = written?.length ?? 0
+
+  /*
+    Hit counts, updated one rule at a time.
+
+    Counted against the rows this import matched rather than the rows it wrote,
+    so a re-upload of the same statement inflates nothing. The count exists so a
+    rule that has never fired is visible in the rules list, which is the only way
+    anyone discovers a pattern that was wrong from the day it was written.
+
+    A failure here is not worth failing the import over: the transactions are
+    already saved and correct, and the count is a diagnostic.
+  */
+  for (const [ruleId, hits] of ruleHits) {
+    const rule = rules.find((candidate) => candidate.id === ruleId)
+    if (!rule) continue
+    await supabase
+      .from('categorization_rules')
+      .update({ hit_count: rule.hitCount + hits })
+      .eq('id', ruleId)
+  }
+
   revalidatePath('/')
   revalidatePath('/rencana')
+  revalidatePath('/tinjau')
 
   return {
     ok: true,
