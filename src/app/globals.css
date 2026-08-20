@@ -199,4 +199,36 @@
       display: none;
     }
   }
+
+  /*
+    Tracing one ribbon out of a dozen that overlap.
+
+    A Sankey draws its flows translucent so crossings stay legible, and the
+    price is that following a single thin one from its source to its
+    destination is guesswork. Fading the others while one is pointed at costs
+    nothing and answers the question the picture otherwise only hints at.
+
+    Kept in the stylesheet rather than emitted with the chart because the
+    content security policy allows no inline style element without a nonce, and
+    because this needs no knowledge of which nodes exist: it isolates whatever
+    is under the pointer. Scoping works out of the descendant combinator, so two
+    diagrams on one page cannot dim each other.
+
+    Only where a pointer can actually hover. On a touch screen the state sticks
+    after a tap with nothing obvious to clear it, which leaves the reader with
+    a diagram that looks broken rather than one that looks focused.
+  */
+  @media (hover: hover) {
+    .sankey [data-ribbon] {
+      transition: opacity 120ms ease-out;
+    }
+
+    .sankey:has([data-ribbon]:hover) [data-ribbon]:not(:hover) {
+      opacity: 0.05;
+    }
+
+    .sankey [data-ribbon]:hover {
+      opacity: 0.62;
+    }
+  }
 }

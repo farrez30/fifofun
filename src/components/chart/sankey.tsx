@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+import { Money } from '@/components/money'
 import { formatIdr, formatIdrCompact, senToRupiahNumber } from '@/lib/money'
 
 /**
@@ -36,6 +38,15 @@ interface Props {
   links: SankeyLink[]
   height?: number
   caption: string
+  /**
+   * Rendered under the diagram, for whatever the drawing had to leave out.
+   *
+   * A Sankey has to fold its tail into one node or the thin ribbons make the
+   * thick ones unreadable, and that node is a dead end: "9 kategori lain" names
+   * a total and offers no way to find out what is in it. What gets folded is
+   * the caller's decision, so the way out of it is too.
+   */
+  note?: ReactNode
 }
 
 const TONE_FILL: Record<FlowTone, string> = {
@@ -79,17 +90,36 @@ function fit(label: string): string {
 }
 const LABEL_OFFSET = 8
 
+/*
+  The least vertical room a label can have before it collides with the one below.
+
+  A label is two lines, a name and an amount, and it is centred on its node. Once
+  a node is thinner than that, which every small category is, the label is taller
+  than the thing it belongs to and the next one is written across it. The picture
+  still renders and two amounts become one smudge.
+
+  Measured rather than derived: a browser lays the two lines out into a box 32.1
+  units tall here, which is more than the font sizes and the offset between them
+  add up to, because a line box is taller than its font. Guessing at those
+  metrics would be a formula that looks principled and is wrong, so the number is
+  the measurement plus a little air, and a browser test fails if it ever stops
+  being enough.
+*/
+const LABEL_MIN_GAP = 34
+
 interface Placed extends SankeyNode {
   x: number
   y: number
   height: number
   value: number
+  /** Where the label sits, which is the node's middle unless that collides. */
+  labelY: number
   /** Running offsets used while attaching ribbons. */
   outUsed: number
   inUsed: number
 }
 
-export function Sankey({ nodes, links, height = 420, caption }: Props) {
+export function Sankey({ nodes, links, height = 420, caption, note }: Props) {
   const positive = links.filter((link) => link.value > 0n)
 
   if (nodes.length === 0 || positive.length === 0) {
@@ -149,14 +179,28 @@ export function Sankey({ nodes, links, height = 420, caption }: Props) {
       .sort((a, b) => b.value - a.value)
 
     let y = PADDING_Y
+    /*
+      Labels are nudged down the column only as far as it takes to stop them
+      overlapping, and never above the node they name. Nodes are laid out top to
+      bottom here, so one forward pass carrying the last label's position is
+      enough; a later label can push, an earlier one is already settled.
+    */
+    let lastLabel = Number.NEGATIVE_INFINITY
     for (const { node, value } of inColumn) {
       const nodeHeight = Math.max(2, value * scale)
+      const labelY = Math.min(
+        height - PADDING_Y,
+        Math.max(y + nodeHeight / 2, lastLabel + LABEL_MIN_GAP),
+      )
+      lastLabel = labelY
+
       placed.set(node.id, {
         ...node,
         x: columnX(column),
         y,
         height: nodeHeight,
         value,
+        labelY,
         outUsed: 0,
         inUsed: 0,
       })
@@ -194,7 +238,7 @@ export function Sankey({ nodes, links, height = 420, caption }: Props) {
   })
 
   return (
-    <figure className="border border-line bg-surface p-4">
+    <figure className="sankey border border-line bg-surface p-4">
       <figcaption className="mb-3 text-sm font-medium text-ink">{caption}</figcaption>
 
       <div
@@ -221,6 +265,7 @@ export function Sankey({ nodes, links, height = 420, caption }: Props) {
             {ribbons.map(({ link, path, tone }) => (
               <path
                 key={`${link.source}-${link.target}`}
+                data-ribbon={`${link.source}-${link.target}`}
                 d={path}
                 fill={TONE_FILL[tone]}
                 opacity={0.28}
@@ -236,7 +281,6 @@ export function Sankey({ nodes, links, height = 420, caption }: Props) {
               // rightwards, so no label is ever drawn on top of a ribbon.
               const toLeft = node.column === columns[0]
               const labelX = toLeft ? node.x - LABEL_OFFSET : node.x + NODE_WIDTH + LABEL_OFFSET
-              const centre = node.y + node.height / 2
 
               return (
                 <g key={node.id}>
@@ -252,7 +296,7 @@ export function Sankey({ nodes, links, height = 420, caption }: Props) {
                       name pushes the amount out of the gutter and it vanishes. */}
                   <text
                     x={labelX}
-                    y={centre}
+                    y={node.labelY}
                     textAnchor={toLeft ? 'end' : 'start'}
                     fontSize={13}
                     fill="var(--color-ink)"
@@ -269,6 +313,8 @@ export function Sankey({ nodes, links, height = 420, caption }: Props) {
           </g>
         </svg>
       </div>
+
+      {note ? <div className="mt-3 border-t border-line pt-3">{note}</div> : null}
 
       {/* The picture carries the shape; the table carries the facts. */}
       {/*
@@ -299,5 +345,53 @@ export function Sankey({ nodes, links, height = 420, caption }: Props) {
         </table>
       </div>
     </figure>
+  )
+}
+
+/**
+ * The way out of the folded tail node.
+ *
+ * A Sankey has to gather its smallest flows into one node or the thin ribbons
+ * make the thick ones unreadable, and that node is a dead end: "9 kategori lain"
+ * names a total and offers no way to find out what is in it. The same failure
+ * the funds page had, and the same fix, which is to say what was left out and
+ * where it went rather than hoping nobody asks.
+ *
+ * Behind a summary rather than listed open, because the tail is by definition
+ * the part nobody needs by default.
+ */
+export function FoldedCategories({
+  folded,
+  into,
+}: {
+  folded: { category: string; amount: bigint }[]
+  /** The destination they were all gathered under. */
+  into: string | null
+}) {
+  if (folded.length === 0) return null
+
+  return (
+    <details className="text-xs">
+      <summary className="cursor-pointer text-accent underline underline-offset-2">
+        Lihat {folded.length} kategori yang digabung
+      </summary>
+      <p className="mt-2 text-ink-muted">
+        Masing-masing terlalu kecil untuk digambar sendiri: pita setebal satu piksel tidak
+        membawa informasi dan membuat yang tebal jadi susah dibaca.
+        {into ? ` Semuanya masuk ${into.toLowerCase()}.` : ''}
+      </p>
+      <ul className="mt-2 space-y-1">
+        {folded.map((row) => (
+          <li
+            key={row.category}
+            data-folded={row.category}
+            className="flex justify-between gap-3 text-ink-muted"
+          >
+            <span>{row.category}</span>
+            <Money sen={row.amount} className="shrink-0" />
+          </li>
+        ))}
+      </ul>
+    </details>
   )
 }

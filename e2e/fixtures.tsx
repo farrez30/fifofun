@@ -8,13 +8,14 @@ import type { CashflowType, LedgerEntry } from '@/lib/ledger/types'
 import { CashflowChart } from '@/components/cashflow-chart'
 import { BudgetBullet } from '@/components/chart/budget-bullet'
 import { CrunchTimeline } from '@/components/chart/crunch-timeline'
-import { Sankey } from '@/components/chart/sankey'
+import { FoldedCategories, Sankey } from '@/components/chart/sankey'
 import { BalanceTrend } from '@/components/chart/balance-trend'
 import { CategorySparks } from '@/components/chart/category-sparks'
 import { Waterfall } from '@/components/chart/waterfall'
 import { FundsPanel } from '@/app/dana/funds-panel'
 import { reviewBudget } from '@/lib/ledger/budget'
 import { buildCategoryTrends } from '@/lib/ledger/category-trend'
+import { buildFlow } from '@/lib/ledger/flow'
 import { reviewFunds } from '@/lib/ledger/funds'
 import type { MonthlySeries, MonthlyStatement } from '@/lib/ledger/monthly'
 import { parseIdAmount as idr } from '@/lib/money'
@@ -349,6 +350,50 @@ const ROOMY: FinancialSnapshot = {
   totalDebt: idr('50.000.000,00'),
 }
 
+/*
+  A real month put through the real pipeline, so the fixture cannot drift into a
+  diagram the dashboard would never draw. Eight spending categories, two more
+  than get drawn by name, so the folded tail and its way out both exist.
+*/
+const SPEND_NAMES = [
+  'Makan/minum',
+  'Transport',
+  'Belanja',
+  'Jajan',
+  'Hiburan',
+  'Kesehatan',
+  'Bensin',
+  'Dating',
+]
+
+const FLOW = buildFlow(
+  {
+    saldoAwal: idr('3.398.413,00'),
+    income: idr('8.171.629,00'),
+    fromAsset: 0n,
+    investSavings: idr('500.000,00'),
+    bills: idr('2.690.151,00'),
+    sinkingFund: 0n,
+    financialGoals: 0n,
+    debtPayment: 0n,
+    spending: idr('3.600.000,00'),
+    piutang: 0n,
+    sisaUang: idr('4.779.891,00'),
+  },
+  SPEND_NAMES.map((name, index) => ({
+    id: `flow-${index}`,
+    occurredAt: new Date('2026-02-10T05:00:00.000Z'),
+    description: name,
+    amount: idr(`${800 - index * 100}.000,00`),
+    cashflow: 'spending' as CashflowType,
+    categoryId: null,
+    categoryName: name,
+    fromAccountId: 'acc',
+    toAccountId: null,
+    source: 'manual' as const,
+  })),
+)
+
 export const FIXTURES = {
   bills: <BillsPanel review={BILLS} />,
   'bills-untouched': <BillsPanel review={BILLS_UNTOUCHED} />,
@@ -484,6 +529,16 @@ export const FIXTURES = {
       adherence={assessAdherence({ ...TIGHT_MONTH, monthlyIncome: idr('30.000.000,00') }, '50-30-20')}
       observedIncome={TIGHT_MONTH.monthlyIncome}
       caption="Anjurannya dibandingkan dengan yang sebenarnya terjadi"
+    />
+  ),
+  // The same diagram the dashboard draws, folded tail and all, so the way out
+  // of that tail is exercised rather than only the picture.
+  'sankey-real': (
+    <Sankey
+      nodes={FLOW.nodes}
+      links={FLOW.links}
+      caption="Aliran uang 2026-02"
+      note={<FoldedCategories folded={FLOW.folded} into={FLOW.foldedInto} />}
     />
   ),
 }

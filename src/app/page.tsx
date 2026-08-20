@@ -6,7 +6,7 @@ import { AppShell } from '@/components/app-shell'
 import { Balances } from '@/components/balances'
 import { CashflowChart } from '@/components/cashflow-chart'
 import { BudgetBullet } from '@/components/chart/budget-bullet'
-import { Sankey, type SankeyLink, type SankeyNode } from '@/components/chart/sankey'
+import { FoldedCategories, Sankey } from '@/components/chart/sankey'
 import { BalanceTrend } from '@/components/chart/balance-trend'
 import { CategorySparks } from '@/components/chart/category-sparks'
 import { Waterfall } from '@/components/chart/waterfall'
@@ -18,7 +18,8 @@ import { reviewBills } from '@/lib/ledger/bills'
 import { reviewReceivables } from '@/lib/ledger/receivables'
 import { proposeBudget, reviewBudget } from '@/lib/ledger/budget'
 import { buildCategoryTrends } from '@/lib/ledger/category-trend'
-import { rollUpByMonthAndCategory, totalsByCategory } from '@/lib/ledger/categories'
+import { rollUpByMonthAndCategory } from '@/lib/ledger/categories'
+import { buildFlow } from '@/lib/ledger/flow'
 import {
   computeAccountMovements,
   computeMonthlySeries,
@@ -26,7 +27,6 @@ import {
   findStalledAccounts,
   groupByMonth,
   reconcileBank,
-  type MonthlyStatement,
 } from '@/lib/ledger/monthly'
 import {
   getAccounts,
@@ -36,7 +36,6 @@ import {
   getHousehold,
   getLatestClosingBalance,
   getOpeningBalance,
-  type TransactionRow,
 } from '@/lib/queries/household'
 import { getUser } from '@/lib/supabase/server'
 
@@ -73,67 +72,6 @@ function EmptyState() {
       </Link>
     </div>
   )
-}
-
-/**
- * Turns one month into the Sankey's nodes and links.
- *
- * Three columns: what came in, where it was earmarked, and what the largest
- * single destination broke down into. Only the top few categories are drawn by
- * name; the rest are gathered into one node, because twenty ribbons a pixel wide
- * carry no information and make the ones that matter unreadable.
- */
-function buildFlow(
-  statement: MonthlyStatement,
-  entries: TransactionRow[],
-): { nodes: SankeyNode[]; links: SankeyLink[] } {
-  const nodes: SankeyNode[] = [{ id: 'in', label: 'Pemasukan', column: 0, tone: 'income' }]
-  const links: SankeyLink[] = []
-
-  const buckets: { id: string; label: string; amount: bigint; tone: SankeyNode['tone'] }[] = [
-    { id: 'spending', label: 'Pengeluaran', amount: statement.spending, tone: 'spend' },
-    { id: 'bills', label: 'Tagihan', amount: statement.bills, tone: 'spend' },
-    { id: 'invest', label: 'Investasi', amount: statement.investSavings, tone: 'save' },
-    { id: 'sinking', label: 'Sinking fund', amount: statement.sinkingFund, tone: 'save' },
-    { id: 'goals', label: 'Tujuan', amount: statement.financialGoals, tone: 'save' },
-    { id: 'debt', label: 'Cicilan', amount: statement.debtPayment, tone: 'warn' },
-  ]
-
-  for (const bucket of buckets) {
-    if (bucket.amount <= 0n) continue
-    nodes.push({ id: bucket.id, label: bucket.label, column: 1, tone: bucket.tone })
-    links.push({ source: 'in', target: bucket.id, value: bucket.amount })
-  }
-
-  // What was not spent is a destination like any other, and showing it as one is
-  // the difference between a diagram that balances and one that quietly does not.
-  const kept = statement.sisaUang - statement.saldoAwal
-  if (kept > 0n) {
-    nodes.push({ id: 'kept', label: 'Sisa', column: 1, tone: 'income' })
-    links.push({ source: 'in', target: 'kept', value: kept })
-  }
-
-  const categories = totalsByCategory(entries, { cashflows: ['spending'] })
-  const named = categories.slice(0, 6)
-  const rest = categories.slice(6).reduce((sum, row) => sum + row.amount, 0n)
-
-  for (const row of named) {
-    if (row.amount <= 0n) continue
-    nodes.push({ id: `cat-${row.category}`, label: row.category, column: 2, tone: 'spend' })
-    links.push({ source: 'spending', target: `cat-${row.category}`, value: row.amount })
-  }
-
-  if (rest > 0n) {
-    nodes.push({
-      id: 'cat-rest',
-      label: `${categories.length - named.length} kategori lain`,
-      column: 2,
-      tone: 'neutral',
-    })
-    links.push({ source: 'spending', target: 'cat-rest', value: rest })
-  }
-
-  return { nodes, links }
 }
 
 async function Dashboard() {
@@ -175,7 +113,7 @@ async function Dashboard() {
     bankAccount && printed ? reconcileBank(movements, bankAccount.id, printed.closing) : null
 
   const latestEntries = groupByMonth(transactions).get(latest.month) ?? []
-  const flow = buildFlow(latest.statement, latestEntries as TransactionRow[])
+  const flow = buildFlow(latest.statement, latestEntries)
 
   // A budget the household set beats one derived from its own history, but an
   // empty panel on the first visit teaches nobody anything, so the median of the
@@ -367,6 +305,7 @@ async function Dashboard() {
           nodes={flow.nodes}
           links={flow.links}
           caption={`Aliran uang ${latest.month}`}
+          note={<FoldedCategories folded={flow.folded} into={flow.foldedInto} />}
         />
       </section>
 

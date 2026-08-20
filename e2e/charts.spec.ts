@@ -900,6 +900,131 @@ test.describe('anjuran dibanding kenyataan', () => {
   })
 })
 
+test.describe('aliran uang', () => {
+  test('fades the other ribbons while one is pointed at', async ({ page }) => {
+    await open(page, 'sankey-real')
+
+    const ribbons = page.locator('[data-ribbon]')
+    const count = await ribbons.count()
+    expect(count).toBeGreaterThan(5)
+
+    const before = await ribbons.evaluateAll((nodes) =>
+      nodes.map((node) => Number(getComputedStyle(node).opacity)),
+    )
+    // Translucent to begin with, so that crossings stay legible.
+    for (const opacity of before) expect(opacity).toBeCloseTo(0.28, 2)
+
+    await ribbons.nth(2).hover()
+
+    /*
+      Polled rather than read once. The change is eased over 120ms, so a single
+      reading taken the instant the pointer lands catches the value it started
+      from and the test fails while the page is behaving perfectly.
+
+      Following one thin ribbon from its source to its destination is guesswork
+      when a dozen of them cross. The pointed-at one comes forward and the rest
+      go back far enough to be out of the way rather than merely dimmer.
+    */
+    await expect
+      .poll(async () => {
+        const after = await ribbons.evaluateAll((nodes) =>
+          nodes.map((node) => Number(getComputedStyle(node).opacity)),
+        )
+        return {
+          pointedAtComesForward: after[2] > 0.5,
+          everyOtherGoesBack: after.every((opacity, index) => index === 2 || opacity < 0.1),
+        }
+      })
+      .toEqual({ pointedAtComesForward: true, everyOtherGoesBack: true })
+  })
+
+  test('puts every ribbon back when the pointer leaves', async ({ page }) => {
+    await open(page, 'sankey-real')
+    const ribbons = page.locator('[data-ribbon]')
+    const count = await ribbons.count()
+
+    await ribbons.nth(2).hover()
+    await page.mouse.move(0, 0)
+
+    await expect
+      .poll(async () =>
+        ribbons.evaluateAll((nodes) =>
+          nodes.map((node) => Number(getComputedStyle(node).opacity).toFixed(2)),
+        ),
+      )
+      .toEqual(Array.from({ length: count }, () => '0.28'))
+  })
+
+  test('never writes one label across another', async ({ page }) => {
+    await open(page, 'sankey-real')
+
+    // A label is two lines and is centred on its node, so once a node is thinner
+    // than the label it carries, the next label is drawn across it. Two amounts
+    // become one smudge and the diagram still reports itself as fine.
+    const boxes = await page.locator('svg text').evaluateAll((nodes) =>
+      nodes.map((node) => {
+        const box = (node as SVGGraphicsElement).getBoundingClientRect()
+        return { top: box.top, bottom: box.bottom, left: box.left, right: box.right }
+      }),
+    )
+
+    for (let i = 0; i < boxes.length; i += 1) {
+      for (let j = i + 1; j < boxes.length; j += 1) {
+        const a = boxes[i]
+        const b = boxes[j]
+        const overlaps =
+          a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom
+        expect(overlaps, `labels ${i} and ${j} overlap`).toBe(false)
+      }
+    }
+  })
+
+  test('keeps every label inside the drawing', async ({ page }) => {
+    await open(page, 'sankey-real')
+
+    // SVG text does not wrap and is not clipped with an error: a label placed
+    // outside the viewBox simply is not there, and the reader never learns that
+    // an amount was meant to be.
+    const escaped = await page.evaluate(() => {
+      const svg = document.querySelector('svg')!
+      const frame = svg.getBoundingClientRect()
+      return [...svg.querySelectorAll('text')].filter((node) => {
+        const box = node.getBoundingClientRect()
+        return box.left < frame.left - 1 || box.right > frame.right + 1
+      }).length
+    })
+    expect(escaped).toBe(0)
+  })
+
+  test('offers a way into the node that gathers the small categories', async ({ page }) => {
+    await open(page, 'sankey-real')
+
+    // "2 kategori lain" names a total and used to offer no way to find out what
+    // was in it, which is the same dead end the funds page had.
+    await expect(page.locator('svg tspan').filter({ hasText: '2 kategori lain' }).first()).toBeVisible()
+
+    const rows = page.locator('[data-folded]')
+    await expect(rows).toHaveCount(2)
+    await expect(rows.first()).toBeHidden()
+
+    await page.getByText(/Lihat 2 kategori yang digabung/).click()
+    await expect(rows.first()).toBeVisible()
+    await expect(page.locator('[data-folded="Bensin"]')).toContainText('Rp200.000')
+    await expect(page.locator('[data-folded="Dating"]')).toContainText('Rp100.000')
+  })
+
+  test('breaks down whichever destination is the larger one', async ({ page }) => {
+    await open(page, 'sankey-real')
+
+    // Spending outweighs bills in this month, so spending is what gets opened
+    // up. The rule is checked properly in the unit tests; this is the wiring.
+    const third = await page
+      .locator('svg text')
+      .evaluateAll((nodes) => nodes.map((node) => node.textContent ?? ''))
+    expect(third.some((label) => label.startsWith('Makan/minum'))).toBe(true)
+  })
+})
+
 test.describe('lebar halaman', () => {
   test('nothing pushes the page sideways on a narrow screen', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 })
@@ -917,6 +1042,7 @@ test.describe('lebar halaman', () => {
       'glidepath-soon',
       'adherence',
       'adherence-healthy',
+      'sankey-real',
     ]) {
       await open(page, fixture)
 
