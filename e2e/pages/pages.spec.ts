@@ -123,6 +123,21 @@ test.describe('the security policy the proxy attaches', () => {
   })
 })
 
+test.describe('the pages that need somebody signed in', () => {
+  /*
+    Every page checks the user itself rather than trusting the proxy, which
+    checks nobody. That is the design, and until this ran it was a claim in a
+    comment. These two are the newest and the only ones reachable here, since
+    the rest also need a database.
+  */
+  for (const path of ['/gabung', '/undangan']) {
+    test(`${path} sends a stranger to the login page`, async ({ page }) => {
+      await page.goto(path)
+      await expect(page).toHaveURL(/\/login$/)
+    })
+  }
+})
+
 test.describe('a page that does not exist', () => {
   test('answers 404 rather than a blank two hundred', async ({ page }) => {
     const response = await page.goto('/tidak-ada-halaman-ini')

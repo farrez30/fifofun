@@ -72,6 +72,30 @@ export function LoginForm() {
         <p className="text-xs text-ink-faint">Minimal 8 karakter.</p>
       </div>
 
+      <div className="space-y-1.5">
+        <label htmlFor="code" className="block text-sm font-medium text-ink">
+          Kode undangan{' '}
+          <span className="font-normal text-ink-faint">(hanya untuk akun baru)</span>
+        </label>
+        <input
+          id="code"
+          name="code"
+          type="text"
+          // Not `required`: the same form signs people in, and signing in needs
+          // no code. The server asks for it only on the sign-up path.
+          autoComplete="off"
+          autoCapitalize="characters"
+          autoCorrect="off"
+          spellCheck={false}
+          placeholder="ABCDE-FGHJK"
+          aria-describedby="code-hint"
+          className="h-11 w-full rounded-sm border border-line bg-surface px-3 font-mono text-sm uppercase tracking-widest text-ink placeholder:tracking-widest placeholder:text-ink-faint focus:border-accent"
+        />
+        <p id="code-hint" className="text-xs text-ink-faint">
+          Akun baru hanya bisa dibuat dengan undangan dari anggota rumah tangga.
+        </p>
+      </div>
+
       {/* Validation shows in place, never in an alert, and is announced. */}
       {state.error ?? state.notice ? (
         <p

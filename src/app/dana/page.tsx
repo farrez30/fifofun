@@ -29,14 +29,11 @@ function FundsSkeleton() {
 async function Funds() {
   const household = await getHousehold()
   if (!household) {
-    return (
-      <div className="border border-line bg-surface p-10 text-center">
-        <h2 className="text-base font-medium text-ink">Akun belum terhubung ke rumah tangga</h2>
-        <p className="mx-auto mt-2 max-w-md text-sm text-ink-muted">
-          Jalankan seed dengan alamat email akun ini untuk menautkannya.
-        </p>
-      </div>
-    )
+    // An account with no household has nothing to show and, until /gabung
+    // existed, nothing to do about it either. One of these used to tell whoever
+    // read it to run the seed script, which is an instruction for the person
+    // who built the app shown to the person who did not.
+    redirect('/gabung')
   }
 
   const [categories, transactions] = await Promise.all([

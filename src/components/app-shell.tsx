@@ -23,8 +23,15 @@ const NAV = [
 interface Props {
   title: string
   email: string
-  /** Which nav item is the current page. */
-  current: (typeof NAV)[number]['href']
+  /**
+   * Which nav item is the current page.
+   *
+   * A route that sits outside the navigation passes its own href and nothing
+   * highlights, which is the truthful answer. Undangan is used twice and then
+   * never again, and a permanent tab for that costs every other page a little
+   * attention, so it lives in the footer instead.
+   */
+  current: (typeof NAV)[number]['href'] | '/undangan'
   lead?: string
   children: React.ReactNode
 }
@@ -77,6 +84,11 @@ export function AppShell({ title, email, current, lead, children }: Props) {
 
       <footer className="mt-16 border-t border-line pt-5 text-xs text-ink-faint">
         <ul className="flex flex-wrap gap-4">
+          <li>
+            <Link href="/undangan" className="hover:text-ink">
+              Undang anggota
+            </Link>
+          </li>
           <li>
             <Link href="/legal/privasi" className="hover:text-ink">
               Kebijakan Privasi

@@ -282,6 +282,29 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
   }),
 }))
 
+export const householdInvites = pgTable(
+  'household_invites',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    householdId: uuid('household_id')
+      .notNull()
+      .references(() => households.id, { onDelete: 'cascade' }),
+    /**
+     * SHA-256 of the code. The code itself is shown once, when it is issued,
+     * and never stored, so a copy of this table is a set of hashes rather than
+     * a set of working invitations.
+     */
+    codeHash: text('code_hash').notNull().unique(),
+    /** References auth.users(id), which Drizzle does not model. */
+    createdBy: uuid('created_by'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    redeemedAt: timestamp('redeemed_at', { withTimezone: true }),
+    redeemedBy: uuid('redeemed_by'),
+  },
+  (table) => [index('household_invites_household_idx').on(table.householdId)],
+)
+
 export const accountsRelations = relations(accounts, ({ one }) => ({
   household: one(households, {
     fields: [accounts.householdId],

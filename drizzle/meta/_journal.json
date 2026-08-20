@@ -29,6 +29,13 @@
       "when": 1787224276954,
       "tag": "0003_fund_targets",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1787250042508,
+      "tag": "0004_invites",
+      "breakpoints": true
     }
   ]
 }

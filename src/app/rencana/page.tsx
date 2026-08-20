@@ -48,7 +48,11 @@ function NoData({ reason }: { reason: string }) {
 async function PlannerData() {
   const household = await getHousehold()
   if (!household) {
-    return <NoData reason="Akun ini belum terhubung ke rumah tangga mana pun." />
+    // An account with no household has nothing to show and, until /gabung
+    // existed, nothing to do about it either. One of these used to tell whoever
+    // read it to run the seed script, which is an instruction for the person
+    // who built the app shown to the person who did not.
+    redirect('/gabung')
   }
 
   const [accounts, transactions, openingBalance] = await Promise.all([

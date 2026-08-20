@@ -65,11 +65,11 @@ function ReportSkeleton() {
 async function Report({ params }: { params: Record<string, string | string[] | undefined> }) {
   const household = await getHousehold()
   if (!household) {
-    return (
-      <p className="border border-line bg-surface p-6 text-sm text-ink-muted">
-        Akun ini belum terhubung ke rumah tangga mana pun.
-      </p>
-    )
+    // An account with no household has nothing to show and, until /gabung
+    // existed, nothing to do about it either. One of these used to tell whoever
+    // read it to run the seed script, which is an instruction for the person
+    // who built the app shown to the person who did not.
+    redirect('/gabung')
   }
 
   const [transactions, categories, accounts] = await Promise.all([

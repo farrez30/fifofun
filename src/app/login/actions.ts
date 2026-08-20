@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
+import { hashCode, normaliseCode } from '@/lib/invites'
 import { createClient } from '@/lib/supabase/server'
 
 /**
@@ -11,6 +12,11 @@ import { createClient } from '@/lib/supabase/server'
  * The messages stay deliberately vague about which half of a credential pair
  * was wrong, because a precise message tells an attacker which addresses have
  * accounts.
+ *
+ * Signing up needs an invitation. The check happens before the account is
+ * created rather than after, because an account that exists and can never
+ * belong to a household is a dead end for whoever made it and a row somebody
+ * else has to look at.
  */
 
 const credentials = z.object({
@@ -47,9 +53,34 @@ export async function authenticate(
   const supabase = await createClient()
 
   if (formData.get('intent') === 'signup') {
+    const code = normaliseCode(String(formData.get('code') ?? ''))
+    if (!code) {
+      return { error: 'Kode undangannya belum benar. Sepuluh karakter, tanpa huruf I, L atau O.' }
+    }
+
+    /*
+      Only the hash is sent. The code never reaches the database, so it cannot
+      turn up in a statement log, and the function answers with a bare boolean
+      so an unauthenticated caller learns nothing else from asking.
+    */
+    const { data: open } = await supabase.rpc('invite_is_open', { p_code_hash: hashCode(code) })
+    if (open !== true) {
+      return { error: 'Kode undangan itu tidak berlaku. Minta yang baru ke anggota rumah tangga.' }
+    }
+
     const { error } = await supabase.auth.signUp(parsed.data)
     if (error) return { error: error.message }
-    return { notice: 'Akun dibuat. Cek email kalau konfirmasi diperlukan, lalu masuk.' }
+
+    /*
+      The invitation is spent at /gabung, not here. Whether sign-up returns a
+      session depends on whether the project asks for email confirmation, and
+      spending the code on a path that has no session yet would consume it for
+      an account that may never be confirmed.
+    */
+    return {
+      notice:
+        'Akun dibuat. Kalau konfirmasi email diminta, buka tautannya dulu. Lalu masuk dan pakai kode undangan yang sama sekali lagi.',
+    }
   }
 
   const { error } = await supabase.auth.signInWithPassword(parsed.data)
