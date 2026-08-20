@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { IBM_Plex_Mono, IBM_Plex_Sans } from 'next/font/google'
+import { ProgressiveWebApp } from '@/components/pwa'
 import './globals.css'
 
 /*
@@ -35,6 +36,15 @@ export const metadata: Metadata = {
     capable: true,
     title: 'FiFoFun',
     statusBarStyle: 'default',
+    // Apple ignores the manifest and reads this instead.
+    startupImage: [],
+  },
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+    ],
+    apple: '/apple-icon.png',
   },
   formatDetection: {
     telephone: false,
@@ -63,6 +73,7 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
           Lompat ke konten
         </a>
         {children}
+        <ProgressiveWebApp />
       </body>
     </html>
   )
