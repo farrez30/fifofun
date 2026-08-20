@@ -59,12 +59,19 @@ for name in "${VARS[@]}"; do
     continue
   fi
 
-  # Remove first so a re-run updates instead of colliding. A name that is not
-  # there yet reports env_not_found, which is the expected case and not an error.
-  $VERCEL env rm "$name" "$TARGET" --yes >/dev/null 2>&1
-
+  # --non-interactive is what makes this work from a real terminal. Without it
+  # the CLI asks which Git branch a Preview variable belongs to, and that prompt
+  # reads the same stdin the value is arriving on, so both are lost. It defaults
+  # to on when the CLI thinks it is talking to an agent, which is exactly why
+  # this failed for a person and not in testing.
+  #
+  # --force overwrites rather than colliding, so a re-run updates in place.
+  #
+  # The value goes over stdin, never --value: an argument is visible to anyone
+  # who can list processes.
+  #
   # stderr is kept: it carries the only honest signal the CLI gives.
-  if ! printf '%s' "$value" | $VERCEL env add "$name" "$TARGET" >/dev/null; then
+  if ! printf '%s' "$value" | $VERCEL env add "$name" "$TARGET" --force --non-interactive >/dev/null; then
     echo "error   $name (lihat pesan di atas)"
     continue
   fi
