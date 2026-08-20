@@ -219,7 +219,12 @@ async function Dashboard() {
         <h2 id="transaksi" className="mb-3 text-sm font-medium text-ink">
           Transaksi terakhir
         </h2>
-        <div className="overflow-x-auto border border-line bg-surface">
+        <div
+          className="overflow-x-auto border border-line bg-surface"
+          tabIndex={0}
+          role="region"
+          aria-label="Tabel transaksi terakhir, bisa digeser ke samping"
+        >
           <table className="w-full text-sm">
             <caption className="sr-only">Dua puluh transaksi terakhir</caption>
             <thead>

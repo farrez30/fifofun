@@ -70,7 +70,12 @@ export function CrunchTimeline({ projection, caption }: Props) {
         </span>
       </figcaption>
 
-      <div className="overflow-x-auto pb-1">
+      <div
+        className="overflow-x-auto pb-1"
+        tabIndex={0}
+        role="region"
+        aria-label="Linimasa biaya anak, bisa digeser ke samping"
+      >
         <div className="flex min-w-full items-end gap-px" style={{ height: '13rem' }}>
           {years.map((year) => {
             const crunch = crunchSet.has(year.year)

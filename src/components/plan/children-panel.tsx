@@ -162,7 +162,12 @@ export function ChildrenPanel({
         <h3 className="text-sm font-medium text-ink">Jarak antar anak</h3>
         <p className="mt-1 max-w-2xl text-sm text-ink-muted">{recommendation.reason}</p>
 
-        <div className="mt-3 overflow-x-auto border border-line bg-surface">
+        <div
+          className="mt-3 overflow-x-auto border border-line bg-surface"
+          tabIndex={0}
+          role="region"
+          aria-label="Tabel jarak antar anak, bisa digeser ke samping"
+        >
           <table className="w-full text-sm">
             <caption className="sr-only">
               Penilaian setiap jarak kelahiran, dari sisi kesehatan dan biaya masuk sekolah

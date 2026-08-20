@@ -54,7 +54,12 @@ export function CashflowChart({ series }: Props) {
         </span>
       </figcaption>
 
-      <div className="overflow-x-auto">
+      <div
+        className="overflow-x-auto"
+        tabIndex={0}
+        role="region"
+        aria-label="Grafik pemasukan dan pengeluaran, bisa digeser ke samping"
+      >
         <div className="flex min-w-full items-end gap-1" style={{ height: '11rem' }}>
           {series.map(({ month, statement }) => {
             const overspent = statement.spending > statement.income

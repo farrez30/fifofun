@@ -197,10 +197,23 @@ export function Sankey({ nodes, links, height = 420, caption }: Props) {
     <figure className="border border-line bg-surface p-4">
       <figcaption className="mb-3 text-sm font-medium text-ink">{caption}</figcaption>
 
-      <div className="overflow-x-auto">
+      <div
+        className="overflow-x-auto"
+        tabIndex={0}
+        role="region"
+        aria-label={caption}
+      >
         <svg
           viewBox={`0 0 ${WIDTH} ${height}`}
-          className="h-auto w-full"
+          /*
+            A floor on the drawn width, not a fixed one.
+
+            Left to shrink freely, a 760-wide diagram in a 375px phone renders
+            its 13px labels at about 6px, which is present but unreadable. Below
+            this floor it scrolls sideways instead, and the container around it
+            is focusable so a keyboard can reach that scroll.
+          */
+          className="h-auto w-full min-w-[40rem]"
           role="img"
           aria-label={caption}
         >
