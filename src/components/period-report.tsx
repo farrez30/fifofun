@@ -114,7 +114,13 @@ export function PeriodReport({ summary, raw, categories, accounts, ledgerSize }:
           </button>
 
           {filtered ? (
-            <a href="/laporan" className="text-sm text-ink-muted underline underline-offset-2">
+            /* Padded to the same height as the button beside it. A standalone
+               control 20 pixels tall is under the 24 pixel minimum, and the
+               inline-in-a-sentence exemption does not cover a lone link. */
+            <a
+              href="/laporan"
+              className="rounded-sm px-2 py-2 text-sm text-ink-muted underline underline-offset-2"
+            >
               Bersihkan
             </a>
           ) : null}

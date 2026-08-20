@@ -72,11 +72,11 @@ export function Balances({ movements, reconciliation, stalled, statementDate }: 
               they can see at once. */}
           <dl className="mt-3 flex flex-wrap gap-x-10 gap-y-2 text-sm">
             <div>
-              <dt className="text-xs uppercase tracking-wide text-ink-faint">App menghitung</dt>
+              <dt className="text-xs uppercase tracking-wide text-ink-muted">App menghitung</dt>
               <dd className="tnum font-mono text-ink">{formatIdr(reconciliation.computed)}</dd>
             </div>
             <div>
-              <dt className="text-xs uppercase tracking-wide text-ink-faint">
+              <dt className="text-xs uppercase tracking-wide text-ink-muted">
                 Bank mencetak
                 {statementDate ? ` · ${formatJakarta(statementDate, 'date')}` : ''}
               </dt>
@@ -84,7 +84,7 @@ export function Balances({ movements, reconciliation, stalled, statementDate }: 
             </div>
             {reconciliation.ok ? null : (
               <div>
-                <dt className="text-xs uppercase tracking-wide text-ink-faint">Selisih</dt>
+                <dt className="text-xs uppercase tracking-wide text-ink-muted">Selisih</dt>
                 <dd className="tnum font-mono text-over">
                   {formatIdr(reconciliation.difference)}
                 </dd>
@@ -125,7 +125,7 @@ export function Balances({ movements, reconciliation, stalled, statementDate }: 
             Mandiri, jadi app tidak bisa melihatnya.
           </p>
 
-          <p className="mt-2 text-xs text-ink-faint">
+          <p className="mt-2 text-xs text-ink-muted">
             Nominal per akun ada di tabel bawah, ditandai ◆.
           </p>
         </div>

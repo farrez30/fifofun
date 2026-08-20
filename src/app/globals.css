@@ -38,6 +38,12 @@
   /* Ink */
   --color-ink: oklch(24% 0.012 75);
   --color-ink-muted: oklch(48% 0.012 75);
+  /*
+    Tuned against paper, surface and sunken only. The semantic wash backgrounds
+    are darker in dark mode, where this measures 4,23:1 and fails, so text on a
+    wash uses `ink-muted`. Anything faint enough for `ink-faint` had no business
+    sitting on a highlighted surface to begin with.
+  */
   /* 52%, not 62%. At 62% this measured 3,29:1 on the sunken surface, well under
      the 4,5:1 that 12px text needs, and it is the colour every caption uses. */
   --color-ink-faint: oklch(52% 0.01 75);
