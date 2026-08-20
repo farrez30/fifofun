@@ -1,8 +1,15 @@
 #!/usr/bin/env bash
-# Pushes the production environment from .env.local to the linked Vercel project.
+# Pushes an environment from .env.local to the linked Vercel project.
+#
+#   bash scripts/push-env.sh production
+#   bash scripts/push-env.sh preview
 #
 # Values are piped straight from the file into the CLI's stdin, so no secret is
 # ever echoed, quoted into a command line, or left in shell history.
+#
+# What lands is read back from Vercel rather than inferred from exit codes. The
+# CLI returns 0 even when it refuses the operation and prints an error, so an
+# exit status here means the command ran, not that anything changed.
 #
 # DATABASE_URL is excluded on purpose: it is the session pooler, used only by
 # migrations run from a laptop. See docs/deploy.md.
@@ -10,6 +17,7 @@ set -uo pipefail
 
 ENV_FILE=".env.local"
 TARGET="${1:-production}"
+VERCEL="pnpm dlx vercel@latest"
 
 VARS=(
   NEXT_PUBLIC_SUPABASE_URL
@@ -38,17 +46,40 @@ read_var() {
   sed -n "s/^$1=//p" "$ENV_FILE" | head -1 | tr -d '\r' | sed -e 's/^"\(.*\)"$/\1/' -e "s/^'\(.*\)'$/\1/"
 }
 
+pushed=()
+
 for name in "${VARS[@]}"; do
   value="$(read_var "$name")"
   if [ -z "$value" ]; then
-    echo "skip   $name (kosong di $ENV_FILE)"
+    echo "skip    $name (kosong di $ENV_FILE)"
     continue
   fi
-  # Remove first so a re-run updates instead of colliding. Silent when absent.
-  printf '%s' "$value" | pnpm dlx vercel@latest env rm "$name" "$TARGET" --yes >/dev/null 2>&1
-  if printf '%s' "$value" | pnpm dlx vercel@latest env add "$name" "$TARGET" >/dev/null 2>&1; then
-    echo "set    $name"
+
+  # Remove first so a re-run updates instead of colliding. A name that is not
+  # there yet reports env_not_found, which is the expected case and not an error.
+  $VERCEL env rm "$name" "$TARGET" --yes >/dev/null 2>&1
+
+  # stderr is kept: it carries the only honest signal the CLI gives.
+  if ! printf '%s' "$value" | $VERCEL env add "$name" "$TARGET" >/dev/null; then
+    echo "error   $name (lihat pesan di atas)"
+    continue
+  fi
+  pushed+=("$name")
+done
+
+echo
+echo "Membaca ulang dari Vercel..."
+listing="$($VERCEL env ls "$TARGET" 2>/dev/null)"
+
+failed=0
+for name in "${pushed[@]:-}"; do
+  [ -n "$name" ] || continue
+  if grep -qE "^[[:space:]]*$name[[:space:]]" <<<"$listing"; then
+    echo "ok      $name"
   else
-    echo "FAILED $name"
+    echo "HILANG  $name — perintahnya lolos tapi nilainya tidak ada di $TARGET"
+    failed=1
   fi
 done
+
+exit $failed
