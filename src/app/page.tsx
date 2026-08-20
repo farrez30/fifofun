@@ -7,6 +7,7 @@ import { Balances } from '@/components/balances'
 import { CashflowChart } from '@/components/cashflow-chart'
 import { BudgetBullet } from '@/components/chart/budget-bullet'
 import { Sankey, type SankeyLink, type SankeyNode } from '@/components/chart/sankey'
+import { BalanceTrend } from '@/components/chart/balance-trend'
 import { Waterfall } from '@/components/chart/waterfall'
 import { BillsPanel } from '@/components/bills-panel'
 import { Money, SignedMoney, Stat } from '@/components/money'
@@ -337,7 +338,12 @@ async function Dashboard() {
         <h2 id="tren" className="mb-3 text-sm font-medium text-ink">
           Tren {series.length} bulan
         </h2>
-        <CashflowChart series={series} />
+        <div className="space-y-4">
+          <CashflowChart series={series} />
+          {/* The flows above, the level here. A month can look reasonable on its
+              own while being the fourth in a row that ended lower. */}
+          <BalanceTrend series={series} caption="Saldo di akhir tiap bulan" />
+        </div>
       </section>
 
       <section aria-labelledby="transaksi">

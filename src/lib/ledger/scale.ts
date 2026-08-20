@@ -113,18 +113,35 @@ export interface SpanScale {
   percentOf: (value: bigint) => number
 }
 
+export interface SpanScaleOptions {
+  /** Roughly how many gridlines to aim for. */
+  target?: number
+  /**
+   * Whether zero has to be inside the range. On by default.
+   *
+   * Turn it off only for a chart drawn as a line. A bar or an area measured
+   * from a floor that is not zero overstates every difference it shows, and
+   * nothing in the picture says so; a line claims only that the points differ
+   * by what the axis says they differ by, which stays true wherever the floor
+   * is put.
+   */
+  includeZero?: boolean
+}
+
 /**
- * Builds a scale for a chart whose bars are levels rather than heights.
+ * Builds a scale for a chart whose marks are levels rather than heights.
  *
  * Both ends are rounded to a multiple of the same step, which puts zero on a
  * gridline for free and keeps the two halves of a chart that crosses zero in
- * proportion to each other. Zero is always inside the range: a waterfall whose
- * floor sits above zero exaggerates every step it draws, and the reader has no
- * way to tell from the picture.
+ * proportion to each other.
  */
-export function buildSpanScale(low: bigint, high: bigint, target = 4): SpanScale {
-  const lo = low < 0n ? low : 0n
-  const hi = high > 0n ? high : 0n
+export function buildSpanScale(
+  low: bigint,
+  high: bigint,
+  { target = 4, includeZero = true }: SpanScaleOptions = {},
+): SpanScale {
+  const lo = includeZero && low > 0n ? 0n : low
+  const hi = includeZero && high < 0n ? 0n : high
   const step = chooseStep(hi - lo, target)
 
   const bottom = floorTo(lo, step)

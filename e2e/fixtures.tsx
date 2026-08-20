@@ -8,6 +8,7 @@ import { CashflowChart } from '@/components/cashflow-chart'
 import { BudgetBullet } from '@/components/chart/budget-bullet'
 import { CrunchTimeline } from '@/components/chart/crunch-timeline'
 import { Sankey } from '@/components/chart/sankey'
+import { BalanceTrend } from '@/components/chart/balance-trend'
 import { Waterfall } from '@/components/chart/waterfall'
 import { reviewBudget } from '@/lib/ledger/budget'
 import type { MonthlySeries, MonthlyStatement } from '@/lib/ledger/monthly'
@@ -153,6 +154,43 @@ const FEBRUARY: MonthlyStatement = {
   sisaUang: idr('5.151.154,00'),
 }
 
+/**
+ * Closing balances either side of a year boundary, ending on the three the
+ * spreadsheet actually recorded for January to March 2026. February is the peak
+ * and March is the low, which is the pair the chart has to call out.
+ */
+const BALANCES: MonthlySeries[] = (
+  [
+    ['2025-11', '4.010.000,00'],
+    ['2025-12', '4.317.549,00'],
+    ['2026-01', '3.398.413,00'],
+    ['2026-02', '5.151.154,00'],
+    ['2026-03', '2.450.825,00'],
+  ] as const
+).map(([month, closing]) => ({
+  month,
+  statement: { ...statement(0n, 0n), sisaUang: idr(closing) },
+}))
+
+/**
+ * Twenty three months, the length of the household's real import.
+ *
+ * A dot every ten pixels is where markers start colliding with each other and
+ * hiding the line they sit on, which is the case a five month fixture never
+ * reaches. Walked deterministically rather than at random so a failure here is
+ * the same failure tomorrow.
+ */
+const LONG_RUN: MonthlySeries[] = Array.from({ length: 23 }, (_, index) => {
+  const year = 2024 + Math.floor((8 + index) / 12)
+  const month = ((8 + index) % 12) + 1
+  const climb = BigInt(index) * idr('900.000,00')
+  const wobble = index % 3 === 0 ? idr('1.400.000,00') : 0n
+  return {
+    month: `${year}-${String(month).padStart(2, '0')}`,
+    statement: { ...statement(0n, 0n), sisaUang: idr('4.000.000,00') + climb - wobble },
+  }
+})
+
 /** A month that ends overdrawn, so the axis has to hold both sides of zero. */
 const OVERDRAWN: MonthlyStatement = {
   ...FEBRUARY,
@@ -171,6 +209,8 @@ export const FIXTURES = {
   cashflow: <CashflowChart series={SERIES} />,
   'budget-derived': <BudgetBullet review={DERIVED_REVIEW} caption="Per kategori" />,
   waterfall: <Waterfall statement={FEBRUARY} caption="Sisa uang Februari" />,
+  'balance-trend': <BalanceTrend series={BALANCES} caption="Saldo di akhir tiap bulan" />,
+  'balance-trend-long': <BalanceTrend series={LONG_RUN} caption="Saldo dua tahun" />,
   'waterfall-overdrawn': <Waterfall statement={OVERDRAWN} caption="Bulan yang berakhir minus" />,
   crunch: <CrunchTimeline projection={FAMILY} caption="Biaya anak" />,
   // The same chart with its markers, so axe sees the sliders and the geometry

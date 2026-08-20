@@ -351,11 +351,103 @@ test.describe('air terjun saldo', () => {
   })
 })
 
+test.describe('tren saldo', () => {
+  test('puts a point on every month, in the order they happened', async ({ page }) => {
+    await open(page, 'balance-trend')
+    await expectMarksToRender(page)
+
+    const dots = await page.$$eval('[data-point]', (nodes) =>
+      nodes.map((node) => ({
+        month: node.getAttribute('data-point') ?? '',
+        x: node.getBoundingClientRect().left,
+        y: node.getBoundingClientRect().top,
+      })),
+    )
+
+    expect(dots.map((dot) => dot.month)).toEqual([
+      '2025-11',
+      '2025-12',
+      '2026-01',
+      '2026-02',
+      '2026-03',
+    ])
+    for (let i = 1; i < dots.length; i++) {
+      expect(dots[i].x).toBeGreaterThan(dots[i - 1].x)
+    }
+  })
+
+  test('puts the highest balance highest', async ({ page }) => {
+    await open(page, 'balance-trend')
+    const at = async (month: string) =>
+      (await page.locator(`[data-point="${month}"]`).boundingBox())?.y ?? 0
+
+    // February closed at Rp5,15jt and March at Rp2,45jt. Screen coordinates run
+    // downwards, so the larger balance has to sit at the smaller y.
+    expect(await at('2026-02')).toBeLessThan(await at('2026-03'))
+    expect(await at('2026-02')).toBeLessThan(await at('2026-01'))
+  })
+
+  test('draws a line rather than an area, because the axis is cropped', async ({ page }) => {
+    await open(page, 'balance-trend')
+
+    /*
+      A cropped floor is the only way to see a household's balance move, and it
+      is exactly what makes a filled shape lie: the fill claims a ratio between
+      the months that is not true. The chart says so in words as well.
+    */
+    const polyline = page.locator('svg polyline')
+    await expect(polyline).toHaveCount(1)
+    await expect(polyline).toHaveAttribute('fill', 'none')
+    await expect(page.locator('figure')).toContainText('bukan nol')
+    expect(await page.locator('svg polygon, svg path').count()).toBe(0)
+  })
+
+  test('keeps two years of markers off each other on a phone', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 })
+    await open(page, 'balance-trend-long')
+
+    const dots = await page.$$eval('[data-point]', (nodes) =>
+      nodes
+        .map((node) => {
+          const box = node.getBoundingClientRect()
+          return { month: node.getAttribute('data-point') ?? '', left: box.left, right: box.right }
+        })
+        .sort((a, b) => a.left - b.left),
+    )
+
+    expect(dots).toHaveLength(23)
+    // Every month keeps its dot, because the dot is what carries the figure on
+    // hover. What has to give at this density is their size.
+    for (let i = 1; i < dots.length; i++) {
+      const previous = dots[i - 1]
+      // The lowest month and the last one are drawn large on purpose, and are
+      // allowed to sit closer to their neighbour than the small ones do.
+      if (previous.right - previous.left > 6 || dots[i].right - dots[i].left > 6) continue
+      expect(dots[i].left, `${previous.month} and ${dots[i].month} overlap`).toBeGreaterThan(
+        previous.right,
+      )
+    }
+  })
+
+  test('never claims to be net worth while it only counts money', async ({ page }) => {
+    await open(page, 'balance-trend')
+    const text = await page.locator('figure').innerText()
+    expect(text).toContain('bukan kekayaan bersih')
+  })
+})
+
 test.describe('lebar halaman', () => {
   test('nothing pushes the page sideways on a narrow screen', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 })
 
-    for (const fixture of ['cashflow', 'bills', 'crunch-interactive', 'sankey', 'waterfall']) {
+    for (const fixture of [
+      'cashflow',
+      'bills',
+      'crunch-interactive',
+      'sankey',
+      'waterfall',
+      'balance-trend',
+    ]) {
       await open(page, fixture)
 
       const { doc, body } = await page.evaluate(() => ({

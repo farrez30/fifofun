@@ -8,6 +8,7 @@ import {
 import type { MonthlyStatement } from '@/lib/ledger/monthly'
 import { formatIdr, formatIdrCompact } from '@/lib/money'
 import { Money, SignedMoney } from '@/components/money'
+import { nudge } from './axis'
 
 /**
  * How Saldo awal became Sisa uang.
@@ -169,13 +170,6 @@ export function Waterfall({ statement, caption }: Props) {
       </div>
     </figure>
   )
-}
-
-/** Keeps the first and last axis labels inside the plot instead of centred on its edge. */
-function nudge(pct: number): string {
-  if (pct <= 0) return 'none'
-  if (pct >= 100) return 'translateX(-100%)'
-  return 'translateX(-50%)'
 }
 
 function Row({

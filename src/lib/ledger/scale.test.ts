@@ -105,3 +105,50 @@ describe('buildSpanScale', () => {
     expect(Number.isFinite(scale.percentOf(0n))).toBe(true)
   })
 })
+
+describe('buildSpanScale without zero', () => {
+  it('crops to the values, so a small difference is visible', () => {
+    const scale = buildSpanScale(idr('27.690.952,00'), idr('29.600.736,00'), {
+      includeZero: false,
+    })
+    expect(scale.bottom).toBeGreaterThan(0n)
+    expect(scale.bottom).toBeLessThanOrEqual(idr('27.690.952,00'))
+    expect(scale.top).toBeGreaterThanOrEqual(idr('29.600.736,00'))
+
+    // Zero based, these two points would sit within seven percent of each other
+    // and the trend between them would be invisible.
+    const spread =
+      scale.percentOf(idr('29.600.736,00')) - scale.percentOf(idr('27.690.952,00'))
+    expect(spread).toBeGreaterThan(40)
+  })
+
+  it('still steps evenly and still ends on its bounds', () => {
+    const scale = buildSpanScale(idr('27.690.952,00'), idr('29.600.736,00'), {
+      includeZero: false,
+    })
+    expect(scale.ticks[0]).toBe(scale.bottom)
+    expect(scale.ticks[scale.ticks.length - 1]).toBe(scale.top)
+
+    const step = scale.ticks[1] - scale.ticks[0]
+    for (let i = 1; i < scale.ticks.length; i++) {
+      expect(scale.ticks[i] - scale.ticks[i - 1]).toBe(step)
+    }
+  })
+
+  it('handles a run that never leaves the red', () => {
+    const scale = buildSpanScale(-idr('900.000,00'), -idr('200.000,00'), { includeZero: false })
+    expect(scale.top).toBeLessThanOrEqual(0n)
+    expect(scale.bottom).toBeLessThanOrEqual(-idr('900.000,00'))
+    expect(scale.percentOf(-idr('200.000,00'))).toBeGreaterThan(
+      scale.percentOf(-idr('900.000,00')),
+    )
+  })
+
+  it('gives a flat run an axis with width rather than dividing by nothing', () => {
+    const scale = buildSpanScale(idr('5.000.000,00'), idr('5.000.000,00'), {
+      includeZero: false,
+    })
+    expect(scale.top).toBeGreaterThan(scale.bottom)
+    expect(Number.isFinite(scale.percentOf(idr('5.000.000,00')))).toBe(true)
+  })
+})
