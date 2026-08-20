@@ -71,6 +71,34 @@ export function AppShell({ title, email, current, lead, children }: Props) {
       </header>
 
       <main id="main">{children}</main>
+
+      <footer className="mt-16 border-t border-line pt-5 text-xs text-ink-faint">
+        <ul className="flex flex-wrap gap-4">
+          <li>
+            <Link href="/legal/privasi" className="hover:text-ink">
+              Kebijakan Privasi
+            </Link>
+          </li>
+          <li>
+            <Link href="/legal/ketentuan" className="hover:text-ink">
+              Ketentuan Penggunaan
+            </Link>
+          </li>
+          <li>
+            <a
+              href="https://github.com/farrez30/fifofun"
+              target="_blank"
+              rel="noreferrer noopener"
+              className="hover:text-ink"
+            >
+              Kode sumber
+            </a>
+          </li>
+        </ul>
+        <p className="mt-2">
+          Angka di aplikasi ini hitungan dari asumsi, bukan nasihat keuangan.
+        </p>
+      </footer>
     </div>
   )
 }

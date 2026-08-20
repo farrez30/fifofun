@@ -1,0 +1,30 @@
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    # One pull request per group rather than per package. Twenty separate bumps
+    # a week get ignored, which is worse than not knowing.
+    groups:
+      next:
+        patterns: ['next', '@next/*', 'react', 'react-dom', 'eslint-config-next']
+      supabase:
+        patterns: ['@supabase/*']
+      drizzle:
+        patterns: ['drizzle-orm', 'drizzle-kit']
+      tooling:
+        patterns: ['eslint*', 'typescript', 'vitest', '@vitest/*', 'tsx', 'dotenv']
+        update-types: ['minor', 'patch']
+    commit-message:
+      prefix: 'chore'
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: 'chore'

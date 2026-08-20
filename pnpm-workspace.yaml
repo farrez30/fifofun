@@ -2,3 +2,11 @@ allowBuilds:
   esbuild: true
   sharp: false
   unrs-resolver: false
+
+# drizzle-kit still pulls the deprecated @esbuild-kit loader, which pins an
+# esbuild old enough to carry GHSA-67mh-4wv8-2f99: any website can talk to the
+# esbuild dev server and read the response. Nothing here ever runs that server,
+# so the advisory is not reachable, but a permanently red audit trains people to
+# stop reading audits at all, and that habit is the real risk.
+overrides:
+  esbuild: '>=0.25.0'
