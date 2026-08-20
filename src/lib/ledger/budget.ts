@@ -31,6 +31,12 @@ export interface BudgetLine {
    */
   share: number | null
   status: BudgetStatus
+  /**
+   * Whether this breach is large enough to be worth an alarm. Only meaningful
+   * when the status is not `under`; a line inside its budget is never flagged
+   * either way. See `MATERIAL_BASIS_POINTS`.
+   */
+  material: boolean
 }
 
 export interface BudgetReview {
@@ -67,6 +73,28 @@ function byOverrun(a: BudgetLine, b: BudgetLine): number {
   return a.category.localeCompare(b.category, 'id')
 }
 
+/**
+ * One percent of the month's spending, below which an overrun is not marked.
+ *
+ * Ranking alone turned out not to be enough. Bank charges came in at Rp45.700
+ * against a typical Rp36.500 and wore the same red triangle as a category that
+ * went over by Rp1,99 juta, because both are equally "over". Three alarms of
+ * identical weight point at nothing, which is the exact failure this panel was
+ * built to fix.
+ *
+ * Relative rather than a fixed Rupiah floor, so it scales with the household
+ * instead of being generous to a large income and brutal to a small one.
+ */
+const MATERIAL_BASIS_POINTS = 100n
+
+function isMaterial(delta: bigint, monthTotal: bigint): boolean {
+  if (delta <= 0n) return false
+  // Nothing to be a share of. A first month with a single overspend should
+  // still be flagged rather than dismissed as noise.
+  if (monthTotal <= 0n) return true
+  return delta * 10_000n >= monthTotal * MATERIAL_BASIS_POINTS
+}
+
 export function reviewBudget(
   period: string,
   budgets: Record<string, bigint>,
@@ -77,14 +105,27 @@ export function reviewBudget(
   // seeing, and so is spending in a category nobody budgeted.
   const categories = [...new Set([...Object.keys(budgets), ...Object.keys(actuals)])]
 
+  // Materiality is judged against the month as a whole, so the totals have to
+  // exist before any line can know whether it deserves an alarm.
+  const totalActual = categories.reduce((total, category) => total + (actuals[category] ?? 0n), 0n)
+
   const lines = categories
     .map<BudgetLine>((category) => {
       const budget = budgets[category] ?? 0n
       const actual = actuals[category] ?? 0n
       const status: BudgetStatus =
         budget <= 0n ? (actual > 0n ? 'unbudgeted' : 'under') : actual > budget ? 'over' : 'under'
+      const delta = actual - budget
 
-      return { category, budget, actual, delta: actual - budget, share: shareOf(actual, budget), status }
+      return {
+        category,
+        budget,
+        actual,
+        delta,
+        share: shareOf(actual, budget),
+        status,
+        material: status !== 'under' && isMaterial(delta, totalActual),
+      }
     })
     .sort(byOverrun)
 
@@ -94,7 +135,7 @@ export function reviewBudget(
     period,
     lines,
     totalBudget: sum((l) => l.budget),
-    totalActual: sum((l) => l.actual),
+    totalActual,
     breaches: lines.filter((line) => line.status !== 'under'),
     source,
   }

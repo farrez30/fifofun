@@ -68,6 +68,54 @@ describe('reviewBudget', () => {
     expect(review.lines[0].share).toBe(100)
   })
 
+  it('marks an overrun that moves the month', () => {
+    const review = reviewBudget(
+      '2026-07',
+      { 'Other spending': idr('2.149.081,00') },
+      { 'Other spending': idr('4.138.307,00') },
+    )
+    expect(review.lines[0]).toMatchObject({ status: 'over', material: true })
+  })
+
+  it('leaves a rounding-sized overrun unmarked so the real ones stay visible', () => {
+    // Observed in July 2026: bank charges of Rp45.700 against a typical
+    // Rp36.500 wore the same red triangle as a category Rp1,99 juta over.
+    const review = reviewBudget(
+      '2026-07',
+      { 'Biaya Bank': idr('36.500,00'), Belanja: idr('1.855.653,00') },
+      { 'Biaya Bank': idr('45.700,00'), Belanja: idr('2.225.031,00') },
+    )
+    const byName = Object.fromEntries(review.lines.map((line) => [line.category, line]))
+    expect(byName['Biaya Bank']).toMatchObject({ status: 'over', material: false })
+    expect(byName.Belanja).toMatchObject({ status: 'over', material: true })
+  })
+
+  it('scales the threshold with the household rather than fixing it in Rupiah', () => {
+    // The same Rp9.200 overrun, in a month one hundredth the size.
+    const review = reviewBudget(
+      '2026-07',
+      { 'Biaya Bank': idr('36.500,00') },
+      { 'Biaya Bank': idr('45.700,00') },
+    )
+    expect(review.lines[0].material).toBe(true)
+  })
+
+  it('never marks a category that stayed inside its budget', () => {
+    const review = reviewBudget('2026-07', { Bensin: idr('300.000,00') }, { Bensin: idr('10.000,00') })
+    expect(review.lines[0]).toMatchObject({ status: 'under', material: false })
+  })
+
+  it('marks unbudgeted spending by the same rule as an overrun', () => {
+    const review = reviewBudget(
+      '2026-07',
+      {},
+      { Dating: idr('1.200.000,00'), Parkir: idr('2.000,00') },
+    )
+    const byName = Object.fromEntries(review.lines.map((line) => [line.category, line]))
+    expect(byName.Dating).toMatchObject({ status: 'unbudgeted', material: true })
+    expect(byName.Parkir).toMatchObject({ status: 'unbudgeted', material: false })
+  })
+
   it('totals both sides across every category', () => {
     const review = reviewBudget(
       '2026-03',

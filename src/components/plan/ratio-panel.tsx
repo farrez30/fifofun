@@ -31,6 +31,19 @@ const VERDICT_STYLE: Record<Verdict, { chip: string; glyph: string; label: strin
   },
 }
 
+/**
+ * Column headings for the strip, short enough to sit under a fifth of a row.
+ * Kept here rather than added to RATIOS: the full labels are the ones every
+ * other surface reads, and shortening them is this panel's problem alone.
+ */
+const SHORT_LABEL: Record<string, string> = {
+  'debt-service': 'Cicilan',
+  'debt-to-asset': 'Utang',
+  savings: 'Menabung',
+  liquidity: 'Likuiditas',
+  solvency: 'Solvabilitas',
+}
+
 const FIELD_LABEL: Record<keyof FinancialSnapshot, string> = {
   monthlyIncome: 'penghasilan bulanan',
   monthlyDebtService: 'cicilan bulanan',
@@ -52,40 +65,60 @@ export function RatioPanel({ snapshot }: { snapshot: FinancialSnapshot }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-4 border border-line bg-surface p-4">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-ink-faint">
-            Skor kesehatan
+      <div className="border border-line bg-surface p-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <p className="text-sm font-medium text-ink">
+            {report.counts.danger > 0
+              ? `${report.counts.danger} dari ${report.results.length} rasio ada di zona bahaya`
+              : report.counts.warning > 0
+                ? `${report.counts.warning} dari ${report.results.length} rasio perlu diwaspadai`
+                : 'Kelima rasio ada di zona sehat'}
           </p>
-          <p className="mt-1 tnum font-mono text-3xl font-medium text-ink">{report.score}</p>
-        </div>
-        <div className="min-w-48 flex-1">
-          <div className="flex h-2 overflow-hidden rounded-xs bg-sunken">
-            {(['healthy', 'warning', 'danger'] as const).map((verdict) =>
-              report.counts[verdict] > 0 ? (
-                <div
-                  key={verdict}
-                  className={
-                    verdict === 'healthy'
-                      ? 'bg-under'
-                      : verdict === 'warning'
-                        ? 'bg-warn'
-                        : 'bg-over'
-                  }
-                  style={{
-                    width: `${(report.counts[verdict] / report.results.length) * 100}%`,
-                  }}
-                />
-              ) : null,
-            )}
-          </div>
-          <p className="mt-2 text-xs text-ink-muted">
-            {report.counts.healthy} sehat, {report.counts.warning} waspada,{' '}
-            {report.counts.danger} bahaya. Skornya rata-rata tertimbang dari kelima rasio dan
-            hanya alat baca cepat. Yang menentukan tindakan adalah baris di bawah, bukan angka
-            ini.
+          <p className="text-xs text-ink-faint">
+            Skor <span className="tnum font-mono text-sm text-ink">{report.score}</span> dari 100
           </p>
         </div>
+
+        {/*
+          One segment per ratio, in the order of the list below, so the strip is
+          an index into that list. It used to be three segments sized by how many
+          ratios fell in each band, sitting next to the score as though it were
+          the score's meter. It never was, and its denominator counted ratios
+          that had no verdict, so a household missing one figure got a strip that
+          quietly stopped short of the end.
+        */}
+        <ul className="mt-3 flex gap-1">
+          {report.results.map((result) => {
+            const style = result.verdict ? VERDICT_STYLE[result.verdict] : null
+            return (
+              <li key={result.threshold.id} className="min-w-0 flex-1">
+                <a
+                  href={`#rasio-${result.threshold.id}`}
+                  className="block rounded-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                >
+                  <span
+                    className={`flex h-6 items-center justify-center border text-[0.625rem] ${
+                      style ? style.chip : 'border-line bg-sunken text-ink-faint'
+                    }`}
+                  >
+                    <span aria-hidden="true">{style ? style.glyph : '–'}</span>
+                  </span>
+                  <span className="mt-1 block truncate text-center text-[0.625rem] text-ink-muted">
+                    {SHORT_LABEL[result.threshold.id] ?? result.threshold.label}
+                  </span>
+                  <span className="sr-only">
+                    {result.threshold.label}: {style ? style.label : 'belum bisa dihitung'}
+                  </span>
+                </a>
+              </li>
+            )
+          })}
+        </ul>
+
+        <p className="mt-3 text-xs text-ink-muted">
+          Skornya rata-rata lima rasio, dengan sehat bernilai 100, waspada 60, dan bahaya 20.
+          Angka itu alat baca cepat, dan yang menentukan tindakan adalah baris di bawah.
+        </p>
       </div>
 
       {report.weakest ? (
@@ -102,7 +135,7 @@ export function RatioPanel({ snapshot }: { snapshot: FinancialSnapshot }) {
         {report.results.map((result) => {
           const style = result.verdict ? VERDICT_STYLE[result.verdict] : null
           return (
-            <li key={result.threshold.id} className="p-4">
+            <li key={result.threshold.id} id={`rasio-${result.threshold.id}`} className="scroll-mt-20 p-4">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <span className="text-sm font-medium text-ink">{result.threshold.label}</span>
                 <span className="flex items-center gap-2">

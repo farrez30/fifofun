@@ -18,11 +18,42 @@ import { formatIdr, formatIdrCompact, senToRupiahNumber } from '@/lib/money'
  * part that decides whether the reader sees the problem at all.
  */
 
-const STATUS = {
-  over: { glyph: '▲', bar: 'bg-over', text: 'text-over', label: 'lewat anggaran' },
-  unbudgeted: { glyph: '◆', bar: 'bg-warn', text: 'text-warn', label: 'tanpa anggaran' },
-  under: { glyph: null, bar: 'bg-accent', text: 'text-ink-faint', label: 'dalam anggaran' },
+const ALARM = {
+  over: { glyph: '▲', bar: 'bg-over', text: 'text-over' },
+  unbudgeted: { glyph: '◆', bar: 'bg-warn', text: 'text-warn' },
 } as const
+
+const QUIET = { glyph: null, bar: 'bg-accent', text: 'text-ink-faint' } as const
+
+/**
+ * A derived figure is not a plan, and must not borrow the word for one.
+ *
+ * The panel used to tell a household it had gone "lewat anggaran" on bank
+ * charges against a Rp36.500 budget nobody ever set: that figure was the median
+ * of their own past six months. Reporting a broken plan where no plan exists
+ * asks someone to answer for a decision they never made.
+ */
+const WORDING = {
+  manual: {
+    against: (amount: string) => `anggaran ${amount}`,
+    none: 'belum dianggarkan',
+    over: 'lewat anggaran',
+    unbudgeted: 'tanpa anggaran',
+    under: 'dalam anggaran',
+  },
+  derived: {
+    against: (amount: string) => `biasanya ${amount}`,
+    none: 'belum pernah muncul',
+    over: 'di atas kebiasaan',
+    unbudgeted: 'kategori baru bulan ini',
+    under: 'seperti biasa',
+  },
+} as const
+
+function styleFor(line: BudgetLine) {
+  if (line.status === 'under' || !line.material) return QUIET
+  return ALARM[line.status]
+}
 
 interface Props {
   review: BudgetReview
@@ -50,6 +81,8 @@ export function BudgetBullet({ review, caption }: Props) {
   const ceilingRupiah = senToRupiahNumber(ceiling)
   const percentOf = (sen: bigint) => (senToRupiahNumber(sen) / ceilingRupiah) * 100
 
+  const quiet = lines.filter((line) => line.status !== 'under' && !line.material).length
+
   return (
     <figure className="border border-line bg-surface p-4">
       <figcaption className="mb-1 flex flex-wrap items-baseline justify-between gap-3">
@@ -62,21 +95,38 @@ export function BudgetBullet({ review, caption }: Props) {
 
       <p className="mb-4 text-xs text-ink-muted">
         {review.source === 'derived'
-          ? 'Anggaran ini diturunkan dari median enam bulan terakhirmu, bukan angka yang kamu tetapkan. Ubah kapan saja.'
-          : 'Anggaran yang kamu tetapkan sendiri.'}
+          ? 'Pembandingnya median enam bulan terakhirmu, bukan angka yang kamu tetapkan sendiri. Tetapkan anggaranmu kapan saja untuk menggantinya.'
+          : 'Pembandingnya anggaran yang kamu tetapkan sendiri.'}
       </p>
 
       <ul className="space-y-3">
         {lines.map((line) => (
-          <Row key={line.category} line={line} percentOf={percentOf} />
+          <Row key={line.category} line={line} percentOf={percentOf} source={review.source} />
         ))}
       </ul>
+
+      {quiet > 0 ? (
+        <p className="mt-4 border-t border-line pt-3 text-xs text-ink-faint">
+          {quiet} kategori lewat sedikit tanpa ditandai. Selisih di bawah satu persen pengeluaran
+          bulan ini tidak diberi tanda, supaya tanda yang ada tetap berarti.
+        </p>
+      ) : null}
     </figure>
   )
 }
 
-function Row({ line, percentOf }: { line: BudgetLine; percentOf: (sen: bigint) => number }) {
-  const style = STATUS[line.status]
+function Row({
+  line,
+  percentOf,
+  source,
+}: {
+  line: BudgetLine
+  percentOf: (sen: bigint) => number
+  source: BudgetReview['source']
+}) {
+  const style = styleFor(line)
+  const words = WORDING[source]
+  const label = words[line.status]
 
   return (
     <li>
@@ -92,8 +142,8 @@ function Row({ line, percentOf }: { line: BudgetLine; percentOf: (sen: bigint) =
         <span className="tnum font-mono text-xs text-ink-muted">
           {formatIdr(line.actual)}
           <span className="text-ink-faint">
-            {' / '}
-            {line.budget === 0n ? 'belum dianggarkan' : formatIdr(line.budget)}
+            {' · '}
+            {line.budget === 0n ? words.none : words.against(formatIdr(line.budget))}
           </span>
           {line.share === null ? null : (
             <span className={`ml-2 ${style.text}`}>{Math.round(line.share)}%</span>
@@ -116,9 +166,7 @@ function Row({ line, percentOf }: { line: BudgetLine; percentOf: (sen: bigint) =
 
       <span className="sr-only">
         {line.category}: terpakai {formatIdr(line.actual)}
-        {line.budget === 0n
-          ? ', tanpa anggaran'
-          : ` dari anggaran ${formatIdr(line.budget)}, ${style.label}`}
+        {line.budget === 0n ? '' : `, ${words.against(formatIdr(line.budget))}`}, {label}
       </span>
     </li>
   )
