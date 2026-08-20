@@ -3,22 +3,29 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
 import { AppShell } from '@/components/app-shell'
+import { Balances } from '@/components/balances'
 import { CashflowChart } from '@/components/cashflow-chart'
+import { BudgetBullet } from '@/components/chart/budget-bullet'
 import { Sankey, type SankeyLink, type SankeyNode } from '@/components/chart/sankey'
 import { Money, SignedMoney, Stat } from '@/components/money'
 import { formatJakarta } from '@/lib/datetime'
-import { totalsByCategory } from '@/lib/ledger/categories'
+import { proposeBudget, reviewBudget } from '@/lib/ledger/budget'
+import { rollUpByMonthAndCategory, totalsByCategory } from '@/lib/ledger/categories'
 import {
   computeAccountMovements,
   computeMonthlySeries,
   findOverdrawnAccounts,
+  findStalledAccounts,
   groupByMonth,
+  reconcileBank,
   type MonthlyStatement,
 } from '@/lib/ledger/monthly'
 import {
   getAccounts,
   getAllTransactions,
+  getBudgets,
   getHousehold,
+  getLatestClosingBalance,
   getOpeningBalance,
   type TransactionRow,
 } from '@/lib/queries/household'
@@ -134,10 +141,11 @@ async function Dashboard() {
     )
   }
 
-  const [accounts, transactions, openingBalance] = await Promise.all([
+  const [accounts, transactions, openingBalance, printed] = await Promise.all([
     getAccounts(household.id),
     getAllTransactions(household.id),
     getOpeningBalance(household.id),
+    getLatestClosingBalance(household.id),
   ])
 
   if (transactions.length === 0) return <EmptyState />
@@ -146,10 +154,36 @@ async function Dashboard() {
   const latest = series[series.length - 1]
   const movements = computeAccountMovements(transactions, accounts)
   const overdrawn = findOverdrawnAccounts(movements)
+  const stalled = findStalledAccounts(movements)
   const needsReview = transactions.filter((tx) => tx.needsReview).length
+
+  const bankAccount = accounts.find((account) => account.kind === 'bank')
+  const reconciliation =
+    bankAccount && printed ? reconcileBank(movements, bankAccount.id, printed.closing) : null
 
   const latestEntries = groupByMonth(transactions).get(latest.month) ?? []
   const flow = buildFlow(latest.statement, latestEntries as TransactionRow[])
+
+  // A budget the household set beats one derived from its own history, but an
+  // empty panel on the first visit teaches nobody anything, so the median of the
+  // recent months stands in until a real budget exists.
+  const history = rollUpByMonthAndCategory(transactions)
+  // Matched on the month rather than taken from the tail: a month with income
+  // and no spending appears in the series and not in the rollup, and the two
+  // would quietly drift apart by one.
+  const currentIndex = history.findIndex((month) => month.month === latest.month)
+  const setBudgets = await getBudgets(household.id, latest.month)
+  const hasSetBudgets = Object.keys(setBudgets).length > 0
+  const budgetReview = reviewBudget(
+    latest.month,
+    hasSetBudgets
+      ? setBudgets
+      : // Derived from the months before this one, never including it. A budget
+        // that includes the month it is judging can never be exceeded.
+        proposeBudget(currentIndex === -1 ? history : history.slice(0, currentIndex)),
+    currentIndex === -1 ? {} : history[currentIndex].byCategory,
+    hasSetBudgets ? 'manual' : 'derived',
+  )
 
   return (
     <div className="space-y-10">
@@ -195,6 +229,26 @@ async function Dashboard() {
           </ul>
         </section>
       ) : null}
+
+      <section aria-labelledby="saldo">
+        <h2 id="saldo" className="mb-3 text-sm font-medium text-ink">
+          Uangnya ada di mana
+        </h2>
+        <Balances
+          movements={movements}
+          reconciliation={reconciliation}
+          stalled={stalled}
+          statementDate={printed?.periodEnd ?? null}
+        />
+      </section>
+
+      <section aria-labelledby="anggaran">
+        <h2 id="anggaran" className="mb-3 text-sm font-medium text-ink">
+          Anggaran dan realisasi
+          <span className="ml-2 font-normal text-ink-muted">{latest.month}</span>
+        </h2>
+        <BudgetBullet review={budgetReview} caption={`Per kategori, ${latest.month}`} />
+      </section>
 
       <section aria-labelledby="aliran">
         <h2 id="aliran" className="mb-3 text-sm font-medium text-ink">

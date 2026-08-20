@@ -189,3 +189,51 @@ export async function getOpeningBalance(householdId: string): Promise<bigint> {
   if (error || !data) return 0n
   return toBigInt(data.opening_balance)
 }
+
+/**
+ * Budgets for one calendar month, keyed by category name.
+ *
+ * Keyed by name rather than by id because that is what the actuals are keyed by:
+ * the rollup groups on the category name a transaction carries, and joining the
+ * two on an id would need every actual to have resolved a category first, which
+ * imported rows have not always done.
+ */
+export async function getBudgets(
+  householdId: string,
+  period: string,
+): Promise<Record<string, bigint>> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('budgets')
+    .select('amount, categories(name)')
+    .eq('household_id', householdId)
+    .eq('period', period)
+
+  if (error || !data) return {}
+
+  const budgets: Record<string, bigint> = {}
+  for (const row of data) {
+    const joined = row.categories as { name: string } | { name: string }[] | null
+    const name = Array.isArray(joined) ? joined[0]?.name : joined?.name
+    if (name) budgets[name] = toBigInt(row.amount)
+  }
+  return budgets
+}
+
+/** The closing balance the bank printed on the most recent statement imported. */
+export async function getLatestClosingBalance(
+  householdId: string,
+): Promise<{ closing: bigint; periodEnd: Date } | null> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('import_batches')
+    .select('closing_balance, period_end')
+    .eq('household_id', householdId)
+    .eq('status', 'reconciled')
+    .order('period_end', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (error || !data?.period_end) return null
+  return { closing: toBigInt(data.closing_balance), periodEnd: new Date(data.period_end as string) }
+}

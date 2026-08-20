@@ -59,7 +59,7 @@ function statement(rows: StatementRow[]): ParsedStatement {
       closingBalance: closing,
     },
     rows,
-    reconciliation: { ok: true, issues: [] },
+    reconciliation: { ok: true, issues: [], sumIn: totalIn, sumOut: totalOut },
   }
 }
 

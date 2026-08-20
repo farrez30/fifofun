@@ -72,6 +72,13 @@ export interface LedgerEntry {
   /** Links a bank fee to the transaction it was charged for. */
   feeParentId?: string | null
   note?: string | null
+  /**
+   * Money that arrived and left again almost immediately: somebody else's funds
+   * routed through the account. It moved the bank balance, so every balance
+   * calculation must count it, and it was never income or spending, so every
+   * statement figure must not.
+   */
+  isPassThrough?: boolean
 }
 
 /**

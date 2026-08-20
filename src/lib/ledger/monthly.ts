@@ -27,8 +27,22 @@ export interface MonthlyStatement {
   sisaUang: bigint
 }
 
+/**
+ * Pass-through money is excluded from every statement figure.
+ *
+ * A sum that arrives from someone else and leaves the same day was never income
+ * and its departure was never spending. Counting both sides looks harmless
+ * because they cancel in Sisa uang, but they do not always: where the money
+ * leaves as a transfer to a wallet, only the arrival is counted and the month
+ * gains income out of nowhere. Even when they do cancel, the income figure is
+ * inflated, and every health ratio is measured against income.
+ */
 function totalFor(entries: LedgerEntry[], cashflow: CashflowType): bigint {
-  return sumSen(entries.filter((entry) => entry.cashflow === cashflow).map((entry) => entry.amount))
+  return sumSen(
+    entries
+      .filter((entry) => entry.cashflow === cashflow && !entry.isPassThrough)
+      .map((entry) => entry.amount),
+  )
 }
 
 /**
@@ -92,6 +106,11 @@ export interface AccountMovement {
  * A closing balance below zero is impossible in reality, so callers should
  * surface it rather than display it; the source spreadsheet showed Gopay at
  * minus Rp47.200 for a whole month without anyone noticing.
+ *
+ * Unlike the statement figures, this counts pass-through money. The bank moved
+ * it, so leaving it out would put every balance here out of step with the one
+ * the bank printed, and that printed balance is the only external check this
+ * app has on its own arithmetic.
  */
 export function computeAccountMovements(
   entries: LedgerEntry[],
@@ -118,6 +137,68 @@ export function computeAccountMovements(
 /** Accounts whose balance went negative, which always means a recording error. */
 export function findOverdrawnAccounts(movements: AccountMovement[]): AccountMovement[] {
   return movements.filter((movement) => movement.closing < 0n)
+}
+
+export interface BankReconciliation {
+  /** The account the statements belong to, so callers can set it apart. */
+  accountId: string
+  ok: boolean
+  /** What this app computed for the account the statements belong to. */
+  computed: bigint
+  /** What the bank printed as the closing balance of the last statement. */
+  printed: bigint
+  difference: bigint
+}
+
+/**
+ * Checks the app's arithmetic against the bank's own figure.
+ *
+ * This is the strongest claim the app can make about itself. Every other number
+ * on the dashboard is derived from rows this app parsed and classified; only
+ * this one is checked against a figure nobody here computed. A difference of
+ * zero means the ledger for that account is exact, to the sen.
+ */
+export function reconcileBank(
+  movements: AccountMovement[],
+  accountId: string,
+  printedClosing: bigint,
+): BankReconciliation | null {
+  const account = movements.find((movement) => movement.accountId === accountId)
+  if (!account) return null
+
+  const difference = account.closing - printedClosing
+  return {
+    accountId,
+    ok: difference === 0n,
+    computed: account.closing,
+    printed: printedClosing,
+    difference,
+  }
+}
+
+export interface StalledAccount extends AccountMovement {
+  /** Money that went in and, as far as this app knows, never came out. */
+  stranded: bigint
+}
+
+/**
+ * Accounts that only ever receive money.
+ *
+ * A wallet topped up nine million Rupiah and never once spent from is not a
+ * wallet with nine million in it; it is a wallet whose spending nobody imported.
+ * The balance is arithmetically correct and factually wrong, and because it is
+ * summed into Sisa uang it makes the headline figure wrong too. Bank statements
+ * can only ever show one side of this, so the app has to say so rather than
+ * present the total as if it were money on hand.
+ */
+export function findStalledAccounts(
+  movements: AccountMovement[],
+  minimum = 100_000_00n,
+): StalledAccount[] {
+  return movements
+    .filter((movement) => movement.credit >= minimum && movement.debit * 10n < movement.credit)
+    .map((movement) => ({ ...movement, stranded: movement.closing }))
+    .sort((a, b) => (b.stranded > a.stranded ? 1 : b.stranded < a.stranded ? -1 : 0))
 }
 
 /**

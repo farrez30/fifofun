@@ -6,8 +6,10 @@ import {
   computeMonthlySeries,
   computeMonthlyStatement,
   findOverdrawnAccounts,
+  findStalledAccounts,
   groupByMonth,
   openingBalanceCheck,
+  reconcileBank,
 } from './monthly'
 import { type Account, type CashflowType, type LedgerEntry, validateEntry } from './types'
 
@@ -235,5 +237,94 @@ describe('entry validation', () => {
   it('rejects a non-positive amount', () => {
     const bad = { ...entry('spending', '1.000,00'), amount: 0n }
     expect(validateEntry(bad).map((p) => p.message)).toContain('Amount must be greater than zero')
+  })
+})
+
+describe('pass-through money', () => {
+  const passing = (e: LedgerEntry): LedgerEntry => ({ ...e, isPassThrough: true })
+
+  it('keeps money that only passed through out of income', () => {
+    const statement = computeMonthlyStatement(
+      [entry('income', '5.000.000,00'), passing(entry('income', '1.950.000,00'))],
+      0n,
+    )
+    expect(statement.income).toBe(parseIdAmount('5.000.000,00'))
+  })
+
+  it('does not invent Sisa uang when the money left again as a transfer', () => {
+    // The case that made the dashboard wrong: the arrival counted as income, the
+    // departure was a wallet top-up, and transfers have no term in the formula.
+    const statement = computeMonthlyStatement(
+      [
+        passing(entry('income', '1.950.000,00')),
+        passing(entry('transfer', '1.950.000,00', 1, { from: 'mandiri', to: 'dana' })),
+      ],
+      0n,
+    )
+    expect(statement.sisaUang).toBe(0n)
+  })
+
+  it('still counts it in the account balances, which must match the bank', () => {
+    const movements = computeAccountMovements(
+      [passing(entry('income', '1.950.000,00'))],
+      [{ id: 'mandiri', name: 'Bank Mandiri', kind: 'bank', openingBalance: 0n }],
+    )
+    expect(movements[0].closing).toBe(parseIdAmount('1.950.000,00'))
+  })
+})
+
+describe('reconcileBank', () => {
+  const movements = (closing: string) =>
+    computeAccountMovements(
+      [entry('income', closing)],
+      [{ id: 'mandiri', name: 'Bank Mandiri', kind: 'bank', openingBalance: 0n }],
+    )
+
+  it('passes when the app agrees with the figure the bank printed', () => {
+    const check = reconcileBank(movements('6.066.622,38'), 'mandiri', parseIdAmount('6.066.622,38'))
+    expect(check).toEqual({
+      accountId: 'mandiri',
+      ok: true,
+      computed: parseIdAmount('6.066.622,38'),
+      printed: parseIdAmount('6.066.622,38'),
+      difference: 0n,
+    })
+  })
+
+  it('reports the signed difference rather than only failing', () => {
+    const check = reconcileBank(movements('6.066.622,38'), 'mandiri', parseIdAmount('6.000.000,00'))
+    expect(check?.ok).toBe(false)
+    expect(check?.difference).toBe(parseIdAmount('66.622,38'))
+  })
+
+  it('returns null for an account the statements never covered', () => {
+    expect(reconcileBank(movements('1.000,00'), 'jago', 0n)).toBeNull()
+  })
+})
+
+describe('findStalledAccounts', () => {
+  const wallet = (name: string, credit: string, debit: string) =>
+    computeAccountMovements(
+      [
+        entry('transfer', credit, 1, { from: 'mandiri', to: name }),
+        ...(parseIdAmount(debit) > 0n
+          ? [entry('transfer', debit, 1, { from: name, to: 'mandiri' })]
+          : []),
+      ],
+      [{ id: name, name, kind: 'ewallet', openingBalance: 0n }],
+    )
+
+  it('flags a wallet that received millions and never paid anything out', () => {
+    const [stalled] = findStalledAccounts(wallet('dana', '9.036.795,00', '0,00'))
+    expect(stalled.name).toBe('dana')
+    expect(stalled.stranded).toBe(parseIdAmount('9.036.795,00'))
+  })
+
+  it('leaves a wallet that is genuinely being spent from alone', () => {
+    expect(findStalledAccounts(wallet('gopay', '1.000.000,00', '800.000,00'))).toEqual([])
+  })
+
+  it('ignores small balances, which are noise rather than a missing statement', () => {
+    expect(findStalledAccounts(wallet('ovo', '50.000,00', '0,00'))).toEqual([])
   })
 })
