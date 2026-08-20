@@ -8,6 +8,7 @@ import { CashflowChart } from '@/components/cashflow-chart'
 import { BudgetBullet } from '@/components/chart/budget-bullet'
 import { CrunchTimeline } from '@/components/chart/crunch-timeline'
 import { Sankey } from '@/components/chart/sankey'
+import { Waterfall } from '@/components/chart/waterfall'
 import { reviewBudget } from '@/lib/ledger/budget'
 import type { MonthlySeries, MonthlyStatement } from '@/lib/ledger/monthly'
 import { parseIdAmount as idr } from '@/lib/money'
@@ -137,12 +138,40 @@ const BILLS_UNTOUCHED = reviewBills([], '2026-07', {
   known: ['Wifi', 'Langganan Spotify', 'Bayar Kontrakan'],
 })
 
+/** February 2026 exactly as the spreadsheet has it, receivable coming back and all. */
+const FEBRUARY: MonthlyStatement = {
+  saldoAwal: idr('3.398.413,00'),
+  income: idr('8.171.629,00'),
+  fromAsset: 0n,
+  investSavings: 0n,
+  bills: idr('2.690.151,00'),
+  sinkingFund: 0n,
+  financialGoals: 0n,
+  debtPayment: 0n,
+  spending: idr('3.830.737,00'),
+  piutang: -idr('102.000,00'),
+  sisaUang: idr('5.151.154,00'),
+}
+
+/** A month that ends overdrawn, so the axis has to hold both sides of zero. */
+const OVERDRAWN: MonthlyStatement = {
+  ...FEBRUARY,
+  saldoAwal: idr('200.000,00'),
+  income: idr('100.000,00'),
+  bills: 0n,
+  spending: idr('900.000,00'),
+  piutang: 0n,
+  sisaUang: -idr('600.000,00'),
+}
+
 export const FIXTURES = {
   bills: <BillsPanel review={BILLS} />,
   'bills-untouched': <BillsPanel review={BILLS_UNTOUCHED} />,
   receivables: <ReceivablesPanel review={RECEIVABLES} />,
   cashflow: <CashflowChart series={SERIES} />,
   'budget-derived': <BudgetBullet review={DERIVED_REVIEW} caption="Per kategori" />,
+  waterfall: <Waterfall statement={FEBRUARY} caption="Sisa uang Februari" />,
+  'waterfall-overdrawn': <Waterfall statement={OVERDRAWN} caption="Bulan yang berakhir minus" />,
   crunch: <CrunchTimeline projection={FAMILY} caption="Biaya anak" />,
   // The same chart with its markers, so axe sees the sliders and the geometry
   // check sees whether they landed on their columns.

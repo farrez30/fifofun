@@ -7,6 +7,7 @@ import { Balances } from '@/components/balances'
 import { CashflowChart } from '@/components/cashflow-chart'
 import { BudgetBullet } from '@/components/chart/budget-bullet'
 import { Sankey, type SankeyLink, type SankeyNode } from '@/components/chart/sankey'
+import { Waterfall } from '@/components/chart/waterfall'
 import { BillsPanel } from '@/components/bills-panel'
 import { Money, SignedMoney, Stat } from '@/components/money'
 import { ReceivablesPanel } from '@/components/receivables-panel'
@@ -271,6 +272,17 @@ async function Dashboard() {
           </div>
         </section>
       ) : null}
+
+      <section aria-labelledby="perjalanan">
+        <h2 id="perjalanan" className="mb-3 text-sm font-medium text-ink">
+          Dari saldo awal ke sisa uang
+          <span className="ml-2 font-normal text-ink-muted">{latest.month}</span>
+        </h2>
+        <Waterfall
+          statement={latest.statement}
+          caption={`Urutan yang membentuk sisa uang ${latest.month}`}
+        />
+      </section>
 
       <section aria-labelledby="saldo">
         <h2 id="saldo" className="mb-3 text-sm font-medium text-ink">

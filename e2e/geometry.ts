@@ -22,9 +22,13 @@ export async function expectMarksToRender(page: Page) {
 
       for (const axis of ['height', 'width'] as const) {
         const declared = node.style[axis]
-        if (!declared.endsWith('%')) continue
+        // Anywhere in the value, not only the whole of it: a bar written as
+        // max(2px, 40%) is still a bar sized by its container, and reading only
+        // whole-percentage values let a chart out of this check entirely.
+        const share = /(\d+(?:\.\d+)?)%/.exec(declared)
+        if (!share) continue
         // A mark legitimately asking for none of the space is not a failure.
-        if (Number.parseFloat(declared) <= 0) continue
+        if (Number.parseFloat(share[1]) <= 0) continue
 
         const measured = axis === 'height' ? box.height : box.width
         if (measured >= 1) continue

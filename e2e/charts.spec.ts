@@ -196,11 +196,166 @@ test.describe('penanda tahun lahir', () => {
   })
 })
 
+test.describe('air terjun saldo', () => {
+  /** Every bar, left to right edge, in the order the chart lists them. */
+  function bars(page: import('@playwright/test').Page) {
+    return page.$$eval('[data-step]', (nodes) =>
+      nodes.map((node) => {
+        const box = node.getBoundingClientRect()
+        return { id: node.getAttribute('data-step') ?? '', left: box.left, right: box.right }
+      }),
+    )
+  }
+
+  test('draws one bar per term that moved, and none for the rest', async ({ page }) => {
+    await open(page, 'waterfall')
+    await expectMarksToRender(page)
+
+    // Investasi, sinking fund, tujuan and cicilan were all nothing in February.
+    // A row per zero would be four labels explaining that nothing happened.
+    expect((await bars(page)).map((bar) => bar.id)).toEqual([
+      'opening',
+      'income',
+      'bills',
+      'spending',
+      'piutang',
+      'closing',
+    ])
+  })
+
+  test('starts each step where the last one finished', async ({ page }) => {
+    await open(page, 'waterfall')
+
+    /*
+      The whole claim of a waterfall is that the bars chain, and the connector
+      line drawn in each row is where the previous running total landed. A bar
+      that does not meet its own connector means the running total jumped with
+      no term to explain it, and nothing in the picture would say so.
+
+      That the connector sits at the previous total is arithmetic, and is
+      asserted in the unit tests. What can only be measured here is whether the
+      bar was laid out against it.
+    */
+    const gaps = await page.$$eval('[data-continues-from]', (lines) =>
+      lines.map((line) => {
+        const row = line.parentElement
+        const bar = row?.querySelector('[data-step]')
+        if (!bar) return null
+        const at = line.getBoundingClientRect().left
+        const box = bar.getBoundingClientRect()
+        return {
+          from: line.getAttribute('data-continues-from'),
+          gap: Math.min(Math.abs(box.left - at), Math.abs(box.right - at)),
+        }
+      }),
+    )
+
+    expect(gaps).toHaveLength(5)
+    for (const entry of gaps) {
+      expect(entry, 'a connector with no bar beside it').not.toBeNull()
+      expect(entry?.gap, `the bar after ${entry?.from} does not meet it`).toBeLessThan(2)
+    }
+  })
+
+  test('sizes each step in proportion to what it moved', async ({ page }) => {
+    await open(page, 'waterfall')
+    const drawn = await bars(page)
+    const width = (id: string) => {
+      const bar = drawn.find((b) => b.id === id)
+      if (!bar) throw new Error(`no bar for ${id}`)
+      return bar.right - bar.left
+    }
+
+    // Rp3.830.737 of spending against Rp2.690.151 of bills is 1,424.
+    expect(width('spending') / width('bills')).toBeGreaterThan(1.38)
+    expect(width('spending') / width('bills')).toBeLessThan(1.47)
+
+    // Rp102.000 beside an axis reaching Rp12 juta is under one percent of the
+    // plot, and rounding it away would delete a term from the reconciliation.
+    expect(width('piutang')).toBeGreaterThan(0)
+  })
+
+  test('hangs the overdrawn month below zero, off the same line', async ({ page }) => {
+    await open(page, 'waterfall-overdrawn')
+    const drawn = await bars(page)
+    const opening = drawn.find((bar) => bar.id === 'opening')
+    const closing = drawn.find((bar) => bar.id === 'closing')
+
+    // Both anchors are measured from zero, so the positive one begins where the
+    // negative one ends. If they do not meet, the axis has lost its zero.
+    expect(Math.abs((closing?.right ?? 0) - (opening?.left ?? 0))).toBeLessThan(2)
+    expect(closing?.left ?? 0).toBeLessThan(opening?.left ?? 0)
+  })
+
+  test('fits a phone without hiding the amounts off the side', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 812 })
+    await open(page, 'waterfall')
+
+    /*
+      The document not scrolling sideways is not the same as the chart being
+      readable. Laid out in three columns this needed six hundred pixels, and
+      what a phone showed on arrival was a stack of labels whose bars and
+      figures were both parked past the right edge of a scroller.
+    */
+    const clipped = await page.$$eval('figure *', (nodes) =>
+      nodes
+        // The screen-reader table is meant to overflow its one pixel box. That
+        // is how it stays out of the way, and nobody looks at it.
+        .filter((node) => !node.closest('.sr-only'))
+        .filter((node) => node.scrollWidth - node.clientWidth > 1)
+        .map((node) => node.className || node.tagName),
+    )
+    expect(clipped).toEqual([])
+
+    for (const row of await page.locator('ol > li').allInnerTexts()) {
+      expect(row).toMatch(/Rp/)
+    }
+
+    // Five labels of "Rp30jt" do not fit across a plot this narrow, and the top
+    // two used to print as "Rp30jtRp40jt". Checked either side of the breakpoint
+    // that decides how many of them are drawn.
+    for (const width of [320, 640]) {
+      await page.setViewportSize({ width, height: 812 })
+
+      const boxes = await page.$$eval('figure > div span', (nodes) =>
+        nodes
+          .filter((node) => node.getBoundingClientRect().width > 0)
+          .map((node) => {
+            const box = node.getBoundingClientRect()
+            return { text: node.textContent ?? '', left: box.left, right: box.right }
+          })
+          .sort((a, b) => a.left - b.left),
+      )
+
+      expect(boxes.length, `no axis labels at ${width}px`).toBeGreaterThan(1)
+      for (let i = 1; i < boxes.length; i++) {
+        expect(
+          boxes[i].left,
+          `${boxes[i - 1].text} runs into ${boxes[i].text} at ${width}px`,
+        ).toBeGreaterThanOrEqual(boxes[i - 1].right)
+      }
+    }
+  })
+
+  test('says which way each step went without relying on colour', async ({ page }) => {
+    await open(page, 'waterfall')
+
+    for (const row of await page.locator('ol > li').allInnerTexts()) {
+      // Anchors are levels rather than movements and carry no arrow.
+      if (/Saldo awal|Sisa uang/.test(row)) continue
+      // An arrow and a sign for the eye, the word itself for a screen reader.
+      expect(row).toMatch(/[▲▼]/)
+      expect(row).toMatch(/[+−]/)
+      expect(row).toMatch(/masuk|keluar/)
+    }
+  })
+})
+
 test.describe('lebar halaman', () => {
   test('nothing pushes the page sideways on a narrow screen', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 })
 
-    for (const fixture of ['cashflow', 'bills', 'crunch-interactive', 'sankey']) {
+    for (const fixture of ['cashflow', 'bills', 'crunch-interactive', 'sankey', 'waterfall']) {
       await open(page, fixture)
 
       const { doc, body } = await page.evaluate(() => ({

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { parseIdAmount as idr } from '@/lib/money'
-import { buildScale } from './scale'
+import { buildScale, buildSpanScale } from './scale'
 
 describe('buildScale', () => {
   it('rounds the top of the axis to a figure a person would say', () => {
@@ -55,5 +55,53 @@ describe('buildScale', () => {
     expect(scale.top).toBeGreaterThan(0n)
     expect(scale.percentOf(0n)).toBe(0)
     expect(Number.isFinite(scale.percentOf(1n))).toBe(true)
+  })
+})
+
+describe('buildSpanScale', () => {
+  it('keeps zero on a gridline when the range never goes below it', () => {
+    const scale = buildSpanScale(0n, idr('11.437.221,00'))
+    expect(scale.bottom).toBe(0n)
+    expect(scale.ticks).toContain(0n)
+    expect(scale.top).toBeGreaterThanOrEqual(idr('11.437.221,00'))
+  })
+
+  it('keeps zero on a gridline when the range straddles it', () => {
+    const scale = buildSpanScale(-idr('600.000,00'), idr('2.400.000,00'))
+    expect(scale.ticks).toContain(0n)
+    expect(scale.bottom).toBeLessThanOrEqual(-idr('600.000,00'))
+    expect(scale.top).toBeGreaterThanOrEqual(idr('2.400.000,00'))
+  })
+
+  it('always includes zero even when every value sits on one side of it', () => {
+    const positive = buildSpanScale(idr('4.000.000,00'), idr('5.000.000,00'))
+    expect(positive.bottom).toBe(0n)
+
+    const negative = buildSpanScale(-idr('5.000.000,00'), -idr('4.000.000,00'))
+    expect(negative.top).toBe(0n)
+  })
+
+  it('steps evenly from bottom to top', () => {
+    const scale = buildSpanScale(-idr('600.000,00'), idr('11.569.000,00'))
+    expect(scale.ticks[0]).toBe(scale.bottom)
+    expect(scale.ticks[scale.ticks.length - 1]).toBe(scale.top)
+
+    const step = scale.ticks[1] - scale.ticks[0]
+    for (let i = 1; i < scale.ticks.length; i++) {
+      expect(scale.ticks[i] - scale.ticks[i - 1]).toBe(step)
+    }
+  })
+
+  it('measures position from the bottom, not from zero', () => {
+    const scale = buildSpanScale(-idr('1.000.000,00'), idr('1.000.000,00'))
+    expect(scale.percentOf(scale.bottom)).toBeCloseTo(0, 1)
+    expect(scale.percentOf(scale.top)).toBeCloseTo(100, 1)
+    expect(scale.percentOf(0n)).toBeCloseTo(50, 1)
+  })
+
+  it('gives a month where nothing moved an axis with width', () => {
+    const scale = buildSpanScale(0n, 0n)
+    expect(scale.top).toBeGreaterThan(scale.bottom)
+    expect(Number.isFinite(scale.percentOf(0n))).toBe(true)
   })
 })
