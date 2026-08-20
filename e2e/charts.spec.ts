@@ -569,6 +569,75 @@ test.describe('kategori sepanjang bulan', () => {
   })
 })
 
+test.describe('pos dana', () => {
+  test('subtracts what came back out of the pot', async ({ page }) => {
+    await open(page, 'funds')
+    const savings = page.locator('li', { hasText: 'Tabungan' }).first()
+
+    // Rp500.000 in and Rp200.000 out. Counting only the deposits would show a
+    // pot with money in it that nothing can be spent from.
+    await expect(savings).toContainText('Rp300.000')
+    await expect(savings).toContainText('Sudah diambil lagi Rp200.000')
+  })
+
+  test('compares the two monthly figures rather than only the progress', async ({ page }) => {
+    await open(page, 'funds')
+    const wedding = page.locator('li', { hasText: 'Dana Menikah' }).first()
+
+    /*
+      How far along a goal is decides almost nothing. Twelve percent with a year
+      to run and ninety percent due next month are opposite situations, and only
+      the pair of monthly figures separates them.
+    */
+    await expect(wedding).toContainText('Biasanya Rp2jt per bulan')
+    await expect(wedding).toContainText('perlu Rp3,7jt per bulan sampai Mar 2027')
+  })
+
+  test('puts the deadline that will be missed at the top', async ({ page }) => {
+    await open(page, 'funds')
+    const names = await page.locator('li > div > span').first().innerText()
+    expect(names).toContain('Dana Menikah')
+    await expect(page.getByText('1 pos tidak akan sampai tepat waktu')).toBeVisible()
+  })
+
+  test('says nothing it cannot know about a pot with no target', async ({ page }) => {
+    await open(page, 'funds')
+    const savings = page.locator('li', { hasText: 'Tabungan' }).first()
+
+    await expect(savings).toContainText('Belum ada target')
+    // No bar either: a progress bar with no target is a bar against nothing.
+    expect(await savings.locator('[data-fund]').count()).toBe(0)
+  })
+
+  test('gives every pot with a target a bar with width', async ({ page }) => {
+    await open(page, 'funds')
+    await expectMarksToRender(page)
+
+    // Rp6 juta against Rp50 juta is twelve percent, and Rp14 juta against
+    // Rp200 juta is seven. The smaller one still has to be visible.
+    const widths = await page.$$eval('[data-fund]', (nodes) =>
+      nodes.map((node) => node.getBoundingClientRect().width),
+    )
+    expect(widths).toHaveLength(2)
+    for (const width of widths) expect(width).toBeGreaterThan(1)
+  })
+
+  test('offers the one figure a person decides, and no others', async ({ page }) => {
+    await open(page, 'funds')
+
+    const fields = await page.locator('form input:not([type="hidden"])').count()
+    // Two per pot, three pots: the target and the month it is wanted by.
+    expect(fields).toBe(6)
+
+    // Folded away until asked for. Setting a target happens once and then not
+    // again for a year, and three open forms would bury the three progress
+    // bars that are the point of the page.
+    await expect(page.getByRole('button', { name: 'Simpan' }).first()).toBeHidden()
+    await page.getByText('Ubah target').first().click()
+    await expect(page.getByRole('button', { name: 'Simpan' }).first()).toBeVisible()
+  })
+})
+
 test.describe('lebar halaman', () => {
   test('nothing pushes the page sideways on a narrow screen', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 })
@@ -581,6 +650,7 @@ test.describe('lebar halaman', () => {
       'waterfall',
       'balance-trend',
       'category-sparks',
+      'funds',
     ]) {
       await open(page, fixture)
 

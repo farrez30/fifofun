@@ -156,3 +156,19 @@ export function formatJakarta(instant: Date, style: 'date' | 'time' | 'datetime'
   if (style === 'time') return time
   return `${date} ${time}`
 }
+
+/**
+ * Renders a `YYYY-MM` month key the way a person would say it: "Mar 2027".
+ *
+ * The keys are what every roll-up in the app is grouped by, and they are exactly
+ * what nobody wants to read on a chart. Anything that is not a month key is
+ * handed back untouched, so a malformed key shows itself instead of being
+ * quietly rendered as some other month.
+ */
+export function formatMonthKey(key: string, style: 'short' | 'compact' = 'short'): string {
+  const match = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(key)
+  if (!match) return key
+
+  const label = ID_MONTH_LABELS[Number(match[2]) - 1]
+  return style === 'compact' ? `${label} '${match[1].slice(2)}` : `${label} ${match[1]}`
+}

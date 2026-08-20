@@ -79,6 +79,22 @@ export const SEED_CATEGORIES: SeedCategory[] = [
   { name: 'Dana Rumah', cashflow: 'financial_goal' },
   { name: 'Dana Mobil', cashflow: 'financial_goal' },
 
+  /*
+    The other direction of every pot above.
+
+    Money coming back out of savings is a `from_asset` entry, and it has to be
+    filed against the pot it came from or the app can only ever count what went
+    in. Same arrangement as the Piutang pair below: both sides of a movement
+    need a name before either side can be measured.
+  */
+  { name: 'Tabungan', cashflow: 'from_asset' },
+  { name: 'Dana Darurat', cashflow: 'from_asset' },
+  { name: 'Reksadana', cashflow: 'from_asset' },
+  { name: 'Pajak Kendaraan', cashflow: 'from_asset' },
+  { name: 'Dana Menikah', cashflow: 'from_asset' },
+  { name: 'Dana Rumah', cashflow: 'from_asset' },
+  { name: 'Dana Mobil', cashflow: 'from_asset' },
+
   { name: 'Antar Account', cashflow: 'transfer' },
   // Two sides of the same arrangement. The spreadsheet files a settlement under
   // the name of the debt it settles, so the pair has to exist under both.

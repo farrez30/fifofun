@@ -12,8 +12,10 @@ import { Sankey } from '@/components/chart/sankey'
 import { BalanceTrend } from '@/components/chart/balance-trend'
 import { CategorySparks } from '@/components/chart/category-sparks'
 import { Waterfall } from '@/components/chart/waterfall'
+import { FundsPanel } from '@/app/dana/funds-panel'
 import { reviewBudget } from '@/lib/ledger/budget'
 import { buildCategoryTrends } from '@/lib/ledger/category-trend'
+import { reviewFunds } from '@/lib/ledger/funds'
 import type { MonthlySeries, MonthlyStatement } from '@/lib/ledger/monthly'
 import { parseIdAmount as idr } from '@/lib/money'
 import { projectFamily } from '@/lib/planning/children'
@@ -158,6 +160,48 @@ const BILLS_UNTOUCHED = reviewBills([], '2026-07', {
   known: ['Wifi', 'Langganan Spotify', 'Bayar Kontrakan'],
 })
 
+/**
+ * Three pots in the three states that matter: a goal whose deadline the current
+ * rate will miss, a goal with a target and no deadline, and a pot with neither.
+ */
+const FUNDS = reviewFunds(
+  [
+    ledgerRow('2026-01-15', 'Dana Menikah', idr('2.000.000,00'), 'financial_goal'),
+    ledgerRow('2026-02-15', 'Dana Menikah', idr('2.000.000,00'), 'financial_goal'),
+    ledgerRow('2026-03-15', 'Dana Menikah', idr('2.000.000,00'), 'financial_goal'),
+    ledgerRow('2026-01-15', 'Dana Rumah', idr('1.000.000,00'), 'financial_goal'),
+    ledgerRow('2026-03-15', 'Dana Rumah', idr('3.000.000,00'), 'financial_goal'),
+    ledgerRow('2026-02-15', 'Tabungan', idr('500.000,00'), 'invest_savings'),
+    // Money taken back out again, which no panel in the app used to subtract.
+    ledgerRow('2026-03-15', 'Tabungan', idr('200.000,00'), 'from_asset'),
+  ],
+  [
+    {
+      name: 'Dana Menikah',
+      cashflow: 'financial_goal',
+      openingBalance: 0n,
+      target: idr('50.000.000,00'),
+      targetMonth: '2027-03',
+    },
+    {
+      name: 'Dana Rumah',
+      cashflow: 'financial_goal',
+      openingBalance: idr('10.000.000,00'),
+      target: idr('200.000.000,00'),
+      targetMonth: null,
+    },
+    {
+      name: 'Tabungan',
+      cashflow: 'invest_savings',
+      openingBalance: 0n,
+      target: null,
+      targetMonth: null,
+    },
+  ],
+  { asOf: '2026-03' },
+)
+
+
 /** February 2026 exactly as the spreadsheet has it, receivable coming back and all. */
 const FEBRUARY: MonthlyStatement = {
   saldoAwal: idr('3.398.413,00'),
@@ -290,6 +334,13 @@ export const FIXTURES = {
   waterfall: <Waterfall statement={FEBRUARY} caption="Sisa uang Februari" />,
   'balance-trend': <BalanceTrend series={BALANCES} caption="Saldo di akhir tiap bulan" />,
   'balance-trend-long': <BalanceTrend series={LONG_RUN} caption="Saldo dua tahun" />,
+  funds: (
+    <FundsPanel
+      review={FUNDS}
+      idOf={(fund) => `id-${fund.name}`}
+      caption="Targetnya satu-satunya angka di halaman ini yang diketik sendiri."
+    />
+  ),
   'category-sparks': (
     <CategorySparks review={CATEGORY_TRENDS} caption="Tiap kategori sepanjang bulan terakhir" />
   ),

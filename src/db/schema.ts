@@ -104,6 +104,16 @@ export const categories = pgTable(
     cashflow: cashflowType('cashflow').notNull(),
     /** Opening balance for savings, sinking fund and goal buckets. */
     openingBalance: bigint('opening_balance', { mode: 'bigint' }).notNull().default(sql`0`),
+    /**
+     * What this pot is aiming at, and the month it is wanted by. Only savings,
+     * sinking funds and goals have either. The spreadsheet kept the pair beside
+     * every goal and worked out the rest by hand; both figures here are still a
+     * decision the household makes, and everything derived from them is read
+     * back out of the ledger.
+     */
+    targetAmount: bigint('target_amount', { mode: 'bigint' }),
+    /** `YYYY-MM`, or null for a pot with no deadline. */
+    targetMonth: text('target_month'),
     icon: text('icon'),
     color: text('color'),
     sortOrder: integer('sort_order').notNull().default(0),

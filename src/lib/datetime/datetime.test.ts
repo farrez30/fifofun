@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   JAKARTA_OFFSET_MINUTES,
   formatJakarta,
+  formatMonthKey,
   parseDayMonthYear,
   parseShortDate,
   parseWibTime,
@@ -123,5 +124,24 @@ describe('formatJakarta', () => {
     expect(formatJakarta(instant, 'date')).toBe('19 Agu 2026')
     expect(formatJakarta(instant, 'time')).toBe('20:58:37')
     expect(formatJakarta(instant, 'datetime')).toBe('19 Agu 2026 20:58:37')
+  })
+})
+
+describe('formatMonthKey', () => {
+  it('says the month the way a person would', () => {
+    expect(formatMonthKey('2027-03')).toBe('Mar 2027')
+    expect(formatMonthKey('2026-08')).toBe('Agu 2026')
+    expect(formatMonthKey('2026-12')).toBe('Des 2026')
+  })
+
+  it('shortens the year where space is tight', () => {
+    expect(formatMonthKey('2027-03', 'compact')).toBe("Mar '27")
+  })
+
+  it('hands back anything that is not a month key, rather than guessing', () => {
+    // A silently wrong month is worse than an obviously wrong string.
+    expect(formatMonthKey('2027-13')).toBe('2027-13')
+    expect(formatMonthKey('2027-3')).toBe('2027-3')
+    expect(formatMonthKey('')).toBe('')
   })
 })

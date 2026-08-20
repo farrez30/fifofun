@@ -14,6 +14,7 @@ import { signOut } from '@/app/login/actions'
 const NAV = [
   { href: '/', label: 'Ringkasan' },
   { href: '/laporan', label: 'Laporan' },
+  { href: '/dana', label: 'Dana' },
   { href: '/tinjau', label: 'Tinjau' },
   { href: '/rencana', label: 'Rencana' },
   { href: '/impor', label: 'Impor' },

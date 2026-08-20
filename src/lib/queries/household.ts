@@ -34,6 +34,12 @@ export interface CategoryRow {
   id: string
   name: string
   cashflow: CashflowType
+  /** What was already in this pot before the ledger starts. Zero for the rest. */
+  openingBalance: bigint
+  /** Only savings, sinking funds and goals carry a target. */
+  target: bigint | null
+  /** `YYYY-MM` the target is wanted by, or null for no deadline. */
+  targetMonth: string | null
 }
 
 function toBigInt(value: unknown): bigint {
@@ -78,13 +84,23 @@ export async function getCategories(householdId: string): Promise<CategoryRow[]>
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('categories')
-    .select('id, name, cashflow')
+    .select('id, name, cashflow, opening_balance, target_amount, target_month')
     .eq('household_id', householdId)
     .is('archived_at', null)
     .order('name')
 
   if (error || !data) return []
-  return data as CategoryRow[]
+
+  // PostgREST returns bigint columns as strings, because JSON numbers cannot
+  // hold them. Converting here keeps every amount in the app a bigint of sen.
+  return data.map((row) => ({
+    id: row.id as string,
+    name: row.name as string,
+    cashflow: row.cashflow as CashflowType,
+    openingBalance: BigInt(row.opening_balance ?? 0),
+    target: row.target_amount === null ? null : BigInt(row.target_amount),
+    targetMonth: (row.target_month as string | null) ?? null,
+  }))
 }
 
 export interface TransactionRow extends LedgerEntry {
