@@ -87,7 +87,7 @@ function byOverrun(a: BudgetLine, b: BudgetLine): number {
  */
 const MATERIAL_BASIS_POINTS = 100n
 
-function isMaterial(delta: bigint, monthTotal: bigint): boolean {
+export function isMaterial(delta: bigint, monthTotal: bigint): boolean {
   if (delta <= 0n) return false
   // Nothing to be a share of. A first month with a single overspend should
   // still be flagged rather than dismissed as noise.

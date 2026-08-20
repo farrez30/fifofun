@@ -436,6 +436,63 @@ test.describe('tren saldo', () => {
   })
 })
 
+test.describe('kategori sepanjang bulan', () => {
+  test('gives every month of every category a mark with height', async ({ page }) => {
+    await open(page, 'category-sparks')
+    await expectMarksToRender(page)
+
+    const sparks = await page.locator('[data-spark]').count()
+    expect(sparks).toBe(4)
+
+    // Rp80.500 beside a Rp4,8 juta peak is under two percent of the card. A
+    // quiet month that rounds away leaves the surge with nothing to be a
+    // surge against.
+    const heights = await heightsOf(page, '[data-spark="Jajan"] [data-month]')
+    expect(heights).toHaveLength(3)
+    for (const height of heights) expect(height).toBeGreaterThan(0)
+    expect(heights[2]).toBeGreaterThan(heights[0] * 10)
+  })
+
+  test('marks the category that ran away and leaves the steady ones alone', async ({ page }) => {
+    await open(page, 'category-sparks')
+
+    const jajan = page.locator('li', { hasText: 'Jajan' }).first()
+    await expect(jajan).toContainText('jauh di atas biasanya')
+    await expect(jajan).toContainText('Rp4.801.400')
+
+    // Bank charges moved by Rp9.200. Both this panel and the budget panel have
+    // to agree that is not worth an alarm.
+    await expect(page.locator('li', { hasText: 'Biaya Bank' }).first()).toContainText(
+      'seperti biasa',
+    )
+  })
+
+  test('scales each card to itself, and says so rather than inviting comparison', async ({
+    page,
+  }) => {
+    await open(page, 'category-sparks')
+
+    const jajan = await heightsOf(page, '[data-spark="Jajan"] [data-month]')
+    const bank = await heightsOf(page, '[data-spark="Biaya Bank"] [data-month]')
+
+    /*
+      Rp45.700 and Rp4.801.400 both fill their own card, because the shape is
+      the content here and a shared axis would flatten every category except
+      the largest into a line. The figures beside each chart carry the size.
+    */
+    expect(Math.max(...bank)).toBe(Math.max(...jajan))
+  })
+
+  test('names the categories that moved, before anyone has to scan the cards', async ({
+    page,
+  }) => {
+    await open(page, 'category-sparks')
+    const summary = await page.locator('figure > p').first().innerText()
+    expect(summary).toContain('Jajan')
+    expect(summary).not.toContain('Biaya Bank')
+  })
+})
+
 test.describe('lebar halaman', () => {
   test('nothing pushes the page sideways on a narrow screen', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 })
@@ -447,6 +504,7 @@ test.describe('lebar halaman', () => {
       'sankey',
       'waterfall',
       'balance-trend',
+      'category-sparks',
     ]) {
       await open(page, fixture)
 

@@ -8,6 +8,7 @@ import { CashflowChart } from '@/components/cashflow-chart'
 import { BudgetBullet } from '@/components/chart/budget-bullet'
 import { Sankey, type SankeyLink, type SankeyNode } from '@/components/chart/sankey'
 import { BalanceTrend } from '@/components/chart/balance-trend'
+import { CategorySparks } from '@/components/chart/category-sparks'
 import { Waterfall } from '@/components/chart/waterfall'
 import { BillsPanel } from '@/components/bills-panel'
 import { Money, SignedMoney, Stat } from '@/components/money'
@@ -16,6 +17,7 @@ import { formatJakarta } from '@/lib/datetime'
 import { reviewBills } from '@/lib/ledger/bills'
 import { reviewReceivables } from '@/lib/ledger/receivables'
 import { proposeBudget, reviewBudget } from '@/lib/ledger/budget'
+import { buildCategoryTrends } from '@/lib/ledger/category-trend'
 import { rollUpByMonthAndCategory, totalsByCategory } from '@/lib/ledger/categories'
 import {
   computeAccountMovements,
@@ -209,6 +211,7 @@ async function Dashboard() {
   )
 
   const receivables = reviewReceivables(transactions)
+  const categoryTrends = buildCategoryTrends(history)
 
   return (
     <div className="space-y-10">
@@ -302,7 +305,16 @@ async function Dashboard() {
           Anggaran dan realisasi
           <span className="ml-2 font-normal text-ink-muted">{latest.month}</span>
         </h2>
-        <BudgetBullet review={budgetReview} caption={`Per kategori, ${latest.month}`} />
+        <div className="space-y-4">
+          <BudgetBullet review={budgetReview} caption={`Per kategori, ${latest.month}`} />
+          {/* The panel above says a category is above its usual. This says
+              whether that is an accident or the fourth month of a climb, which
+              is what decides whether anything needs doing about it. */}
+          <CategorySparks
+            review={categoryTrends}
+            caption="Tiap kategori sepanjang bulan-bulan terakhir"
+          />
+        </div>
       </section>
 
       <section aria-labelledby="tagihan">

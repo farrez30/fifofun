@@ -9,8 +9,10 @@ import { BudgetBullet } from '@/components/chart/budget-bullet'
 import { CrunchTimeline } from '@/components/chart/crunch-timeline'
 import { Sankey } from '@/components/chart/sankey'
 import { BalanceTrend } from '@/components/chart/balance-trend'
+import { CategorySparks } from '@/components/chart/category-sparks'
 import { Waterfall } from '@/components/chart/waterfall'
 import { reviewBudget } from '@/lib/ledger/budget'
+import { buildCategoryTrends } from '@/lib/ledger/category-trend'
 import type { MonthlySeries, MonthlyStatement } from '@/lib/ledger/monthly'
 import { parseIdAmount as idr } from '@/lib/money'
 import { projectFamily } from '@/lib/planning/children'
@@ -191,6 +193,39 @@ const LONG_RUN: MonthlySeries[] = Array.from({ length: 23 }, (_, index) => {
   }
 })
 
+/**
+ * The failure that started this project: Jajan runs about Rp80 ribu a month and
+ * one month reached Rp4,8 juta with nothing anywhere saying so. Bank charges sit
+ * beside it as the control, moving by Rp9.200 and deserving no alarm at all.
+ */
+const CATEGORY_TRENDS = buildCategoryTrends([
+  {
+    month: '2026-01',
+    byCategory: {
+      Jajan: idr('80.500,00'),
+      Belanja: idr('1.855.653,00'),
+      'Biaya Bank': idr('36.500,00'),
+    },
+  },
+  {
+    month: '2026-02',
+    byCategory: {
+      Jajan: idr('92.000,00'),
+      Belanja: idr('1.700.000,00'),
+      'Biaya Bank': idr('36.500,00'),
+    },
+  },
+  {
+    month: '2026-03',
+    byCategory: {
+      Jajan: idr('4.801.400,00'),
+      Belanja: idr('1.900.000,00'),
+      'Biaya Bank': idr('45.700,00'),
+      Kendaraan: idr('350.000,00'),
+    },
+  },
+])
+
 /** A month that ends overdrawn, so the axis has to hold both sides of zero. */
 const OVERDRAWN: MonthlyStatement = {
   ...FEBRUARY,
@@ -211,6 +246,9 @@ export const FIXTURES = {
   waterfall: <Waterfall statement={FEBRUARY} caption="Sisa uang Februari" />,
   'balance-trend': <BalanceTrend series={BALANCES} caption="Saldo di akhir tiap bulan" />,
   'balance-trend-long': <BalanceTrend series={LONG_RUN} caption="Saldo dua tahun" />,
+  'category-sparks': (
+    <CategorySparks review={CATEGORY_TRENDS} caption="Tiap kategori sepanjang bulan terakhir" />
+  ),
   'waterfall-overdrawn': <Waterfall statement={OVERDRAWN} caption="Bulan yang berakhir minus" />,
   crunch: <CrunchTimeline projection={FAMILY} caption="Biaya anak" />,
   // The same chart with its markers, so axe sees the sliders and the geometry
