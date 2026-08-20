@@ -205,20 +205,35 @@ function findPassThrough(
   windowHours: number,
 ): Set<string> {
   const flagged = new Set<string>()
+  // A departure can only pay for one arrival. Without this, two arrivals of the
+  // same amount on the same day both matched the single departure between them,
+  // and the second one was written off as somebody else's money when it was
+  // real income. Observed twice in the corpus, for Rp400.000 in total.
+  const claimed = new Set<number>()
   const windowMs = windowHours * 3_600_000
 
   for (let i = 0; i < rows.length; i++) {
     if (rows[i].amountIn === 0n) continue
 
-    for (let j = 0; j < rows.length; j++) {
-      if (i === j || rows[j].amountOut !== rows[i].amountIn) continue
-      const gap = rows[j].occurredAt.getTime() - rows[i].occurredAt.getTime()
-      if (gap < 0 || gap > windowMs) continue
+    // The nearest unclaimed departure wins rather than the first one in the
+    // sheet, because money passing through leaves promptly; a match eight hours
+    // later is a weaker claim than one eight minutes later.
+    let best = -1
+    let bestGap = Infinity
 
-      flagged.add(entries[i].id)
-      flagged.add(entries[j].id)
-      break
+    for (let j = 0; j < rows.length; j++) {
+      if (j === i || claimed.has(j)) continue
+      if (rows[j].amountOut !== rows[i].amountIn) continue
+      const gap = rows[j].occurredAt.getTime() - rows[i].occurredAt.getTime()
+      if (gap < 0 || gap > windowMs || gap >= bestGap) continue
+      best = j
+      bestGap = gap
     }
+
+    if (best === -1) continue
+    claimed.add(best)
+    flagged.add(entries[i].id)
+    flagged.add(entries[best].id)
   }
 
   return flagged

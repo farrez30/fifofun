@@ -207,6 +207,30 @@ describe('pass-through money', () => {
     expect(review.some((item) => item.entryId === entries[0].id)).toBe(true)
   })
 
+  it('lets one departure settle only one arrival', () => {
+    // Two people sent the same amount on the same day and only one payment went
+    // out. The second arrival is real income, and treating it as pass-through
+    // quietly removed Rp400.000 of income across the corpus.
+    const second: RowSpec = { ...ARRIVAL, at: '2026-03-10T02:00:30.000Z', balance: '4.900.000,00' }
+    const { entries, passThroughIds } = statementToLedger(
+      statement([arrival, row(second), departure]),
+      OPTIONS,
+    )
+    expect(passThroughIds).toHaveLength(2)
+    expect(passThroughIds).toContain(entries[0].id)
+    expect(passThroughIds).not.toContain(entries[1].id)
+  })
+
+  it('settles against the nearest departure, not the first one listed', () => {
+    const late: RowSpec = { ...DEPARTURE, at: '2026-03-10T20:00:00.000Z', balance: '900.000,00' }
+    const { entries, passThroughIds } = statementToLedger(
+      statement([arrival, row(late), departure]),
+      OPTIONS,
+    )
+    expect(passThroughIds).toContain(entries[2].id)
+    expect(passThroughIds).not.toContain(entries[1].id)
+  })
+
   it('leaves an equal amount outside the window alone', () => {
     const later = row({ ...DEPARTURE, at: '2026-03-13T02:00:00.000Z' })
     const { passThroughIds } = statementToLedger(statement([arrival, later]), OPTIONS)
