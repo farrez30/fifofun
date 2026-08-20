@@ -44,16 +44,36 @@ export function BillsPanel({ review }: Props) {
   return (
     <div className="border border-line bg-surface">
       <div className="border-b border-line p-4">
+        {/*
+          Three cases, not two. A month with nothing due because everything was
+          paid and a month with nothing due because no bill has been recorded in
+          months are opposite situations, and the first version of this line
+          reported the second one as "semua tagihan sudah dibayar, Rp0".
+        */}
         <p className="text-sm font-medium text-ink">
-          {due.length === 0
-            ? `Semua tagihan bulan ini sudah dibayar, ${formatIdr(total)}.`
-            : `${due.length} tagihan belum dibayar, kira-kira ${formatIdr(outstanding)}.`}
+          {due.length > 0
+            ? `${due.length} tagihan belum dibayar, kira-kira ${formatIdr(outstanding)}.`
+            : total > 0n
+              ? `Semua tagihan bulan ini sudah dibayar, ${formatIdr(total)}.`
+              : 'Belum ada tagihan yang tercatat keluar bulan ini.'}
         </p>
-        {due.length > 0 ? (
-          <p className="mt-1 text-sm text-ink-muted">
-            Sudah keluar bulan ini {formatIdr(total)}.
-          </p>
-        ) : null}
+
+        <p className="mt-1 text-sm text-ink-muted">
+          {due.length > 0 ? (
+            `Sudah keluar bulan ini ${formatIdr(total)}.`
+          ) : total > 0n ? (
+            `${bills.filter((bill) => bill.state === 'paid').length} dari ${bills.length} tagihan aktif.`
+          ) : (
+            <>
+              Listrik, internet, dan langganan biasanya mendarat di Belanja sampai ada yang
+              memindahkannya.{' '}
+              <a href="/tinjau" className="text-accent underline underline-offset-2">
+                Pindahkan lewat antrean tinjau
+              </a>
+              .
+            </>
+          )}
+        </p>
       </div>
 
       <div

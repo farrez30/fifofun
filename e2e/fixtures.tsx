@@ -128,8 +128,18 @@ const RECEIVABLES = reviewReceivables(
   { asOf: new Date('2026-03-31T05:00:00.000Z') },
 )
 
+/**
+ * The state this household is actually in: every bill set up, none of them yet
+ * recognised in the ledger. It reported itself as "semua tagihan sudah dibayar,
+ * Rp0" until the headline learned to tell nothing-due from nothing-recorded.
+ */
+const BILLS_UNTOUCHED = reviewBills([], '2026-07', {
+  known: ['Wifi', 'Langganan Spotify', 'Bayar Kontrakan'],
+})
+
 export const FIXTURES = {
   bills: <BillsPanel review={BILLS} />,
+  'bills-untouched': <BillsPanel review={BILLS_UNTOUCHED} />,
   receivables: <ReceivablesPanel review={RECEIVABLES} />,
   cashflow: <CashflowChart series={SERIES} />,
   'budget-derived': <BudgetBullet review={DERIVED_REVIEW} caption="Per kategori" />,

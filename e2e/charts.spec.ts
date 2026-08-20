@@ -135,3 +135,13 @@ test.describe('piutang', () => {
     expect(text).toContain('Baru sebagian')
   })
 })
+
+test('never reports nothing-recorded as everything-paid', async ({ page }) => {
+  await open(page, 'bills-untouched')
+  const text = await page.locator('body').innerText()
+
+  expect(text).not.toContain('sudah dibayar, Rp0')
+  expect(text).toContain('Belum ada tagihan yang tercatat keluar bulan ini')
+  // And it says what to do about it, rather than leaving a dead end.
+  await expect(page.getByRole('link', { name: /antrean tinjau/i })).toBeVisible()
+})
