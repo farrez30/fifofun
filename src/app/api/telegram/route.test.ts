@@ -177,6 +177,41 @@ describe('recording an entry', () => {
   })
 })
 
+describe('the reply Telegram has to be able to render', () => {
+  /** The body of the last sendMessage call. */
+  const sent = () => {
+    const calls = (globalThis.fetch as unknown as { mock: { calls: unknown[][] } }).mock.calls
+    const last = calls.at(-1)?.[1] as { body: string } | undefined
+    return last ? (JSON.parse(last.body) as { text: string; parse_mode: string }) : null
+  }
+
+  it('escapes a note that would otherwise be read as markup', async () => {
+    /*
+      Telegram rejects the whole message with a 400 when < > or & appear outside
+      a tag. The reply is sent after the row is written and its failure is
+      silent, so the person sees nothing come back, sends the same thing again,
+      and the resend carries a new message id: a new dedupe key, a second row.
+    */
+    await POST(request(message('25rb baju <ukuran M> & topi')))
+
+    expect(sent()?.parse_mode).toBe('HTML')
+    expect(sent()?.text).toContain('baju &lt;ukuran M&gt; &amp; topi')
+    expect(sent()?.text).not.toContain('<ukuran')
+  })
+
+  it('leaves the note it stores alone', async () => {
+    // The escaping is for the wire, not for the ledger. A note kept as entities
+    // would show up escaped everywhere the app prints it.
+    await POST(request(message('25rb baju <ukuran M>')))
+    expect(written[0]).toMatchObject({ note: 'baju <ukuran M>' })
+  })
+
+  it('still marks up the parts it wrote itself', async () => {
+    await POST(request(message('25rb kopi')))
+    expect(sent()?.text).toContain('<b>')
+  })
+})
+
 describe('the rate limit', () => {
   it('stops accepting past the ceiling within one window', async () => {
     // A distinct chat id so this test does not inherit another test's window.

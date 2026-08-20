@@ -72,6 +72,19 @@ function withinRateLimit(chatId: string): boolean {
   return true
 }
 
+/*
+  Telegram's HTML mode requires <, > and & to be escaped in anything that is not
+  markup, and rejects the whole message with a 400 when they are not.
+
+  The cost of skipping this is not a stray tag. A rejected reply is silent, the
+  entry is already saved by then, and the person sees nothing come back and
+  sends the same thing again. That message carries a new id, so the dedupe key
+  differs and the second attempt is recorded as a second transaction.
+*/
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
 async function reply(chatId: number, text: string): Promise<void> {
   const token = process.env.TELEGRAM_BOT_TOKEN
   if (!token) return
@@ -210,7 +223,7 @@ export async function POST(request: Request) {
   const direction = isIncoming ? 'Masuk' : 'Keluar'
   await reply(
     message.chat.id,
-    `${direction} <b>${formatIdr(parsed.amount)}</b>${parsed.note ? ` · ${parsed.note}` : ''}\nTercatat, menunggu kategori dipastikan di aplikasi.`,
+    `${direction} <b>${formatIdr(parsed.amount)}</b>${parsed.note ? ` · ${escapeHtml(parsed.note)}` : ''}\nTercatat, menunggu kategori dipastikan di aplikasi.`,
   )
 
   return NextResponse.json({ ok: true })
