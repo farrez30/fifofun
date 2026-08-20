@@ -88,7 +88,17 @@ const eslintConfig = defineConfig([
       ],
     },
   },
-  globalIgnores(['.next/**', 'out/**', 'build/**', 'next-env.d.ts', 'tmp/**', 'drizzle/**']),
+  globalIgnores([
+    '.next/**',
+    'out/**',
+    'build/**',
+    'next-env.d.ts',
+    'tmp/**',
+    'drizzle/**',
+    // axe-core, copied in on demand to audit a real build. It is third-party
+    // and gitignored; linting it turns an accessibility check into 26 errors.
+    'public/_axe.js',
+  ]),
 ])
 
 export default eslintConfig

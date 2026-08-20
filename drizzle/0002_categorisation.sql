@@ -1,0 +1,2 @@
+ALTER TABLE "transactions" ADD COLUMN "confirmed_at" timestamp with time zone;--> statement-breakpoint
+CREATE INDEX "transactions_confirmed_idx" ON "transactions" USING btree ("household_id","confirmed_at");

@@ -179,6 +179,16 @@ export const transactions = pgTable(
     isPassThrough: boolean('is_pass_through').notNull().default(false),
     /** Set until a human has confirmed a low-confidence classification. */
     needsReview: boolean('needs_review').notNull().default(false),
+    /**
+     * When a person settled this row's category, either directly or by writing a
+     * rule that covers it. Null means the category is still the importer's guess.
+     *
+     * `needs_review` cannot answer this. It marks rows the classifier was unsure
+     * about, and the classifier is most confident exactly where it is least
+     * useful: it knows a QRIS payment is a QRIS payment and files it under a
+     * default category with full confidence, which is a guess nobody agreed to.
+     */
+    confirmedAt: timestamp('confirmed_at', { withTimezone: true }),
     /** Untouched source text, kept because bank formats change without notice. */
     rawDescription: text('raw_description'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -189,6 +199,7 @@ export const transactions = pgTable(
     index('transactions_household_time_idx').on(table.householdId, table.occurredAt),
     index('transactions_category_idx').on(table.categoryId),
     index('transactions_review_idx').on(table.householdId, table.needsReview),
+    index('transactions_confirmed_idx').on(table.householdId, table.confirmedAt),
     uniqueIndex('transactions_dedupe_unique').on(table.householdId, table.dedupeKey),
   ],
 )

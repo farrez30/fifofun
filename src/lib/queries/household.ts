@@ -237,3 +237,99 @@ export async function getLatestClosingBalance(
   if (error || !data?.period_end) return null
   return { closing: toBigInt(data.closing_balance), periodEnd: new Date(data.period_end as string) }
 }
+
+export interface RuleRow {
+  id: string
+  priority: number
+  matchType: 'contains' | 'prefix' | 'exact'
+  pattern: string
+  cashflow: CashflowType | null
+  categoryId: string | null
+  categoryName: string | null
+  autoApply: boolean
+  hitCount: number
+}
+
+export async function getRules(householdId: string): Promise<RuleRow[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('categorization_rules')
+    .select('id, priority, match_type, pattern, cashflow, category_id, auto_apply, hit_count, categories(name)')
+    .eq('household_id', householdId)
+    .order('priority')
+
+  if (error || !data) return []
+
+  return data.map((row) => {
+    const joined = row.categories as { name: string } | { name: string }[] | null
+    return {
+      id: row.id as string,
+      priority: row.priority as number,
+      matchType: row.match_type as RuleRow['matchType'],
+      pattern: row.pattern as string,
+      cashflow: (row.cashflow as CashflowType | null) ?? null,
+      categoryId: (row.category_id as string | null) ?? null,
+      categoryName: Array.isArray(joined) ? (joined[0]?.name ?? null) : (joined?.name ?? null),
+      autoApply: Boolean(row.auto_apply),
+      hitCount: (row.hit_count as number) ?? 0,
+    }
+  })
+}
+
+export interface UnconfirmedRow {
+  id: string
+  description: string
+  rawDescription: string | null
+  amount: bigint
+  cashflow: CashflowType
+  categoryName: string | null
+  occurredAt: Date
+}
+
+/**
+ * Rows whose category is still the importer's guess.
+ *
+ * Transfers are left out: their category is decided by which accounts they move
+ * money between, not by a person's judgement, and asking about them would bury
+ * the rows that actually need an opinion.
+ */
+export async function getUnconfirmed(householdId: string): Promise<UnconfirmedRow[]> {
+  const supabase = await createClient()
+  const all: UnconfirmedRow[] = []
+
+  for (let offset = 0; ; offset += PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('id, description, raw_description, amount, cashflow, occurred_at, categories(name)')
+      .eq('household_id', householdId)
+      .is('deleted_at', null)
+      .is('confirmed_at', null)
+      .neq('cashflow', 'transfer')
+      .neq('source', 'manual')
+      // Paging on a non-unique sort key lets rows swap between pages, so a row
+      // can appear twice or not at all. Amounts repeat constantly in a ledger,
+      // so the id is there purely to make the order total.
+      .order('amount', { ascending: false })
+      .order('id')
+      .range(offset, offset + PAGE_SIZE - 1)
+
+    if (error || !data) break
+
+    for (const row of data) {
+      const joined = row.categories as { name: string } | { name: string }[] | null
+      all.push({
+        id: row.id as string,
+        description: row.description as string,
+        rawDescription: (row.raw_description as string | null) ?? null,
+        amount: toBigInt(row.amount),
+        cashflow: row.cashflow as CashflowType,
+        categoryName: Array.isArray(joined) ? (joined[0]?.name ?? null) : (joined?.name ?? null),
+        occurredAt: new Date(row.occurred_at as string),
+      })
+    }
+
+    if (data.length < PAGE_SIZE) break
+  }
+
+  return all
+}

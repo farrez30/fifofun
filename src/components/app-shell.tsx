@@ -13,6 +13,7 @@ import { signOut } from '@/app/login/actions'
 
 const NAV = [
   { href: '/', label: 'Ringkasan' },
+  { href: '/tinjau', label: 'Tinjau' },
   { href: '/rencana', label: 'Rencana' },
   { href: '/impor', label: 'Impor' },
 ] as const
