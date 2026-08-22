@@ -1,95 +1,22 @@
 'use client'
 
-import { useId, useState } from 'react'
-import { formatIdr } from '@/lib/money'
+import { useId } from 'react'
+import { CONTROL, FieldLabel } from '@/components/field-base'
 
 /**
  * Form primitives for the planner.
  *
  * Written rather than pulled from a component library on purpose. The default
  * look of every popular kit is itself the thing that makes generated interfaces
- * recognisable, and these carry two behaviours a generic input does not: money
- * is held as `bigint` sen and never as a float, and every control states its
- * unit so a figure is never ambiguous about what it means.
- */
-
-const CONTROL =
-  'h-11 w-full rounded-sm border border-line bg-surface px-3 text-sm text-ink transition-colors duration-150 placeholder:text-ink-faint hover:border-line-strong focus:border-accent'
-
-interface LabelProps {
-  htmlFor: string
-  children: React.ReactNode
-  hint?: string
-}
-
-function FieldLabel({ htmlFor, children, hint }: LabelProps) {
-  return (
-    <label htmlFor={htmlFor} className="block text-sm font-medium text-ink">
-      {children}
-      {hint ? <span className="ml-2 font-normal text-ink-faint">{hint}</span> : null}
-    </label>
-  )
-}
-
-interface MoneyInputProps {
-  label: string
-  value: bigint
-  onChange: (sen: bigint) => void
-  hint?: string
-  /** Shown under the field, typically where a figure came from. */
-  note?: string
-}
-
-/**
- * Rupiah in, sen out.
+ * recognisable, and these carry a behaviour a generic input does not: every
+ * control states its unit, so a figure is never ambiguous about what it means.
  *
- * Typing is deliberately forgiving: separators are stripped rather than
- * rejected, because a user pasting `Rp1.552.574` from a statement should not
- * have to clean it up first. Only whole Rupiah are accepted, since nobody
- * budgets in sen, and the value is scaled to sen at the boundary so the rest of
- * the app never sees a decimal.
+ * The money input used to live here too. It now serves six pages, so it sits
+ * in `@/components/money-input` and is re-exported here for the panels that
+ * have always imported it from this file.
  */
-export function MoneyInput({ label, value, onChange, hint, note }: MoneyInputProps) {
-  const id = useId()
-  const [text, setText] = useState(() => (value === 0n ? '' : formatRupiah(value)))
 
-  function handle(raw: string) {
-    const digits = raw.replace(/\D/g, '')
-    setText(digits === '' ? '' : new Intl.NumberFormat('id-ID').format(Number(digits)))
-    onChange(digits === '' ? 0n : BigInt(digits) * 100n)
-  }
-
-  return (
-    <div className="space-y-1.5">
-      <FieldLabel htmlFor={id} hint={hint}>
-        {label}
-      </FieldLabel>
-      <div className="relative">
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 left-3 flex items-center font-mono text-sm text-ink-faint"
-        >
-          Rp
-        </span>
-        <input
-          id={id}
-          type="text"
-          inputMode="numeric"
-          autoComplete="off"
-          value={text}
-          onChange={(event) => handle(event.target.value)}
-          className={`${CONTROL} pl-10 tnum font-mono`}
-          placeholder="0"
-        />
-      </div>
-      {note ? <p className="text-xs text-ink-muted">{note}</p> : null}
-    </div>
-  )
-}
-
-function formatRupiah(sen: bigint): string {
-  return formatIdr(sen, { symbol: false })
-}
+export { MoneyInput } from '@/components/money-input'
 
 interface NumberFieldProps {
   label: string

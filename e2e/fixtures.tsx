@@ -33,6 +33,10 @@ import { RatioPanel } from '@/components/plan/ratio-panel'
 import type { HouseholdProfile } from '@/lib/planning/allocation'
 import type { ChildPlan } from '@/lib/planning/children'
 import { templateProfile } from '@/lib/planning/lifestyle'
+import { AccountMark, CashflowChip, CategoryMark, DirectionMark } from '@/components/marks'
+import { ACCOUNT_KINDS, CASHFLOW_TYPES } from '@/lib/ledger/types'
+import { ACCOUNT_KIND_LABELS, DIRECTION_LABELS, type Direction } from '@/lib/ledger/direction'
+import { SEED_PALETTE } from '@/lib/ledger/palette'
 import { documentFor, FIXTURE_DIR } from './render'
 
 /**
@@ -426,7 +430,87 @@ const CHILD_PLANS: ChildPlan[] = [
 
 const LIFESTYLE = templateProfile('seimbang')
 
+/*
+  Every mark at once, which is the only way to see whether eleven cashflow
+  chips are still legible against their own washes in both colour schemes. The
+  contrast failures this corpus has caught were all small text on a wash.
+*/
+const MARKED_CATEGORIES: { name: string; cashflow: CashflowType }[] = [
+  { name: 'Makan/minum', cashflow: 'spending' },
+  { name: 'Belanja', cashflow: 'spending' },
+  { name: 'Wifi', cashflow: 'bills' },
+  { name: 'Gaji', cashflow: 'income' },
+  { name: 'Dana Menikah', cashflow: 'financial_goal' },
+]
+
+const MARKS = (
+  <div className="space-y-6">
+    <section aria-labelledby="marks-arah">
+      <h2 id="marks-arah" className="mb-2 text-sm font-medium text-ink">
+        Arah
+      </h2>
+      <ul className="flex flex-wrap gap-4 text-sm text-ink">
+        {(['in', 'out', 'neither'] as Direction[]).map((direction) => (
+          <li key={direction} className="flex items-center gap-1.5">
+            <DirectionMark direction={direction} />
+            {DIRECTION_LABELS[direction]}
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    <section aria-labelledby="marks-cashflow">
+      <h2 id="marks-cashflow" className="mb-2 text-sm font-medium text-ink">
+        Cashflow
+      </h2>
+      <ul className="flex flex-wrap gap-2">
+        {CASHFLOW_TYPES.map((cashflow) => (
+          <li key={cashflow}>
+            <CashflowChip cashflow={cashflow} />
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    <section aria-labelledby="marks-kategori">
+      <h2 id="marks-kategori" className="mb-2 text-sm font-medium text-ink">
+        Kategori
+      </h2>
+      <ul className="flex flex-wrap gap-4 text-sm">
+        {MARKED_CATEGORIES.map((category) => (
+          <li key={category.name}>
+            <CategoryMark
+              name={category.name}
+              cashflow={category.cashflow}
+              icon={SEED_PALETTE[category.name].icon}
+              hue={SEED_PALETTE[category.name].hue}
+            />
+          </li>
+        ))}
+        {/* A category the seed never heard of: hashed hue, cashflow icon. */}
+        <li>
+          <CategoryMark name="Kopi Sore" cashflow="spending" icon={null} hue={null} />
+        </li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="marks-akun">
+      <h2 id="marks-akun" className="mb-2 text-sm font-medium text-ink">
+        Akun
+      </h2>
+      <ul className="flex flex-wrap gap-4 text-sm">
+        {ACCOUNT_KINDS.map((kind) => (
+          <li key={kind}>
+            <AccountMark name={ACCOUNT_KIND_LABELS[kind]} kind={kind} />
+          </li>
+        ))}
+      </ul>
+    </section>
+  </div>
+)
+
 export const FIXTURES = {
+  marks: MARKS,
   bills: <BillsPanel review={BILLS} />,
   'bills-untouched': <BillsPanel review={BILLS_UNTOUCHED} />,
   receivables: <ReceivablesPanel review={RECEIVABLES} />,
