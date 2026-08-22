@@ -109,7 +109,11 @@ async function Dashboard({ akun }: { akun: string }) {
   const stalled = findStalledAccounts(movements)
   const needsReview = transactions.filter((tx) => tx.needsReview).length
 
-  const bankAccount = accounts.find((account) => account.kind === 'bank')
+  // The import key, not the kind: a household with two bank accounts still
+  // reconciles against the one the statement actually comes from.
+  const bankAccount =
+    accounts.find((account) => account.key === 'mandiri') ??
+    accounts.find((account) => account.kind === 'bank')
   const reconciliation =
     bankAccount && printed ? reconcileBank(movements, bankAccount.id, printed.closing) : null
 
@@ -171,17 +175,11 @@ async function Dashboard({ akun }: { akun: string }) {
       )
     : transactions
 
-  // Every category the month touched gets its own ribbon, named and coloured.
-  // Six named categories and a node called "9 kategori lain" answered the
-  // question with a number rather than with the names it stood for.
-  const flow = buildFlow(latest.statement, latestEntries, {
-    drill: 'all',
-    namedLimit: null,
-    hueOf: (name) => look(name).hue,
-  })
-
   // One place decides what a category looks like, so the flow diagram, the
   // month breakdown and the review queue cannot disagree about Belanja.
+  //
+  // Above buildFlow, not below it: buildFlow calls hueOf while it runs, so a
+  // declaration underneath is still empty by the time the callback reads it.
   const categoryByName = new Map(categories.map((category) => [category.name, category]))
   const look = (name: string) => {
     const row = categoryByName.get(name)
@@ -190,6 +188,15 @@ async function Dashboard({ akun }: { akun: string }) {
       icon: row ? categoryIcon(row) : null,
     }
   }
+
+  // Every category the month touched gets its own ribbon, named and coloured.
+  // Six named categories and a node called "9 kategori lain" answered the
+  // question with a number rather than with the names it stood for.
+  const flow = buildFlow(latest.statement, latestEntries, {
+    drill: 'all',
+    namedLimit: null,
+    hueOf: (name) => look(name).hue,
+  })
 
   return (
     <div className="space-y-10">

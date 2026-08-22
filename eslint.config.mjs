@@ -49,6 +49,26 @@ const eslintConfig = defineConfig([
   {
     files: ['src/**/*.{ts,tsx}'],
     rules: {
+      /*
+        A const referenced by a callback that runs before the const is declared
+        throws at request time and compiles cleanly, because TypeScript cannot
+        know when a closure is called. That shape took the dashboard down in
+        production once; this is the only check that sees it.
+
+        Functions and types are exempt: hoisted declarations and the lookup
+        tables kept below the code that reads them are both deliberate here.
+      */
+      '@typescript-eslint/no-use-before-define': [
+        'error',
+        {
+          variables: true,
+          functions: false,
+          classes: false,
+          typedefs: false,
+          enums: false,
+          ignoreTypeReferences: true,
+        },
+      ],
       'no-restricted-syntax': ['error', ...generatedLookRules],
       'no-restricted-imports': [
         'error',

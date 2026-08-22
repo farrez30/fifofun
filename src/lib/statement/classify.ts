@@ -376,6 +376,9 @@ export function classify(row: StatementRow, options: ClassifyOptions = {}): Clas
   }
 
   // --- Wallet top-ups and biller payments -------------------------------
+  // Declared at the bottom with the other lookup tables, and read here only
+  // once a statement is being classified, long after the module is evaluated.
+  // eslint-disable-next-line @typescript-eslint/no-use-before-define
   const wallet = WALLET_BILLERS.find((entry) => entry.match.test(first))
   if (wallet) {
     const destination = wallet.extract(second)
