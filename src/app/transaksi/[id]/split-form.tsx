@@ -2,9 +2,9 @@
 
 import { useActionState, useState } from 'react'
 import { useFormStatus } from 'react-dom'
-import { CONTROL } from '@/components/field-base'
+import { BUTTON_PRIMARY, CONTROL } from '@/components/field-base'
 import { MoneyInput } from '@/components/money-input'
-import { SPLIT_MAX, SPLIT_MIN, splitRemainder } from '@/lib/ledger/edit'
+import { SPLIT_MAX, SPLIT_MIN, splitBlocker } from '@/lib/ledger/edit'
 import { CASHFLOW_LABELS, type CashflowType } from '@/lib/ledger/types'
 import { formatIdr } from '@/lib/money'
 import type { ActionResult } from '@/lib/actions'
@@ -46,9 +46,18 @@ export function SplitForm({
   const [parts, setParts] = useState<Part[]>([EMPTY, EMPTY])
 
   const total = BigInt(amount || '0')
-  const remainder = splitRemainder(total, parts)
-  const complete =
-    remainder === 0n && parts.every((part) => part.categoryId !== '' && part.amount > 0n)
+  const blocker = splitBlocker(total, parts)
+
+  const status =
+    blocker === null
+      ? 'Pas, jumlahnya sama dengan nominal asli.'
+      : blocker.kind === 'remainder'
+        ? `Sisa ${formatIdr(blocker.amount)} belum dibagi.`
+        : blocker.kind === 'excess'
+          ? `Kelebihan ${formatIdr(blocker.amount)}.`
+          : blocker.kind === 'zero'
+            ? `Bagian ${blocker.part} masih nol.`
+            : `Bagian ${blocker.part} belum punya kategori.`
 
   const byCashflow = new Map<CashflowType, CategoryOption[]>()
   for (const category of categories) {
@@ -132,16 +141,12 @@ export function SplitForm({
         </button>
 
         <p role="status" className="text-sm text-ink-muted">
-          {remainder > 0n
-            ? `Sisa ${formatIdr(remainder)} belum dibagi.`
-            : remainder < 0n
-              ? `Kelebihan ${formatIdr(-remainder)}.`
-              : 'Pas, jumlahnya sama dengan nominal asli.'}
+          {status}
         </p>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <Submit disabled={!complete} />
+        <Submit disabled={blocker !== null} />
         {result ? (
           <p role="status" className={`text-sm ${result.ok ? 'text-under' : 'text-over'}`}>
             {result.message}
@@ -165,7 +170,7 @@ function Submit({ disabled }: { disabled: boolean }) {
     <button
       type="submit"
       disabled={disabled || pending}
-      className="h-11 rounded-sm border border-line-strong px-3 text-sm text-ink transition-colors duration-150 hover:bg-sunken disabled:opacity-40"
+      className={BUTTON_PRIMARY}
     >
       {pending ? 'Memisah' : 'Pisah'}
     </button>

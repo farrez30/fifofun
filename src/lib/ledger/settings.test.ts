@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { ACCOUNT_KEYS, ACCOUNT_KEY_LABELS, isLookedUpByName, parseIdentifiers, planReorder, twinsOf } from './settings'
 import { SEED_ACCOUNTS } from './seed-data'
-import { ACCOUNT_KINDS } from './types'
+import { ACCOUNT_KINDS, CASHFLOW_HELP, CASHFLOW_TYPES } from './types'
 
 /**
  * The parts of settings that other features depend on without knowing it.
@@ -137,5 +137,20 @@ describe('planReorder', () => {
       { id: 'b', sortOrder: 1 },
       { id: 'a', sortOrder: 2 },
     ])
+  })
+})
+
+describe('CASHFLOW_HELP', () => {
+  it('explains every cashflow the picker offers', () => {
+    // The field is permanent once a transaction uses it, so a cashflow with a
+    // label and no explanation is the worst kind of gap on that form.
+    for (const cashflow of CASHFLOW_TYPES) {
+      expect(CASHFLOW_HELP[cashflow]?.length ?? 0).toBeGreaterThan(20)
+    }
+  })
+
+  it('says something different about each one', () => {
+    const sentences = CASHFLOW_TYPES.map((cashflow) => CASHFLOW_HELP[cashflow])
+    expect(new Set(sentences).size).toBe(sentences.length)
   })
 })

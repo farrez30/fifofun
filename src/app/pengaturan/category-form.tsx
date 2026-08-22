@@ -2,11 +2,16 @@
 
 import { useActionState, useId, useState } from 'react'
 import { useFormStatus } from 'react-dom'
-import { CONTROL, FieldLabel } from '@/components/field-base'
+import { BUTTON_PRIMARY, CONTROL, FieldLabel } from '@/components/field-base'
 import { CategoryMark, ICONS, ICON_NAMES } from '@/components/marks'
 import { PRESET_HUES, categoryHue } from '@/lib/ledger/palette'
 import { isLookedUpByName, twinsOf } from '@/lib/ledger/settings'
-import { CASHFLOW_LABELS, CASHFLOW_TYPES, type CashflowType } from '@/lib/ledger/types'
+import {
+  CASHFLOW_HELP,
+  CASHFLOW_LABELS,
+  CASHFLOW_TYPES,
+  type CashflowType,
+} from '@/lib/ledger/types'
 import type { ActionResult } from '@/lib/actions'
 import { createCategory, updateCategory } from './actions'
 import type { CategoryView } from './categories-panel'
@@ -89,6 +94,9 @@ export function CategoryForm({ category, cashflow }: Props) {
               </option>
             ))}
           </select>
+          {/* The one field here that cannot be changed later deserves to say
+              what it means, not only what it is called. */}
+          <p className="text-xs text-ink-muted">{CASHFLOW_HELP[flow]}</p>
           {locked ? (
             <>
               <input type="hidden" name="cashflow" value={flow} />
@@ -110,12 +118,37 @@ export function CategoryForm({ category, cashflow }: Props) {
       <fieldset>
         <legend className="text-sm font-medium text-ink">Ikon</legend>
         <div className="mt-2 flex flex-wrap gap-1">
+          {/* An icon chosen by accident has to be removable, the same way the
+              hue below has "Ikuti warna bawaan". */}
+          <label
+            className={`inline-flex size-11 cursor-pointer items-center justify-center rounded-sm border text-xs transition-colors duration-150 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent ${
+              icon === ''
+                ? 'border-accent bg-accent-wash text-ink'
+                : 'border-line text-ink-muted hover:border-line-strong hover:bg-sunken'
+            }`}
+          >
+            <input
+              type="radio"
+              name="icon"
+              value=""
+              checked={icon === ''}
+              onChange={() => setIcon('')}
+              className="sr-only"
+            />
+            bawaan
+          </label>
           {ICON_NAMES.map((option) => {
             const Glyph = ICONS[option]
             return (
               <label
                 key={option}
-                className={`inline-flex size-11 cursor-pointer items-center justify-center rounded-sm border transition-colors duration-150 ${
+                /*
+                  The radio itself is one pixel and invisible, so the focus ring
+                  has to be drawn on the box a person can actually see. Without
+                  this, tabbing through forty-six icons moves a ring nobody can
+                  find.
+                */
+                className={`inline-flex size-11 cursor-pointer items-center justify-center rounded-sm border transition-colors duration-150 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent ${
                   icon === option
                     ? 'border-accent bg-accent-wash'
                     : 'border-line hover:border-line-strong hover:bg-sunken'
@@ -210,7 +243,7 @@ function Submit({ label }: { label: string }) {
     <button
       type="submit"
       disabled={pending}
-      className="h-11 rounded-sm border border-line-strong px-3 text-sm text-ink transition-colors duration-150 hover:bg-sunken disabled:opacity-40"
+      className={BUTTON_PRIMARY}
     >
       {pending ? 'Menyimpan' : label}
     </button>

@@ -3,6 +3,7 @@
 import { useActionState, useState } from 'react'
 import { useFormStatus } from 'react-dom'
 import { CategoryMark } from '@/components/marks'
+import { BUTTON_PRIMARY, BUTTON_QUIET } from '@/components/field-base'
 import { MoneyInput } from '@/components/money-input'
 import { formatMonthKey } from '@/lib/datetime'
 import { CASHFLOW_LABELS, type CashflowType } from '@/lib/ledger/types'
@@ -215,6 +216,20 @@ function Row({
 
 function BudgetCell({ line }: { line: BudgetLineView }) {
   const [amount, setAmount] = useState(() => BigInt(line.amount || '0'))
+  /*
+    The figure this cell last agreed with the server about.
+
+    Without it, copying last month's budgets wrote rows the server confirmed
+    while every input still showed nothing, and the next Save posted those
+    zeroes back and deleted what had just been copied. The money input does the
+    same reconciliation against its own prop; this is the layer above it.
+  */
+  const [known, setKnown] = useState(line.amount)
+
+  if (line.amount !== known) {
+    setKnown(line.amount)
+    setAmount(BigInt(line.amount || '0'))
+  }
 
   return (
     <MoneyInput
@@ -235,7 +250,10 @@ function CopyForm({ period, from }: { period: string; from: string }) {
     <form action={action} className="flex flex-wrap items-center gap-3">
       <input type="hidden" name="period" value={period} />
       <input type="hidden" name="from" value={from} />
-      <Submit label={`Salin anggaran ${formatMonthKey(from)} ke kategori yang masih kosong`} />
+      <Submit
+        tone="quiet"
+        label={`Salin anggaran ${formatMonthKey(from)} ke kategori yang masih kosong`}
+      />
       {result ? (
         <p role="status" className={`text-sm ${result.ok ? 'text-under' : 'text-over'}`}>
           {result.message}
@@ -246,13 +264,13 @@ function CopyForm({ period, from }: { period: string; from: string }) {
   )
 }
 
-function Submit({ label }: { label: string }) {
+function Submit({ label, tone = 'primary' }: { label: string; tone?: 'primary' | 'quiet' }) {
   const { pending } = useFormStatus()
   return (
     <button
       type="submit"
       disabled={pending}
-      className="h-11 rounded-sm border border-line-strong px-3 text-sm text-ink transition-colors duration-150 hover:bg-sunken disabled:opacity-40"
+      className={tone === 'primary' ? BUTTON_PRIMARY : BUTTON_QUIET}
     >
       {pending ? 'Menyimpan' : label}
     </button>

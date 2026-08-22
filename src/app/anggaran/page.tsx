@@ -101,7 +101,7 @@ async function Budgets({ params }: { params: Record<string, string | string[] | 
 
   return (
     <div className="space-y-5">
-      <MonthNav period={period} />
+      <MonthNav period={period} thisMonth={thisMonth} />
       <BudgetTable plan={plan} />
     </div>
   )

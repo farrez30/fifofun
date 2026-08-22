@@ -3,7 +3,7 @@
 import { useActionState, useId, useState } from 'react'
 import { useFormStatus } from 'react-dom'
 import { AccountChips, type AccountOption } from '@/app/catat/account-chips'
-import { CONTROL, FieldLabel } from '@/components/field-base'
+import { BUTTON_PRIMARY, CONTROL, FieldLabel } from '@/components/field-base'
 import { MoneyInput } from '@/components/money-input'
 import { CASHFLOW_LABELS, type CashflowType } from '@/lib/ledger/types'
 import type { Editable } from '@/lib/ledger/edit'
@@ -191,7 +191,9 @@ export function EditEntryForm({
         />
       </div>
 
-      <div className="flex items-start gap-3">
+      {/* The label is the target: a sixteen pixel box on its own is too small
+          to hit, and the sentence under it explains the decision anyway. */}
+      <label htmlFor={ids.pass} className="flex min-h-11 cursor-pointer items-start gap-3 py-1.5">
         <input
           id={ids.pass}
           type="checkbox"
@@ -199,15 +201,13 @@ export function EditEntryForm({
           onChange={(event) => setPassThrough(event.target.checked)}
           className="mt-0.5 size-4 shrink-0 accent-[var(--color-accent)]"
         />
-        <div>
-          <label htmlFor={ids.pass} className="text-sm text-ink">
-            Uang titipan
-          </label>
-          <p className="text-xs text-ink-muted">
+        <span>
+          <span className="block text-sm text-ink">Uang titipan</span>
+          <span className="block text-xs text-ink-muted">
             Tidak dihitung sebagai pemasukan atau pengeluaran, tapi tetap menggerakkan saldo akun.
-          </p>
-        </div>
-      </div>
+          </span>
+        </span>
+      </label>
 
       <div className="flex flex-wrap items-center gap-3">
         <Submit />
@@ -228,7 +228,7 @@ function Submit() {
     <button
       type="submit"
       disabled={pending}
-      className="h-11 rounded-sm border border-line-strong px-3 text-sm text-ink transition-colors duration-150 hover:bg-sunken disabled:opacity-40"
+      className={BUTTON_PRIMARY}
     >
       {pending ? 'Menyimpan' : 'Simpan perubahan'}
     </button>

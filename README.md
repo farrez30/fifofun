@@ -33,10 +33,31 @@ quietly corrupt budgets:
 - Money arriving back from an e-wallet is not income.
 - Money that arrives and leaves the same day is somebody else's, passing through.
 
+**Records what the bank cannot see.** Cash, e-wallets and corrections are typed
+in on their own page, and a manual entry that turns out to be the same
+transaction the next statement brings in is detected and offered as a merge
+rather than counted twice. Where a wallet balance has drifted, the difference is
+recorded as an adjustment transaction, so the money that went missing shows up
+as spending instead of quietly vanishing from a balance.
+
+**Lets a decision be revisited.** Any transaction can be recategorised, noted,
+split into several categories, or removed, from wherever it was seen. What the
+bank said about a row is not editable: the amount, the date and the accounts of
+a statement line are what the reconciliation checks itself against. One receipt
+covering four categories is therefore split rather than edited, into parts that
+add up to the original exactly.
+
 **Plans forward.** Budget allocation frameworks used in Indonesia, financial
 health ratios with their published thresholds, cost projections for children and
 education under Indonesian education inflation, and gap analysis between the
-life you budget for and the one you want.
+life you budget for and the one you want. The answers are saved, so the planner
+is a plan rather than a demonstration.
+
+**Sets the budget it judges you against.** Budgets are decided per category per
+month, next to the median of the months before it and to what was budgeted last
+month, so a first figure is chosen with the evidence in front of it. Savings
+pots work from either end: a deadline gives the monthly figure it needs, and a
+monthly figure gives the month it arrives.
 
 ## Correctness
 
@@ -56,12 +77,19 @@ credit columns.
 
 ## Status
 
-Under active development. The domain layer is complete and tested; the
-application is being built on top of it.
+In daily use against a real household ledger. The domain layer and the
+application on top of it are both complete: import, review, manual entry,
+reporting, budgets, savings goals, the planner, and the settings that let
+accounts and categories be renamed without breaking the import.
+
+Every component is also rendered standalone into a fixture page and checked with
+axe in both colour schemes, and against horizontal overflow at 375px, because a
+chart that reconciles perfectly and cannot be read on a phone is still broken.
 
 ```bash
 pnpm install
-pnpm test
+pnpm test        # unit
+pnpm test:e2e    # components in a real browser, plus the accessibility sweep
 ```
 
 ## Deployment

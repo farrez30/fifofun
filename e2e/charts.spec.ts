@@ -1289,6 +1289,49 @@ test.describe('rencana', () => {
   })
 })
 
+test.describe('sasaran sentuh', () => {
+  /*
+    Every control a finger has to hit, measured rather than assumed. The
+    checkbox rows failed this: a sixteen pixel box beside eighteen pixels of
+    text is a target under half the minimum, while the account chips in the
+    same app had always been forty-four.
+  */
+  const SURFACES = [
+    'plan-household-full',
+    'plan-household-compact',
+    'transaksi-edit-manual',
+    'settings-category-form',
+    'budget-table',
+    'catat-entry',
+  ]
+
+  test('gives every checkbox and radio a target a finger can hit', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 })
+
+    for (const fixture of SURFACES) {
+      await open(page, fixture)
+      const small = await page.$$eval(
+        'input[type=checkbox], input[type=radio]',
+        (nodes) =>
+          nodes
+            .map((node) => {
+              // The label is the target: the box itself is deliberately small,
+              // and on the icon picker it is one pixel and invisible.
+              const target = node.closest('label') ?? node
+              const box = target.getBoundingClientRect()
+              return {
+                name: (target.textContent ?? '').trim().slice(0, 30),
+                height: Math.round(box.height),
+                width: Math.round(box.width),
+              }
+            })
+            .filter((row) => row.height < 24 || row.width < 24),
+      )
+      expect(small, `${fixture} has a target under 24px`).toEqual([])
+    }
+  })
+})
+
 test.describe('lebar halaman', () => {
   test('nothing pushes the page sideways on a narrow screen', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 })

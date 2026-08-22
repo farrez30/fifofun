@@ -147,7 +147,9 @@ export function ChildrenPanel({
             />
             <Figure
               label="Tahun terberat"
-              value={family.peakYear ? String(family.peakYear.year) : '—'}
+              // Not a dash: no peak year means no year has any cost in it,
+              // which is a fact about the plan rather than a missing figure.
+              value={family.peakYear ? String(family.peakYear.year) : 'belum ada'}
               hint={
                 family.peakYear
                   ? `${formatIdr(family.peakYear.total)} dalam satu tahun.`
@@ -232,7 +234,7 @@ export function ChildrenPanel({
                     </td>
                     <td className="whitespace-nowrap px-4 py-2.5 text-right tnum font-mono text-ink-muted">
                       {option.worstCollisionFee === 0n
-                        ? '—'
+                        ? 'tidak ada'
                         : formatIdrCompact(option.worstCollisionFee)}
                     </td>
                   </tr>

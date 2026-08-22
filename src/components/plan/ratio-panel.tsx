@@ -140,9 +140,13 @@ export function RatioPanel({ snapshot }: { snapshot: FinancialSnapshot }) {
                 <span className="text-sm font-medium text-ink">{result.threshold.label}</span>
                 <span className="flex items-center gap-2">
                   <span className="tnum font-mono text-sm text-ink">
-                    {result.value === null
-                      ? '—'
-                      : display(result.value, result.threshold.unit)}
+                    {/* A ratio with no denominator is unknown, not zero, and a
+                        dash in a column of figures reads as zero. */}
+                    {result.value === null ? (
+                      <span className="font-sans text-ink-faint">tidak diketahui</span>
+                    ) : (
+                      display(result.value, result.threshold.unit)
+                    )}
                   </span>
                   {style ? (
                     <span

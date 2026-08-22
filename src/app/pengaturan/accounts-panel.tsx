@@ -196,7 +196,7 @@ function MoveButton({
   name: string
   disabled: boolean
 }) {
-  const [, action] = useActionState<ActionResult | null, FormData>(moveAccount, null)
+  const [result, action] = useActionState<ActionResult | null, FormData>(moveAccount, null)
 
   return (
     <form action={action}>
@@ -210,6 +210,13 @@ function MoveButton({
       >
         <span aria-hidden="true">{direction === 'up' ? '↑' : '↓'}</span>
       </button>
+      {/* A refused reorder used to do nothing at all: the arrow moved no row
+          and said no word. */}
+      {result && !result.ok ? (
+        <span role="status" className="ml-2 text-xs text-over">
+          {result.message}
+        </span>
+      ) : null}
     </form>
   )
 }

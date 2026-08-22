@@ -166,14 +166,23 @@ export function Toggle({
   const id = useId()
   const chip = variant === 'chip'
 
+  /*
+    The label is the target, and it is at least as tall as a finger.
+
+    A sixteen pixel box beside eighteen pixels of text is a nine by eighteen
+    hit area, which fails the minimum target size and is miserable on a phone.
+    The account chips in this app already got this right at forty-four; this is
+    the same shape.
+  */
   return (
-    <div
+    <label
+      htmlFor={id}
       className={
         chip
-          ? `inline-flex items-center gap-2 rounded-sm border px-2.5 py-1.5 transition-colors duration-150 ${
+          ? `inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-sm border px-2.5 transition-colors duration-150 ${
               checked ? 'border-accent bg-accent-wash' : 'border-line bg-paper'
             }`
-          : 'flex items-start gap-3'
+          : 'flex min-h-11 cursor-pointer items-start gap-3 py-1.5'
       }
     >
       <input
@@ -183,13 +192,13 @@ export function Toggle({
         onChange={(event) => onChange(event.target.checked)}
         className={`h-4 w-4 shrink-0 accent-[var(--color-accent)] ${chip ? '' : 'mt-0.5'}`}
       />
-      <div>
-        <label htmlFor={id} className={`text-ink ${chip ? 'text-xs' : 'text-sm'}`}>
-          {label}
-        </label>
-        {description && !chip ? <p className="text-xs text-ink-muted">{description}</p> : null}
-      </div>
-    </div>
+      <span>
+        <span className={`block text-ink ${chip ? 'text-xs' : 'text-sm'}`}>{label}</span>
+        {description && !chip ? (
+          <span className="block text-xs text-ink-muted">{description}</span>
+        ) : null}
+      </span>
+    </label>
   )
 }
 

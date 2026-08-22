@@ -2,7 +2,7 @@
 
 import { useActionState, useId, useState } from 'react'
 import { useFormStatus } from 'react-dom'
-import { CONTROL, FieldLabel } from '@/components/field-base'
+import { BUTTON_PRIMARY, CONTROL, FieldLabel } from '@/components/field-base'
 import { MoneyInput } from '@/components/money-input'
 import { ACCOUNT_KEYS, ACCOUNT_KEY_LABELS } from '@/lib/ledger/settings'
 import { ACCOUNT_KINDS, type AccountKind } from '@/lib/ledger/types'
@@ -182,7 +182,7 @@ function Submit({ label }: { label: string }) {
     <button
       type="submit"
       disabled={pending}
-      className="h-11 rounded-sm border border-line-strong px-3 text-sm text-ink transition-colors duration-150 hover:bg-sunken disabled:opacity-40"
+      className={BUTTON_PRIMARY}
     >
       {pending ? 'Menyimpan' : label}
     </button>

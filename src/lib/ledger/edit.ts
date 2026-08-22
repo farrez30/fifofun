@@ -139,3 +139,38 @@ export function planSplit(parent: SplitParent, parts: SplitPart[]): SplitPlan {
 export function splitRemainder(parent: bigint, parts: { amount: bigint }[]): bigint {
   return parent - parts.reduce((sum, part) => sum + part.amount, 0n)
 }
+
+export type SplitBlocker =
+  | { kind: 'remainder'; amount: bigint }
+  | { kind: 'excess'; amount: bigint }
+  | { kind: 'zero'; part: number }
+  | { kind: 'category'; part: number }
+  | null
+
+/**
+ * Why the split cannot be submitted yet, or null when it can.
+ *
+ * The form reported only the remainder, so two parts that summed exactly with
+ * a category left unset read "Pas" beside a submit button that refused to work
+ * and gave no reason. A disabled control with no stated cause is a dead end,
+ * and the cause is knowable, so it is returned rather than guessed at.
+ *
+ * Ordered by what a person fixes first: the arithmetic, then the empty
+ * amounts, then the missing categories.
+ */
+export function splitBlocker(
+  parent: bigint,
+  parts: { amount: bigint; categoryId: string }[],
+): SplitBlocker {
+  const remainder = splitRemainder(parent, parts)
+  if (remainder > 0n) return { kind: 'remainder', amount: remainder }
+  if (remainder < 0n) return { kind: 'excess', amount: -remainder }
+
+  const zero = parts.findIndex((part) => part.amount <= 0n)
+  if (zero !== -1) return { kind: 'zero', part: zero + 1 }
+
+  const missing = parts.findIndex((part) => part.categoryId === '')
+  if (missing !== -1) return { kind: 'category', part: missing + 1 }
+
+  return null
+}

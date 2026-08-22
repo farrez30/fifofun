@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { parseIdAmount as idr } from '@/lib/money'
+import { computeAccountMovements, computeMonthlySeries } from './monthly'
 import {
   compatibleCategories,
   editableFields,
   isBankFact,
   planSplit,
+  splitBlocker,
   splitRemainder,
   SPLIT_MAX,
 } from './edit'
@@ -157,5 +159,116 @@ describe('splitRemainder', () => {
       -idr('50.000,00'),
     )
     expect(splitRemainder(idr('150.000,00'), [])).toBe(idr('150.000,00'))
+  })
+})
+
+describe('memisah transaksi tidak menggeser angka apa pun', () => {
+  const parent = {
+    id: 'tx-parent',
+    occurredAt: new Date('2026-07-15T05:00:00.000Z'),
+    description: 'ALFAMART CIPUTAT',
+    amount: idr('150.000,00'),
+    cashflow: 'spending' as const,
+    categoryId: 'cat-belanja',
+    fromAccountId: 'acc-mandiri',
+    toAccountId: null,
+    source: 'xlsx' as const,
+  }
+
+  const other = {
+    ...parent,
+    id: 'tx-gaji',
+    description: 'GAJI',
+    amount: idr('8.000.000,00'),
+    cashflow: 'income' as const,
+    fromAccountId: null,
+    toAccountId: 'acc-mandiri',
+  }
+
+  /*
+    The claim the split feature is built on: the parts replace the original
+    exactly, so the running balance the import reconciles against does not
+    move. Asserted against the real monthly engine rather than against the
+    planner, because that engine is what the reconciliation reads.
+  */
+  it('leaves the monthly statement and the account balance identical', () => {
+    const plan = planSplit(parent, [
+      { amount: idr('100.000,00'), categoryId: 'cat-belanja', description: 'sabun' },
+      { amount: idr('50.000,00'), categoryId: 'cat-makan', description: '' },
+    ])
+    if (!plan.ok) throw new Error('expected a plan')
+
+    const children = plan.children.map((child, index) => ({
+      ...parent,
+      id: `tx-child-${index}`,
+      description: child.description,
+      amount: child.amount,
+      categoryId: child.categoryId,
+    }))
+
+    const before = computeMonthlySeries([other, parent], idr('1.000.000,00'))
+    const after = computeMonthlySeries([other, ...children], idr('1.000.000,00'))
+
+    expect(after).toEqual(before)
+
+    const account = {
+      id: 'acc-mandiri',
+      name: 'Bank Mandiri',
+      kind: 'bank' as const,
+      openingBalance: 0n,
+    }
+    expect(computeAccountMovements([other, ...children], [account])).toEqual(
+      computeAccountMovements([other, parent], [account]),
+    )
+  })
+
+  it('would move them if the parts did not add up, which is why they must', () => {
+    const short = [
+      { ...parent, id: 'tx-child-0', amount: idr('100.000,00') },
+      { ...parent, id: 'tx-child-1', amount: idr('40.000,00') },
+    ]
+    const before = computeMonthlySeries([other, parent], idr('1.000.000,00'))
+    const after = computeMonthlySeries([other, ...short], idr('1.000.000,00'))
+
+    // Rp10.000 of spending that never happened, which is exactly what
+    // `planSplit` refuses to produce.
+    expect(after[0].statement.sisaUang - before[0].statement.sisaUang).toBe(idr('10.000,00'))
+  })
+})
+
+describe('splitBlocker', () => {
+  const total = idr('150.000,00')
+  const part = (amount: bigint, categoryId = 'cat-belanja') => ({ amount, categoryId })
+
+  it('reports the arithmetic first, in both directions', () => {
+    expect(splitBlocker(total, [part(idr('100.000,00')), part(idr('40.000,00'))])).toEqual({
+      kind: 'remainder',
+      amount: idr('10.000,00'),
+    })
+    expect(splitBlocker(total, [part(idr('100.000,00')), part(idr('60.000,00'))])).toEqual({
+      kind: 'excess',
+      amount: idr('10.000,00'),
+    })
+  })
+
+  it('names the part that is still empty once the sum is right', () => {
+    // The failure this exists for: the two parts sum to the original exactly,
+    // so the old status read "Pas" while the button stayed disabled and said
+    // nothing at all about the part still worth nothing.
+    expect(splitBlocker(total, [part(idr('150.000,00')), part(0n)])).toEqual({
+      kind: 'zero',
+      part: 2,
+    })
+  })
+
+  it('names the part with no category, numbered the way a person counts', () => {
+    expect(splitBlocker(total, [part(idr('100.000,00')), part(idr('50.000,00'), '')])).toEqual({
+      kind: 'category',
+      part: 2,
+    })
+  })
+
+  it('says nothing is in the way when nothing is', () => {
+    expect(splitBlocker(total, [part(idr('100.000,00')), part(idr('50.000,00'))])).toBeNull()
   })
 })

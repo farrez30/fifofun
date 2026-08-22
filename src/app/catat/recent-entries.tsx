@@ -99,7 +99,7 @@ export function RecentEntries({ rows }: { rows: RecentEntry[] }) {
                   {row.duplicateSuspected ? (
                     <a
                       href="/tinjau#kemungkinan-ganda"
-                      className="ml-2 inline-block rounded-xs border border-warn/40 bg-warn-wash px-1.5 py-0.5 text-[0.625rem] text-ink"
+                      className="ml-2 inline-block rounded-xs border border-warn/40 bg-warn-wash px-1.5 py-0.5 text-xs text-ink"
                     >
                       kemungkinan ganda
                     </a>

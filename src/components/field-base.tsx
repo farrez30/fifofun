@@ -13,6 +13,22 @@ import { type ReactNode } from 'react'
 export const CONTROL =
   'h-11 w-full rounded-sm border border-line bg-surface px-3 text-sm text-ink transition-colors duration-150 placeholder:text-ink-faint hover:border-line-strong focus:border-accent'
 
+/*
+  The two buttons, and the difference between them is a claim about which one a
+  person came to press.
+
+  The accent recipe was already in nine places when the settings, budget and
+  transaction screens were written, and those screens copied an outline button
+  six times instead, which left five whole pages where Save and Copy and Delete
+  all looked identical. Both live here now for the same reason CONTROL does: a
+  second copy is how two controls end up a pixel apart.
+*/
+export const BUTTON_PRIMARY =
+  'h-11 rounded-sm bg-accent px-5 text-sm font-medium text-paper transition-colors duration-150 hover:bg-accent-strong disabled:opacity-50'
+
+export const BUTTON_QUIET =
+  'h-11 rounded-sm border border-line-strong px-3 text-sm text-ink transition-colors duration-150 hover:bg-sunken disabled:opacity-50'
+
 interface LabelProps {
   htmlFor: string
   children: ReactNode

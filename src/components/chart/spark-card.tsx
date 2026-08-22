@@ -41,9 +41,17 @@ export interface SparkView {
 
 export function SparkCard({ view }: { view: SparkView }) {
   const [pinned, setPinned] = useState(view.points[view.points.length - 1]?.month ?? '')
+  /*
+    What the pointer is over, which is a different question from what is
+    selected. Reading a month and choosing one used to be the same action, so
+    `aria-checked` moved under the pointer and the live region announced months
+    nobody had decided anything about.
+  */
+  const [hovered, setHovered] = useState<string | null>(null)
   const bars = useRef(new Map<string, HTMLDivElement>())
 
-  const active = view.points.find((point) => point.month === pinned) ?? view.points[0]
+  const shown = hovered ?? pinned
+  const active = view.points.find((point) => point.month === shown) ?? view.points[0]
 
   function choose(month: string) {
     setPinned(month)
@@ -72,7 +80,9 @@ export function SparkCard({ view }: { view: SparkView }) {
       </p>
       <p className="tnum mt-0.5 font-mono text-sm text-ink">{view.latestAmount}</p>
 
-      <p className="tnum mt-1 text-xs text-ink-muted" role="status" aria-live="polite">
+      {/* `role="status"` is already a polite live region; saying it twice is
+          how a reader ends up hearing it twice. */}
+      <p className="tnum mt-1 text-xs text-ink-muted" role="status">
         {active ? (
           <>
             {active.label} · {active.amount}
@@ -117,7 +127,14 @@ export function SparkCard({ view }: { view: SparkView }) {
               aria-checked={chosen}
               aria-label={`${point.label}, ${point.amount}`}
               tabIndex={chosen ? 0 : -1}
-              onMouseEnter={() => setPinned(point.month)}
+              /*
+                Hovering reads a month; choosing one selects it. They were the
+                same action, so `aria-checked` moved under the pointer without
+                anybody deciding anything, and eight cards on a screen made a
+                pointer sweep announce eight selections.
+              */
+              onMouseEnter={() => setHovered(point.month)}
+              onMouseLeave={() => setHovered(null)}
               onFocus={() => setPinned(point.month)}
               onClick={() => choose(point.month)}
               className={`flex flex-1 cursor-pointer flex-col justify-end ${

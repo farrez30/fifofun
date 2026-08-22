@@ -9,7 +9,7 @@ import { getAccounts, getCategories, getHousehold, getTransaction } from '@/lib/
 import { getUser } from '@/lib/supabase/server'
 import { EditEntryForm, type EntryView } from './edit-form'
 import { EntrySummary } from './entry-summary'
-import { DeleteEntryButton, UnsplitButton } from './row-actions'
+import { DeleteEntryButton, RestoreEntryButton, UnsplitButton } from './row-actions'
 import { SplitForm } from './split-form'
 
 export const metadata: Metadata = { title: 'Ubah transaksi' }
@@ -91,6 +91,7 @@ export default async function TransactionPage({
             <p className="mt-1 text-sm text-ink-muted">
               Datanya tetap tersimpan, hanya disembunyikan dari semua hitungan.
             </p>
+            <RestoreEntryButton id={row.id} />
           </div>
         ) : null}
 

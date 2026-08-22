@@ -165,7 +165,7 @@ function Row({
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <span className="text-sm text-ink">
           {fund.name}
-          <span className="ml-2 rounded-xs border border-line px-1.5 py-0.5 text-[0.625rem] uppercase tracking-wide text-ink-muted">
+          <span className="ml-2 rounded-xs border border-line px-1.5 py-0.5 text-xs uppercase tracking-wide text-ink-muted">
             {KIND[fund.cashflow]}
           </span>
         </span>

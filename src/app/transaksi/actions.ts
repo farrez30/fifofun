@@ -489,6 +489,65 @@ export async function unsplitEntry(
   }
 }
 
+/**
+ * Bringing a deleted row back.
+ *
+ * Deleting sets a date rather than removing anything, and the page says so.
+ * Until this existed that was a promise with no button behind it: a person who
+ * deleted the wrong transaction was told the data was safe and given no way to
+ * reach it, which is worse than an honest warning that it cannot be undone.
+ *
+ * Only rows somebody typed can be deleted, so only those can be restored, and
+ * a row that is hidden because it was split is not restored here: that one is
+ * put back by joining its parts, which is a different question.
+ */
+export async function restoreEntry(
+  _previous: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const id = z.uuid().safeParse(formData.get('id'))
+  if (!id.success) return fail('Transaksinya tidak ditemukan.')
+
+  const ctx = await context()
+  if (!ctx) return fail(SESSION_EXPIRED)
+  const { supabase, householdId } = ctx
+
+  const { data: children } = await supabase
+    .from('transactions')
+    .select('id')
+    .eq('household_id', householdId)
+    .eq('split_of', id.data)
+    .is('deleted_at', null)
+
+  if ((children?.length ?? 0) > 0) {
+    return fail(
+      'Transaksi ini sedang dipisah.',
+      'Gabungkan kembali bagian-bagiannya kalau mau barisnya utuh lagi.',
+    )
+  }
+
+  const { data, error } = await supabase
+    .from('transactions')
+    .update({ deleted_at: null })
+    .eq('id', id.data)
+    .eq('household_id', householdId)
+    .in('source', ['manual', 'telegram'])
+    .not('deleted_at', 'is', null)
+    .select('id')
+
+  if (error) return fail('Transaksinya gagal dikembalikan.', error.message)
+  if (!data || data.length === 0) {
+    return fail('Transaksi itu tidak ditemukan, atau memang tidak terhapus.')
+  }
+
+  revalidateEverywhere(id.data)
+  return {
+    ok: true,
+    message: 'Transaksinya dikembalikan.',
+    detail: 'Barisnya masuk lagi ke semua hitungan, persis seperti sebelum dihapus.',
+  }
+}
+
 /** Every page that counts transactions is now stale, which is all of them. */
 function revalidateEverywhere(id: string) {
   for (const path of ['/', '/laporan', '/tinjau', '/catat', '/dana', '/anggaran']) {

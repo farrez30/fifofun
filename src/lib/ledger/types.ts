@@ -35,6 +35,29 @@ export const CASHFLOW_LABELS: Record<CashflowType, string> = {
   from_asset: 'Dari Asset / Saving',
 }
 
+/**
+ * What each cashflow means, for the one form where the choice is permanent.
+ *
+ * The labels above are the spreadsheet's own words, kept so a figure can be
+ * compared row by row against the old sheet. They are not an explanation:
+ * nothing in "Sinking Fund" tells a person it is the one they want for a
+ * yearly insurance premium, and the field cannot be changed once a transaction
+ * uses it.
+ */
+export const CASHFLOW_HELP: Record<CashflowType, string> = {
+  income: 'Uang masuk yang jadi hakmu: gaji, bonus, hasil kerja lain.',
+  spending: 'Belanja harian yang jumlahnya kamu putuskan tiap kali.',
+  bills: 'Tagihan rutin yang jumlah dan jatuh temponya sudah tetap.',
+  invest_savings: 'Uang yang kamu simpan atau investasikan, dan masih milikmu.',
+  sinking_fund: 'Tabungan untuk biaya besar yang sudah pasti datang, misalnya pajak tahunan.',
+  financial_goal: 'Tabungan untuk satu tujuan bernama, misalnya menikah atau rumah.',
+  transfer: 'Perpindahan antar akunmu sendiri. Tidak menambah atau mengurangi uangmu.',
+  debt_payment: 'Cicilan atau pelunasan utang.',
+  receivable_new: 'Uang yang kamu talangi dan masih ditagih ke orang lain.',
+  receivable_settled: 'Uang talangan yang sudah dikembalikan kepadamu.',
+  from_asset: 'Uang yang kamu ambil lagi dari tabungan, investasi, atau pos tujuan.',
+}
+
 export const ACCOUNT_KINDS = ['bank', 'ewallet', 'cash', 'emoney', 'investment'] as const
 
 export type AccountKind = (typeof ACCOUNT_KINDS)[number]

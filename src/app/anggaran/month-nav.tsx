@@ -15,7 +15,7 @@ import { addMonths } from '@/lib/ledger/funds'
  * user on whichever option they arrow past first.
  */
 
-export function MonthNav({ period }: { period: string }) {
+export function MonthNav({ period, thisMonth }: { period: string; thisMonth: string }) {
   const previous = addMonths(period, -1)
   const next = addMonths(period, 1)
 
@@ -40,6 +40,15 @@ export function MonthNav({ period }: { period: string }) {
       >
         {formatMonthKey(next)}
       </Link>
+
+      {period === thisMonth ? null : (
+        <Link
+          href="/anggaran"
+          className="inline-flex h-11 items-center rounded-sm border border-line px-3 text-sm text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
+        >
+          Bulan ini
+        </Link>
+      )}
 
       <form action="/anggaran" method="get" className="flex items-center gap-2">
         <label htmlFor="bulan" className="text-xs text-ink-muted">

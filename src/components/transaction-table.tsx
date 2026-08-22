@@ -163,7 +163,7 @@ function Accounts({
 function Tag({ children, tone }: { children: React.ReactNode; tone?: 'warn' }) {
   return (
     <span
-      className={`ml-2 rounded-xs border px-1.5 py-0.5 text-[0.625rem] text-ink-muted ${
+      className={`ml-2 rounded-xs border px-1.5 py-0.5 text-xs text-ink-muted ${
         tone === 'warn' ? 'border-warn/40 bg-warn-wash' : 'border-line bg-sunken'
       }`}
     >
