@@ -43,6 +43,13 @@
       "when": 1787251812513,
       "tag": "0005_function_grants",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1787365305141,
+      "tag": "0006_manual_entries_plans",
+      "breakpoints": true
     }
   ]
 }

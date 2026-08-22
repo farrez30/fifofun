@@ -66,7 +66,7 @@ async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2))
 
   // Imported after the environment is loaded; the client reads it on creation.
-  const { eq, and } = await import('drizzle-orm')
+  const { eq, and, or } = await import('drizzle-orm')
   const { db, schema } = await import('./client')
   const { readXlsx } = await import('@/lib/xlsx')
   const { parseMandiriStatement } = await import('@/lib/statement/mandiri-xlsx')
@@ -74,6 +74,7 @@ async function main(): Promise<void> {
   const { SEED_ACCOUNTS, SEED_CATEGORIES, DEFAULT_CATEGORY_BY_KIND } = await import(
     '@/lib/ledger/seed-data'
   )
+  const { SEED_PALETTE } = await import('@/lib/ledger/palette')
   const { formatIdr } = await import('@/lib/money')
 
   const files = args.setupOnly ? [] : walk(args.dir).sort()
@@ -128,13 +129,28 @@ async function main(): Promise<void> {
   // --- accounts and categories ------------------------------------------
   const accountIds = new Map<string, string>()
   for (const seed of SEED_ACCOUNTS) {
+    // By key first, then by name. A household that has since renamed Bank
+    // Mandiri still has the key, and one seeded before the key column existed
+    // still has the name; both end up with the same account rather than a
+    // second one.
     const [existing] = await db
       .select()
       .from(schema.accounts)
-      .where(and(eq(schema.accounts.householdId, household.id), eq(schema.accounts.name, seed.name)))
+      .where(
+        and(
+          eq(schema.accounts.householdId, household.id),
+          or(eq(schema.accounts.key, seed.key), eq(schema.accounts.name, seed.name)),
+        ),
+      )
       .limit(1)
 
     if (existing) {
+      if (existing.key === null) {
+        await db
+          .update(schema.accounts)
+          .set({ key: seed.key })
+          .where(eq(schema.accounts.id, existing.id))
+      }
       accountIds.set(seed.key, existing.id)
       continue
     }
@@ -145,6 +161,7 @@ async function main(): Promise<void> {
         name: seed.name,
         kind: seed.kind,
         institution: seed.institution,
+        key: seed.key,
         ownIdentifiers: seed.key === 'mandiri' ? args.ownIdentifiers : [],
       })
       .returning()
@@ -159,9 +176,19 @@ async function main(): Promise<void> {
   const keyOf = (cashflow: string, name: string) => `${cashflow} ${name}`
 
   for (const seed of SEED_CATEGORIES) {
+    // The same colour and icon the migration backfills, so a database seeded
+    // on a laptop looks like one migrated in production rather than falling
+    // back to a hash for every row.
+    const look = SEED_PALETTE[seed.name]
     const [created] = await db
       .insert(schema.categories)
-      .values({ householdId: household.id, name: seed.name, cashflow: seed.cashflow })
+      .values({
+        householdId: household.id,
+        name: seed.name,
+        cashflow: seed.cashflow,
+        icon: look?.icon ?? null,
+        color: look === undefined ? null : String(look.hue),
+      })
       .onConflictDoNothing()
       .returning()
 
@@ -181,7 +208,18 @@ async function main(): Promise<void> {
         ),
       )
       .limit(1)
-    if (existing) categoryIds.set(keyOf(seed.cashflow, seed.name), existing.id)
+    if (!existing) continue
+
+    if (look && (existing.icon === null || existing.color === null)) {
+      await db
+        .update(schema.categories)
+        .set({
+          icon: existing.icon ?? look.icon,
+          color: existing.color ?? String(look.hue),
+        })
+        .where(eq(schema.categories.id, existing.id))
+    }
+    categoryIds.set(keyOf(seed.cashflow, seed.name), existing.id)
   }
   console.log(`${categoryIds.size} categories ready`)
 

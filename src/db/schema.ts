@@ -1,5 +1,6 @@
 import { relations, sql } from 'drizzle-orm'
 import {
+  type AnyPgColumn,
   bigint,
   boolean,
   index,
@@ -89,8 +90,21 @@ export const accounts = pgTable(
     ownIdentifiers: text('own_identifiers').array().notNull().default([]),
     sortOrder: integer('sort_order').notNull().default(0),
     archivedAt: timestamp('archived_at', { withTimezone: true }),
+    /**
+     * The handle the importer and the Telegram bot write to, rather than the
+     * account's name. Those two used to look an account up by the string
+     * "Bank Mandiri", so renaming an account silently broke every future
+     * import with no error anywhere. Null means this account is not fed by
+     * either of them.
+     */
+    key: text('key'),
   },
-  (table) => [index('accounts_household_idx').on(table.householdId)],
+  (table) => [
+    index('accounts_household_idx').on(table.householdId),
+    uniqueIndex('accounts_key_unique')
+      .on(table.householdId, table.key)
+      .where(sql`key is not null`),
+  ],
 )
 
 export const categories = pgTable(
@@ -114,6 +128,14 @@ export const categories = pgTable(
     targetAmount: bigint('target_amount', { mode: 'bigint' }),
     /** `YYYY-MM`, or null for a pot with no deadline. */
     targetMonth: text('target_month'),
+    /**
+     * What the household means to put in each month, in sen. The target says
+     * where a pot is going; this says how fast, which is the other half of
+     * every question the funds page answers.
+     */
+    plannedMonthly: bigint('planned_monthly', { mode: 'bigint' }),
+    /** The same intention as a share of typical income, in basis points (1250 = 12,5%). */
+    plannedShareBp: integer('planned_share_bp'),
     icon: text('icon'),
     color: text('color'),
     sortOrder: integer('sort_order').notNull().default(0),
@@ -204,6 +226,24 @@ export const transactions = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
+    /**
+     * The imported row this manual entry appears to duplicate. Set by the
+     * import when a manual row matches a freshly inserted bank row on amount,
+     * account and time; cleared when a person says they are different, and
+     * kept as the audit link when the manual row is merged away.
+     */
+    duplicateOf: uuid('duplicate_of').references((): AnyPgColumn => transactions.id, {
+      onDelete: 'set null',
+    }),
+    /**
+     * The row this one is a part of. One receipt covering two categories is
+     * split into children that inherit its time, accounts and source; the
+     * parent is soft-deleted so every balance stays exact and re-importing the
+     * same statement cannot resurrect it.
+     */
+    splitOf: uuid('split_of').references((): AnyPgColumn => transactions.id, {
+      onDelete: 'set null',
+    }),
   },
   (table) => [
     index('transactions_household_time_idx').on(table.householdId, table.occurredAt),
@@ -211,6 +251,12 @@ export const transactions = pgTable(
     index('transactions_review_idx').on(table.householdId, table.needsReview),
     index('transactions_confirmed_idx').on(table.householdId, table.confirmedAt),
     uniqueIndex('transactions_dedupe_unique').on(table.householdId, table.dedupeKey),
+    index('transactions_duplicate_idx')
+      .on(table.householdId, table.duplicateOf)
+      .where(sql`duplicate_of is not null`),
+    index('transactions_split_idx')
+      .on(table.householdId, table.splitOf)
+      .where(sql`split_of is not null`),
   ],
 )
 
@@ -252,6 +298,43 @@ export const budgets = pgTable(
     source: text('source').notNull().default('manual'),
   },
   (table) => [uniqueIndex('budgets_unique').on(table.householdId, table.period, table.categoryId)],
+)
+
+/**
+ * The planner's inputs, kept so a simulation survives a reload.
+ *
+ * One row per household: this is the household's own answer to "what are we
+ * planning for", not a scenario library. Every figure the planner derives is
+ * still derived; only what a person typed is stored, and the median the ledger
+ * observed is still shown beside a saved income so the two can disagree
+ * visibly.
+ */
+export const plans = pgTable(
+  'plans',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    householdId: uuid('household_id')
+      .notNull()
+      .references(() => households.id, { onDelete: 'cascade' }),
+    income: bigint('income', { mode: 'bigint' }).notNull(),
+    adults: integer('adults').notNull().default(1),
+    children: integer('children').notNull().default(0),
+    irregularIncome: boolean('irregular_income').notNull().default(false),
+    wantsZakat: boolean('wants_zakat').notNull().default(false),
+    frameworkId: text('framework_id').notNull(),
+    track: text('track').notNull().default('negeri'),
+    targetTier: text('target_tier').notNull().default('seimbang'),
+    targetSavings: bigint('target_savings', { mode: 'bigint' }).notNull(),
+    /** `[{ birthYear, track }]`, the only two fields the children panel ever sets. */
+    childPlans: jsonb('child_plans').notNull().default([]),
+    goalTarget: bigint('goal_target', { mode: 'bigint' }).notNull(),
+    goalYears: integer('goal_years').notNull().default(10),
+    goalSaved: bigint('goal_saved', { mode: 'bigint' }).notNull().default(sql`0`),
+    hajjMonthly: bigint('hajj_monthly', { mode: 'bigint' }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex('plans_household_unique').on(table.householdId)],
 )
 
 export const householdsRelations = relations(households, ({ many }) => ({
@@ -308,6 +391,13 @@ export const householdInvites = pgTable(
 export const accountsRelations = relations(accounts, ({ one }) => ({
   household: one(households, {
     fields: [accounts.householdId],
+    references: [households.id],
+  }),
+}))
+
+export const plansRelations = relations(plans, ({ one }) => ({
+  household: one(households, {
+    fields: [plans.householdId],
     references: [households.id],
   }),
 }))
