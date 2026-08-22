@@ -103,6 +103,10 @@ export function formatIdrCompact(sen: bigint): string {
   return `${sign}Rp${GROUPED.format(rupiah)}`
 }
 
+/** A hundred trillion rupiah, past which a figure is a typing accident. */
+export const MAX_RUPIAH = 100_000_000_000_000
+export const MAX_SEN = BigInt(MAX_RUPIAH) * 100n
+
 export function addSen(a: bigint, b: bigint): bigint {
   return a + b
 }

@@ -18,6 +18,7 @@ import { reviewBills } from '@/lib/ledger/bills'
 import { reviewReceivables } from '@/lib/ledger/receivables'
 import { proposeBudget, reviewBudget } from '@/lib/ledger/budget'
 import { buildCategoryTrends } from '@/lib/ledger/category-trend'
+import { signedDirection } from '@/lib/ledger/direction'
 import { rollUpByMonthAndCategory } from '@/lib/ledger/categories'
 import { buildFlow } from '@/lib/ledger/flow'
 import {
@@ -350,12 +351,7 @@ async function Dashboard() {
                 .slice(-20)
                 .reverse()
                 .map((tx) => {
-                  const direction =
-                    tx.cashflow === 'income' || tx.cashflow === 'from_asset'
-                      ? 'in'
-                      : tx.cashflow === 'transfer'
-                        ? 'neutral'
-                        : 'out'
+                  const direction = signedDirection(tx.cashflow)
                   return (
                     <tr key={tx.id} className="border-b border-line last:border-0">
                       <td className="whitespace-nowrap px-4 py-2.5 tnum text-ink-muted">

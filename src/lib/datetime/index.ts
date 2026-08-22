@@ -146,14 +146,24 @@ function jakartaParts(instant: Date): CalendarDate & WallTime {
 
 const pad = (n: number) => String(n).padStart(2, '0')
 
-/** Renders a UTC instant as Jakarta wall-clock text, matching the source documents. */
-export function formatJakarta(instant: Date, style: 'date' | 'time' | 'datetime'): string {
+/**
+ * Renders a UTC instant as Jakarta wall-clock text, matching the source
+ * documents. The `iso-` styles are what a date or time input wants as its
+ * value, in the same zone, so a form defaults to today in Jakarta rather than
+ * today wherever the server happens to run.
+ */
+export function formatJakarta(
+  instant: Date,
+  style: 'date' | 'time' | 'datetime' | 'iso-date' | 'iso-time',
+): string {
   const p = jakartaParts(instant)
   const date = `${pad(p.day)} ${ID_MONTH_LABELS[p.month - 1]} ${p.year}`
   const time = `${pad(p.hour)}:${pad(p.minute)}:${pad(p.second)}`
 
   if (style === 'date') return date
   if (style === 'time') return time
+  if (style === 'iso-date') return `${p.year}-${pad(p.month)}-${pad(p.day)}`
+  if (style === 'iso-time') return `${pad(p.hour)}:${pad(p.minute)}`
   return `${date} ${time}`
 }
 

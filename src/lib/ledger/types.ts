@@ -35,7 +35,9 @@ export const CASHFLOW_LABELS: Record<CashflowType, string> = {
   from_asset: 'Dari Asset / Saving',
 }
 
-export type AccountKind = 'bank' | 'ewallet' | 'cash' | 'emoney' | 'investment'
+export const ACCOUNT_KINDS = ['bank', 'ewallet', 'cash', 'emoney', 'investment'] as const
+
+export type AccountKind = (typeof ACCOUNT_KINDS)[number]
 
 export interface Account {
   id: string

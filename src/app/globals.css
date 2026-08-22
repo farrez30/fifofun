@@ -68,6 +68,17 @@
 @layer base {
   :root {
     color-scheme: light dark;
+
+    /*
+      Category colour is a stored hue and nothing else. Lightness and chroma are
+      fixed here per theme, so `oklch(var(--category-l) var(--category-c) 212)`
+      is the same category in both modes without a second palette. Plain
+      custom properties rather than theme tokens: the only consumer is an
+      inline style, and the comment below explains why theme overrides live
+      on `:root`.
+    */
+    --category-l: 50%;
+    --category-c: 0.11;
   }
 
   /*
@@ -105,6 +116,9 @@
       --color-under-wash: oklch(27% 0.05 172);
       --color-warn: oklch(78% 0.12 75);
       --color-warn-wash: oklch(30% 0.055 75);
+
+      --category-l: 74%;
+      --category-c: 0.1;
     }
   }
 

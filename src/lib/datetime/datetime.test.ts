@@ -125,6 +125,14 @@ describe('formatJakarta', () => {
     expect(formatJakarta(instant, 'time')).toBe('20:58:37')
     expect(formatJakarta(instant, 'datetime')).toBe('19 Agu 2026 20:58:37')
   })
+
+  it('renders the ISO date and HH:MM a form control needs', () => {
+    const instant = new Date('2026-08-19T13:58:37.000Z')
+    expect(formatJakarta(instant, 'iso-date')).toBe('2026-08-19')
+    expect(formatJakarta(instant, 'iso-time')).toBe('20:58')
+    // Just past midnight in Jakarta is still the previous day in UTC.
+    expect(formatJakarta(new Date('2026-08-19T17:30:00.000Z'), 'iso-date')).toBe('2026-08-20')
+  })
 })
 
 describe('formatMonthKey', () => {
