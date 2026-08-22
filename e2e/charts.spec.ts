@@ -1048,6 +1048,8 @@ test.describe('lebar halaman', () => {
       'sankey-real',
       'marks',
       'review-queue',
+      'catat-entry',
+      'balances',
     ]) {
       await open(page, fixture)
 

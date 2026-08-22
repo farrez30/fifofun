@@ -4,18 +4,26 @@ import { signOut } from '@/app/login/actions'
 /**
  * The frame every signed-in page sits in.
  *
- * Navigation is a plain row of links rather than a sidebar. There are four
- * destinations and a sidebar for four items is furniture, not orientation. The
- * current page is marked with `aria-current` and a border rather than colour
- * alone, so it is legible to a screen reader and to anyone who cannot separate
- * the accent from the ink.
+ * Navigation is a plain row of links rather than a sidebar. Even at eight
+ * destinations a sidebar would be furniture rather than orientation, and the
+ * row wraps on a phone where a sidebar would have to become a menu behind a
+ * button. The current page is marked with `aria-current` and a border rather
+ * than colour alone, so it is legible to a screen reader and to anyone who
+ * cannot separate the accent from the ink.
+ *
+ * Two things deliberately sit outside it. Settings is used twice a year and a
+ * permanent tab for that costs every other page a little attention, so it
+ * lives in the footer beside the invitation link. And a single transaction has
+ * no tab at all: it is reached from wherever it was seen.
  */
 
 const NAV = [
   { href: '/', label: 'Ringkasan' },
   { href: '/laporan', label: 'Laporan' },
   { href: '/dana', label: 'Dana' },
+  { href: '/anggaran', label: 'Anggaran' },
   { href: '/tinjau', label: 'Tinjau' },
+  { href: '/catat', label: 'Catat' },
   { href: '/rencana', label: 'Rencana' },
   { href: '/impor', label: 'Impor' },
 ] as const
@@ -31,7 +39,7 @@ interface Props {
    * never again, and a permanent tab for that costs every other page a little
    * attention, so it lives in the footer instead.
    */
-  current: (typeof NAV)[number]['href'] | '/undangan'
+  current: (typeof NAV)[number]['href'] | '/undangan' | '/pengaturan' | '/transaksi'
   lead?: string
   children: React.ReactNode
 }

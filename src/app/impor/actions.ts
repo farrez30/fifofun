@@ -3,6 +3,8 @@
 import { createHash } from 'node:crypto'
 import { revalidatePath } from 'next/cache'
 import { formatIdr } from '@/lib/money'
+import { toJakartaInstant } from '@/lib/datetime'
+import { findLikelyDuplicates } from '@/lib/ledger/conflicts'
 import { ruleAgreesWithDirection } from '@/lib/ledger/direction'
 import { firstMatch, type Rule } from '@/lib/ledger/rules'
 import { DEFAULT_CATEGORY_BY_KIND, SEED_ACCOUNTS } from '@/lib/ledger/seed-data'
@@ -59,6 +61,8 @@ export interface ImportReport {
   inserted?: number
   duplicates?: number
   needsReview?: number
+  /** Manual entries that look like rows this statement just brought in. */
+  duplicatesSuspected?: number
   openingBalance?: string
   closingBalance?: string
   issues?: ImportIssue[]
@@ -322,7 +326,9 @@ export async function importStatement(
   const { data: written, error: writeError } = await supabase
     .from('transactions')
     .upsert(rows, { onConflict: 'household_id,dedupe_key', ignoreDuplicates: true })
-    .select('id')
+    // Only the rows that were actually inserted come back, which is exactly
+    // the set a manual entry can newly turn out to duplicate.
+    .select('id, occurred_at, amount, from_account_id, to_account_id')
 
   if (writeError) {
     return {
@@ -355,13 +361,69 @@ export async function importStatement(
       .eq('id', ruleId)
   }
 
+  /*
+    Manual entries this statement turns out to have imported.
+
+    Somebody types a cash payment on the day it happens; the statement arrives
+    a month later with the same payment in it, because it went through the
+    account after all. Both rows are honest and counting both is wrong, so the
+    pair is recorded and the choice is left to a person in the review queue.
+
+    Only rows the upsert actually inserted are considered, and only manual rows
+    inside the statement's period plus a few days either side. Like the hit
+    counts above, a failure here is a diagnostic rather than a reason to fail
+    an import whose transactions are already saved and correct.
+  */
+  let duplicatesSuspected = 0
+  if (inserted > 0) {
+    const PAD_MS = 4 * 24 * 60 * 60 * 1000
+    const from = new Date(toJakartaInstant(header.periodStart).getTime() - PAD_MS)
+    const to = new Date(
+      toJakartaInstant(header.periodEnd, { hour: 23, minute: 59, second: 59 }).getTime() + PAD_MS,
+    )
+
+    const { data: manualRows } = await supabase
+      .from('transactions')
+      .select('id, occurred_at, amount, from_account_id, to_account_id')
+      .eq('household_id', household.id)
+      .eq('source', 'manual')
+      .is('deleted_at', null)
+      .is('duplicate_of', null)
+      .gte('occurred_at', from.toISOString())
+      .lte('occurred_at', to.toISOString())
+
+    const pairable = (row: Record<string, unknown>) => ({
+      id: row.id as string,
+      occurredAt: new Date(row.occurred_at as string),
+      amount: BigInt(row.amount as string),
+      fromAccountId: (row.from_account_id as string | null) ?? null,
+      toAccountId: (row.to_account_id as string | null) ?? null,
+    })
+
+    const { pairs } = findLikelyDuplicates(
+      (manualRows ?? []).map(pairable),
+      (written ?? []).map(pairable),
+    )
+
+    for (const pair of pairs) {
+      const { error: linkError } = await supabase
+        .from('transactions')
+        .update({ duplicate_of: pair.imported.id })
+        .eq('id', pair.manual.id)
+        .eq('household_id', household.id)
+      if (!linkError) duplicatesSuspected += 1
+    }
+  }
+
   revalidatePath('/')
   revalidatePath('/rencana')
   revalidatePath('/tinjau')
+  revalidatePath('/catat')
 
   return {
     ok: true,
     filename: file.name,
+    duplicatesSuspected,
     message: `${inserted} transaksi masuk, dan saldonya cocok sampai ke sen terakhir.`,
     detail:
       walletCoverage.seen > 0 && walletCoverage.matchedOwn === 0

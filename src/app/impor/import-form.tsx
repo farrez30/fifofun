@@ -2,6 +2,7 @@
 
 import { useActionState, useRef, useState } from 'react'
 import { useFormStatus } from 'react-dom'
+import { formatIdr } from '@/lib/money'
 import { importStatement, type ImportReport } from './actions'
 
 /**
@@ -134,9 +135,25 @@ function Report({ report }: { report: ImportReport }) {
             value={`${report.needsReview}`}
             hint={report.needsReview ? 'Kategorinya belum pasti.' : undefined}
           />
-          <Pair label="Saldo awal" value={report.openingBalance ?? '—'} mono />
-          <Pair label="Saldo akhir" value={report.closingBalance ?? '—'} mono />
+          <Pair label="Saldo awal" value={report.openingBalance ?? formatIdr(0n)} mono />
+          <Pair label="Saldo akhir" value={report.closingBalance ?? formatIdr(0n)} mono />
         </dl>
+      ) : null}
+
+      {report.duplicatesSuspected ? (
+        <p className="mt-3 border-t border-line pt-3 text-sm text-ink">
+          <span aria-hidden="true" className="mr-1.5 text-warn">
+            ◆
+          </span>
+          {report.duplicatesSuspected} catatan manual kemungkinan sama dengan baris yang baru masuk.
+          <span className="mt-0.5 block text-ink-muted">
+            Keduanya masih terhitung sampai kamu memutuskan.{' '}
+            <a href="/tinjau#kemungkinan-ganda" className="text-accent underline underline-offset-2">
+              Cocokkan di halaman Tinjau
+            </a>
+            .
+          </span>
+        </p>
       ) : null}
 
       {report.issues && report.issues.length > 0 ? (

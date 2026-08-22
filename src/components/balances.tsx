@@ -1,5 +1,7 @@
+import { BalanceRows } from '@/app/catat/adjust-balance'
 import { formatJakarta } from '@/lib/datetime'
 import type { AccountMovement, BankReconciliation, StalledAccount } from '@/lib/ledger/monthly'
+import type { AccountKind } from '@/lib/ledger/types'
 import { formatIdr } from '@/lib/money'
 
 /**
@@ -22,10 +24,28 @@ interface Props {
   reconciliation: BankReconciliation | null
   stalled: StalledAccount[]
   statementDate: Date | null
+  /** Kind per account, for the mark beside each name. */
+  accounts: { id: string; kind: AccountKind }[]
+  /** Today in Jakarta, as the adjustment form's date input wants it. */
+  today: string
+  /** One per row, so a double submit of a correction writes once. */
+  entryKeys: Record<string, string>
 }
 
-export function Balances({ movements, reconciliation, stalled, statementDate }: Props) {
+export function Balances({
+  movements,
+  reconciliation,
+  stalled,
+  statementDate,
+  accounts,
+  today,
+  entryKeys,
+}: Props) {
   const stalledIds = new Set(stalled.map((account) => account.accountId))
+  const kinds = new Map(accounts.map((account) => [account.id, account.kind]))
+  const bankName =
+    movements.find((movement) => movement.accountId === reconciliation?.accountId)?.name ??
+    'rekening bank'
   const stranded = stalled.reduce((sum, account) => sum + account.stranded, 0n)
   const confirmed = reconciliation?.computed ?? 0n
   const inferred = movements
@@ -63,8 +83,7 @@ export function Balances({ movements, reconciliation, stalled, statementDate }: 
             <span aria-hidden="true" className={reconciliation.ok ? 'text-under' : 'text-over'}>
               {reconciliation.ok ? '●' : '▲'}
             </span>
-            Saldo Bank Mandiri {reconciliation.ok ? 'cocok' : 'tidak cocok'} dengan yang dicetak
-            bank
+            Saldo {bankName} {reconciliation.ok ? 'cocok' : 'tidak cocok'} dengan yang dicetak bank
           </p>
 
           {/* Two labelled figures rather than one sentence containing both. The
@@ -126,7 +145,8 @@ export function Balances({ movements, reconciliation, stalled, statementDate }: 
           </p>
 
           <p className="mt-2 text-xs text-ink-muted">
-            Nominal per akun ada di tabel bawah, ditandai ◆.
+            Nominal per akun ada di tabel bawah, ditandai ◆. Kalau kamu tahu saldo sebenarnya,
+            Sesuaikan saldo mencatat selisihnya sebagai transaksi.
           </p>
         </div>
       ) : null}
@@ -153,31 +173,29 @@ export function Balances({ movements, reconciliation, stalled, statementDate }: 
               <th scope="col" className="px-4 py-2.5 text-right font-medium">
                 Saldo
               </th>
+              <th scope="col" className="px-4 py-2.5 text-right font-medium">
+                Penyesuaian
+              </th>
             </tr>
           </thead>
-          <tbody>
-            {movements.map((account) => (
-              <tr key={account.accountId} className="border-b border-line last:border-0">
-                <th scope="row" className="whitespace-nowrap px-4 py-2.5 text-left font-normal text-ink">
-                  {stalledIds.has(account.accountId) ? (
-                    <span aria-hidden="true" className="mr-1.5 text-warn">
-                      ◆
-                    </span>
-                  ) : null}
-                  {account.name}
-                </th>
-                <td className="whitespace-nowrap px-4 py-2.5 text-right tnum font-mono text-ink-muted">
-                  {account.credit === 0n ? '—' : formatIdr(account.credit)}
-                </td>
-                <td className="whitespace-nowrap px-4 py-2.5 text-right tnum font-mono text-ink-muted">
-                  {account.debit === 0n ? '—' : formatIdr(account.debit)}
-                </td>
-                <td className="whitespace-nowrap px-4 py-2.5 text-right tnum font-mono text-ink">
-                  {formatIdr(account.closing)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
+          {/* The rows are a client island so a correction can be typed in
+              place. Everything above stays on the server, where the bigint
+              arithmetic and the reconciliation live. */}
+          <BalanceRows
+            rows={movements.map((account) => ({
+              accountId: account.accountId,
+              name: account.name,
+              kind: kinds.get(account.accountId) ?? 'cash',
+              stalled: stalledIds.has(account.accountId),
+              credit: formatIdr(account.credit),
+              debit: formatIdr(account.debit),
+              closing: formatIdr(account.closing),
+              closingSen: account.closing.toString(),
+              reconciled: account.accountId === reconciliation?.accountId,
+              today,
+              entryKey: entryKeys[account.accountId] ?? account.accountId,
+            }))}
+          />
         </table>
       </div>
     </div>

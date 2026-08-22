@@ -130,7 +130,7 @@ test.describe('the pages that need somebody signed in', () => {
     comment. These two are the newest and the only ones reachable here, since
     the rest also need a database.
   */
-  for (const path of ['/gabung', '/undangan']) {
+  for (const path of ['/gabung', '/undangan', '/catat']) {
     test(`${path} sends a stranger to the login page`, async ({ page }) => {
       await page.goto(path)
       await expect(page).toHaveURL(/\/login$/)

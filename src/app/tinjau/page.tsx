@@ -8,9 +8,12 @@ import {
   getCategories,
   getHousehold,
   getRules,
+  getSuspectedDuplicates,
   getUnconfirmed,
 } from '@/lib/queries/household'
 import { getUser } from '@/lib/supabase/server'
+import { DuplicatesPanel } from '@/app/catat/duplicates-panel'
+import { toDuplicateView } from '@/app/catat/duplicates-view'
 import { buildQueueOptions, toGroupOptions, type QueueOptions } from './query'
 import { QueueControls } from './queue-controls'
 import { ReviewQueue } from './review-queue'
@@ -53,11 +56,12 @@ async function Queue({ options }: { options: QueueOptions }) {
     redirect('/gabung')
   }
 
-  const [pending, rules, categories, accounts] = await Promise.all([
+  const [pending, rules, categories, accounts, duplicates] = await Promise.all([
     getUnconfirmed(household.id),
     getRules(household.id),
     getCategories(household.id),
     getAccounts(household.id),
+    getSuspectedDuplicates(household.id),
   ])
 
   const groups = groupBySuggestion(pending, rules as Rule[], toGroupOptions(options))
@@ -69,6 +73,7 @@ async function Queue({ options }: { options: QueueOptions }) {
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_18rem]">
       <div className="space-y-5">
+        <DuplicatesPanel pairs={duplicates.map(toDuplicateView)} />
         <QueueControls options={options} />
         <ReviewQueue
           groups={groups}

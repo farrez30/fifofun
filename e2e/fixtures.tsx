@@ -36,6 +36,13 @@ import { templateProfile } from '@/lib/planning/lifestyle'
 import { AccountMark, CashflowChip, CategoryMark, DirectionMark } from '@/components/marks'
 import { QueueControls } from '@/app/tinjau/queue-controls'
 import { ReviewQueue } from '@/app/tinjau/review-queue'
+import { EntryForm } from '@/app/catat/entry-form'
+import { AdjustBalanceForm, type BalanceRow } from '@/app/catat/adjust-balance'
+import { DuplicatesPanel } from '@/app/catat/duplicates-panel'
+import type { DuplicateView } from '@/app/catat/duplicates-view'
+import { Balances } from '@/components/balances'
+import type { AccountMovement } from '@/lib/ledger/monthly'
+import { formatIdr } from '@/lib/money'
 import { groupBySuggestion } from '@/lib/ledger/rules'
 import type { UnconfirmedRow } from '@/lib/queries/household'
 import { ACCOUNT_KINDS, CASHFLOW_TYPES } from '@/lib/ledger/types'
@@ -518,6 +525,43 @@ const MARKS = (
   both takes money and gives it back, which has to be two decisions, and rows
   from two different accounts, which is half of remembering what a payment was.
 */
+const idrText = (amount: string) => formatIdr(idr(amount))
+
+const BALANCE_MOVEMENTS: AccountMovement[] = [
+  {
+    accountId: 'acc-mandiri',
+    name: 'Bank Mandiri',
+    opening: 0n,
+    credit: idr('22.000.000,00'),
+    debit: idr('17.818.332,00'),
+    closing: idr('4.181.668,00'),
+  },
+  {
+    accountId: 'acc-cash',
+    name: 'Cash',
+    opening: 0n,
+    credit: idr('1.500.000,00'),
+    debit: idr('1.320.000,00'),
+    closing: idr('180.000,00'),
+  },
+  {
+    accountId: 'acc-gopay',
+    name: 'GoPay',
+    opening: 0n,
+    credit: idr('9.036.795,00'),
+    debit: 0n,
+    closing: idr('9.036.795,00'),
+  },
+  {
+    accountId: 'acc-emoney',
+    name: 'e-Money',
+    opening: 0n,
+    credit: idr('400.000,00'),
+    debit: idr('355.000,00'),
+    closing: idr('45.000,00'),
+  },
+]
+
 const QUEUE_ACCOUNTS = [
   { id: 'acc-mandiri', name: 'Bank Mandiri', kind: 'bank' as const },
   { id: 'acc-gopay', name: 'GoPay', kind: 'ewallet' as const },
@@ -570,8 +614,142 @@ const QUEUE_REMAINING = {
   total: QUEUE_ROWS.reduce((sum, entry) => sum + entry.amount, 0n),
 }
 
+/* Four accounts of four kinds, which is what the chips have to stay legible at. */
+const CATAT_ACCOUNTS = [
+  { id: 'acc-mandiri', name: 'Bank Mandiri', kind: 'bank' as const },
+  { id: 'acc-cash', name: 'Cash', kind: 'cash' as const },
+  { id: 'acc-gopay', name: 'GoPay', kind: 'ewallet' as const },
+  { id: 'acc-emoney', name: 'e-Money', kind: 'emoney' as const },
+]
+
+const CATAT_CATEGORIES = [
+  { id: 'cat-makan', name: 'Makan/minum', cashflow: 'spending' as CashflowType },
+  { id: 'cat-jajan', name: 'Jajan', cashflow: 'spending' as CashflowType },
+  { id: 'cat-bensin', name: 'Bensin', cashflow: 'spending' as CashflowType },
+  { id: 'cat-wifi', name: 'Wifi', cashflow: 'bills' as CashflowType },
+  { id: 'cat-tabungan', name: 'Tabungan', cashflow: 'invest_savings' as CashflowType },
+  { id: 'cat-gaji', name: 'Gaji', cashflow: 'income' as CashflowType },
+  { id: 'cat-antar', name: 'Antar Account', cashflow: 'transfer' as CashflowType },
+]
+
+const BALANCE_ROWS: BalanceRow[] = [
+  {
+    accountId: 'acc-mandiri',
+    name: 'Bank Mandiri',
+    kind: 'bank',
+    stalled: false,
+    credit: idrText('9.912.000,00'),
+    debit: idrText('8.002.215,00'),
+    closing: idrText('4.181.668,00'),
+    closingSen: idr('4.181.668,00').toString(),
+    reconciled: true,
+    today: '2026-08-22',
+    entryKey: '00000000-0000-4000-8000-000000000010',
+  },
+  {
+    // The wallet the dashboard warns about: topped up, never spent from.
+    accountId: 'acc-gopay',
+    name: 'GoPay',
+    kind: 'ewallet',
+    stalled: true,
+    credit: idrText('9.036.795,00'),
+    debit: idrText('0,00'),
+    closing: idrText('9.036.795,00'),
+    closingSen: idr('9.036.795,00').toString(),
+    reconciled: false,
+    today: '2026-08-22',
+    entryKey: '00000000-0000-4000-8000-000000000011',
+  },
+]
+
+const DUPLICATE_PAIRS: DuplicateView[] = [
+  {
+    manualId: '00000000-0000-4000-8000-000000000021',
+    importedId: '00000000-0000-4000-8000-000000000022',
+    drift: '2 hari',
+    manual: {
+      when: '10 Agu 2026 12:30:00',
+      description: 'Makan siang Warung Bu Tini',
+      amount: idrText('45.000,00'),
+      categoryName: 'Makan/minum',
+      note: 'patungan berdua',
+      confirmed: true,
+    },
+    imported: {
+      when: '12 Agu 2026 09:14:00',
+      description: 'QRIS WARUNG BU TINI',
+      amount: idrText('45.000,00'),
+      categoryName: 'Belum berkategori',
+      note: null,
+      confirmed: false,
+    },
+  },
+  {
+    manualId: '00000000-0000-4000-8000-000000000023',
+    importedId: '00000000-0000-4000-8000-000000000024',
+    drift: '5 jam',
+    manual: {
+      when: '15 Agu 2026 08:00:00',
+      description: 'Bensin',
+      amount: idrText('120.000,00'),
+      categoryName: 'Bensin',
+      note: null,
+      confirmed: true,
+    },
+    imported: {
+      when: '15 Agu 2026 13:02:00',
+      description: 'KD20 MPM SPBU 34-152',
+      amount: idrText('120.000,00'),
+      categoryName: 'Bensin',
+      note: null,
+      confirmed: true,
+    },
+  },
+]
+
 export const FIXTURES = {
   marks: MARKS,
+  'catat-entry': (
+    <EntryForm
+      accounts={CATAT_ACCOUNTS}
+      categories={CATAT_CATEGORIES}
+      defaults={{ date: '2026-08-22', time: '12:30' }}
+      entryKey="00000000-0000-4000-8000-000000000000"
+    />
+  ),
+  'catat-adjust': (
+    <div className="space-y-6">
+      {BALANCE_ROWS.map((row) => (
+        <AdjustBalanceForm key={row.accountId} row={row} />
+      ))}
+    </div>
+  ),
+  'catat-duplicates': <DuplicatesPanel pairs={DUPLICATE_PAIRS} />,
+  balances: (
+    <Balances
+      movements={BALANCE_MOVEMENTS}
+      reconciliation={{
+        accountId: 'acc-mandiri',
+        ok: true,
+        computed: idr('4.181.668,00'),
+        printed: idr('4.181.668,00'),
+        difference: 0n,
+      }}
+      stalled={[{ ...BALANCE_MOVEMENTS[2], stranded: idr('9.036.795,00') }]}
+      statementDate={new Date('2026-07-31T17:00:00.000Z')}
+      accounts={BALANCE_MOVEMENTS.map((movement, index) => ({
+        id: movement.accountId,
+        kind: (['bank', 'cash', 'ewallet', 'emoney'] as const)[index],
+      }))}
+      today="2026-08-22"
+      entryKeys={Object.fromEntries(
+        BALANCE_MOVEMENTS.map((movement, index) => [
+          movement.accountId,
+          `00000000-0000-4000-8000-00000000003${index}`,
+        ]),
+      )}
+    />
+  ),
   'review-queue': (
     <ReviewQueue
       groups={groupBySuggestion(QUEUE_ROWS)}

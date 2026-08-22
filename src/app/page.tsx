@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { randomUUID } from 'node:crypto'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
@@ -252,6 +253,9 @@ async function Dashboard() {
           reconciliation={reconciliation}
           stalled={stalled}
           statementDate={printed?.periodEnd ?? null}
+          accounts={accounts.map((account) => ({ id: account.id, kind: account.kind }))}
+          today={formatJakarta(new Date(), 'iso-date')}
+          entryKeys={Object.fromEntries(accounts.map((account) => [account.id, randomUUID()]))}
         />
       </section>
 
