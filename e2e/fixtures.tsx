@@ -36,6 +36,10 @@ import type { HouseholdProfile } from '@/lib/planning/allocation'
 import type { ChildPlan } from '@/lib/planning/children'
 import { templateProfile } from '@/lib/planning/lifestyle'
 import { AccountMark, CashflowChip, CategoryMark, DirectionMark } from '@/components/marks'
+import { AccountsPanel, type AccountView } from '@/app/pengaturan/accounts-panel'
+import { AccountForm } from '@/app/pengaturan/account-form'
+import { CategoriesPanel, type CategoryView } from '@/app/pengaturan/categories-panel'
+import { CategoryForm } from '@/app/pengaturan/category-form'
 import { QueueControls } from '@/app/tinjau/queue-controls'
 import { ReviewQueue } from '@/app/tinjau/review-queue'
 import { EntryForm } from '@/app/catat/entry-form'
@@ -472,6 +476,69 @@ const FLOW = buildFlow(
   behaviour would be testing React rather than the markup.
 */
 const inert = () => undefined
+
+const SETTINGS_ACCOUNTS: AccountView[] = [
+  {
+    id: 'acc-mandiri',
+    name: 'Bank Mandiri',
+    kind: 'bank',
+    institution: 'Bank Mandiri',
+    key: 'mandiri',
+    openingBalance: '155257400',
+    openingBalanceAt: '2026-01-01',
+    ownIdentifiers: '081234567890\n+6281122334455',
+    archived: false,
+    usage: 1591,
+  },
+  {
+    id: 'acc-cash',
+    name: 'Cash',
+    kind: 'cash',
+    institution: '',
+    key: 'cash',
+    openingBalance: '0',
+    openingBalanceAt: '',
+    ownIdentifiers: '',
+    archived: false,
+    usage: 42,
+  },
+  {
+    id: 'acc-gopay',
+    name: 'GoPay',
+    kind: 'ewallet',
+    institution: 'Gojek',
+    key: 'gopay',
+    openingBalance: '0',
+    openingBalanceAt: '',
+    ownIdentifiers: '',
+    archived: false,
+    usage: 18,
+  },
+  // Put away rather than deleted, which is the only thing this app ever does.
+  {
+    id: 'acc-ovo',
+    name: 'OVO lama',
+    kind: 'ewallet',
+    institution: '',
+    key: '',
+    openingBalance: '0',
+    openingBalanceAt: '',
+    ownIdentifiers: '',
+    archived: true,
+    usage: 3,
+  },
+]
+
+const SETTINGS_CATEGORIES: CategoryView[] = [
+  { id: 'cat-gaji', name: 'Gaji', cashflow: 'income', icon: 'Briefcase', hue: '0', archived: false, usage: 24 },
+  { id: 'cat-makan', name: 'Makan/minum', cashflow: 'spending', icon: 'ForkKnife', hue: '137', archived: false, usage: 612 },
+  // Nothing filed under it yet, so its cashflow is still free to move.
+  { id: 'cat-kopi', name: 'Kopi', cashflow: 'spending', icon: '', hue: '', archived: false, usage: 0 },
+  { id: 'cat-wifi', name: 'Wifi', cashflow: 'bills', icon: 'WifiHigh', hue: '210', archived: false, usage: 12 },
+  { id: 'cat-tabungan', name: 'Tabungan', cashflow: 'invest_savings', icon: 'PiggyBank', hue: '300', archived: false, usage: 9 },
+  { id: 'cat-tabungan-keluar', name: 'Tabungan', cashflow: 'from_asset', icon: 'PiggyBank', hue: '300', archived: false, usage: 2 },
+  { id: 'cat-lama', name: 'Langganan lama', cashflow: 'bills', icon: 'Receipt', hue: '', archived: true, usage: 5 },
+]
 
 /*
   The four answers the whole planner is computed from. Saved and observed
@@ -1219,6 +1286,14 @@ export const FIXTURES = {
       <HouseholdInputs {...HOUSEHOLD} variant="minimised" />
     </>
   ),
+  // Four accounts, one of them archived, so the row that keeps its place in the
+  // list and the row that does not are both drawn.
+  'settings-accounts': <AccountsPanel accounts={SETTINGS_ACCOUNTS} />,
+  'settings-account-form': <AccountForm account={SETTINGS_ACCOUNTS[0]} />,
+  'settings-categories': <CategoriesPanel categories={SETTINGS_CATEGORIES} />,
+  // A category nothing has been filed under yet, so the cashflow is still open,
+  // beside one where it is locked.
+  'settings-category-form': <CategoryForm category={SETTINGS_CATEGORIES[2]} />,
   'plan-index': (
     <PlanIndex
       sections={[

@@ -7,7 +7,7 @@ import { toJakartaInstant } from '@/lib/datetime'
 import { findLikelyDuplicates } from '@/lib/ledger/conflicts'
 import { ruleAgreesWithDirection } from '@/lib/ledger/direction'
 import { firstMatch, type Rule } from '@/lib/ledger/rules'
-import { DEFAULT_CATEGORY_BY_KIND, SEED_ACCOUNTS } from '@/lib/ledger/seed-data'
+import { DEFAULT_CATEGORY_BY_KIND } from '@/lib/ledger/seed-data'
 import { parseMandiriStatement } from '@/lib/statement/mandiri-xlsx'
 import { statementToLedger } from '@/lib/statement/to-ledger'
 import { createClient } from '@/lib/supabase/server'
@@ -63,6 +63,10 @@ export interface ImportReport {
   needsReview?: number
   /** Manual entries that look like rows this statement just brought in. */
   duplicatesSuspected?: number
+  /** Which part of settings has to be filled in before this can work. */
+  needsSettings?: 'akun'
+  /** Payments to e-wallets that could not be recognised as the household own. */
+  walletUnmatched?: number
   openingBalance?: string
   closingBalance?: string
   issues?: ImportIssue[]
@@ -151,8 +155,9 @@ export async function importStatement(
 
   const { data: accounts } = await supabase
     .from('accounts')
-    .select('id, name, own_identifiers')
+    .select('id, name, key, own_identifiers')
     .eq('household_id', household.id)
+    .is('archived_at', null)
 
   const { data: categories } = await supabase
     .from('categories')
@@ -179,11 +184,16 @@ export async function importStatement(
     hitCount: (row.hit_count as number) ?? 0,
   }))
 
-  const idByName = new Map((accounts ?? []).map((row) => [row.name as string, row.id as string]))
+  /*
+    Accounts are found by their import key, not by their name. The name is a
+    label a household is free to change, and it used to be the only thing
+    linking a statement row to an account: renaming Bank Mandiri to Rekening
+    Gaji silently made every future import file its rows against nothing.
+  */
   const idByKey = new Map(
-    SEED_ACCOUNTS.map((seed) => [seed.key, idByName.get(seed.name)]).filter(
-      (pair): pair is [string, string] => Boolean(pair[1]),
-    ),
+    (accounts ?? [])
+      .filter((row) => row.key)
+      .map((row) => [row.key as string, row.id as string]),
   )
   // Keyed by cashflow and name together, because that is what the unique index
   // is. Two categories may share a name across cashflows, and a map keyed on the
@@ -195,8 +205,19 @@ export async function importStatement(
     ]),
   )
 
-  const bank = (accounts ?? []).find((row) => row.name === 'Bank Mandiri')
-  const ownIdentifiers = ((bank?.own_identifiers as string[] | null) ?? []).filter(Boolean)
+  const bank = (accounts ?? []).find((row) => row.key === 'mandiri')
+  if (!bank) {
+    return {
+      ...fail(
+        'Tidak ada akun dengan kunci impor mandiri.',
+        'Statement ini diisi ke akun yang memegang kunci itu. Pasang kuncinya pada rekening bankmu di Pengaturan, lalu impor lagi.',
+      ),
+      filename: file.name,
+      needsSettings: 'akun',
+    }
+  }
+
+  const ownIdentifiers = ((bank.own_identifiers as string[] | null) ?? []).filter(Boolean)
 
   const { entries, classifications, passThroughIds, review, walletCoverage } = statementToLedger(
     statement,
@@ -222,7 +243,7 @@ export async function importStatement(
     .from('import_batches')
     .insert({
       household_id: household.id,
-      account_id: idByKey.get('mandiri') ?? null,
+      account_id: bank.id as string,
       filename: file.name,
       file_hash: fileHash,
       format: 'mandiri_livin_xlsx_v1',
@@ -427,8 +448,10 @@ export async function importStatement(
     message: `${inserted} transaksi masuk, dan saldonya cocok sampai ke sen terakhir.`,
     detail:
       walletCoverage.seen > 0 && walletCoverage.matchedOwn === 0
-        ? `Ada ${walletCoverage.seen} pembayaran ke e-wallet yang tidak dikenali sebagai top-up milikmu sendiri, jadi semuanya tercatat sebagai pengeluaran. Isi nomor telepon di balik akun e-wallet kamu pada pengaturan akun Bank Mandiri agar tidak menggelembungkan pengeluaran.`
+        ? `Ada ${walletCoverage.seen} pembayaran ke e-wallet yang tidak dikenali sebagai top-up milikmu sendiri, jadi semuanya tercatat sebagai pengeluaran. Isi nomor telepon e-walletmu di Pengaturan, pada akun yang memegang kunci impor mandiri, agar tidak menggelembungkan pengeluaran.`
         : undefined,
+    walletUnmatched:
+      walletCoverage.seen > 0 && walletCoverage.matchedOwn === 0 ? walletCoverage.seen : undefined,
     period: { start: isoDate(header.periodStart), end: isoDate(header.periodEnd) },
     inserted,
     duplicates: rows.length - inserted,

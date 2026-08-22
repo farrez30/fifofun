@@ -64,6 +64,8 @@ export interface SupabaseStub {
   /** Every call against one table, in order. */
   callsOn: (table: string) => RecordedCall[]
   setUser: (user: { id: string } | null) => void
+  /** Forget every queued answer and every recorded call. */
+  reset: () => void
 }
 
 export function createSupabaseStub(options: { user?: { id: string } | null } = {}): SupabaseStub {
@@ -138,6 +140,10 @@ export function createSupabaseStub(options: { user?: { id: string } | null } = {
     callsOn: (table) => calls.filter((call) => call.table === table),
     setUser: (next) => {
       user = next
+    },
+    reset: () => {
+      responses.clear()
+      calls.length = 0
     },
   }
 }

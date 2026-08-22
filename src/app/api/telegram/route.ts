@@ -186,12 +186,28 @@ export async function POST(request: Request) {
   // cannot create a second row.
   const dedupeKey = `telegram:${chatId}:${message.message_id}`
 
+  /*
+    The cash account is found by its import key rather than by being called
+    Cash. A household is free to rename it, and a bot that matched on the name
+    would quietly start filing every message against no account at all: the
+    row would still save, with both sides null, and the balance it was meant
+    to move would never move.
+  */
   const { data: cashAccount } = await supabase
     .from('accounts')
     .select('id')
     .eq('household_id', householdId)
-    .eq('name', 'Cash')
+    .eq('key', 'cash')
+    .is('archived_at', null)
     .maybeSingle()
+
+  if (!cashAccount) {
+    await reply(
+      message.chat.id,
+      'Belum ada akun dengan kunci impor cash. Atur dulu di Pengaturan, lalu kirim lagi.',
+    )
+    return NextResponse.json({ ok: true })
+  }
 
   const isIncoming = cashflow === 'income' || cashflow === 'from_asset'
 
@@ -202,8 +218,8 @@ export async function POST(request: Request) {
       description: parsed.note || 'Catatan dari Telegram',
       amount: parsed.amount.toString(),
       cashflow,
-      from_account_id: isIncoming ? null : (cashAccount?.id ?? null),
-      to_account_id: isIncoming ? (cashAccount?.id ?? null) : null,
+      from_account_id: isIncoming ? null : cashAccount.id,
+      to_account_id: isIncoming ? cashAccount.id : null,
       source: 'telegram',
       dedupe_key: dedupeKey,
       note: parsed.note || null,

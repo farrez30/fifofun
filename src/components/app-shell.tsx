@@ -93,6 +93,11 @@ export function AppShell({ title, email, current, lead, children }: Props) {
       <footer className="mt-16 border-t border-line pt-5 text-xs text-ink-faint">
         <ul className="flex flex-wrap gap-4">
           <li>
+            <Link href="/pengaturan" className="hover:text-ink">
+              Pengaturan
+            </Link>
+          </li>
+          <li>
             <Link href="/undangan" className="hover:text-ink">
               Undang anggota
             </Link>

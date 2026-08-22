@@ -81,8 +81,12 @@ export function FundsPanel({ review, idOf, caption, income, asOf }: Props) {
       <div className="border border-line bg-surface p-6">
         <p className="text-sm font-medium text-ink">Belum ada pos tabungan atau tujuan.</p>
         <p className="mt-2 text-sm text-ink-muted">
-          Tabungan, sinking fund dan tujuan dibuat saat seed dijalankan. Kalau kosong, jalankan
-          seed lebih dulu.
+          Buat satu di{' '}
+          <a href="/pengaturan#kategori" className="text-accent underline underline-offset-2">
+            Pengaturan kategori
+          </a>{' '}
+          dengan cashflow Invest / Savings, Sinking Fund, atau Financial Goals. Setoran ke pos itu
+          langsung terbaca dari transaksi yang kamu kategorikan ke sana.
         </p>
       </div>
     )

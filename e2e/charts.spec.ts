@@ -1316,6 +1316,8 @@ test.describe('lebar halaman', () => {
       'category-sparks-many',
       'plan-household-compact',
       'funds-planned',
+      'settings-accounts',
+      'settings-category-form',
     ]) {
       await open(page, fixture)
 

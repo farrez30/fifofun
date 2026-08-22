@@ -121,6 +121,21 @@ function Report({ report }: { report: ImportReport }) {
 
       {report.detail ? <p className="mt-2 text-sm text-ink-muted">{report.detail}</p> : null}
 
+      {/*
+        Both of the things that go wrong here are fixed on the same screen, and
+        until that screen existed the message could only describe it. A detail
+        that names a place a reader cannot get to is a dead end.
+      */}
+      {report.needsSettings === 'akun' || report.walletUnmatched ? (
+        <p className="mt-2 text-sm">
+          <a href="/pengaturan#akun" className="text-accent underline underline-offset-2">
+            {report.needsSettings === 'akun'
+              ? 'Pasang kunci impor di Pengaturan'
+              : 'Isi nomor e-wallet di Pengaturan'}
+          </a>
+        </p>
+      ) : null}
+
       {report.ok && report.inserted !== undefined ? (
         <dl className="mt-3 grid gap-3 border-t border-line pt-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
           <Pair label="Periode" value={`${report.period?.start} sampai ${report.period?.end}`} />

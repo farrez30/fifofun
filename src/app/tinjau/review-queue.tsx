@@ -344,6 +344,15 @@ function CategorySelect({
           </optgroup>
         ))}
       </select>
+      {empty ? (
+        <span className="mt-1 block text-xs text-ink-muted">
+          Buat kategorinya di{' '}
+          <a href="/pengaturan#kategori" className="text-accent underline underline-offset-2">
+            Pengaturan
+          </a>
+          , dengan cashflow yang arahnya sama.
+        </span>
+      ) : null}
     </label>
   )
 }

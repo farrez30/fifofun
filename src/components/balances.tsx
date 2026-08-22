@@ -146,7 +146,12 @@ export function Balances({
 
           <p className="mt-2 text-xs text-ink-muted">
             Nominal per akun ada di tabel bawah, ditandai ◆. Kalau kamu tahu saldo sebenarnya,
-            Sesuaikan saldo mencatat selisihnya sebagai transaksi.
+            Sesuaikan saldo mencatat selisihnya sebagai transaksi. Akun yang memang sudah tidak
+            dipakai bisa diarsipkan di{' '}
+            <a href="/pengaturan#akun" className="text-accent underline underline-offset-2">
+              Pengaturan
+            </a>
+            .
           </p>
         </div>
       ) : null}
