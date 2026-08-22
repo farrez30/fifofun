@@ -135,7 +135,7 @@ export function RatioPanel({ snapshot }: { snapshot: FinancialSnapshot }) {
         {report.results.map((result) => {
           const style = result.verdict ? VERDICT_STYLE[result.verdict] : null
           return (
-            <li key={result.threshold.id} id={`rasio-${result.threshold.id}`} className="scroll-mt-20 p-4">
+            <li key={result.threshold.id} id={`rasio-${result.threshold.id}`} className="scroll-mt-32 p-4">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <span className="text-sm font-medium text-ink">{result.threshold.label}</span>
                 <span className="flex items-center gap-2">

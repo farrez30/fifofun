@@ -1,6 +1,15 @@
 import { createClient } from '@/lib/supabase/server'
 import { parseHue } from '@/lib/ledger/palette'
 import type { AccountKind, CashflowType, EntrySource, LedgerEntry } from '@/lib/ledger/types'
+import {
+  childPlansFromJson,
+  isKnownFramework,
+  LIFESTYLE_TIERS,
+  SCHOOL_TRACKS,
+  type PlanValues,
+} from '@/lib/planning/plan'
+import type { SchoolTrack } from '@/lib/planning/constants'
+import type { LifestyleTier } from '@/lib/planning/lifestyle'
 
 /**
  * Reads for the signed-in user.
@@ -663,4 +672,53 @@ export async function getBudgetRows(householdId: string, period: string): Promis
     categoryId: row.category_id as string,
     amount: toBigInt(row.amount),
   }))
+}
+
+/**
+ * The saved planner inputs, or null for a household that has never saved any.
+ *
+ * Null is also the answer when a stored framework, school track or lifestyle
+ * tier is not one this build knows about. A row written by an older deploy
+ * with an option since removed would otherwise put the picker into a state it
+ * has no entry for, and a planner that starts from the defaults is a smaller
+ * loss than one that starts from something incoherent.
+ */
+export async function getPlan(householdId: string): Promise<PlanValues | null> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('plans')
+    .select(
+      'income, adults, children, irregular_income, wants_zakat, framework_id, track, target_tier, target_savings, child_plans, goal_target, goal_years, goal_saved, hajj_monthly',
+    )
+    .eq('household_id', householdId)
+    .maybeSingle()
+
+  if (error || !data) return null
+
+  const track = data.track as SchoolTrack
+  const targetTier = data.target_tier as LifestyleTier
+  if (
+    !isKnownFramework(data.framework_id as string) ||
+    !SCHOOL_TRACKS.includes(track) ||
+    !LIFESTYLE_TIERS.includes(targetTier)
+  ) {
+    return null
+  }
+
+  return {
+    income: toBigInt(data.income),
+    adults: Number(data.adults),
+    children: Number(data.children),
+    irregularIncome: Boolean(data.irregular_income),
+    wantsZakat: Boolean(data.wants_zakat),
+    frameworkId: data.framework_id as string,
+    track,
+    targetTier,
+    targetSavings: toBigInt(data.target_savings),
+    childPlans: childPlansFromJson(data.child_plans),
+    goalTarget: toBigInt(data.goal_target),
+    goalYears: Number(data.goal_years),
+    goalSaved: toBigInt(data.goal_saved),
+    hajjMonthly: toBigInt(data.hajj_monthly),
+  }
 }

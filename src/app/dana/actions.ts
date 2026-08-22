@@ -2,42 +2,51 @@
 
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
+import {
+  SESSION_EXPIRED,
+  context,
+  fail,
+  monthKeyField,
+  optionalSen,
+  type ActionResult,
+} from '@/lib/actions'
 import { FUND_CASHFLOWS } from '@/lib/ledger/funds'
-import { createClient } from '@/lib/supabase/server'
 
 /**
- * Setting what a pot is aiming at, and by when.
+ * What a pot is aiming at, and how it means to get there.
  *
- * The target is the one figure in this feature a person decides; everything
- * else is read back out of the ledger. It is written through PostgREST on the
- * user's own token, so row level security decides whether the row may be
- * touched, exactly as the import and the review queue do.
+ * A goal can be stated from either end and the two are the same sentence read
+ * in opposite directions: fifty million by March, or four million a month.
+ * Only one of them used to be sayable here, which quietly assumed every goal
+ * starts with a deadline. Most of them start with what a person can spare.
  *
- * The update is also filtered to the three fund cashflow types. Row level
- * security stops one household writing to another's categories, and nothing in
- * it stops a household putting a savings target on Makan/minum, which would put
- * a figure on the panel that no part of the app knows how to reach.
+ * Both ends may be set at once, and that is the useful case rather than a
+ * conflict: with a deadline and an intended contribution the panel can say
+ * whether the plan makes it, instead of judging a new intention by six months
+ * of history that predates it.
+ *
+ * The update is filtered to the three fund cashflow types. Row level security
+ * stops one household writing to another's categories, and nothing in it stops
+ * a household putting a savings target on Makan/minum, which would put a figure
+ * on the panel that no part of the app knows how to reach.
  */
 
-/** A hundred trillion rupiah, past which the figure is a typing accident. */
-const MAX_RUPIAH = 100_000_000_000_000
+/** A share of income in basis points, which is what the percent field posts. */
+const shareBp = z
+  .string()
+  .trim()
+  .transform((value) => (value === '' ? null : Number(value)))
+  .pipe(z.number().int().min(0).max(10_000).nullable())
 
 const schema = z.object({
   categoryId: z.uuid(),
-  /** Rupiah as typed, not sen. Empty or zero clears the target. */
-  amount: z.coerce.number().int().min(0).max(MAX_RUPIAH),
-  month: z
-    .string()
-    .regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Bulannya harus YYYY-MM')
-    .or(z.literal(''))
-    .transform((value) => (value === '' ? null : value)),
+  /** Which end of the goal the form was filled from. */
+  mode: z.enum(['tenggat', 'setoran']),
+  amount: optionalSen,
+  month: monthKeyField,
+  monthly: optionalSen,
+  share: shareBp,
 })
-
-export interface ActionResult {
-  ok: boolean
-  message: string
-  detail?: string
-}
 
 export async function setFundTarget(
   _previous: ActionResult | null,
@@ -45,41 +54,68 @@ export async function setFundTarget(
 ): Promise<ActionResult> {
   const parsed = schema.safeParse({
     categoryId: formData.get('categoryId'),
-    amount: formData.get('amount') || 0,
+    mode: formData.get('mode') ?? 'tenggat',
+    amount: formData.get('amount') ?? '',
     month: formData.get('month') ?? '',
+    monthly: formData.get('monthly') ?? '',
+    share: formData.get('share') ?? '',
   })
   if (!parsed.success) {
-    return { ok: false, message: 'Angkanya belum bisa dibaca.', detail: parsed.error.message }
+    return fail('Angkanya belum bisa dibaca.', parsed.error.issues[0]?.message)
   }
 
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) return { ok: false, message: 'Sesi kamu sudah berakhir. Masuk lagi lalu ulangi.' }
+  const { categoryId, mode, amount, month, monthly, share } = parsed.data
+  if (mode === 'setoran' && monthly !== null && share !== null) {
+    return fail(
+      'Isi salah satu saja.',
+      'Setoran bisa ditulis sebagai jumlah per bulan atau sebagai persentase penghasilan, tidak keduanya.',
+    )
+  }
 
-  const { amount, month, categoryId } = parsed.data
-  const target = amount === 0 ? null : BigInt(amount) * 100n
+  const ctx = await context()
+  if (!ctx) return fail(SESSION_EXPIRED)
 
-  const { data, error } = await supabase
+  const patch: Record<string, unknown> = { target_amount: amount === null ? null : amount.toString() }
+  if (mode === 'tenggat') {
+    // A deadline without a target is a date nothing is measured against.
+    patch.target_month = amount === null ? null : month
+  } else {
+    patch.planned_monthly = monthly === null ? null : monthly.toString()
+    patch.planned_share_bp = share
+    if (amount === null) patch.target_month = null
+  }
+
+  const { data, error } = await ctx.supabase
     .from('categories')
-    .update({
-      target_amount: target === null ? null : target.toString(),
-      // A deadline without a target is a date nothing is measured against.
-      target_month: target === null ? null : month,
-    })
+    .update(patch)
     .eq('id', categoryId)
+    .eq('household_id', ctx.householdId)
     .in('cashflow', FUND_CASHFLOWS)
     .select('id')
 
-  if (error) return { ok: false, message: 'Targetnya gagal disimpan.', detail: error.message }
-  if (!data || data.length === 0) {
-    return { ok: false, message: 'Pos itu tidak bisa diberi target.' }
-  }
+  if (error) return fail('Targetnya gagal disimpan.', error.message)
+  if (!data || data.length === 0) return fail('Pos itu tidak bisa diberi target.')
 
   revalidatePath('/dana')
+  revalidatePath('/')
+
+  if (mode === 'setoran') {
+    return {
+      ok: true,
+      message:
+        monthly === null && share === null
+          ? 'Rencana setorannya dihapus.'
+          : 'Rencana setorannya disimpan.',
+      detail: 'Perkiraan tercapainya dihitung dari sisa target dibagi setoran itu.',
+    }
+  }
+
   return {
     ok: true,
-    message: target === null ? 'Targetnya dihapus.' : 'Targetnya disimpan.',
+    message: amount === null ? 'Targetnya dihapus.' : 'Targetnya disimpan.',
+    detail:
+      amount !== null && month === null
+        ? 'Tanpa tenggat, yang dihitung adalah perkiraan tercapainya, bukan kurang berapa per bulan.'
+        : undefined,
   }
 }

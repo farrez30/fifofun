@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { formatIdr, formatIdrCompact } from '@/lib/money'
 import { hajjPlan, monthlyContribution, suggestInstrument } from '@/lib/planning/goals'
 import { HAJJ, RETURNS_SOURCE } from '@/lib/planning/constants'
@@ -23,14 +22,35 @@ interface Props {
   monthlyExpenses: bigint
   profile: HouseholdProfile
   currentYear: number
+  /*
+    The four figures a person decides are held by the planner rather than here,
+    so that saving the plan and reloading it is one operation over one object.
+    A panel that kept its own copy would show a target the saved plan does not
+    have, which is the failure the spreadsheet had.
+  */
+  target: bigint
+  onTargetChange: (amount: bigint) => void
+  years: number
+  onYearsChange: (years: number) => void
+  saved: bigint
+  onSavedChange: (amount: bigint) => void
+  hajjMonthly: bigint
+  onHajjMonthlyChange: (amount: bigint) => void
 }
 
-export function GoalsPanel({ monthlyExpenses, profile, currentYear }: Props) {
-  const [target, setTarget] = useState(500_000_000_00n)
-  const [years, setYears] = useState(10)
-  const [saved, setSaved] = useState(0n)
-  const [hajjMonthly, setHajjMonthly] = useState(1_000_000_00n)
-
+export function GoalsPanel({
+  monthlyExpenses,
+  profile,
+  currentYear,
+  target,
+  onTargetChange,
+  years,
+  onYearsChange,
+  saved,
+  onSavedChange,
+  hajjMonthly,
+  onHajjMonthlyChange,
+}: Props) {
   const months = years * 12
   const instrument = suggestInstrument(months)
   const plan = monthlyContribution(target, months, instrument.instrument.base, saved)
@@ -55,16 +75,16 @@ export function GoalsPanel({ monthlyExpenses, profile, currentYear }: Props) {
       <div>
         <h3 className="text-sm font-medium text-ink">Hitung tujuan apa pun</h3>
         <div className="mt-3 grid gap-4 sm:grid-cols-3">
-          <MoneyInput label="Target" value={target} onChange={setTarget} />
+          <MoneyInput label="Target" value={target} onChange={onTargetChange} />
           <NumberField
             label="Waktu"
             value={years}
-            onChange={setYears}
+            onChange={onYearsChange}
             min={1}
             max={40}
             unit="tahun"
           />
-          <MoneyInput label="Sudah terkumpul" value={saved} onChange={setSaved} />
+          <MoneyInput label="Sudah terkumpul" value={saved} onChange={onSavedChange} />
         </div>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
@@ -94,7 +114,7 @@ export function GoalsPanel({ monthlyExpenses, profile, currentYear }: Props) {
             currentYear={currentYear}
             years={years}
             startingBalance={saved}
-            onYearsChange={setYears}
+            onYearsChange={onYearsChange}
             caption="Jalan ke targetnya, dengan dan tanpa imbal hasil"
           />
         </div>
@@ -134,7 +154,7 @@ export function GoalsPanel({ monthlyExpenses, profile, currentYear }: Props) {
           <MoneyInput
             label="Disisihkan tiap bulan"
             value={hajjMonthly}
-            onChange={setHajjMonthly}
+            onChange={onHajjMonthlyChange}
           />
         </div>
 

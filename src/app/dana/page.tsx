@@ -3,7 +3,14 @@ import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
 import { AppShell } from '@/components/app-shell'
 import { FUND_CASHFLOWS, reviewFunds, type FundCashflow, type FundCategory } from '@/lib/ledger/funds'
-import { getAllTransactions, getCategories, getHousehold } from '@/lib/queries/household'
+import { monthKeyOf, monthKeyToString, computeMonthlySeries } from '@/lib/ledger/monthly'
+import { typicalIncome } from '@/lib/ledger/snapshot'
+import {
+  getAllTransactions,
+  getCategories,
+  getHousehold,
+  getOpeningBalance,
+} from '@/lib/queries/household'
 import { getUser } from '@/lib/supabase/server'
 import { FundsPanel } from './funds-panel'
 
@@ -36,9 +43,10 @@ async function Funds() {
     redirect('/gabung')
   }
 
-  const [categories, transactions] = await Promise.all([
+  const [categories, transactions, openingBalance] = await Promise.all([
     getCategories(household.id),
     getAllTransactions(household.id),
+    getOpeningBalance(household.id),
   ])
 
   const pots = categories.filter((category) =>
@@ -51,9 +59,25 @@ async function Funds() {
     openingBalance: category.openingBalance,
     target: category.target,
     targetMonth: category.targetMonth,
+    plannedMonthly: category.plannedMonthly,
+    plannedShareBp: category.plannedShareBp,
   }))
 
-  const review = reviewFunds(transactions, funds)
+  /*
+    The median income from the ledger, which is what a contribution written as
+    a share of income is a share of. Nobody types their salary on this page,
+    and asking them to would be asking for a figure the app already knows.
+  */
+  const income = typicalIncome(computeMonthlySeries(transactions, openingBalance))
+  const asOf = transactions.reduce(
+    (latest, entry) => {
+      const month = monthKeyToString(monthKeyOf(entry.occurredAt))
+      return month > latest ? month : latest
+    },
+    '',
+  )
+
+  const review = reviewFunds(transactions, funds, { income })
 
   // Keyed on both, because the categories table lets the same name exist under
   // two cashflow types and a goal called Tabungan is not the savings pot.
@@ -63,7 +87,9 @@ async function Funds() {
     <FundsPanel
       review={review}
       idOf={(fund) => idByKey.get(`${fund.cashflow}|${fund.name}`)}
-      caption="Setoran dihitung dari transaksi bercashflow Invest/Savings, Sinking Fund dan Financial Goals. Pengambilan dihitung dari transaksi Dari Asset/Saving dengan nama pos yang sama. Targetnya satu-satunya angka di halaman ini yang kamu ketik sendiri."
+      income={income}
+      asOf={asOf}
+      caption="Setoran dihitung dari transaksi bercashflow Invest/Savings, Sinking Fund dan Financial Goals. Pengambilan dihitung dari transaksi Dari Asset/Saving dengan nama pos yang sama. Yang kamu ketik sendiri hanya targetnya dan rencana setorannya."
     />
   )
 }
@@ -77,7 +103,7 @@ export default async function DanaPage() {
       title="Dana"
       email={user.email ?? ''}
       current="/dana"
-      lead="Tabungan, sinking fund dan tujuan, beserta laju setorannya."
+      lead="Tabungan, sinking fund dan tujuan, beserta laju setorannya. Targetnya boleh ditentukan dari tenggat, atau dari setoran per bulan yang kamu sanggup."
     >
       <Suspense fallback={<FundsSkeleton />}>
         <Funds />

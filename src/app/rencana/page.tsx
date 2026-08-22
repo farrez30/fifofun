@@ -11,6 +11,7 @@ import {
   getAllTransactions,
   getHousehold,
   getOpeningBalance,
+  getPlan,
 } from '@/lib/queries/household'
 import { getUser } from '@/lib/supabase/server'
 
@@ -55,10 +56,11 @@ async function PlannerData() {
     redirect('/gabung')
   }
 
-  const [accounts, transactions, openingBalance] = await Promise.all([
+  const [accounts, transactions, openingBalance, saved] = await Promise.all([
     getAccounts(household.id),
     getAllTransactions(household.id),
     getOpeningBalance(household.id),
+    getPlan(household.id),
   ])
 
   if (transactions.length === 0) {
@@ -73,10 +75,15 @@ async function PlannerData() {
 
   return (
     <Planner
+      // A household that has saved a plan starts from it; one that has not
+      // starts from its own ledger. The key rebuilds the form on the first
+      // save, which is the one moment the two answers differ.
+      key={saved ? 'tersimpan' : 'baru'}
       history={history}
       observedIncome={typicalIncome(series)}
       snapshot={buildSnapshot(series, movements)}
       currentYear={new Date().getUTCFullYear()}
+      saved={saved}
     />
   )
 }
@@ -90,7 +97,7 @@ export default async function RencanaPage() {
       title="Rencana"
       email={user.email ?? ''}
       current="/rencana"
-      lead="Setiap angka di sini membawa sumbernya. Yang datang dari OJK, BPS atau Kemenag ditandai sebagai itu; yang diturunkan di aplikasi ini ditandai sebagai itu juga."
+      lead="Setiap angka di sini membawa sumbernya. Yang datang dari OJK, BPS atau Kemenag ditandai sebagai itu; yang diturunkan di aplikasi ini ditandai sebagai itu juga. Jawabanmu sendiri bisa disimpan, dan akan terisi lagi saat halaman ini dibuka."
     >
       <Suspense fallback={<PlannerSkeleton />}>
         <PlannerData />

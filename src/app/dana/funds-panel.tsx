@@ -1,6 +1,6 @@
 import { formatMonthKey } from '@/lib/datetime'
 import type { FundCashflow, FundProgress, FundsReview } from '@/lib/ledger/funds'
-import { formatIdr, formatIdrCompact, senToRupiahNumber } from '@/lib/money'
+import { formatIdr, formatIdrCompact } from '@/lib/money'
 import { TargetForm } from './target-form'
 
 /**
@@ -58,9 +58,13 @@ interface Props {
   /** Category id per pot name and cashflow, so a target can be written back. */
   idOf: (fund: FundProgress) => string | undefined
   caption: string
+  /** Typical monthly income, so a pot planned as a share of it can be priced. */
+  income: bigint
+  /** The last month the ledger reaches, which is where an estimate counts from. */
+  asOf: string
 }
 
-export function FundsPanel({ review, idOf, caption }: Props) {
+export function FundsPanel({ review, idOf, caption, income, asOf }: Props) {
   const { funds, totalSaved, totalTarget, behind } = review
   const targeted = funds.filter((fund) => fund.target !== null).length
   /*
@@ -121,7 +125,13 @@ export function FundsPanel({ review, idOf, caption }: Props) {
 
       <ul className="divide-y divide-line">
         {funds.map((fund) => (
-          <Row key={`${fund.cashflow}-${fund.name}`} fund={fund} categoryId={idOf(fund)} />
+          <Row
+            key={`${fund.cashflow}-${fund.name}`}
+            fund={fund}
+            categoryId={idOf(fund)}
+            income={income}
+            asOf={asOf}
+          />
         ))}
       </ul>
 
@@ -132,7 +142,17 @@ export function FundsPanel({ review, idOf, caption }: Props) {
   )
 }
 
-function Row({ fund, categoryId }: { fund: FundProgress; categoryId: string | undefined }) {
+function Row({
+  fund,
+  categoryId,
+  income,
+  asOf,
+}: {
+  fund: FundProgress
+  categoryId: string | undefined
+  income: bigint
+  asOf: string
+}) {
   const verdict = verdictOf(fund)
   const share = fund.share === null ? null : Math.min(100, Math.round(fund.share))
 
@@ -187,6 +207,45 @@ function Row({ fund, categoryId }: { fund: FundProgress; categoryId: string | un
         </span>
       </p>
 
+      {/*
+        The same pot in four monthly figures, because the decision is a
+        comparison between them and a sentence makes a reader hold two of them
+        in their head to do it. What is not known is printed as not known: a
+        dash would read as zero, and zero is a different fact.
+      */}
+      <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:grid-cols-4">
+        <Figure
+          label="Biasanya"
+          value={fund.monthlyRate > 0n ? `${formatIdrCompact(fund.monthlyRate)} / bln` : null}
+          unknown="belum ada setoran"
+        />
+        <Figure
+          label="Direncanakan"
+          value={
+            fund.plannedMonthly !== null ? `${formatIdrCompact(fund.plannedMonthly)} / bln` : null
+          }
+          unknown="belum ditentukan"
+        />
+        <Figure
+          label="Perlu"
+          value={
+            fund.neededPerMonth !== null ? `${formatIdrCompact(fund.neededPerMonth)} / bln` : null
+          }
+          unknown="tanpa tenggat"
+        />
+        <Figure
+          label="Sampai"
+          value={
+            fund.targetMonth
+              ? formatMonthKey(fund.targetMonth)
+              : fund.etaMonth
+                ? formatMonthKey(fund.etaMonth)
+                : null
+          }
+          unknown="belum bisa dihitung"
+        />
+      </dl>
+
       {fund.withdrawn > 0n ? (
         <p className="mt-1 text-xs text-ink-faint">
           Sudah diambil lagi {formatIdr(fund.withdrawn)} dari pos ini.
@@ -197,11 +256,35 @@ function Row({ fund, categoryId }: { fund: FundProgress; categoryId: string | un
         <TargetForm
           categoryId={categoryId}
           name={fund.name}
-          target={fund.target === null ? '' : String(senToRupiahNumber(fund.target))}
+          target={fund.target === null ? '' : fund.target.toString()}
           month={fund.targetMonth ?? ''}
+          plannedMonthly={fund.plannedMonthly === null ? '' : fund.plannedMonthly.toString()}
+          plannedShareBp={fund.plannedShareBp ? String(fund.plannedShareBp) : ''}
+          saved={(fund.saved > 0n ? fund.saved : 0n).toString()}
+          income={income.toString()}
+          asOf={asOf}
         />
       ) : null}
     </li>
+  )
+}
+
+function Figure({
+  label,
+  value,
+  unknown,
+}: {
+  label: string
+  value: string | null
+  unknown: string
+}) {
+  return (
+    <div>
+      <dt className="text-ink-faint">{label}</dt>
+      <dd className={value === null ? 'text-ink-faint' : 'tnum font-mono text-ink'}>
+        {value ?? unknown}
+      </dd>
+    </div>
   )
 }
 
@@ -215,9 +298,11 @@ function Row({ fund, categoryId }: { fund: FundProgress; categoryId: string | un
  */
 function Pace({ fund }: { fund: FundProgress }) {
   const usual =
-    fund.monthlyRate > 0n
-      ? `Biasanya ${formatIdrCompact(fund.monthlyRate)} per bulan`
-      : 'Belum pernah ada setoran ke pos ini'
+    fund.plannedMonthly !== null
+      ? `Direncanakan ${formatIdrCompact(fund.plannedMonthly)} per bulan`
+      : fund.monthlyRate > 0n
+        ? `Biasanya ${formatIdrCompact(fund.monthlyRate)} per bulan`
+        : 'Belum pernah ada setoran ke pos ini'
 
   if (fund.remaining === 0n && fund.target !== null) {
     return <>{usual}. Targetnya sudah terpenuhi.</>
@@ -235,8 +320,12 @@ function Pace({ fund }: { fund: FundProgress }) {
     )
   }
 
-  if (fund.monthsAtThisRate !== null) {
-    return <>{usual}. Sampai di sana sekitar {horizon(fund.monthsAtThisRate)} lagi.</>
+  // Months at the rate a person chose, where they chose one. Reporting the
+  // observed rate instead would answer a question about the past with a
+  // sentence in the future tense.
+  const months = fund.plannedMonthly !== null ? fund.monthsAtPlannedRate : fund.monthsAtThisRate
+  if (months !== null) {
+    return <>{usual}. Sampai di sana sekitar {horizon(months)} lagi.</>
   }
 
   return <>{usual}.</>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { parseIdAmount as idr } from '@/lib/money'
-import { monthsBetween, reviewFunds, type FundCategory } from './funds'
+import { addMonths, monthsBetween, reviewFunds, type FundCategory } from './funds'
 import type { CashflowType, LedgerEntry } from './types'
 
 let seq = 0
@@ -176,5 +176,92 @@ describe('monthsBetween', () => {
   it('gives a deadline already past no months at all', () => {
     expect(monthsBetween('2026-06', '2026-03')).toBe(0)
     expect(monthsBetween('2026-06', '2026-06')).toBe(0)
+  })
+})
+
+describe('addMonths', () => {
+  it('walks forward and back across year boundaries', () => {
+    expect(addMonths('2026-11', 3)).toBe('2027-02')
+    expect(addMonths('2026-02', -3)).toBe('2025-11')
+    expect(addMonths('2026-06', 0)).toBe('2026-06')
+  })
+
+  it('is the inverse of monthsBetween for a forward gap', () => {
+    expect(monthsBetween('2026-03', addMonths('2026-03', 19))).toBe(19)
+  })
+})
+
+describe('reviewFunds dengan setoran yang direncanakan', () => {
+  const wedding: FundCategory = {
+    name: 'Dana Menikah',
+    cashflow: 'financial_goal',
+    openingBalance: 0n,
+    target: idr('50.000.000,00'),
+    targetMonth: null,
+  }
+
+  it('says when a planned contribution arrives, without a deadline being set', () => {
+    const review = reviewFunds(
+      [row('2026-06', 'Dana Menikah', idr('2.000.000,00'), 'financial_goal')],
+      [{ ...wedding, plannedMonthly: idr('4.000.000,00') }],
+    )
+
+    // Rp48 juta left at Rp4 juta a month is twelve months, counted from the
+    // last month in the ledger rather than from whenever the page is opened.
+    expect(review.funds[0].monthsAtPlannedRate).toBe(12)
+    expect(review.funds[0].etaMonth).toBe('2027-06')
+  })
+
+  it('prices a share of income, and refuses to price it without one', () => {
+    const asShare = [{ ...wedding, plannedShareBp: 1_000 }]
+    const entries = [row('2026-06', 'Dana Menikah', idr('2.000.000,00'), 'financial_goal')]
+
+    const withIncome = reviewFunds(entries, asShare, { income: idr('10.000.000,00') })
+    expect(withIncome.funds[0].plannedMonthly).toBe(idr('1.000.000,00'))
+
+    // Ten percent of an income nobody knows is not zero, it is unknown.
+    const without = reviewFunds(entries, asShare)
+    expect(without.funds[0].plannedMonthly).toBeNull()
+    expect(without.funds[0].etaMonth).toBeNull()
+  })
+
+  it('prefers the amount when a pot carries both an amount and a share', () => {
+    const review = reviewFunds(
+      [row('2026-06', 'Dana Menikah', idr('2.000.000,00'), 'financial_goal')],
+      [{ ...wedding, plannedMonthly: idr('3.000.000,00'), plannedShareBp: 1_000 }],
+      { income: idr('10.000.000,00') },
+    )
+    expect(review.funds[0].plannedMonthly).toBe(idr('3.000.000,00'))
+  })
+
+  it('judges the deadline by what was planned, not by what happened before it', () => {
+    const entries = [row('2026-06', 'Dana Menikah', idr('1.000.000,00'), 'financial_goal')]
+    const dated = { ...wedding, targetMonth: '2027-06' }
+
+    // Rp49 juta over twelve months needs about Rp4,1 juta a month. The usual
+    // rate of Rp1 juta does not make it; a household that has just decided to
+    // put Rp5 juta in every month does.
+    expect(reviewFunds(entries, [dated]).funds[0].onTrack).toBe(false)
+    expect(
+      reviewFunds(entries, [{ ...dated, plannedMonthly: idr('5.000.000,00') }]).funds[0].onTrack,
+    ).toBe(true)
+  })
+
+  it('leaves a pot with no target without an arrival date', () => {
+    const review = reviewFunds(
+      [row('2026-06', 'Tabungan', idr('500.000,00'), 'invest_savings')],
+      [
+        {
+          name: 'Tabungan',
+          cashflow: 'invest_savings',
+          openingBalance: 0n,
+          target: null,
+          targetMonth: null,
+          plannedMonthly: idr('1.000.000,00'),
+        },
+      ],
+    )
+    expect(review.funds[0].monthsAtPlannedRate).toBeNull()
+    expect(review.funds[0].etaMonth).toBeNull()
   })
 })

@@ -1164,6 +1164,131 @@ test.describe('kategori sepanjang bulan, selebihnya', () => {
   })
 })
 
+test.describe('pos dana, dari arah setoran', () => {
+  test('answers when a monthly contribution lands, without a deadline', async ({ page }) => {
+    await open(page, 'funds-planned')
+    const wedding = page.locator('li', { hasText: 'Dana Menikah' }).first()
+
+    // Rp46 juta left at Rp4 juta a month is twelve months from March 2026.
+    await expect(wedding).toContainText('Direncanakan Rp4jt per bulan')
+    await expect(wedding).toContainText('Mar 2027')
+  })
+
+  test('prices a contribution written as a share of income', async ({ page }) => {
+    await open(page, 'funds-planned')
+    const house = page.locator('li', { hasText: 'Dana Rumah' }).first()
+
+    // Twenty percent of Rp10 juta, which nobody typed as an amount anywhere.
+    await expect(house).toContainText('Rp2jt / bln')
+  })
+
+  test('prints what it does not know rather than a dash', async ({ page }) => {
+    await open(page, 'funds-planned')
+    const savings = page.locator('li', { hasText: 'Tabungan' }).first()
+    const figures = await savings.locator('dd').allInnerTexts()
+
+    /*
+      A pot with no target and no plan has three unknowns and one fact. A dash
+      in any of those slots reads as zero, and zero is a different claim: it
+      would say a deadline exists and needs nothing paid into it.
+    */
+    expect(figures).toContain('belum ditentukan')
+    expect(figures).toContain('tanpa tenggat')
+    expect(figures).toContain('belum bisa dihitung')
+  })
+
+  test('offers both ends of the same goal, one at a time', async ({ page }) => {
+    await open(page, 'funds-planned')
+    const wedding = page.locator('li', { hasText: 'Dana Menikah' }).first()
+    // The form is folded away until somebody wants it, which is also true of
+    // every assertion about what is inside it.
+    await wedding.locator('summary').click()
+
+    // The pot was set up from its contribution, so that is the tab it opens on.
+    const rate = wedding.getByRole('button', { name: 'Tentukan setoran' })
+    await expect(rate).toHaveAttribute('aria-pressed', 'true')
+    await expect(wedding.getByRole('button', { name: 'Tentukan tenggat' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+
+    // A month input belongs to the other tab and is not on this one.
+    expect(await wedding.locator('input[type="month"]').count()).toBe(0)
+    expect(await wedding.locator('input[name="monthly"]').count()).toBe(1)
+  })
+
+  test('carries every money field as sen digits', async ({ page }) => {
+    await open(page, 'funds-planned')
+    const wedding = page.locator('li', { hasText: 'Dana Menikah' }).first()
+
+    await expect(wedding.locator('input[name="amount"]')).toHaveValue('5000000000')
+    await expect(wedding.locator('input[name="monthly"]')).toHaveValue('400000000')
+  })
+})
+
+test.describe('rencana', () => {
+  test('states the saved figure and the median without confusing the two', async ({ page }) => {
+    await open(page, 'plan-household-full')
+    const text = await page.locator('body').innerText()
+
+    // Both figures, both named. A note that printed only one of them would
+    // leave a reader unable to tell whether the field shows what they saved or
+    // what the ledger says.
+    expect(text).toContain('Tersimpan Rp8.171.629')
+    expect(text).toContain('median Rp7.500.000 dari riwayatmu')
+  })
+
+  test('says out loud that something is unsaved', async ({ page }) => {
+    await open(page, 'plan-household-full')
+    await expect(page.getByRole('status')).toContainText('Belum disimpan')
+  })
+
+  test('keeps every control when it shrinks into the dock', async ({ page }) => {
+    await open(page, 'plan-household-compact')
+
+    // The same four answers, still typeable, still labelled for a reader who
+    // cannot see the shape of the row.
+    await expect(page.getByLabel('Penghasilan bulanan', { exact: true })).toBeVisible()
+    await expect(page.getByLabel('Dewasa', { exact: true })).toBeVisible()
+    await expect(page.getByLabel('Anak', { exact: true })).toBeVisible()
+    await expect(page.getByLabel('Penghasilan tidak tetap', { exact: true })).toHaveCount(0)
+    await expect(page.getByLabel('Tidak tetap', { exact: true })).toBeChecked()
+    await expect(page.getByRole('button', { name: 'Kecilkan' })).toBeVisible()
+  })
+
+  test('can be put away and brought back', async ({ page }) => {
+    await open(page, 'plan-household-minimised')
+    const text = await page.locator('body').innerText()
+
+    // Put away, it still says what it is holding, because a collapsed block
+    // that shows nothing makes a reader open it to find out.
+    expect(text).toContain('2 dewasa')
+    expect(text).toContain('1 anak')
+    expect(text).toContain('penghasilan tidak tetap')
+    await expect(page.getByRole('button', { name: 'Tampilkan' })).toBeVisible()
+  })
+
+  test('submits the plan from outside the form it belongs to', async ({ page }) => {
+    await open(page, 'plan-household-compact')
+    const save = page.getByRole('button', { name: 'Simpan rencana' })
+
+    // The dock rebuilds its own markup as it shrinks, so the fields live in a
+    // form outside it and every button names that form.
+    await expect(save).toHaveAttribute('form', 'rencana-simpan')
+  })
+
+  test('numbers the sections and marks where the reader is', async ({ page }) => {
+    await open(page, 'plan-index')
+    const links = page.getByRole('link')
+
+    await expect(links).toHaveCount(6)
+    await expect(links.first()).toHaveAttribute('aria-current', 'location')
+    await expect(links.first()).toContainText('Titik berangkat')
+    // The first pill is 01, not 0 and not 1.
+    await expect(links.first()).toContainText('01')
+  })
+})
+
 test.describe('lebar halaman', () => {
   test('nothing pushes the page sideways on a narrow screen', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 })
@@ -1189,6 +1314,8 @@ test.describe('lebar halaman', () => {
       'sankey-all',
       'account-scope',
       'category-sparks-many',
+      'plan-household-compact',
+      'funds-planned',
     ]) {
       await open(page, fixture)
 

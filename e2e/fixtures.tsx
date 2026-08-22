@@ -29,6 +29,8 @@ import { AllocationPanel } from '@/components/plan/allocation-panel'
 import { ChildrenPanel } from '@/components/plan/children-panel'
 import { GapPanel } from '@/components/plan/gap-panel'
 import { GoalsPanel } from '@/components/plan/goals-panel'
+import { HouseholdInputs } from '@/components/plan/household-inputs'
+import { PlanIndex } from '@/components/plan/plan-index'
 import { RatioPanel } from '@/components/plan/ratio-panel'
 import type { HouseholdProfile } from '@/lib/planning/allocation'
 import type { ChildPlan } from '@/lib/planning/children'
@@ -232,6 +234,45 @@ const FUNDS = reviewFunds(
   { asOf: '2026-03' },
 )
 
+/*
+  The same pots, planned from the other end: a monthly contribution rather than
+  a deadline. Dana Menikah is a rate with no deadline at all, Dana Rumah is a
+  share of income, and Tabungan has neither, which is the third state the row
+  has to be able to say out loud.
+*/
+const FUNDS_PLANNED = reviewFunds(
+  [
+    ledgerRow('2026-01-15', 'Dana Menikah', idr('2.000.000,00'), 'financial_goal'),
+    ledgerRow('2026-02-15', 'Dana Menikah', idr('2.000.000,00'), 'financial_goal'),
+    ledgerRow('2026-03-15', 'Dana Rumah', idr('3.000.000,00'), 'financial_goal'),
+  ],
+  [
+    {
+      name: 'Dana Menikah',
+      cashflow: 'financial_goal',
+      openingBalance: 0n,
+      target: idr('50.000.000,00'),
+      targetMonth: null,
+      plannedMonthly: idr('4.000.000,00'),
+    },
+    {
+      name: 'Dana Rumah',
+      cashflow: 'financial_goal',
+      openingBalance: idr('10.000.000,00'),
+      target: idr('200.000.000,00'),
+      targetMonth: '2029-12',
+      plannedShareBp: 2_000,
+    },
+    {
+      name: 'Tabungan',
+      cashflow: 'invest_savings',
+      openingBalance: 0n,
+      target: null,
+      targetMonth: null,
+    },
+  ],
+  { asOf: '2026-03', income: idr('10.000.000,00') },
+)
 const FUNDS_UNTOUCHED = reviewFunds(
   [],
   [
@@ -431,6 +472,31 @@ const FLOW = buildFlow(
   behaviour would be testing React rather than the markup.
 */
 const inert = () => undefined
+
+/*
+  The four answers the whole planner is computed from. Saved and observed
+  income differ on purpose: that pair is what the note under the field has to
+  be able to say without either figure being mistaken for the other.
+*/
+const HOUSEHOLD = {
+  income: idr('8.171.629,00'),
+  onIncomeChange: inert,
+  adults: 2,
+  onAdultsChange: inert,
+  childCount: 1,
+  onChildCountChange: inert,
+  irregular: true,
+  onIrregularChange: inert,
+  wantsZakat: false,
+  onWantsZakatChange: inert,
+  observedIncome: idr('7.500.000,00'),
+  savedIncome: idr('8.171.629,00'),
+  onVariantChange: inert,
+  formId: 'rencana-simpan',
+  pending: false,
+  result: null,
+  dirty: true,
+}
 
 const PROFILE: HouseholdProfile = { adults: 2, children: 1, debtServiceRatio: 0.18 }
 
@@ -956,6 +1022,19 @@ export const FIXTURES = {
     <FundsPanel
       review={FUNDS}
       idOf={(fund) => `id-${fund.name}`}
+      income={idr('10.000.000,00')}
+      asOf="2026-03"
+      caption="Targetnya satu-satunya angka di halaman ini yang diketik sendiri."
+    />
+  ),
+  // Pots aimed from the other end: what goes in each month, and when that
+  // lands. One of them says it as a share of income instead.
+  'funds-planned': (
+    <FundsPanel
+      review={FUNDS_PLANNED}
+      idOf={(fund) => `id-${fund.name}`}
+      income={idr('10.000.000,00')}
+      asOf="2026-03"
       caption="Targetnya satu-satunya angka di halaman ini yang diketik sendiri."
     />
   ),
@@ -965,6 +1044,8 @@ export const FIXTURES = {
     <FundsPanel
       review={FUNDS_UNTOUCHED}
       idOf={(fund) => `id-${fund.name}`}
+      income={0n}
+      asOf="2026-07"
       caption="Targetnya satu-satunya angka di halaman ini yang diketik sendiri."
     />
   ),
@@ -1103,7 +1184,52 @@ export const FIXTURES = {
     />
   ),
   'plan-goals': (
-    <GoalsPanel monthlyExpenses={LIFESTYLE.total} profile={PROFILE} currentYear={2026} />
+    <GoalsPanel
+      monthlyExpenses={LIFESTYLE.total}
+      profile={PROFILE}
+      currentYear={2026}
+      target={idr('500.000.000,00')}
+      onTargetChange={inert}
+      years={10}
+      onYearsChange={inert}
+      saved={0n}
+      onSavedChange={inert}
+      hajjMonthly={idr('1.000.000,00')}
+      onHajjMonthlyChange={inert}
+    />
+  ),
+  // The block as it sits in the page, and as it rides in the dock once the
+  // page has scrolled past it. The form it submits to lives outside it, which
+  // is why every one of these carries an empty one.
+  'plan-household-full': (
+    <>
+      <form id="rencana-simpan" />
+      <HouseholdInputs {...HOUSEHOLD} variant="full" />
+    </>
+  ),
+  'plan-household-compact': (
+    <>
+      <form id="rencana-simpan" />
+      <HouseholdInputs {...HOUSEHOLD} variant="compact" />
+    </>
+  ),
+  'plan-household-minimised': (
+    <>
+      <form id="rencana-simpan" />
+      <HouseholdInputs {...HOUSEHOLD} variant="minimised" />
+    </>
+  ),
+  'plan-index': (
+    <PlanIndex
+      sections={[
+        { id: 'rumah-tangga', label: 'Titik berangkat' },
+        { id: 'alokasi', label: 'Alokasi' },
+        { id: 'kesehatan', label: 'Kesehatan' },
+        { id: 'anak', label: 'Anak' },
+        { id: 'gap', label: 'Jarak' },
+        { id: 'tujuan', label: 'Tujuan' },
+      ]}
+    />
   ),
 }
 

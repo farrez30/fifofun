@@ -26,6 +26,10 @@ export interface FundCategory {
   target: bigint | null
   /** `YYYY-MM` the target is wanted by, or null for a pot with no deadline. */
   targetMonth: string | null
+  /** What the household means to put in each month, if it said so. */
+  plannedMonthly?: bigint | null
+  /** The same intention as a share of income, in basis points. */
+  plannedShareBp?: number | null
 }
 
 export interface FundProgress extends FundCategory {
@@ -41,6 +45,17 @@ export interface FundProgress extends FundCategory {
   monthlyRate: bigint
   /** Months to the target at that usual rate. Null if it will never arrive. */
   monthsAtThisRate: number | null
+  /**
+   * The monthly contribution the household planned, in sen.
+   *
+   * Either typed as an amount or derived from a share of income, which is why
+   * a share is useless without an income to take it from and answers null.
+   */
+  plannedMonthly: bigint | null
+  /** Months to the target at the planned rate. Null if it will never arrive. */
+  monthsAtPlannedRate: number | null
+  /** `YYYY-MM` the planned rate arrives in, measured from `asOf`. */
+  etaMonth: string | null
   /** Months left until the deadline. Null without one; zero once it has passed. */
   monthsLeft: number | null
   /** What has to go in each month from here to make the deadline. */
@@ -65,6 +80,8 @@ type Entry = LedgerEntry & { categoryName?: string | null }
 export interface ReviewFundsOptions {
   /** The month to measure deadlines from. Defaults to the last month in the ledger. */
   asOf?: string
+  /** Typical monthly income, so a pot planned as a share of it can be priced. */
+  income?: bigint
 }
 
 /** Whole months from one `YYYY-MM` to another, never below zero. */
@@ -75,8 +92,17 @@ export function monthsBetween(from: string, to: string): number {
   return gap > 0 ? gap : 0
 }
 
+/** A `YYYY-MM` moved by whole months, forward or back. */
+export function addMonths(month: string, delta: number): string {
+  const [year, index] = month.split('-').map(Number)
+  const zeroBased = year * 12 + (index - 1) + delta
+  const nextYear = Math.floor(zeroBased / 12)
+  const nextMonth = zeroBased - nextYear * 12 + 1
+  return `${String(nextYear).padStart(4, '0')}-${String(nextMonth).padStart(2, '0')}`
+}
+
 /** Ceiling division that stays in bigint, so no amount rounds through a float. */
-function perMonth(amount: bigint, months: number): bigint {
+export function perMonth(amount: bigint, months: number): bigint {
   if (months <= 0) return amount
   const divisor = BigInt(months)
   return (amount + divisor - 1n) / divisor
@@ -100,7 +126,7 @@ export function reviewFunds(
   const asOf = options.asOf ?? lastMonth
 
   const funds = categories
-    .map<FundProgress>((fund) => progressFor(fund, entries, byMonth, asOf))
+    .map<FundProgress>((fund) => progressFor(fund, entries, byMonth, asOf, options.income))
     .sort(rank)
 
   return {
@@ -116,6 +142,7 @@ function progressFor(
   entries: Entry[],
   byMonth: Map<string, Entry[]>,
   asOf: string,
+  income: bigint | undefined,
 ): FundProgress {
   const isContribution = (entry: Entry) =>
     entry.cashflow === fund.cashflow && entry.categoryName === fund.name
@@ -165,6 +192,36 @@ function progressFor(
   const neededPerMonth =
     remaining === null || monthsLeft === null ? null : perMonth(remaining, monthsLeft)
 
+  /*
+    A pot can be planned from either end, and both ends are the same figure.
+    Saying "Rp2 juta a month" and asking when it lands, or saying "by March"
+    and asking what that costs, are one question read in two directions, so
+    the planned rate sits beside the needed rate rather than replacing it.
+
+    A share is stored instead of an amount by households that think in
+    percentages of a salary. It only becomes an amount once there is an income
+    to take it from, and answering with nothing is better than answering with
+    a percentage of zero.
+  */
+  const plannedMonthly =
+    fund.plannedMonthly && fund.plannedMonthly > 0n
+      ? fund.plannedMonthly
+      : fund.plannedShareBp && income && income > 0n
+        ? (income * BigInt(fund.plannedShareBp)) / 10_000n
+        : null
+
+  const monthsAtPlannedRate =
+    remaining === null
+      ? null
+      : remaining === 0n
+        ? 0
+        : plannedMonthly !== null && plannedMonthly > 0n
+          ? Number((remaining + plannedMonthly - 1n) / plannedMonthly)
+          : null
+
+  const etaMonth =
+    monthsAtPlannedRate === null || asOf === '' ? null : addMonths(asOf, monthsAtPlannedRate)
+
   return {
     ...fund,
     saved,
@@ -174,9 +231,18 @@ function progressFor(
     share,
     monthlyRate,
     monthsAtThisRate,
+    plannedMonthly,
+    monthsAtPlannedRate,
+    etaMonth,
     monthsLeft,
     neededPerMonth,
-    onTrack: neededPerMonth === null ? null : monthlyRate >= neededPerMonth,
+    /*
+      Measured against the planned rate where there is one, and against the
+      observed rate otherwise. A household that has just decided to put twice
+      as much in every month should not be told it is behind on the strength of
+      the six months before it decided.
+    */
+    onTrack: neededPerMonth === null ? null : (plannedMonthly ?? monthlyRate) >= neededPerMonth,
     lastFed,
   }
 }

@@ -26,6 +26,10 @@ interface NumberFieldProps {
   max?: number
   hint?: string
   unit?: string
+  /** `sm` for a field riding in the dock, where every row costs scroll depth. */
+  size?: 'md' | 'sm'
+  /** Keep the label for screen readers only, for a field inside a dense row. */
+  hideLabel?: boolean
 }
 
 /** A stepper, because typing a number between one and four is absurd on a phone. */
@@ -37,13 +41,19 @@ export function NumberField({
   max = 10,
   hint,
   unit,
+  size = 'md',
+  hideLabel = false,
 }: NumberFieldProps) {
   const id = useId()
   const clamp = (next: number) => Math.min(max, Math.max(min, next))
+  // The buttons stay tap-sized even when compact: a stepper is the one control
+  // on this page that gets tapped rather than typed into.
+  const box = size === 'sm' ? 'h-10 w-10' : 'h-11 w-11'
+  const field = size === 'sm' ? 'h-10 w-14' : 'h-11 w-full'
 
   return (
     <div className="space-y-1.5">
-      <FieldLabel htmlFor={id} hint={hint}>
+      <FieldLabel htmlFor={id} hint={hint} visuallyHidden={hideLabel}>
         {label}
       </FieldLabel>
       <div className="flex items-stretch">
@@ -52,7 +62,7 @@ export function NumberField({
           onClick={() => onChange(clamp(value - 1))}
           disabled={value <= min}
           aria-label={`Kurangi ${label.toLowerCase()}`}
-          className="h-11 w-11 shrink-0 rounded-l-sm border border-line text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken disabled:opacity-40"
+          className={`${box} shrink-0 rounded-l-sm border border-line text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken disabled:opacity-40`}
         >
           <span aria-hidden="true">−</span>
         </button>
@@ -64,14 +74,14 @@ export function NumberField({
           min={min}
           max={max}
           onChange={(event) => onChange(clamp(Number(event.target.value)))}
-          className="h-11 w-full border-y border-line bg-surface px-3 text-center tnum font-mono text-sm text-ink focus:border-accent"
+          className={`${field} border-y border-line bg-surface px-2 text-center tnum font-mono text-sm text-ink focus:border-accent`}
         />
         <button
           type="button"
           onClick={() => onChange(clamp(value + 1))}
           disabled={value >= max}
           aria-label={`Tambah ${label.toLowerCase()}`}
-          className="h-11 w-11 shrink-0 rounded-r-sm border border-line text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken disabled:opacity-40"
+          className={`${box} shrink-0 rounded-r-sm border border-line text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken disabled:opacity-40`}
         >
           <span aria-hidden="true">+</span>
         </button>
@@ -134,24 +144,50 @@ interface ToggleProps {
   checked: boolean
   onChange: (checked: boolean) => void
   description?: string
+  /** `chip` puts the box and its label on one line, for the dock. */
+  variant?: 'stacked' | 'chip'
 }
 
-export function Toggle({ label, checked, onChange, description }: ToggleProps) {
+/**
+ * A yes or no.
+ *
+ * The checkbox stays a real checkbox in both variants rather than becoming a
+ * styled span with a click handler. A chip that only looks pressed is
+ * invisible to a screen reader and to a keyboard, and the browser's own
+ * control already answers both.
+ */
+export function Toggle({
+  label,
+  checked,
+  onChange,
+  description,
+  variant = 'stacked',
+}: ToggleProps) {
   const id = useId()
+  const chip = variant === 'chip'
+
   return (
-    <div className="flex items-start gap-3">
+    <div
+      className={
+        chip
+          ? `inline-flex items-center gap-2 rounded-sm border px-2.5 py-1.5 transition-colors duration-150 ${
+              checked ? 'border-accent bg-accent-wash' : 'border-line bg-paper'
+            }`
+          : 'flex items-start gap-3'
+      }
+    >
       <input
         id={id}
         type="checkbox"
         checked={checked}
         onChange={(event) => onChange(event.target.checked)}
-        className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-accent)]"
+        className={`h-4 w-4 shrink-0 accent-[var(--color-accent)] ${chip ? '' : 'mt-0.5'}`}
       />
       <div>
-        <label htmlFor={id} className="text-sm text-ink">
+        <label htmlFor={id} className={`text-ink ${chip ? 'text-xs' : 'text-sm'}`}>
           {label}
         </label>
-        {description ? <p className="text-xs text-ink-muted">{description}</p> : null}
+        {description && !chip ? <p className="text-xs text-ink-muted">{description}</p> : null}
       </div>
     </div>
   )
@@ -161,17 +197,60 @@ interface SectionProps {
   id: string
   title: string
   lead?: string
+  /** Printed in the header band, so a long page has places rather than scroll depth. */
+  index?: number
+  /**
+   * `card` is a section of the page. `bar` is the same section riding in the
+   * dock at the top, where a heading band would cost the height the dock is
+   * trying to save.
+   */
+  variant?: 'card' | 'bar'
   children: React.ReactNode
 }
 
-export function Section({ id, title, lead, children }: SectionProps) {
+/**
+ * One question of the plan.
+ *
+ * Six headings on one background read as one very long article, which is what
+ * they were: nothing said where an answer stopped and the next question began.
+ * A card draws that boundary with a band rather than with more whitespace,
+ * because whitespace between two identical blocks is not a boundary, it is a
+ * gap.
+ *
+ * Both variants render the same element tree. The dock swaps a section from
+ * one to the other while a person is typing in it, and rebuilding the subtree
+ * would take the focus and the caret with it.
+ */
+export function Section({ id, title, lead, index, variant = 'card', children }: SectionProps) {
+  const bar = variant === 'bar'
+
   return (
-    <section aria-labelledby={id} className="scroll-mt-20">
-      <h2 id={id} className="text-base font-semibold tracking-tight text-ink">
-        {title}
-      </h2>
-      {lead ? <p className="mt-1 max-w-2xl text-sm text-ink-muted">{lead}</p> : null}
-      <div className="mt-4 space-y-4">{children}</div>
+    <section
+      aria-labelledby={id}
+      // Cleared by the dock, which is the tallest thing that can cover an
+      // anchor when one is jumped to.
+      className={`scroll-mt-32 ${bar ? '' : 'border border-line bg-paper'}`}
+    >
+      <div
+        className={
+          bar
+            ? 'sr-only'
+            : 'flex items-baseline gap-3 border-b border-line bg-sunken px-4 py-3 sm:px-5'
+        }
+      >
+        {index === undefined ? null : (
+          <span aria-hidden="true" className="tnum font-mono text-xs text-ink-faint">
+            {String(index).padStart(2, '0')}
+          </span>
+        )}
+        <div className="min-w-0">
+          <h2 id={id} className="text-base font-semibold tracking-tight text-ink">
+            {title}
+          </h2>
+          {lead ? <p className="mt-1 max-w-2xl text-sm text-ink-muted">{lead}</p> : null}
+        </div>
+      </div>
+      <div className={bar ? 'space-y-2 px-3 py-2' : 'space-y-4 p-4 sm:p-5'}>{children}</div>
     </section>
   )
 }
