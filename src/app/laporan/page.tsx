@@ -3,10 +3,12 @@ import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
 import { AppShell } from '@/components/app-shell'
 import { PeriodReport } from '@/components/period-report'
-import { summarisePeriod, type PeriodFilter } from '@/lib/ledger/period'
+import { TablePager, TransactionTable } from '@/components/transaction-table'
+import { matchesFilter, summarisePeriod, type PeriodFilter } from '@/lib/ledger/period'
 import { CASHFLOW_TYPES, type CashflowType } from '@/lib/ledger/types'
 import { getAccounts, getAllTransactions, getCategories, getHousehold } from '@/lib/queries/household'
 import { getUser } from '@/lib/supabase/server'
+import { pageCount, pageHref, pageSlice, parsePage } from './paging'
 
 export const metadata: Metadata = { title: 'Laporan' }
 
@@ -75,7 +77,9 @@ async function Report({ params }: { params: Record<string, string | string[] | u
   const [transactions, categories, accounts] = await Promise.all([
     getAllTransactions(household.id),
     getCategories(household.id),
-    getAccounts(household.id),
+    // Archived ones too: a report over last year has to be able to name the
+    // wallet those rows were paid from, even if nobody uses it any more.
+    getAccounts(household.id, { includeArchived: true }),
   ])
 
   const accountNameById = new Map(accounts.map((account) => [account.id, account.name]))
@@ -87,15 +91,48 @@ async function Report({ params }: { params: Record<string, string | string[] | u
 
   const filter = buildFilter(params)
 
+  /*
+    The same predicate the totals above are computed from, so the list can
+    never disagree with the figures it sits under. The rows are already newest
+    first from the query.
+  */
+  const matched = enriched.filter((entry) => matchesFilter(entry, filter))
+  const page = parsePage(params.hal)
+  const pages = pageCount(matched.length)
+
+  const plain = Object.fromEntries(
+    Object.entries(params).map(([key, value]) => [key, first(value)]),
+  )
+
   return (
-    <PeriodReport
-      summary={summarisePeriod(enriched, filter)}
-      filter={filter}
-      raw={params}
-      categories={categories.map((category) => category.name)}
-      accounts={accounts.map((account) => account.name)}
-      ledgerSize={transactions.length}
-    />
+    <div className="space-y-8">
+      <PeriodReport
+        summary={summarisePeriod(enriched, filter)}
+        filter={filter}
+        raw={params}
+        categories={categories.map((category) => category.name)}
+        accounts={accounts.map((account) => account.name)}
+        ledgerSize={transactions.length}
+      />
+
+      <section aria-labelledby="daftar">
+        <h2 id="daftar" className="mb-3 text-sm font-medium text-ink">
+          Daftar transaksi
+        </h2>
+        <TransactionTable
+          rows={pageSlice(matched, page)}
+          accounts={accounts}
+          categories={categories}
+          caption={`Transaksi terpilih, halaman ${page} dari ${pages}`}
+          emptyText="Tidak ada transaksi yang cocok dengan saringan ini."
+        />
+        <TablePager page={page} pages={pages} hrefFor={(next) => pageHref(plain, next)} />
+        <p className="mt-2 text-xs text-ink-muted">
+          Klik keterangannya untuk mengubah kategori, catatan, atau memisahkannya jadi beberapa
+          kategori.
+        </p>
+      </section>
+    </div>
   )
 }
 

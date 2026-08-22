@@ -1318,6 +1318,9 @@ test.describe('lebar halaman', () => {
       'funds-planned',
       'settings-accounts',
       'settings-category-form',
+      'transaction-table',
+      'transaksi-edit-manual',
+      'transaksi-split',
     ]) {
       await open(page, fixture)
 

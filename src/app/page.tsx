@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
 import { AppShell } from '@/components/app-shell'
+import { TransactionTable } from '@/components/transaction-table'
 import { Balances } from '@/components/balances'
 import { CashflowChart } from '@/components/cashflow-chart'
 import { BudgetBullet } from '@/components/chart/budget-bullet'
@@ -12,7 +13,7 @@ import { BalanceTrend } from '@/components/chart/balance-trend'
 import { CategorySparks } from '@/components/chart/category-sparks'
 import { Waterfall } from '@/components/chart/waterfall'
 import { BillsPanel } from '@/components/bills-panel'
-import { Money, SignedMoney, Stat } from '@/components/money'
+import { Money, Stat } from '@/components/money'
 import { ReceivablesPanel } from '@/components/receivables-panel'
 import { formatJakarta } from '@/lib/datetime'
 import { reviewBills } from '@/lib/ledger/bills'
@@ -21,7 +22,6 @@ import { proposeBudget, reviewBudget } from '@/lib/ledger/budget'
 import { AccountScope } from '@/components/account-scope'
 import { asMonthlySeries, computeAccountSeries } from '@/lib/ledger/account-series'
 import { buildCategoryTrends } from '@/lib/ledger/category-trend'
-import { signedDirection } from '@/lib/ledger/direction'
 import { categoryHue, categoryIcon } from '@/lib/ledger/palette'
 import { rollUpByMonthAndCategory } from '@/lib/ledger/categories'
 import { buildFlow } from '@/lib/ledger/flow'
@@ -413,61 +413,16 @@ async function Dashboard({ akun }: { akun: string }) {
         <h2 id="transaksi" className="mb-3 text-sm font-medium text-ink">
           Transaksi terakhir
         </h2>
-        <div
-          className="relative overflow-x-auto border border-line bg-surface"
-          tabIndex={0}
-          role="region"
-          aria-label="Tabel transaksi terakhir, bisa digeser ke samping"
-        >
-          <table className="w-full text-sm">
-            <caption className="sr-only">Dua puluh transaksi terakhir</caption>
-            <thead>
-              <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-faint">
-                <th scope="col" className="px-4 py-2.5 font-medium">
-                  Waktu
-                </th>
-                <th scope="col" className="px-4 py-2.5 font-medium">
-                  Keterangan
-                </th>
-                <th scope="col" className="px-4 py-2.5 font-medium">
-                  Kategori
-                </th>
-                <th scope="col" className="px-4 py-2.5 text-right font-medium">
-                  Nominal
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {transactions
-                .slice(-20)
-                .reverse()
-                .map((tx) => {
-                  const direction = signedDirection(tx.cashflow)
-                  return (
-                    <tr key={tx.id} className="border-b border-line last:border-0">
-                      <td className="whitespace-nowrap px-4 py-2.5 tnum text-ink-muted">
-                        {formatJakarta(tx.occurredAt, 'date')}
-                      </td>
-                      <td className="px-4 py-2.5 text-ink">
-                        {tx.description}
-                        {tx.needsReview ? (
-                          <span className="ml-2 rounded-xs border border-warn/40 bg-warn-wash px-1.5 py-0.5 text-[0.625rem] text-ink-muted">
-                            perlu ditinjau
-                          </span>
-                        ) : null}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-2.5 text-ink-muted">
-                        {tx.categoryName ?? 'Belum berkategori'}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-2.5 text-right">
-                        <SignedMoney sen={tx.amount} direction={direction} />
-                      </td>
-                    </tr>
-                  )
-                })}
-            </tbody>
-          </table>
-        </div>
+        <TransactionTable
+          rows={[...transactions].slice(-20).reverse()}
+          accounts={accounts}
+          categories={categories}
+          caption="Dua puluh transaksi terakhir"
+          emptyText="Belum ada transaksi tercatat."
+        />
+        <p className="mt-2 text-xs text-ink-muted">
+          Klik keterangannya untuk mengubahnya. Semua transaksi ada di Laporan.
+        </p>
       </section>
     </div>
   )

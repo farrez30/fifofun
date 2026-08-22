@@ -36,6 +36,10 @@ import type { HouseholdProfile } from '@/lib/planning/allocation'
 import type { ChildPlan } from '@/lib/planning/children'
 import { templateProfile } from '@/lib/planning/lifestyle'
 import { AccountMark, CashflowChip, CategoryMark, DirectionMark } from '@/components/marks'
+import { TransactionTable } from '@/components/transaction-table'
+import { EditEntryForm, type EntryView } from '@/app/transaksi/[id]/edit-form'
+import { SplitForm } from '@/app/transaksi/[id]/split-form'
+import { editableFields } from '@/lib/ledger/edit'
 import { AccountsPanel, type AccountView } from '@/app/pengaturan/accounts-panel'
 import { AccountForm } from '@/app/pengaturan/account-form'
 import { CategoriesPanel, type CategoryView } from '@/app/pengaturan/categories-panel'
@@ -476,6 +480,91 @@ const FLOW = buildFlow(
   behaviour would be testing React rather than the markup.
 */
 const inert = () => undefined
+
+/*
+  One statement row and one typed row. Which fields the form draws is decided
+  from the source, and these are the two answers.
+*/
+const TABLE_ACCOUNTS = [
+  { id: 'acc-mandiri', name: 'Bank Mandiri', kind: 'bank' as const },
+  { id: 'acc-gopay', name: 'GoPay', kind: 'ewallet' as const },
+]
+
+const TABLE_CATEGORIES = [
+  { id: 'cat-belanja', name: 'Belanja', cashflow: 'spending' as const, icon: 'ShoppingBag', hue: 137 },
+  { id: 'cat-makan', name: 'Makan/minum', cashflow: 'spending' as const, icon: 'ForkKnife', hue: 40 },
+  { id: 'cat-wifi', name: 'Wifi', cashflow: 'bills' as const, icon: 'WifiHigh', hue: 210 },
+]
+
+const SPLIT_OPTIONS = TABLE_CATEGORIES.map(({ id, name, cashflow }) => ({ id, name, cashflow }))
+
+function tableRow(
+  id: string,
+  description: string,
+  amount: bigint,
+  overrides: Partial<Parameters<typeof TransactionTable>[0]['rows'][number]> = {},
+): Parameters<typeof TransactionTable>[0]['rows'][number] {
+  return {
+    id,
+    occurredAt: new Date('2026-07-15T05:00:00.000Z'),
+    description,
+    amount,
+    cashflow: 'spending',
+    categoryId: 'cat-belanja',
+    categoryName: 'Belanja',
+    fromAccountId: 'acc-mandiri',
+    toAccountId: null,
+    source: 'xlsx',
+    needsReview: false,
+    isPassThrough: false,
+    duplicateOf: null,
+    splitOf: null,
+    ...overrides,
+  }
+}
+
+const TABLE_ROWS = [
+  tableRow('tx-1', 'ALFAMART CIPUTAT', idr('150.000,00')),
+  tableRow('tx-2', 'GOPAY TOPUP', idr('100.000,00'), {
+    cashflow: 'transfer',
+    categoryId: null,
+    categoryName: null,
+    toAccountId: 'acc-gopay',
+  }),
+  tableRow('tx-3', 'Belum dikategorikan', idr('45.000,00'), {
+    categoryId: null,
+    categoryName: null,
+    needsReview: true,
+  }),
+  tableRow('tx-4', 'Titipan teman', idr('200.000,00'), { isPassThrough: true }),
+  tableRow('tx-5', 'Bagian dari struk', idr('50.000,00'), { splitOf: 'tx-1' }),
+  // An account that no lookup will find, which must not read as a blank cell.
+  tableRow('tx-6', 'Dari akun yang hilang', idr('12.000,00'), { fromAccountId: 'acc-hilang' }),
+]
+
+const BANK_ENTRY: EntryView = {
+  id: 'tx-1',
+  description: 'ALFAMART CIPUTAT',
+  note: '',
+  amount: '15000000',
+  date: '2026-07-15',
+  time: '12:00',
+  cashflow: 'spending',
+  categoryId: 'cat-belanja',
+  accountId: 'acc-mandiri',
+  fromAccountId: 'acc-mandiri',
+  toAccountId: '',
+  isPassThrough: false,
+  editable: editableFields({ source: 'xlsx', cashflow: 'spending' }),
+}
+
+const MANUAL_ENTRY: EntryView = {
+  ...BANK_ENTRY,
+  id: 'tx-7',
+  description: 'Kopi di warung',
+  amount: '2500000',
+  editable: editableFields({ source: 'manual', cashflow: 'spending' }),
+}
 
 const SETTINGS_ACCOUNTS: AccountView[] = [
   {
@@ -1288,6 +1377,23 @@ export const FIXTURES = {
   ),
   // Four accounts, one of them archived, so the row that keeps its place in the
   // list and the row that does not are both drawn.
+  'transaction-table': (
+    <TransactionTable
+      rows={TABLE_ROWS}
+      accounts={TABLE_ACCOUNTS}
+      categories={TABLE_CATEGORIES}
+      caption="Transaksi terakhir"
+      emptyText="Belum ada transaksi tercatat."
+    />
+  ),
+  // A statement row: the category can move, the figure cannot.
+  'transaksi-edit-xlsx': (
+    <EditEntryForm entry={BANK_ENTRY} categories={SPLIT_OPTIONS} accounts={TABLE_ACCOUNTS} />
+  ),
+  'transaksi-edit-manual': (
+    <EditEntryForm entry={MANUAL_ENTRY} categories={SPLIT_OPTIONS} accounts={TABLE_ACCOUNTS} />
+  ),
+  'transaksi-split': <SplitForm id="tx-1" amount="15000000" categories={SPLIT_OPTIONS} />,
   'settings-accounts': <AccountsPanel accounts={SETTINGS_ACCOUNTS} />,
   'settings-account-form': <AccountForm account={SETTINGS_ACCOUNTS[0]} />,
   'settings-categories': <CategoriesPanel categories={SETTINGS_CATEGORIES} />,

@@ -139,8 +139,18 @@ export async function recordEntry(
   if (cashflow !== 'transfer' && !sides.fromAccountId && !sides.toAccountId) {
     return fail('Pilih akunnya.', 'Setiap catatan menempel pada satu akun.')
   }
+  if (cashflow === 'transfer' && sides.fromAccountId === sides.toAccountId) {
+    return fail(
+      'Akun asal dan tujuan tidak boleh sama.',
+      'Perpindahan ke akun yang sama tidak menggerakkan apa pun.',
+    )
+  }
 
-  const ids = [sides.fromAccountId, sides.toAccountId].filter((id): id is string => Boolean(id))
+  // A set, so a row naming one account on both sides is answered by the
+  // sentence above rather than by a lookup that appears to find nothing.
+  const ids = [
+    ...new Set([sides.fromAccountId, sides.toAccountId].filter((id): id is string => Boolean(id))),
+  ]
   const { data: owned } = await supabase
     .from('accounts')
     .select('id')
