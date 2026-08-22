@@ -34,6 +34,10 @@ import type { HouseholdProfile } from '@/lib/planning/allocation'
 import type { ChildPlan } from '@/lib/planning/children'
 import { templateProfile } from '@/lib/planning/lifestyle'
 import { AccountMark, CashflowChip, CategoryMark, DirectionMark } from '@/components/marks'
+import { QueueControls } from '@/app/tinjau/queue-controls'
+import { ReviewQueue } from '@/app/tinjau/review-queue'
+import { groupBySuggestion } from '@/lib/ledger/rules'
+import type { UnconfirmedRow } from '@/lib/queries/household'
 import { ACCOUNT_KINDS, CASHFLOW_TYPES } from '@/lib/ledger/types'
 import { ACCOUNT_KIND_LABELS, DIRECTION_LABELS, type Direction } from '@/lib/ledger/direction'
 import { SEED_PALETTE } from '@/lib/ledger/palette'
@@ -509,8 +513,86 @@ const MARKS = (
   </div>
 )
 
+/*
+  A queue with the two shapes that used to be invisible: one counterparty that
+  both takes money and gives it back, which has to be two decisions, and rows
+  from two different accounts, which is half of remembering what a payment was.
+*/
+const QUEUE_ACCOUNTS = [
+  { id: 'acc-mandiri', name: 'Bank Mandiri', kind: 'bank' as const },
+  { id: 'acc-gopay', name: 'GoPay', kind: 'ewallet' as const },
+]
+
+const QUEUE_CATEGORIES = [
+  { id: 'cat-keluarga', name: 'Keluarga', cashflow: 'spending' as CashflowType },
+  { id: 'cat-makan', name: 'Makan/minum', cashflow: 'spending' as CashflowType },
+  { id: 'cat-wifi', name: 'Wifi', cashflow: 'bills' as CashflowType },
+  { id: 'cat-gaji', name: 'Gaji', cashflow: 'income' as CashflowType },
+  { id: 'cat-penyesuaian', name: 'Penyesuaian Income', cashflow: 'income' as CashflowType },
+]
+
+let queueSeq = 0
+function queueRow(
+  description: string,
+  amount: bigint,
+  cashflow: CashflowType,
+  when: string,
+  accountId: string,
+): UnconfirmedRow {
+  queueSeq += 1
+  const incoming = cashflow === 'income'
+  return {
+    id: `q${queueSeq}`,
+    description,
+    rawDescription: `Transfer ke BANK MANDIRI\n${description.toUpperCase()}\ncatatan`,
+    amount,
+    cashflow,
+    categoryName: null,
+    occurredAt: new Date(when),
+    fromAccountId: incoming ? null : accountId,
+    toAccountId: incoming ? accountId : null,
+    source: 'xlsx',
+  }
+}
+
+const QUEUE_ROWS: UnconfirmedRow[] = [
+  queueRow('ANIS RENGGANIS - arisan mei', idr('3.000.000,00'), 'spending', '2026-05-02T05:00:00.000Z', 'acc-mandiri'),
+  queueRow('ANIS RENGGANIS - arisan juni', idr('3.000.000,00'), 'spending', '2026-06-02T05:00:00.000Z', 'acc-mandiri'),
+  // The same counterparty paying back: a second group, and a second decision.
+  queueRow('ANIS RENGGANIS - kembalian', idr('1.500.000,00'), 'income', '2026-07-04T05:00:00.000Z', 'acc-mandiri'),
+  queueRow('KOPI KENANGAN', idr('42.000,00'), 'spending', '2026-07-11T03:00:00.000Z', 'acc-gopay'),
+  queueRow('KOPI KENANGAN', idr('38.000,00'), 'spending', '2026-07-19T04:00:00.000Z', 'acc-gopay'),
+  queueRow('INDOMARET AEROPOLIS', idr('126.500,00'), 'spending', '2026-08-01T06:00:00.000Z', 'acc-mandiri'),
+]
+
+const QUEUE_REMAINING = {
+  count: QUEUE_ROWS.length,
+  total: QUEUE_ROWS.reduce((sum, entry) => sum + entry.amount, 0n),
+}
+
 export const FIXTURES = {
   marks: MARKS,
+  'review-queue': (
+    <ReviewQueue
+      groups={groupBySuggestion(QUEUE_ROWS)}
+      categories={QUEUE_CATEGORIES}
+      accounts={QUEUE_ACCOUNTS}
+      remaining={QUEUE_REMAINING}
+      options={{ urut: 'nominal', kelompok: 'lawan' }}
+    />
+  ),
+  'review-queue-bulan': (
+    <div className="space-y-5">
+      <QueueControls options={{ urut: 'waktu', kelompok: 'bulan' }} />
+      <ReviewQueue
+        groups={groupBySuggestion(QUEUE_ROWS, [], { by: 'month', order: 'time' })}
+        categories={QUEUE_CATEGORIES}
+        accounts={QUEUE_ACCOUNTS}
+        remaining={QUEUE_REMAINING}
+        options={{ urut: 'waktu', kelompok: 'bulan' }}
+      />
+    </div>
+  ),
   bills: <BillsPanel review={BILLS} />,
   'bills-untouched': <BillsPanel review={BILLS_UNTOUCHED} />,
   receivables: <ReceivablesPanel review={RECEIVABLES} />,

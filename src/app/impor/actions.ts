@@ -3,6 +3,7 @@
 import { createHash } from 'node:crypto'
 import { revalidatePath } from 'next/cache'
 import { formatIdr } from '@/lib/money'
+import { ruleAgreesWithDirection } from '@/lib/ledger/direction'
 import { firstMatch, type Rule } from '@/lib/ledger/rules'
 import { DEFAULT_CATEGORY_BY_KIND, SEED_ACCOUNTS } from '@/lib/ledger/seed-data'
 import { parseMandiriStatement } from '@/lib/statement/mandiri-xlsx'
@@ -262,13 +263,24 @@ export async function importStatement(
       transfer moves money between is a fact about the row rather than an opinion
       about it, and a pattern that happens to match must not overrule it.
     */
-    const rule =
+    const matched =
       entry.cashflow === 'transfer'
         ? null
         : firstMatch(rules, {
             description: entry.description,
             rawDescription: statement.rows[index].description,
           })
+
+    /*
+      A rule taught on an outgoing row will happily match an incoming one whose
+      counterparty is the same person, and filing money arriving under a
+      spending category is the shape `transactions_account_sides` refuses. That
+      refusal fails the whole upsert, so one such pattern used to make every
+      later import of that statement impossible. The row keeps its default
+      category instead and waits in the review queue, which is where a decision
+      about it belongs anyway.
+    */
+    const rule = matched && ruleAgreesWithDirection(matched.cashflow, entry.cashflow) ? matched : null
 
     if (rule) ruleHits.set(rule.id, (ruleHits.get(rule.id) ?? 0) + 1)
 

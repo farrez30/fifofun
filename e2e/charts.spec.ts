@@ -1046,6 +1046,8 @@ test.describe('lebar halaman', () => {
       'adherence',
       'adherence-healthy',
       'sankey-real',
+      'marks',
+      'review-queue',
     ]) {
       await open(page, fixture)
 

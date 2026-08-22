@@ -1,3 +1,5 @@
+import { directionOf, type Direction } from './direction'
+import { monthKeyOf, monthKeyToString } from './monthly'
 import type { CashflowType } from './types'
 
 /**
@@ -165,19 +167,46 @@ export function suggestPattern(entry: Matchable): Suggestion | null {
 
 export interface Groupable extends Matchable {
   amount: bigint
+  /** Which way the money went, so a group is never half in and half out. */
+  cashflow: CashflowType
+  /** When it happened, so the queue can be read by period rather than by size. */
+  occurredAt: Date
   categoryName?: string | null
+  fromAccountId?: string | null
+  toAccountId?: string | null
 }
 
-export interface ReviewGroup {
+export interface ReviewGroup<T extends Groupable = Groupable> {
+  /**
+   * Unique across the queue: direction and then either the pattern or the
+   * month. The direction is part of it because one counterparty can both pay
+   * and be paid, and a single group for both would offer one category for two
+   * opposite movements.
+   */
+  key: string
+  kind: 'counterparty' | 'month'
+  direction: Direction
+  /** Empty for a month group, which is not a pattern anybody can save. */
   pattern: string
   matchType: MatchType
-  entries: Groupable[]
+  /** `YYYY-MM` for a month group, null otherwise. */
+  month: string | null
+  entries: T[]
   count: number
   total: bigint
   /** A few real descriptions, so the pattern can be sanity checked before use. */
   samples: string[]
   /** Categories the rows currently carry, so a mixed group is visible as mixed. */
   currentCategories: string[]
+  firstAt: Date
+  lastAt: Date
+}
+
+export interface GroupOptions {
+  /** Group by the counterparty a rule would match, or by calendar month. */
+  by?: 'counterparty' | 'month'
+  /** Rank by money, which is the default, or by how recent the rows are. */
+  order?: 'money' | 'time'
 }
 
 /**
@@ -191,18 +220,35 @@ export interface ReviewGroup {
  * Ranked by money rather than by count, because the point of categorising is to
  * find out where the money went, and eighty small payments matter less than four
  * large ones.
+ *
+ * Two axes were added once the queue had to be readable by period as well. By
+ * month, every row is groupable, including the ones whose text is too short to
+ * become a pattern, which used to disappear from the queue entirely. And in
+ * both modes a group is split by direction: a friend who is paid and who pays
+ * back is two decisions, not one, and offering a single category for both is
+ * how a row ends up with a cashflow the account sides cannot satisfy.
  */
-export function groupBySuggestion(entries: Groupable[], rules: Rule[] = []): ReviewGroup[] {
-  const groups = new Map<string, ReviewGroup>()
+export function groupBySuggestion<T extends Groupable>(
+  entries: T[],
+  rules: Rule[] = [],
+  options: GroupOptions = {},
+): ReviewGroup<T>[] {
+  const by = options.by ?? 'counterparty'
+  const order = options.order ?? 'money'
+  const groups = new Map<string, ReviewGroup<T>>()
 
   for (const entry of entries) {
     // Anything a rule already decides is not waiting on a person.
     if (firstMatch(rules, entry)) continue
 
-    const suggestion = suggestPattern(entry)
-    if (!suggestion) continue
+    const direction = directionOf(entry.cashflow)
+    const month = monthKeyToString(monthKeyOf(entry.occurredAt))
+    const suggestion = by === 'counterparty' ? suggestPattern(entry) : null
+    if (by === 'counterparty' && !suggestion) continue
 
-    const existing = groups.get(suggestion.pattern)
+    const key = by === 'counterparty' ? `${direction}:${suggestion!.pattern}` : `${direction}:${month}`
+
+    const existing = groups.get(key)
     if (existing) {
       existing.entries.push(entry)
       existing.count += 1
@@ -211,23 +257,96 @@ export function groupBySuggestion(entries: Groupable[], rules: Rule[] = []): Rev
       if (entry.categoryName && !existing.currentCategories.includes(entry.categoryName)) {
         existing.currentCategories.push(entry.categoryName)
       }
+      if (entry.occurredAt < existing.firstAt) existing.firstAt = entry.occurredAt
+      if (entry.occurredAt > existing.lastAt) existing.lastAt = entry.occurredAt
       continue
     }
 
-    groups.set(suggestion.pattern, {
-      pattern: suggestion.pattern,
-      matchType: suggestion.matchType,
+    groups.set(key, {
+      key,
+      kind: by,
+      direction,
+      pattern: suggestion?.pattern ?? '',
+      matchType: suggestion?.matchType ?? 'contains',
+      month: by === 'month' ? month : null,
       entries: [entry],
       count: 1,
       total: entry.amount,
       samples: [entry.description],
       currentCategories: entry.categoryName ? [entry.categoryName] : [],
+      firstAt: entry.occurredAt,
+      lastAt: entry.occurredAt,
     })
   }
 
-  return [...groups.values()].sort(
-    (a, b) => (b.total > a.total ? 1 : b.total < a.total ? -1 : 0) || a.pattern.localeCompare(b.pattern, 'id'),
-  )
+  // Inside a month group the order is always newest first: months are read as
+  // a run of days, and the largest row of August says nothing about August.
+  const rowOrder = by === 'month' ? 'time' : order
+  for (const group of groups.values()) group.entries.sort(byRow(rowOrder))
+
+  return [...groups.values()].sort(byGroup(by, order))
+}
+
+function byRow(order: 'money' | 'time') {
+  return (a: Groupable, b: Groupable): number => {
+    if (order === 'time') {
+      const gap = b.occurredAt.getTime() - a.occurredAt.getTime()
+      if (gap !== 0) return gap
+    } else if (a.amount !== b.amount) {
+      return b.amount > a.amount ? 1 : -1
+    }
+    // Amounts and timestamps both repeat constantly in a ledger, so the id is
+    // there purely to make the order total and therefore stable.
+    return a.id.localeCompare(b.id)
+  }
+}
+
+function byGroup(by: 'counterparty' | 'month', order: 'money' | 'time') {
+  return (a: ReviewGroup, b: ReviewGroup): number => {
+    if (by === 'month') {
+      // Newest month first, and money out before money in inside a month:
+      // spending is what a review is usually about.
+      const months = (b.month ?? '').localeCompare(a.month ?? '')
+      if (months !== 0) return months
+      if (a.direction !== b.direction) return a.direction === 'out' ? -1 : 1
+      return a.key.localeCompare(b.key)
+    }
+
+    if (order === 'time') {
+      const gap = b.lastAt.getTime() - a.lastAt.getTime()
+      if (gap !== 0) return gap
+    } else if (a.total !== b.total) {
+      return b.total > a.total ? 1 : -1
+    }
+    return a.pattern.localeCompare(b.pattern, 'id') || a.key.localeCompare(b.key)
+  }
+}
+
+export interface DirectionSplit<T> {
+  agree: T[]
+  disagree: T[]
+}
+
+/**
+ * Which of these rows a category may be written to.
+ *
+ * A category carries a cashflow, and a cashflow decides which account sides a
+ * row must have. Writing an income category onto a row whose money left an
+ * account produces exactly the shape the `transactions_account_sides` check
+ * refuses, and one such row takes a whole batch of a hundred down with it.
+ */
+export function splitByDirection<T extends { cashflow: CashflowType }>(
+  rows: T[],
+  cashflow: CashflowType,
+): DirectionSplit<T> {
+  const wanted = directionOf(cashflow)
+  const agree: T[] = []
+  const disagree: T[] = []
+  for (const row of rows) {
+    if (directionOf(row.cashflow) === wanted) agree.push(row)
+    else disagree.push(row)
+  }
+  return { agree, disagree }
 }
 
 export interface RuleConflict {

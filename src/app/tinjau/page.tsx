@@ -4,12 +4,15 @@ import { Suspense } from 'react'
 import { AppShell } from '@/components/app-shell'
 import { groupBySuggestion, type Rule } from '@/lib/ledger/rules'
 import {
+  getAccounts,
   getCategories,
   getHousehold,
   getRules,
   getUnconfirmed,
 } from '@/lib/queries/household'
 import { getUser } from '@/lib/supabase/server'
+import { buildQueueOptions, toGroupOptions, type QueueOptions } from './query'
+import { QueueControls } from './queue-controls'
 import { ReviewQueue } from './review-queue'
 import { RulesList } from './rules-list'
 
@@ -40,7 +43,7 @@ function QueueSkeleton() {
   )
 }
 
-async function Queue() {
+async function Queue({ options }: { options: QueueOptions }) {
   const household = await getHousehold()
   if (!household) {
     // An account with no household has nothing to show and, until /gabung
@@ -50,13 +53,14 @@ async function Queue() {
     redirect('/gabung')
   }
 
-  const [pending, rules, categories] = await Promise.all([
+  const [pending, rules, categories, accounts] = await Promise.all([
     getUnconfirmed(household.id),
     getRules(household.id),
     getCategories(household.id),
+    getAccounts(household.id),
   ])
 
-  const groups = groupBySuggestion(pending, rules as Rule[])
+  const groups = groupBySuggestion(pending, rules as Rule[], toGroupOptions(options))
   const remaining = {
     count: pending.length,
     total: pending.reduce((sum, row) => sum + row.amount, 0n),
@@ -64,11 +68,20 @@ async function Queue() {
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_18rem]">
-      <ReviewQueue
-        groups={groups}
-        categories={categories.filter((category) => ASSIGNABLE.has(category.cashflow))}
-        remaining={remaining}
-      />
+      <div className="space-y-5">
+        <QueueControls options={options} />
+        <ReviewQueue
+          groups={groups}
+          categories={categories.filter((category) => ASSIGNABLE.has(category.cashflow))}
+          accounts={accounts.map((account) => ({
+            id: account.id,
+            name: account.name,
+            kind: account.kind,
+          }))}
+          remaining={remaining}
+          options={options}
+        />
+      </div>
 
       <aside className="space-y-5 lg:border-l lg:border-line lg:pl-6">
         <div>
@@ -96,9 +109,15 @@ async function Queue() {
   )
 }
 
-export default async function TinjauPage() {
+export default async function TinjauPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
   const user = await getUser()
   if (!user) redirect('/login')
+
+  const options = buildQueueOptions(await searchParams)
 
   return (
     <AppShell
@@ -107,8 +126,10 @@ export default async function TinjauPage() {
       current="/tinjau"
       lead="Kategori dari impor adalah tebakan mesin. Di sini kamu yang memutuskan, dan keputusanmu berlaku ke transaksi berikutnya."
     >
-      <Suspense fallback={<QueueSkeleton />}>
-        <Queue />
+      {/* Keyed so a new arrangement re-suspends rather than showing the old
+          grouping while the new one is still being worked out. */}
+      <Suspense key={JSON.stringify(options)} fallback={<QueueSkeleton />}>
+        <Queue options={options} />
       </Suspense>
     </AppShell>
   )

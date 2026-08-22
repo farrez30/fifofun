@@ -6,6 +6,7 @@ import {
   matches,
   normalise,
   groupBySuggestion,
+  splitByDirection,
   suggestPattern,
   type Groupable,
   type Matchable,
@@ -181,19 +182,29 @@ describe('suggestPattern', () => {
 })
 
 describe('groupBySuggestion', () => {
-  const paid = (description: string, rawDescription: string, amount: bigint, id: string): Groupable => ({
+  const paid = (
+    description: string,
+    rawDescription: string,
+    amount: bigint,
+    id: string,
+    extra: Partial<Groupable> = {},
+  ): Groupable => ({
     id,
     description,
     rawDescription,
     amount,
+    cashflow: 'spending',
+    occurredAt: new Date('2026-01-10T05:00:00.000Z'),
+    ...extra,
   })
 
-  const arisan = (note: string, id: string) =>
+  const arisan = (note: string, id: string, extra: Partial<Groupable> = {}) =>
     paid(
       `ANIS RENGGANIS - ${note}`,
       `Transfer ke BANK MANDIRI\nANIS RENGGANIS 1160005668471\n${note}`,
       300_000_00n,
       id,
+      extra,
     )
 
   it('collapses many payments to one counterparty into a single decision', () => {
@@ -242,6 +253,105 @@ describe('groupBySuggestion', () => {
   it('drops rows with no usable pattern rather than grouping them under nothing', () => {
     const tooShort = paid('AB', 'Pembayaran QR\nke AB\n601503995632', 1_000_00n, 'x')
     expect(groupBySuggestion([tooShort])).toEqual([])
+  })
+
+  it('splits a counterparty that both pays and gets paid into two groups', () => {
+    // The same friend, one arisan payment out and one settlement back in. One
+    // group would offer a single category for two opposite movements.
+    const groups = groupBySuggestion([
+      arisan('arisan mei', 'a'),
+      arisan('kembalian', 'b', { cashflow: 'income' }),
+    ])
+    expect(groups).toHaveLength(2)
+    expect(groups.map((group) => group.direction).sort()).toEqual(['in', 'out'])
+    expect(new Set(groups.map((group) => group.key)).size).toBe(2)
+  })
+
+  it('records the first and last date of a group', () => {
+    const groups = groupBySuggestion([
+      arisan('arisan mei', 'a', { occurredAt: new Date('2025-05-02T03:00:00.000Z') }),
+      arisan('arisan des', 'b', { occurredAt: new Date('2025-12-20T03:00:00.000Z') }),
+    ])
+    expect(groups[0].firstAt.toISOString()).toBe('2025-05-02T03:00:00.000Z')
+    expect(groups[0].lastAt.toISOString()).toBe('2025-12-20T03:00:00.000Z')
+  })
+
+  it('orders groups by their most recent row when asked for time', () => {
+    const old = paid(
+      'KOPI KENANGAN',
+      'Pembayaran QR\nke KOPI KENANGAN\n601503995632',
+      2_000_000_00n,
+      'k',
+      { occurredAt: new Date('2025-02-01T05:00:00.000Z') },
+    )
+    const recent = arisan('arisan agustus', 'a', {
+      occurredAt: new Date('2026-08-01T05:00:00.000Z'),
+    })
+    expect(groupBySuggestion([old, recent], [], { order: 'time' }).map((g) => g.pattern)).toEqual([
+      'anis rengganis',
+      'kopi kenangan',
+    ])
+    // The default is unchanged: the larger total still leads.
+    expect(groupBySuggestion([old, recent]).map((g) => g.pattern)).toEqual([
+      'kopi kenangan',
+      'anis rengganis',
+    ])
+  })
+
+  it('orders rows inside a group newest first when asked for time', () => {
+    const rows = [
+      arisan('mei', 'a', { occurredAt: new Date('2026-05-02T05:00:00.000Z') }),
+      arisan('agustus', 'b', { occurredAt: new Date('2026-08-02T05:00:00.000Z') }),
+      arisan('juni', 'c', { occurredAt: new Date('2026-06-02T05:00:00.000Z') }),
+    ]
+    const [group] = groupBySuggestion(rows, [], { order: 'time' })
+    expect(group.entries.map((entry) => entry.id)).toEqual(['b', 'c', 'a'])
+  })
+
+  it('groups by Jakarta month and sorts the months newest first', () => {
+    // 17:30 UTC on the last day of July is already August in Jakarta.
+    const rows = [
+      arisan('juli', 'a', { occurredAt: new Date('2026-07-15T05:00:00.000Z') }),
+      arisan('agustus', 'b', { occurredAt: new Date('2026-07-31T17:30:00.000Z') }),
+    ]
+    const groups = groupBySuggestion(rows, [], { by: 'month' })
+    expect(groups.map((group) => group.month)).toEqual(['2026-08', '2026-07'])
+    expect(groups[0].kind).toBe('month')
+    expect(groups[0].pattern).toBe('')
+  })
+
+  it('includes rows without a usable pattern when grouped by month', () => {
+    const tooShort = paid('AB', 'Pembayaran QR\nke AB\n601503995632', 1_000_00n, 'x')
+    const groups = groupBySuggestion([tooShort], [], { by: 'month' })
+    expect(groups).toHaveLength(1)
+    expect(groups[0].count).toBe(1)
+  })
+
+  it('puts money out before money in inside the same month', () => {
+    const groups = groupBySuggestion(
+      [arisan('kembalian', 'b', { cashflow: 'income' }), arisan('arisan', 'a')],
+      [],
+      { by: 'month' },
+    )
+    expect(groups.map((group) => group.direction)).toEqual(['out', 'in'])
+  })
+})
+
+describe('splitByDirection', () => {
+  it('separates rows that agree with a category direction from the rest', () => {
+    const rows = [
+      { id: 'a', cashflow: 'spending' as const },
+      { id: 'b', cashflow: 'bills' as const },
+      { id: 'c', cashflow: 'income' as const },
+    ]
+    const split = splitByDirection(rows, 'invest_savings')
+    expect(split.agree.map((row) => row.id)).toEqual(['a', 'b'])
+    expect(split.disagree.map((row) => row.id)).toEqual(['c'])
+  })
+
+  it('agrees with everything when the category moves money the same way', () => {
+    const rows = [{ id: 'a', cashflow: 'income' as const }]
+    expect(splitByDirection(rows, 'receivable_settled').disagree).toEqual([])
   })
 })
 

@@ -2,8 +2,9 @@
 
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
-import { findConflict, matches, normalise, type Rule } from '@/lib/ledger/rules'
-import { CASHFLOW_TYPES } from '@/lib/ledger/types'
+import { DIRECTION_LABELS, directionOf, ruleAgreesWithDirection } from '@/lib/ledger/direction'
+import { findConflict, matches, normalise, splitByDirection, type Rule } from '@/lib/ledger/rules'
+import { CASHFLOW_TYPES, type CashflowType } from '@/lib/ledger/types'
 import { getRules, getUnconfirmed } from '@/lib/queries/household'
 import { createClient } from '@/lib/supabase/server'
 
@@ -48,6 +49,19 @@ export interface ActionResult {
 
 function fail(message: string, detail?: string): ActionResult {
   return { ok: false, message, detail }
+}
+
+/**
+ * Why a category cannot be written onto a row.
+ *
+ * A category carries a cashflow, and a cashflow decides which account sides a
+ * row must have. Filing an outgoing payment under an income category would
+ * produce exactly the shape `transactions_account_sides` refuses, and because
+ * the update runs in batches of a hundred, one such row used to take ninety
+ * nine correct ones down with it and report a raw Postgres message.
+ */
+function mismatch(categoryName: string, category: CashflowType, row: CashflowType): string {
+  return `${categoryName} untuk uang ${DIRECTION_LABELS[directionOf(category)]}, transaksi ini uang ${DIRECTION_LABELS[directionOf(row)]}. Pilih kategori dengan arah yang sama.`
 }
 
 async function context() {
@@ -134,6 +148,21 @@ export async function applyCategory(
   }
 
   /*
+    A counterparty that both pays and is paid matches in both directions, and
+    only one of the two can take this category. The rows that agree are
+    settled; the rest are left alone and counted, because they are already
+    visible as their own group directly below this one. Refusing outright
+    would block every mixed counterparty from ever being categorised.
+  */
+  const { agree, disagree } = splitByDirection(hits, cashflow)
+  if (agree.length === 0) {
+    return fail(
+      'Arah kategorinya tidak cocok dengan transaksinya.',
+      mismatch(category.name as string, cashflow, disagree[0].cashflow),
+    )
+  }
+
+  /*
     Updated in chunks because PostgREST puts the id list in the query string.
     One counterparty here already accounts for 128 rows, which is a URL of some
     five kilobytes, and the limit at which a proxy starts refusing is neither
@@ -142,7 +171,7 @@ export async function applyCategory(
   */
   const CHUNK = 100
   const settledAt = new Date().toISOString()
-  const ids = hits.map((row) => row.id)
+  const ids = agree.map((row) => row.id)
 
   for (let start = 0; start < ids.length; start += CHUNK) {
     const { error: writeError } = await supabase
@@ -192,7 +221,7 @@ export async function applyCategory(
         cashflow,
         category_id: categoryId,
         auto_apply: true,
-        hit_count: hits.length,
+        hit_count: agree.length,
       })
       ruleNote = ruleError
         ? `Kategorinya tersimpan, tapi aturannya gagal dibuat: ${ruleError.message}`
@@ -203,11 +232,16 @@ export async function applyCategory(
   revalidatePath('/tinjau')
   revalidatePath('/')
 
+  const left =
+    disagree.length > 0
+      ? `${disagree.length} transaksi dengan arah sebaliknya dibiarkan; kelompoknya ada di bawah.`
+      : undefined
+
   return {
     ok: true,
-    message: `${hits.length} transaksi masuk ke ${category.name as string}.`,
-    detail: ruleNote,
-    applied: hits.length,
+    message: `${agree.length} transaksi masuk ke ${category.name as string}.`,
+    detail: [ruleNote, left].filter(Boolean).join(' ') || undefined,
+    applied: agree.length,
   }
 }
 
@@ -233,6 +267,26 @@ export async function categoriseOne(
     .eq('id', parsed.data.categoryId)
     .maybeSingle()
   if (!category) return fail('Kategori itu tidak ada di rumah tangga ini.')
+
+  // The row's own direction is read from the database rather than taken from
+  // the page, which may have been open since before somebody else changed it.
+  const { data: row } = await supabase
+    .from('transactions')
+    .select('id, cashflow')
+    .eq('household_id', householdId)
+    .eq('id', parsed.data.transactionId)
+    .is('deleted_at', null)
+    .maybeSingle()
+  if (!row) return fail('Transaksinya tidak ditemukan.', 'Mungkin sudah dihapus atau dipisah.')
+
+  const rowCashflow = row.cashflow as CashflowType
+  const categoryCashflow = category.cashflow as CashflowType
+  if (!ruleAgreesWithDirection(categoryCashflow, rowCashflow)) {
+    return fail(
+      'Arah kategorinya tidak cocok dengan transaksinya.',
+      mismatch(category.name as string, categoryCashflow, rowCashflow),
+    )
+  }
 
   const { error } = await supabase
     .from('transactions')
