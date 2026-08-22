@@ -1,6 +1,8 @@
 'use client'
 
-import { useState, type KeyboardEvent } from 'react'
+import { useRef, useState, type KeyboardEvent } from 'react'
+import { MonthDetailPanel } from '@/components/month-detail'
+import type { MonthDetail } from '@/lib/ledger/month-detail'
 
 /**
  * The interactive half of the income and spending chart.
@@ -60,6 +62,13 @@ interface Props {
   /** True when at least one month lost money, so the difference view needs a zero line. */
   hasDeficit: boolean
   caption: string
+  /**
+   * One per month, already formatted. The chart says which month lost money;
+   * this is what the month was made of, and it is why the selection is now two
+   * things rather than one: pointing at a month reads its figures, choosing a
+   * month keeps its breakdown open underneath.
+   */
+  details?: MonthDetail[]
 }
 
 type Mode = 'side' | 'net'
@@ -123,28 +132,43 @@ export function CashflowChartView({
   medianSpending,
   hasDeficit,
   caption,
+  details = [],
 }: Props) {
   const [mode, setMode] = useState<Mode>('side')
   // The most recent month, because that is the one a reader arrives asking
   // about, and because a readout that starts empty shifts the layout when it
   // fills.
-  const [selected, setSelected] = useState(months[months.length - 1]?.month ?? '')
+  const [pinned, setPinned] = useState(months[months.length - 1]?.month ?? '')
+  // Pointing at a month reads it; the detail below stays where it was put.
+  // Without the distinction, dragging the pointer across the plot would swap
+  // two tables under the reader's hand.
+  const [hovered, setHovered] = useState<string | null>(null)
+  const columns = useRef(new Map<string, HTMLDivElement>())
 
+  const selected = hovered ?? pinned
   const active = months.find((month) => month.month === selected) ?? months[months.length - 1]
+  const detail = details.find((candidate) => candidate.month === pinned)
+
+  function choose(month: string) {
+    setPinned(month)
+    // Focus follows the choice, or a keyboard reader would hear one month and
+    // be looking at another.
+    columns.current.get(month)?.focus()
+  }
 
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     const step = event.key === 'ArrowLeft' ? -1 : event.key === 'ArrowRight' ? 1 : 0
     if (step === 0 && event.key !== 'Home' && event.key !== 'End') return
     event.preventDefault()
 
-    const index = months.findIndex((month) => month.month === selected)
+    const index = months.findIndex((month) => month.month === pinned)
     const next =
       event.key === 'Home'
         ? 0
         : event.key === 'End'
           ? months.length - 1
           : Math.min(months.length - 1, Math.max(0, index + step))
-    setSelected(months[next].month)
+    choose(months[next].month)
   }
 
   // In the difference view a losing month has to be drawn below the line, so
@@ -264,24 +288,30 @@ export function CashflowChartView({
               role="radiogroup"
               aria-label="Pilih bulan"
               onKeyDown={onKeyDown}
+              onMouseLeave={() => setHovered(null)}
               className="relative flex h-full min-w-full gap-1"
             >
               {months.map((month) => {
-                const chosen = month.month === selected
+                const chosen = month.month === pinned
+                const pointed = month.month === hovered
                 return (
                   <div
                     key={month.month}
+                    ref={(node) => {
+                      if (node) columns.current.set(month.month, node)
+                      else columns.current.delete(month.month)
+                    }}
                     role="radio"
                     aria-checked={chosen}
                     aria-label={`${month.month}, masuk ${month.income.text}, keluar ${month.spending.text}, ${
                       month.netNegative ? 'kurang' : 'lebih'
                     } ${month.net.text}`}
                     tabIndex={chosen ? 0 : -1}
-                    onMouseEnter={() => setSelected(month.month)}
-                    onFocus={() => setSelected(month.month)}
-                    onClick={() => setSelected(month.month)}
+                    onMouseEnter={() => setHovered(month.month)}
+                    onFocus={() => choose(month.month)}
+                    onClick={() => choose(month.month)}
                     className={`flex min-w-9 flex-1 cursor-pointer flex-col items-center gap-1 ${
-                      chosen ? 'bg-accent-wash' : ''
+                      chosen ? 'bg-accent-wash' : pointed ? 'bg-sunken' : ''
                     }`}
                   >
                     <div className="flex min-h-0 w-full flex-1 items-end justify-center gap-0.5">
@@ -345,8 +375,12 @@ export function CashflowChartView({
       </p>
 
       <p className="mt-1 text-xs text-ink-faint">
-        Arahkan kursor atau pakai tombol panah untuk membaca bulan tertentu.
+        {details.length > 0
+          ? 'Arahkan kursor untuk membaca angkanya. Klik atau tekan Enter pada sebuah bulan untuk menyematkan rinciannya di bawah grafik.'
+          : 'Arahkan kursor atau pakai tombol panah untuk membaca bulan tertentu.'}
       </p>
+
+      {detail ? <MonthDetailPanel detail={detail} /> : null}
 
       {/*
         Wrapped rather than marked directly. A table ignores the one pixel width

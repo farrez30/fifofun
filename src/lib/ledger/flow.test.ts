@@ -167,7 +167,9 @@ describe('buildFlow', () => {
     // unreadable, so the tail is folded. What it holds still has to be
     // reachable, which is why it comes back rather than being dropped.
     expect(flow.folded.map((row) => row.category)).toEqual(['Bensin', 'Dating'])
-    expect(flow.links.find((link) => link.target === 'cat-rest')?.value).toBe(
+    // The tail node is named after the destination it hangs off, because with
+    // several destinations open there is one tail per destination.
+    expect(flow.links.find((link) => link.target === 'cat-rest-spending')?.value).toBe(
       idr('200.000,00') + idr('100.000,00'),
     )
   })
@@ -220,5 +222,96 @@ describe('buildFlow', () => {
       .filter((link) => link.source === 'in')
       .reduce((sum, link) => sum + link.value, 0n)
     expect(out).toBe(month.income)
+  })
+})
+
+describe('buildFlow, every destination opened', () => {
+  const month = statement({
+    income: idr('10.000.000,00'),
+    spending: idr('3.000.000,00'),
+    bills: idr('1.200.000,00'),
+    sinkingFund: idr('500.000,00'),
+  })
+
+  const rows = [
+    entry('spending', 'Makan/minum', '1.800.000,00'),
+    entry('spending', 'Belanja', '1.200.000,00'),
+    entry('bills', 'Wifi', '300.000,00'),
+    entry('bills', 'Listrik', '900.000,00'),
+    // One category on its own: the single-drill picture skips a destination
+    // like this, and the full one still names it.
+    entry('sinking_fund', 'Pajak Kendaraan', '500.000,00'),
+  ]
+
+  const full = () => buildFlow(month, rows, { drill: 'all', namedLimit: null })
+
+  it('opens every destination that has a category, including a sinking fund', () => {
+    const flow = full()
+    expect(breakdown(flow).sort()).toEqual(
+      ['Belanja', 'Listrik', 'Makan/minum', 'Pajak Kendaraan', 'Wifi'].sort(),
+    )
+    expect(flow.folded).toEqual([])
+    expect(flow.foldedInto).toBeNull()
+  })
+
+  it('keeps same-named categories under two destinations apart', () => {
+    const flow = buildFlow(
+      month,
+      [...rows, entry('bills', 'Belanja', '300.000,00')],
+      { drill: 'all', namedLimit: null },
+    )
+    const belanja = flow.nodes.filter((node) => node.label === 'Belanja')
+    expect(belanja).toHaveLength(2)
+    expect(new Set(belanja.map((node) => node.id)).size).toBe(2)
+    expect(flow.links.filter((link) => link.target.endsWith('-Belanja'))).toHaveLength(2)
+  })
+
+  it('ranks column two by the size of the destination it hangs off', () => {
+    const flow = full()
+    const orders = new Map(flow.nodes.filter((n) => n.column === 2).map((n) => [n.label, n.order]))
+    // Spending is the largest destination, then bills, then the sinking fund.
+    expect(orders.get('Makan/minum')).toBe(0)
+    expect(orders.get('Wifi')).toBe(1)
+    expect(orders.get('Pajak Kendaraan')).toBe(2)
+  })
+
+  it('still folds a tail per destination when a limit is asked for', () => {
+    const flow = buildFlow(month, rows, { drill: 'all', namedLimit: 1 })
+    const tails = flow.nodes.filter((node) => node.id.startsWith('cat-rest-'))
+    expect(tails.map((node) => node.id).sort()).toEqual(['cat-rest-bills', 'cat-rest-spending'])
+    expect(flow.folded.map((row) => row.category).sort()).toEqual(['Belanja', 'Wifi'])
+    // With more than one destination open, no single one owns the tail.
+    expect(flow.foldedInto).toBeNull()
+  })
+
+  it('gives every category node the hue it was asked for, and none without', () => {
+    const hues = new Map([
+      ['Makan/minum', 243],
+      ['Belanja', 158],
+    ])
+    const flow = buildFlow(month, rows, {
+      drill: 'all',
+      namedLimit: null,
+      hueOf: (name) => hues.get(name) ?? 0,
+    })
+    const makan = flow.nodes.find((node) => node.label === 'Makan/minum')
+    expect(makan?.hue).toBe(243)
+    expect(full().nodes.find((node) => node.label === 'Makan/minum')?.hue).toBeUndefined()
+  })
+
+  it('has every ribbon reach a node that exists', () => {
+    const flow = full()
+    const ids = new Set(flow.nodes.map((node) => node.id))
+    for (const link of flow.links) {
+      expect(ids.has(link.source), link.source).toBe(true)
+      expect(ids.has(link.target), link.target).toBe(true)
+    }
+  })
+
+  it('leaves the default picture alone', () => {
+    // The dashboard asked for more; every other caller gets what it had.
+    const flow = buildFlow(month, rows)
+    expect(breakdown(flow).sort()).toEqual(['Belanja', 'Makan/minum'])
+    expect(flow.foldedInto).toBe('Pengeluaran')
   })
 })

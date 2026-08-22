@@ -17,6 +17,30 @@ async function open(page: import('@playwright/test').Page, fixture: string) {
   await page.evaluate(() => document.fonts.ready)
 }
 
+/**
+ * A label is two lines and is centred on its node, so once a node is thinner
+ * than the label it carries, the next label is drawn across it. Two amounts
+ * become one smudge and the diagram still reports itself as fine. This is the
+ * check the drawing's own height is chosen to satisfy.
+ */
+async function expectNoLabelOverlap(page: import('@playwright/test').Page) {
+  const boxes = await page.locator('svg text').evaluateAll((nodes) =>
+    nodes.map((node) => {
+      const box = (node as SVGGraphicsElement).getBoundingClientRect()
+      return { top: box.top, bottom: box.bottom, left: box.left, right: box.right }
+    }),
+  )
+
+  for (let i = 0; i < boxes.length; i += 1) {
+    for (let j = i + 1; j < boxes.length; j += 1) {
+      const a = boxes[i]
+      const b = boxes[j]
+      const overlaps = a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom
+      expect(overlaps, `labels ${i} and ${j} overlap`).toBe(false)
+    }
+  }
+}
+
 test.describe('pemasukan dan pengeluaran', () => {
   test('draws a bar for every month, tallest where the money is', async ({ page }) => {
     await open(page, 'cashflow')
@@ -960,26 +984,7 @@ test.describe('aliran uang', () => {
 
   test('never writes one label across another', async ({ page }) => {
     await open(page, 'sankey-real')
-
-    // A label is two lines and is centred on its node, so once a node is thinner
-    // than the label it carries, the next label is drawn across it. Two amounts
-    // become one smudge and the diagram still reports itself as fine.
-    const boxes = await page.locator('svg text').evaluateAll((nodes) =>
-      nodes.map((node) => {
-        const box = (node as SVGGraphicsElement).getBoundingClientRect()
-        return { top: box.top, bottom: box.bottom, left: box.left, right: box.right }
-      }),
-    )
-
-    for (let i = 0; i < boxes.length; i += 1) {
-      for (let j = i + 1; j < boxes.length; j += 1) {
-        const a = boxes[i]
-        const b = boxes[j]
-        const overlaps =
-          a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom
-        expect(overlaps, `labels ${i} and ${j} overlap`).toBe(false)
-      }
-    }
+    await expectNoLabelOverlap(page)
   })
 
   test('keeps every label inside the drawing', async ({ page }) => {
@@ -1028,6 +1033,137 @@ test.describe('aliran uang', () => {
   })
 })
 
+test.describe('aliran uang lengkap', () => {
+  test('names every category the month used, and folds none of them away', async ({ page }) => {
+    await open(page, 'sankey-all')
+
+    const labels = await page
+      .locator('svg tspan')
+      .evaluateAll((nodes) => nodes.map((node) => node.textContent ?? ''))
+
+    // A long name is cut to fit the gutter, so what can be asserted is that a
+    // label exists which the full name starts with. The sinking fund is in the
+    // list on purpose: a destination holding one category is exactly what the
+    // single-drill picture used to skip.
+    for (const name of ['Makan/minum', 'Belanja', 'Wifi', 'Tabungan', 'Pajak Kendaraan']) {
+      expect(
+        labels.some((label) => label !== '' && name.startsWith(label.replace('…', ''))),
+        name,
+      ).toBe(true)
+    }
+    expect(labels.some((label) => label.includes('kategori lain'))).toBe(false)
+  })
+
+  test('gives every ribbon a gradient of its own two ends', async ({ page }) => {
+    await open(page, 'sankey-all')
+
+    const gradients = await page.locator('svg defs linearGradient').evaluateAll((nodes) =>
+      nodes.map((node) => node.id),
+    )
+    const fills = await page.locator('svg path[data-ribbon]').evaluateAll((nodes) =>
+      nodes.map((node) => node.getAttribute('fill') ?? ''),
+    )
+
+    expect(gradients.length).toBe(fills.length)
+    for (const fill of fills) {
+      const id = /^url\(#(.+)\)$/.exec(fill)?.[1]
+      expect(id, fill).toBeTruthy()
+      expect(gradients).toContain(id)
+    }
+
+    // The category end of a ribbon is the category's own hue, which is what
+    // makes one followable across the diagram.
+    const stops = await page.locator('svg defs linearGradient stop').evaluateAll((nodes) =>
+      nodes.map((node) => (node as SVGElement).style.stopColor),
+    )
+    expect(stops.some((colour) => colour.includes('--category-l'))).toBe(true)
+  })
+
+  test('grows tall enough to keep every label readable', async ({ page }) => {
+    await open(page, 'sankey-all')
+
+    const height = await page.locator('svg').evaluate((node) => node.getBoundingClientRect().height)
+    expect(height).toBeGreaterThanOrEqual(420)
+
+    await expectNoLabelOverlap(page)
+    await expectMarksToRender(page)
+
+    // Nothing may sit outside the frame on any side: SVG text is not clipped
+    // with an error, it simply is not there.
+    const escaped = await page.evaluate(() => {
+      const svg = document.querySelector('svg')!
+      const frame = svg.getBoundingClientRect()
+      return [...svg.querySelectorAll('text')].filter((node) => {
+        const box = node.getBoundingClientRect()
+        return (
+          box.left < frame.left - 1 ||
+          box.right > frame.right + 1 ||
+          box.top < frame.top - 1 ||
+          box.bottom > frame.bottom + 1
+        )
+      }).length
+    })
+    expect(escaped).toBe(0)
+  })
+})
+
+test.describe('rincian bulan', () => {
+  test('breaks the pinned month down into categories and transactions', async ({ page }) => {
+    await open(page, 'cashflow')
+
+    // The latest month is pinned on arrival, because that is the one a reader
+    // came to ask about.
+    const detail = page.locator('[data-month-detail="2026-07"]')
+    await expect(detail).toBeVisible()
+    await expect(detail.locator('h3')).toContainText('Rincian Jul 2026')
+
+    // Six spending or income categories plus the transfer, which is a category
+    // in its own right even though it is not spending.
+    const categories = detail.locator('table').first().locator('tbody tr')
+    await expect(categories).toHaveCount(7)
+
+    // The transfer is not one of the month's transactions: moving money
+    // between your own accounts is neither money in nor money out.
+    const transactions = detail.locator('table').nth(1).locator('tbody tr')
+    await expect(transactions).toHaveCount(6)
+
+    await expect(detail.locator('a[href^="/laporan?dari="]')).toHaveAttribute(
+      'href',
+      '/laporan?dari=2026-07-01&sampai=2026-07-31',
+    )
+  })
+
+  test('draws no share bar too thin to see', async ({ page }) => {
+    await open(page, 'cashflow')
+    await expectMarksToRender(page)
+  })
+})
+
+test.describe('kategori sepanjang bulan, selebihnya', () => {
+  test('offers the categories it left out rather than only counting them', async ({ page }) => {
+    await open(page, 'category-sparks-many')
+
+    const summary = page.locator('summary')
+    await expect(summary).toContainText(/Tampilkan \d+ kategori lain/)
+
+    const hidden = page.locator('details [data-spark]')
+    await expect(hidden.first()).toBeHidden()
+    await summary.click()
+    await expect(hidden.first()).toBeVisible()
+  })
+
+  test('reads a month without a tooltip', async ({ page }) => {
+    await open(page, 'category-sparks-many')
+
+    const card = page.locator('[data-spark]').first()
+    await expect(card).toHaveAttribute('role', 'radiogroup')
+    // The figure for the selected month is printed, not hidden in a title.
+    const readout = page.locator('[role="status"]').first()
+    await expect(readout).toContainText('Jul 2026')
+    await expect(readout).toContainText('Rp')
+  })
+})
+
 test.describe('lebar halaman', () => {
   test('nothing pushes the page sideways on a narrow screen', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 })
@@ -1050,6 +1186,9 @@ test.describe('lebar halaman', () => {
       'review-queue',
       'catat-entry',
       'balances',
+      'sankey-all',
+      'account-scope',
+      'category-sparks-many',
     ]) {
       await open(page, fixture)
 

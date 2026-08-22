@@ -224,10 +224,10 @@ export function CategoryMark({
   const Glyph = ICONS[iconName] ?? ICONS[categoryIcon({ cashflow, icon: null }) as IconName]
 
   return (
-    <span
-      data-mark="category"
-      className={`inline-flex items-center gap-1.5 text-ink ${className}`}
-    >
+    // No colour of its own: a mark is dropped into a table cell, a chip and a
+    // selected tab with an accent behind it, and a fixed ink would fail the
+    // contrast check on the last of those.
+    <span data-mark="category" className={`inline-flex items-center gap-1.5 ${className}`}>
       <span
         aria-hidden="true"
         data-hue={categoryHue({ name, hue })}
@@ -236,7 +236,7 @@ export function CategoryMark({
           backgroundColor: `oklch(var(--category-l) var(--category-c) ${categoryHue({ name, hue })})`,
         }}
       />
-      <Glyph aria-hidden="true" weight="regular" className="size-4 shrink-0 text-ink-muted" />
+      <Glyph aria-hidden="true" weight="regular" className="size-4 shrink-0 opacity-70" />
       <span className="min-w-0 truncate">{name}</span>
     </span>
   )
@@ -254,8 +254,8 @@ export function AccountMark({
 }) {
   const Glyph = ICONS[ACCOUNT_ICON[kind]]
   return (
-    <span data-mark="account" className={`inline-flex items-center gap-1.5 text-ink ${className}`}>
-      <Glyph aria-hidden="true" weight="regular" className="size-4 shrink-0 text-ink-muted" />
+    <span data-mark="account" className={`inline-flex items-center gap-1.5 ${className}`}>
+      <Glyph aria-hidden="true" weight="regular" className="size-4 shrink-0 opacity-70" />
       <span className="min-w-0 truncate">{name}</span>
       <span className="sr-only">, {ACCOUNT_KIND_LABELS[kind]}</span>
     </span>

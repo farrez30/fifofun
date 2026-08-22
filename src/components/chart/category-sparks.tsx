@@ -1,5 +1,7 @@
 import type { CategoryMovement, CategoryTrend, CategoryTrendReview } from '@/lib/ledger/category-trend'
+import { formatMonthKey } from '@/lib/datetime'
 import { formatIdr, formatIdrCompact, senToRupiahNumber } from '@/lib/money'
+import { SparkCard, type SparkView } from './spark-card'
 
 /**
  * One small chart per spending category, all on the same page.
@@ -13,6 +15,12 @@ import { formatIdr, formatIdrCompact, senToRupiahNumber } from '@/lib/money'
  * one would make the shape of every category except the largest a flat line, and
  * shape is the entire content here; the figures beside each chart carry the size.
  * Nothing in a card is ever compared to another card by length.
+ *
+ * The cards are client islands and everything else here is not. The bars had a
+ * `title` and nothing else, so the figures were unreachable by keyboard and on
+ * a phone; the reading now happens in the card. Which categories exist and
+ * which were left out is decided here, on the server, where the amounts are
+ * still exact.
  */
 
 const MOVEMENT: Record<CategoryMovement, { glyph: string | null; tone: string; words: string }> = {
@@ -27,8 +35,35 @@ interface Props {
   caption: string
 }
 
+function toView(trend: CategoryTrend): SparkView {
+  const style = MOVEMENT[trend.movement]
+  const peak = senToRupiahNumber(trend.peak > 0n ? trend.peak : 1n)
+  const heightOf = (amount: bigint) => (senToRupiahNumber(amount) / peak) * 100
+
+  return {
+    category: trend.category,
+    latestAmount: formatIdr(trend.latest),
+    usualPct: trend.usual > 0n ? heightOf(trend.usual) : null,
+    points: trend.points.map((point, index) => ({
+      month: point.month,
+      label: formatMonthKey(point.month),
+      pct: heightOf(point.amount),
+      amount: formatIdr(point.amount),
+      // Against the household's own usual for this category, which is the only
+      // comparison that means anything at this scale.
+      share:
+        trend.usual > 0n ? Number((point.amount * 100n) / trend.usual) : null,
+      latest: index === trend.points.length - 1,
+    })),
+    glyph: style.glyph,
+    tone: style.tone,
+    words: `${style.words}${trend.usual > 0n ? `, ${formatIdrCompact(trend.usual)}` : ''}`,
+    latestFill: trend.movement === 'melonjak' ? 'bg-over' : 'bg-accent',
+  }
+}
+
 export function CategorySparks({ review, caption }: Props) {
-  const { trends, months, omitted, omittedTotal } = review
+  const { trends, months, omitted, omittedTotal, rest } = review
 
   if (trends.length === 0) {
     return (
@@ -62,16 +97,30 @@ export function CategorySparks({ review, caption }: Props) {
 
       <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {trends.map((trend) => (
-          <Card key={trend.category} trend={trend} />
+          <SparkCard key={trend.category} view={toView(trend)} />
         ))}
       </ul>
 
       {omitted > 0 ? (
-        <p className="mt-4 border-t border-line pt-3 text-xs text-ink-faint">
-          {omitted} kategori lain tidak digambar, semuanya bersama-sama{' '}
-          {formatIdrCompact(omittedTotal)} sepanjang {months.length} bulan ini.
-        </p>
+        /* Native disclosure rather than state: opening a list needs no
+           JavaScript, and the cards inside are the same client islands. */
+        <details className="mt-4 border-t border-line pt-3">
+          <summary className="cursor-pointer text-xs text-accent underline underline-offset-2">
+            Tampilkan {omitted} kategori lain, bersama-sama {formatIdrCompact(omittedTotal)}{' '}
+            sepanjang {months.length} bulan ini
+          </summary>
+          <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {rest.map((trend) => (
+              <SparkCard key={trend.category} view={toView(trend)} />
+            ))}
+          </ul>
+        </details>
       ) : null}
+
+      <p className="mt-3 text-xs text-ink-faint">
+        Arahkan kursor atau pakai tombol panah untuk membaca bulan tertentu. Garis putus-putus itu
+        kebiasaan kategori ini, bukan anggaran.
+      </p>
 
       {/* Wrapped, because a table ignores the one pixel width sr-only sets. */}
       <div className="sr-only">
@@ -89,7 +138,7 @@ export function CategorySparks({ review, caption }: Props) {
             </tr>
           </thead>
           <tbody>
-            {trends.map((trend) => (
+            {[...trends, ...rest].map((trend) => (
               <tr key={trend.category}>
                 <th scope="row">{trend.category}</th>
                 {trend.points.map((point) => (
@@ -102,73 +151,5 @@ export function CategorySparks({ review, caption }: Props) {
         </table>
       </div>
     </figure>
-  )
-}
-
-function Card({ trend }: { trend: CategoryTrend }) {
-  const style = MOVEMENT[trend.movement]
-  const peak = senToRupiahNumber(trend.peak > 0n ? trend.peak : 1n)
-  const heightOf = (amount: bigint) => (senToRupiahNumber(amount) / peak) * 100
-
-  return (
-    <li className="border border-line bg-sunken p-3">
-      <p className="truncate text-sm text-ink" title={trend.category}>
-        {trend.category}
-      </p>
-      <p className="tnum mt-0.5 font-mono text-sm text-ink">{formatIdr(trend.latest)}</p>
-
-      {/*
-        The row has a height of its own and each column stretches to fill it,
-        which is what gives the percentage inside something to resolve against.
-        Sized to their content instead, the columns collapse and every bar in
-        the app draws zero pixels tall while still type checking.
-      */}
-      <div className="relative mt-2 flex h-12 gap-px" data-spark={trend.category}>
-        {trend.usual > 0n ? (
-          <div
-            aria-hidden="true"
-            className="absolute inset-x-0 border-t border-dashed border-ink-faint"
-            style={{ bottom: `${heightOf(trend.usual)}%` }}
-          />
-        ) : null}
-
-        {trend.points.map((point, index) => {
-          const last = index === trend.points.length - 1
-          return (
-            <div key={point.month} className="flex flex-1 flex-col justify-end">
-              <div
-                data-month={point.month}
-                title={`${point.month}: ${formatIdr(point.amount)}`}
-                className={
-                  last
-                    ? trend.movement === 'melonjak'
-                      ? 'bg-over'
-                      : 'bg-accent'
-                    : 'bg-line-strong'
-                }
-                // A month that really spent nothing gets nothing. Everything
-                // else keeps a hairline, so a quiet month and an empty one do
-                // not look the same.
-                style={{
-                  height: point.amount === 0n ? '0' : `max(1px, ${heightOf(point.amount)}%)`,
-                }}
-              />
-            </div>
-          )
-        })}
-      </div>
-
-      <p className={`mt-1.5 text-xs ${style.tone}`}>
-        {style.glyph ? (
-          <span aria-hidden="true" className="mr-1">
-            {style.glyph}
-          </span>
-        ) : null}
-        <span className="text-ink-muted">
-          {style.words}
-          {trend.usual > 0n ? `, ${formatIdrCompact(trend.usual)}` : ''}
-        </span>
-      </p>
-    </li>
   )
 }

@@ -25,6 +25,14 @@ export interface SankeyNode {
   /** Which vertical band the node sits in, left to right. */
   column: number
   tone?: FlowTone
+  /**
+   * The hue that identifies this category everywhere else in the app. It says
+   * which category a ribbon belongs to, never what the category means, and the
+   * label is printed beside it regardless.
+   */
+  hue?: number
+  /** Nodes in a column sort by this first, so one destination's categories stay together. */
+  order?: number
 }
 
 export interface SankeyLink {
@@ -36,8 +44,14 @@ export interface SankeyLink {
 interface Props {
   nodes: SankeyNode[]
   links: SankeyLink[]
+  /** Left out, the drawing takes the height its own labels need. */
   height?: number
   caption: string
+  /**
+   * Prefix for the gradient ids. Two diagrams on one page must not share a
+   * definition, and an index is safer than a slug of a category name.
+   */
+  id?: string
   /**
    * Rendered under the diagram, for whatever the drawing had to leave out.
    *
@@ -55,6 +69,21 @@ const TONE_FILL: Record<FlowTone, string> = {
   save: 'var(--color-accent-strong)',
   warn: 'var(--color-warn)',
   neutral: 'var(--color-line-strong)',
+}
+
+/**
+ * A node's own colour.
+ *
+ * The tone says what kind of movement it is, which is what the three or four
+ * destinations need. A category node also carries a hue, and there the colour
+ * is identity rather than meaning: the same Belanja in the diagram, in the
+ * month detail and in the review queue. Lightness and chroma come from the
+ * theme, so one stored hue is right in both colour schemes.
+ */
+function fillOf(node: { tone?: FlowTone; hue?: number }): string {
+  return node.hue === undefined
+    ? TONE_FILL[node.tone ?? 'neutral']
+    : `oklch(var(--category-l) var(--category-c) ${node.hue})`
 }
 
 /*
@@ -107,6 +136,19 @@ const LABEL_OFFSET = 8
 */
 const LABEL_MIN_GAP = 34
 
+/*
+  How far a label reaches above and below the point it is anchored at.
+
+  The name sits on the anchor and the amount fifteen units under it, so a label
+  is not centred on its own anchor: it reaches about a line's ascent upwards
+  and the second line plus its descent downwards. Both ends matter now that
+  labels are moved in both directions, because a label pushed to the very top
+  of the drawing would have its first line outside the frame, where SVG text is
+  not clipped with an error and simply is not there.
+*/
+const LABEL_ABOVE = 14
+const LABEL_BELOW = 22
+
 interface Placed extends SankeyNode {
   x: number
   y: number
@@ -119,7 +161,10 @@ interface Placed extends SankeyNode {
   inUsed: number
 }
 
-export function Sankey({ nodes, links, height = 420, caption, note }: Props) {
+/** The room one label needs, which is what a column of them has to be given. */
+const ROW = LABEL_MIN_GAP + NODE_GAP
+
+export function Sankey({ nodes, links, height: fixedHeight, caption, note, id }: Props) {
   const positive = links.filter((link) => link.value > 0n)
 
   if (nodes.length === 0 || positive.length === 0) {
@@ -158,6 +203,16 @@ export function Sankey({ nodes, links, height = 420, caption, note }: Props) {
     ...columns.map((column) => nodes.filter((n) => n.column === column).length),
     1,
   )
+  /*
+    Tall enough for the labels it has to carry.
+
+    A diagram naming every category can hold twenty nodes in a column, and at a
+    fixed 420 the labels would be nudged down past each other until the last
+    few sat outside the drawing. The floor stays 420 so a small month looks the
+    way it always did; past that the picture grows and the page scrolls, which
+    is the honest trade.
+  */
+  const height = fixedHeight ?? Math.max(420, tallestColumn * ROW)
   const usable = height - PADDING_Y * 2 - NODE_GAP * (tallestColumn - 1)
   const scale = usable / heaviest
 
@@ -174,37 +229,53 @@ export function Sankey({ nodes, links, height = 420, caption, note }: Props) {
         node,
         value: Math.max(inflow.get(node.id) ?? 0, outflow.get(node.id) ?? 0),
       }))
-      // Largest first, which keeps the thick ribbons near the top and stops the
-      // diagram reading as noise.
-      .sort((a, b) => b.value - a.value)
+      // Grouped by destination where one is given, then largest first, which
+      // keeps the thick ribbons near the top and stops the diagram reading as
+      // noise.
+      .sort((a, b) => (a.node.order ?? 0) - (b.node.order ?? 0) || b.value - a.value)
 
-    let y = PADDING_Y
     /*
       Labels are nudged down the column only as far as it takes to stop them
-      overlapping, and never above the node they name. Nodes are laid out top to
-      bottom here, so one forward pass carrying the last label's position is
-      enough; a later label can push, an earlier one is already settled.
+      overlapping, and never above the node they name.
+
+      One forward pass used to be enough, when a column held four nodes and the
+      drawing had room underneath. With twenty of them the last few run out of
+      column: each is pushed a label's height below the one before, the bottom
+      clamp catches them, and three names pile up in the same place. So the
+      forward pass is followed by a backward one that lifts whatever the clamp
+      caught, which is the standard way out and costs one more loop.
     */
+    const laid: { node: SankeyNode; value: number; y: number; height: number; labelY: number }[] = []
+    let y = PADDING_Y
     let lastLabel = Number.NEGATIVE_INFINITY
     for (const { node, value } of inColumn) {
       const nodeHeight = Math.max(2, value * scale)
       const labelY = Math.min(
-        height - PADDING_Y,
+        height - LABEL_BELOW,
         Math.max(y + nodeHeight / 2, lastLabel + LABEL_MIN_GAP),
       )
       lastLabel = labelY
+      laid.push({ node, value, y, height: nodeHeight, labelY })
+      y += nodeHeight + NODE_GAP
+    }
 
+    for (let i = laid.length - 2; i >= 0; i--) {
+      const ceiling = laid[i + 1].labelY - LABEL_MIN_GAP
+      // Never above the top of the drawing, and only ever moved upward here.
+      if (laid[i].labelY > ceiling) laid[i].labelY = Math.max(LABEL_ABOVE, ceiling)
+    }
+
+    for (const { node, value, y: top, height: nodeHeight, labelY } of laid) {
       placed.set(node.id, {
         ...node,
         x: columnX(column),
-        y,
+        y: top,
         height: nodeHeight,
         value,
         labelY,
         outUsed: 0,
         inUsed: 0,
       })
-      y += nodeHeight + NODE_GAP
     }
   }
 
@@ -234,8 +305,21 @@ export function Sankey({ nodes, links, height = 420, caption, note }: Props) {
       'Z',
     ].join(' ')
 
-    return [{ link, path, tone: to.tone ?? from.tone ?? 'neutral' }]
+    return [{ link, path, from: fillOf(from), to: fillOf(to) }]
   })
+
+  /*
+    One gradient per ribbon, from the colour of where it starts to the colour of
+    where it lands. With every category named, a column of twenty identical
+    teal ribbons is a picture that hides its own answer; a ribbon that arrives
+    the colour of its category can be followed by eye.
+
+    Defined with `<defs>` and inline style attributes rather than a stylesheet,
+    because the content security policy allows no `<style>` element without a
+    nonce, and because `var()` has to resolve against the theme in both colour
+    schemes.
+  */
+  const prefix = id ?? `sankey-${caption.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
 
   return (
     <figure className="sankey border border-line bg-surface p-4">
@@ -261,13 +345,22 @@ export function Sankey({ nodes, links, height = 420, caption, note }: Props) {
           role="img"
           aria-label={caption}
         >
+          <defs>
+            {ribbons.map((ribbon, index) => (
+              <linearGradient key={`${prefix}-g${index}`} id={`${prefix}-g${index}`}>
+                <stop offset="0%" style={{ stopColor: ribbon.from }} />
+                <stop offset="100%" style={{ stopColor: ribbon.to }} />
+              </linearGradient>
+            ))}
+          </defs>
+
           <g>
-            {ribbons.map(({ link, path, tone }) => (
+            {ribbons.map(({ link, path }, index) => (
               <path
                 key={`${link.source}-${link.target}`}
                 data-ribbon={`${link.source}-${link.target}`}
                 d={path}
-                fill={TONE_FILL[tone]}
+                fill={`url(#${prefix}-g${index})`}
                 opacity={0.28}
               >
                 <title>{`${placed.get(link.source)?.label} ke ${placed.get(link.target)?.label}: ${formatIdr(link.value)}`}</title>
@@ -289,7 +382,7 @@ export function Sankey({ nodes, links, height = 420, caption, note }: Props) {
                     y={node.y}
                     width={NODE_WIDTH}
                     height={node.height}
-                    fill={TONE_FILL[node.tone ?? 'neutral']}
+                    fill={fillOf(node)}
                     rx={2}
                   />
                   {/* Name and amount on separate lines. Side by side, a long

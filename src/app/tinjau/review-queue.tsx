@@ -409,7 +409,11 @@ function SingleRows({
                   <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-muted">
                     <span className="tnum">{formatJakarta(entry.occurredAt, 'datetime')}</span>
                     {account ? (
-                      <AccountMark name={account.name} kind={account.kind} className="text-xs" />
+                      <AccountMark
+                        name={account.name}
+                        kind={account.kind}
+                        className="text-xs text-ink"
+                      />
                     ) : (
                       <span>Akun tidak dikenal</span>
                     )}

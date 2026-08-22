@@ -41,7 +41,9 @@ import { AdjustBalanceForm, type BalanceRow } from '@/app/catat/adjust-balance'
 import { DuplicatesPanel } from '@/app/catat/duplicates-panel'
 import type { DuplicateView } from '@/app/catat/duplicates-view'
 import { Balances } from '@/components/balances'
+import { AccountScope } from '@/components/account-scope'
 import type { AccountMovement } from '@/lib/ledger/monthly'
+import { categoryHue } from '@/lib/ledger/palette'
 import { formatIdr } from '@/lib/money'
 import { groupBySuggestion } from '@/lib/ledger/rules'
 import type { UnconfirmedRow } from '@/lib/queries/household'
@@ -707,8 +709,146 @@ const DUPLICATE_PAIRS: DuplicateView[] = [
   },
 ]
 
+/*
+  A month with every category the household actually uses, which is the picture
+  the dashboard now draws: twenty spending names, four bills, a savings pot and
+  a sinking fund with one category, because a destination holding one category
+  is exactly what the single-drill version used to skip.
+*/
+const FULL_SPEND = [
+  ['Makan/minum', '1.593.177,00'],
+  ['Belanja', '2.225.031,00'],
+  ['Other spending', '4.138.307,00'],
+  ['Transport', '420.000,00'],
+  ['Jajan', '380.000,00'],
+  ['Bensin', '350.000,00'],
+  ['Kesehatan', '310.000,00'],
+  ['Hiburan', '295.000,00'],
+  ['Keluarga', '280.000,00'],
+  ['Rumah', '265.000,00'],
+  ['Sedekah', '250.000,00'],
+  ['Dating', '230.000,00'],
+  ['Kendaraan', '215.000,00'],
+  ['Edukasi', '200.000,00'],
+  ['Hadiah', '185.000,00'],
+  ['Skin & Body Care', '170.000,00'],
+  ['Kosan', '155.000,00'],
+  ['Internet', '140.000,00'],
+  ['Penyesuaian Spending', '95.000,00'],
+  ['Biaya Bank', '45.700,00'],
+] as const
+
+const FULL_BILLS = [
+  ['Wifi', '271.950,00'],
+  ['Listrik', '385.000,00'],
+  ['Langganan Spotify', '104.900,00'],
+  ['Langganan Youtube', '25.925,00'],
+] as const
+
+let fullSeq = 0
+const fullRow = (name: string, amount: string, cashflow: CashflowType) => {
+  fullSeq += 1
+  return {
+    id: `full-${fullSeq}`,
+    occurredAt: new Date('2026-07-10T05:00:00.000Z'),
+    description: name,
+    amount: idr(amount),
+    cashflow,
+    categoryId: null,
+    categoryName: name,
+    fromAccountId: 'acc-mandiri',
+    toAccountId: null,
+    source: 'xlsx' as const,
+  }
+}
+
+const FULL_ROWS = [
+  ...FULL_SPEND.map(([name, amount]) => fullRow(name, amount, 'spending')),
+  ...FULL_BILLS.map(([name, amount]) => fullRow(name, amount, 'bills')),
+  fullRow('Tabungan', '1.000.000,00', 'invest_savings'),
+  fullRow('Pajak Kendaraan', '500.000,00', 'sinking_fund'),
+]
+
+const sumOf = (cashflow: CashflowType) =>
+  FULL_ROWS.filter((row) => row.cashflow === cashflow).reduce((sum, row) => sum + row.amount, 0n)
+
+const FULL_STATEMENT: MonthlyStatement = {
+  saldoAwal: idr('3.398.413,00'),
+  income: idr('14.500.000,00'),
+  fromAsset: 0n,
+  investSavings: sumOf('invest_savings'),
+  bills: sumOf('bills'),
+  sinkingFund: sumOf('sinking_fund'),
+  financialGoals: 0n,
+  debtPayment: 0n,
+  spending: sumOf('spending'),
+  piutang: 0n,
+  sisaUang: 0n,
+}
+FULL_STATEMENT.sisaUang =
+  FULL_STATEMENT.saldoAwal +
+  FULL_STATEMENT.income -
+  FULL_STATEMENT.investSavings -
+  FULL_STATEMENT.bills -
+  FULL_STATEMENT.sinkingFund -
+  FULL_STATEMENT.spending
+
+const FULL_FLOW = buildFlow(FULL_STATEMENT, FULL_ROWS, {
+  drill: 'all',
+  namedLimit: null,
+  hueOf: (name) => categoryHue({ name, hue: null }),
+})
+
+/* The month behind the cashflow chart's last column, so its detail has rows. */
+const DETAIL_ROWS = [
+  fullRow('Gaji', '9.300.000,00', 'income'),
+  ...FULL_SPEND.slice(0, 5).map(([name, amount]) => fullRow(name, amount, 'spending')),
+  {
+    ...fullRow('Antar Account', '500.000,00', 'transfer'),
+    toAccountId: 'acc-gopay',
+  },
+]
+
+const SPARKS_MANY = buildCategoryTrends(
+  [
+    {
+      month: '2026-05',
+      byCategory: Object.fromEntries(FULL_SPEND.map(([name, amount]) => [name, idr(amount)])),
+    },
+    {
+      month: '2026-06',
+      byCategory: Object.fromEntries(
+        FULL_SPEND.map(([name, amount]) => [name, idr(amount) + idr('20.000,00')]),
+      ),
+    },
+    {
+      month: '2026-07',
+      byCategory: Object.fromEntries(FULL_SPEND.map(([name, amount]) => [name, idr(amount)])),
+    },
+  ],
+  { top: 4 },
+)
+
 export const FIXTURES = {
   marks: MARKS,
+  'sankey-all': (
+    <Sankey
+      nodes={FULL_FLOW.nodes}
+      links={FULL_FLOW.links}
+      caption="Aliran uang 2026-07"
+      id="alur-penuh"
+      note={<FoldedCategories folded={FULL_FLOW.folded} into={FULL_FLOW.foldedInto} />}
+    />
+  ),
+  'account-scope': (
+    <AccountScope
+      accounts={CATAT_ACCOUNTS}
+      current="acc-gopay"
+    />
+  ),
+  'category-sparks-many': (
+    <CategorySparks review={SPARKS_MANY} caption="Tiap kategori sepanjang bulan-bulan terakhir" />
+  ),
   'catat-entry': (
     <EntryForm
       accounts={CATAT_ACCOUNTS}
@@ -774,7 +914,13 @@ export const FIXTURES = {
   bills: <BillsPanel review={BILLS} />,
   'bills-untouched': <BillsPanel review={BILLS_UNTOUCHED} />,
   receivables: <ReceivablesPanel review={RECEIVABLES} />,
-  cashflow: <CashflowChart series={SERIES} />,
+  cashflow: (
+    <CashflowChart
+      series={SERIES}
+      entries={DETAIL_ROWS}
+      look={(name) => ({ hue: categoryHue({ name, hue: null }), icon: null })}
+    />
+  ),
   'budget-derived': <BudgetBullet review={DERIVED_REVIEW} caption="Per kategori" />,
   'budget-manual': (
     <BudgetBullet review={MANUAL_REVIEW} caption="Per kategori" income={idr('6.000.000,00')} />

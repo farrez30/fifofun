@@ -18,8 +18,11 @@ import { formatJakarta } from '@/lib/datetime'
 import { reviewBills } from '@/lib/ledger/bills'
 import { reviewReceivables } from '@/lib/ledger/receivables'
 import { proposeBudget, reviewBudget } from '@/lib/ledger/budget'
+import { AccountScope } from '@/components/account-scope'
+import { asMonthlySeries, computeAccountSeries } from '@/lib/ledger/account-series'
 import { buildCategoryTrends } from '@/lib/ledger/category-trend'
 import { signedDirection } from '@/lib/ledger/direction'
+import { categoryHue, categoryIcon } from '@/lib/ledger/palette'
 import { rollUpByMonthAndCategory } from '@/lib/ledger/categories'
 import { buildFlow } from '@/lib/ledger/flow'
 import {
@@ -76,7 +79,7 @@ function EmptyState() {
   )
 }
 
-async function Dashboard() {
+async function Dashboard({ akun }: { akun: string }) {
   const household = await getHousehold()
   if (!household) {
     // An account with no household has nothing to show and, until /gabung
@@ -111,7 +114,6 @@ async function Dashboard() {
     bankAccount && printed ? reconcileBank(movements, bankAccount.id, printed.closing) : null
 
   const latestEntries = groupByMonth(transactions).get(latest.month) ?? []
-  const flow = buildFlow(latest.statement, latestEntries)
 
   // A budget the household set beats one derived from its own history, but an
   // empty panel on the first visit teaches nobody anything, so the median of the
@@ -152,6 +154,43 @@ async function Dashboard() {
   const receivables = reviewReceivables(transactions)
   const categoryTrends = buildCategoryTrends(history)
 
+  /*
+    The trend, scoped to one account when asked.
+
+    The account list is the allow-list: an id nobody owns simply means every
+    account, because a household should not be able to ask about somebody
+    else's wallet by editing the address bar, and a page that errors on a stale
+    link is worse than one that shows the default.
+  */
+  const scoped = accounts.find((account) => account.id === akun) ?? null
+  const scopedPoints = scoped ? computeAccountSeries(transactions, scoped) : []
+  const shownSeries = scoped ? asMonthlySeries(scopedPoints) : series
+  const scopedEntries = scoped
+    ? transactions.filter(
+        (row) => row.fromAccountId === scoped.id || row.toAccountId === scoped.id,
+      )
+    : transactions
+
+  // Every category the month touched gets its own ribbon, named and coloured.
+  // Six named categories and a node called "9 kategori lain" answered the
+  // question with a number rather than with the names it stood for.
+  const flow = buildFlow(latest.statement, latestEntries, {
+    drill: 'all',
+    namedLimit: null,
+    hueOf: (name) => look(name).hue,
+  })
+
+  // One place decides what a category looks like, so the flow diagram, the
+  // month breakdown and the review queue cannot disagree about Belanja.
+  const categoryByName = new Map(categories.map((category) => [category.name, category]))
+  const look = (name: string) => {
+    const row = categoryByName.get(name)
+    return {
+      hue: categoryHue(row ?? { name, hue: null }),
+      icon: row ? categoryIcon(row) : null,
+    }
+  }
+
   return (
     <div className="space-y-10">
       <section aria-labelledby="ringkasan-bulan">
@@ -178,14 +217,32 @@ async function Dashboard() {
             previous={previous?.statement.bills}
             previousLabel={previous?.month}
           />
-          <Stat
-            label="Sisa uang"
-            sen={latest.statement.sisaUang}
-            emphasis
-            previous={previous?.statement.sisaUang}
-            previousLabel={previous?.month}
-            hint="Turunan dari bulan sebelumnya, tidak diketik ulang"
-          />
+          {scoped ? (
+            <Stat
+              label={`Saldo ${scoped.name}`}
+              sen={scopedPoints[scopedPoints.length - 1]?.closing ?? 0n}
+              emphasis
+              previous={scopedPoints[scopedPoints.length - 2]?.closing}
+              previousLabel={scopedPoints[scopedPoints.length - 2]?.month}
+              hint={`Saldo akhir ${latest.month} menurut catatan, termasuk perpindahan antar akun.`}
+            />
+          ) : (
+            <Stat
+              /*
+                Not "Sisa uang". The figure is every account added together,
+                and the wallets in it are top-ups the statement saw with
+                payments it never did, so the total reads as money on hand when
+                some of it is money already spent. The label says what it is,
+                and the split below says how much of it can be vouched for.
+              */
+              label="Uang bisa dipakai"
+              sen={latest.statement.sisaUang}
+              emphasis
+              previous={previous?.statement.sisaUang}
+              previousLabel={previous?.month}
+              hint="Semua akun, turunan dari bulan sebelumnya. Berapa yang dipastikan bank ada di bagian Uangnya ada di mana."
+            />
+          )}
         </div>
       </section>
 
@@ -308,17 +365,47 @@ async function Dashboard() {
           caption={`Aliran uang ${latest.month}`}
           note={<FoldedCategories folded={flow.folded} into={flow.foldedInto} />}
         />
+        <p className="mt-2 text-xs text-ink-muted">
+          Setiap kategori yang terpakai bulan ini punya pitanya sendiri, dengan warna yang sama
+          seperti di rincian bulan dan di antrean tinjau.
+        </p>
       </section>
 
       <section aria-labelledby="tren">
         <h2 id="tren" className="mb-3 text-sm font-medium text-ink">
-          Tren {series.length} bulan
+          Tren {shownSeries.length} bulan
+          <span className="ml-2 font-normal text-ink-muted">{scoped?.name ?? 'Semua akun'}</span>
         </h2>
+        <AccountScope
+          accounts={accounts.map((account) => ({
+            id: account.id,
+            name: account.name,
+            kind: account.kind,
+          }))}
+          current={scoped?.id ?? null}
+        />
         <div className="space-y-4">
-          <CashflowChart series={series} />
+          <CashflowChart
+            series={shownSeries}
+            entries={scoped ? scopedEntries : transactions}
+            look={look}
+            scope={scoped ? { id: scoped.id, name: scoped.name } : undefined}
+            caption={scoped ? `Masuk dan keluar ${scoped.name}` : 'Pemasukan dan pengeluaran'}
+          />
           {/* The flows above, the level here. A month can look reasonable on its
               own while being the fourth in a row that ended lower. */}
-          <BalanceTrend series={series} caption="Saldo di akhir tiap bulan" />
+          <BalanceTrend
+            series={shownSeries}
+            caption={
+              scoped ? `Saldo ${scoped.name} di akhir tiap bulan` : 'Saldo di akhir tiap bulan'
+            }
+          />
+          {scoped && stalled.some((account) => account.accountId === scoped.id) ? (
+            <p className="text-xs text-ink-muted">
+              Akun ini hampir tidak pernah mengeluarkan uang di catatan, jadi garisnya kemungkinan
+              besar lebih tinggi daripada saldo sebenarnya.
+            </p>
+          ) : null}
         </div>
       </section>
 
@@ -386,14 +473,24 @@ async function Dashboard() {
   )
 }
 
-export default async function HomePage() {
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
   const user = await getUser()
   if (!user) redirect('/login')
 
+  const params = await searchParams
+  const raw = Array.isArray(params.akun) ? params.akun[0] : params.akun
+  const akun = raw?.trim() ?? ''
+
   return (
     <AppShell title="Ringkasan" email={user.email ?? ''} current="/">
-      <Suspense fallback={<DashboardSkeleton />}>
-        <Dashboard />
+      {/* Keyed on the scope, so switching account re-suspends rather than
+          showing one account's chart under another one's heading. */}
+      <Suspense key={akun} fallback={<DashboardSkeleton />}>
+        <Dashboard akun={akun} />
       </Suspense>
     </AppShell>
   )

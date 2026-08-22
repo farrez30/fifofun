@@ -41,6 +41,12 @@ export interface CategoryTrendReview {
   /** Categories that did not make the cut, and what they came to between them. */
   omitted: number
   omittedTotal: bigint
+  /**
+   * Those same categories in full, so the panel can offer them rather than
+   * only counting them. A figure a reader cannot open is a dead end, which is
+   * the same failure the folded Sankey node had.
+   */
+  rest: CategoryTrend[]
 }
 
 export interface CategoryTrendOptions {
@@ -58,7 +64,7 @@ export function buildCategoryTrends(
   const months = window.map((month) => month.month)
 
   if (window.length === 0) {
-    return { months, trends: [], omitted: 0, omittedTotal: 0n }
+    return { months, trends: [], omitted: 0, omittedTotal: 0n, rest: [] }
   }
 
   const latestMonth = window[window.length - 1]
@@ -103,6 +109,7 @@ export function buildCategoryTrends(
     trends: kept,
     omitted: rest.length,
     omittedTotal: rest.reduce((sum, trend) => sum + trend.total, 0n),
+    rest,
   }
 }
 

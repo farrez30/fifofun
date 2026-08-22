@@ -1,7 +1,7 @@
 import type { SankeyLink, SankeyNode } from '@/components/chart/sankey'
 import { totalsByCategory } from './categories'
 import type { MonthlyStatement } from './monthly'
-import type { LedgerEntry } from './types'
+import type { CashflowType, LedgerEntry } from './types'
 
 /**
  * One month turned into the flow diagram's nodes and links.
@@ -32,14 +32,6 @@ type Entry = LedgerEntry & { categoryName?: string | null; isPassThrough?: boole
 /** Cashflow types whose categories are worth a column of their own. */
 const DRILLABLE = ['spending', 'bills', 'invest_savings', 'financial_goal'] as const
 
-/** Which column one node each of those feeds. */
-const BUCKET_OF: Record<(typeof DRILLABLE)[number], string> = {
-  spending: 'spending',
-  bills: 'bills',
-  invest_savings: 'invest',
-  financial_goal: 'goals',
-}
-
 /** How many categories are drawn by name before the tail is folded away. */
 const NAMED_LIMIT = 6
 
@@ -57,17 +49,73 @@ export interface MonthFlow {
   foldedInto: string | null
 }
 
-export function buildFlow(statement: MonthlyStatement, entries: Entry[]): MonthFlow {
+export interface FlowOptions {
+  /**
+   * `largest` opens the single biggest destination, which is what a diagram
+   * drawn in one screen can hold. `all` opens every destination that has
+   * categories, including sinking funds and instalments, which the single
+   * drill deliberately skips because they usually hold one category each.
+   */
+  drill?: 'largest' | 'all'
+  /** How many categories keep their own name per destination. Null names them all. */
+  namedLimit?: number | null
+  /** The hue that identifies a category everywhere else in the app. */
+  hueOf?: (category: string) => number
+}
+
+export function buildFlow(
+  statement: MonthlyStatement,
+  entries: Entry[],
+  options: FlowOptions = {},
+): MonthFlow {
+  const drill = options.drill ?? 'largest'
+  const namedLimit = options.namedLimit === undefined ? NAMED_LIMIT : options.namedLimit
   const nodes: SankeyNode[] = [{ id: 'in', label: 'Pemasukan', column: 0, tone: 'income' }]
   const links: SankeyLink[] = []
 
-  const buckets: { id: string; label: string; amount: bigint; tone: SankeyNode['tone'] }[] = [
-    { id: 'spending', label: 'Pengeluaran', amount: statement.spending, tone: 'spend' },
-    { id: 'bills', label: 'Tagihan', amount: statement.bills, tone: 'spend' },
-    { id: 'invest', label: 'Investasi', amount: statement.investSavings, tone: 'save' },
-    { id: 'sinking', label: 'Sinking fund', amount: statement.sinkingFund, tone: 'save' },
-    { id: 'goals', label: 'Tujuan', amount: statement.financialGoals, tone: 'save' },
-    { id: 'debt', label: 'Cicilan', amount: statement.debtPayment, tone: 'warn' },
+  const buckets: {
+    id: string
+    label: string
+    amount: bigint
+    tone: SankeyNode['tone']
+    cashflow: CashflowType
+  }[] = [
+    {
+      id: 'spending',
+      label: 'Pengeluaran',
+      amount: statement.spending,
+      tone: 'spend',
+      cashflow: 'spending',
+    },
+    { id: 'bills', label: 'Tagihan', amount: statement.bills, tone: 'spend', cashflow: 'bills' },
+    {
+      id: 'invest',
+      label: 'Investasi',
+      amount: statement.investSavings,
+      tone: 'save',
+      cashflow: 'invest_savings',
+    },
+    {
+      id: 'sinking',
+      label: 'Sinking fund',
+      amount: statement.sinkingFund,
+      tone: 'save',
+      cashflow: 'sinking_fund',
+    },
+    {
+      id: 'goals',
+      label: 'Tujuan',
+      amount: statement.financialGoals,
+      tone: 'save',
+      cashflow: 'financial_goal',
+    },
+    {
+      id: 'debt',
+      label: 'Cicilan',
+      amount: statement.debtPayment,
+      tone: 'warn',
+      cashflow: 'debt_payment',
+    },
   ]
 
   for (const bucket of buckets) {
@@ -85,45 +133,82 @@ export function buildFlow(statement: MonthlyStatement, entries: Entry[]): MonthF
   }
 
   /*
-    The destination worth opening up, by size, among those that have categories
-    at all. A bucket holding one category breaks down into a single ribbon of its
-    own width, which is a column that says nothing, so two is the floor.
+    Which destinations get opened up.
+
+    By size, among those that have categories at all. A bucket holding one
+    category breaks down into a single ribbon of its own width, which is a
+    column that says nothing, so the single-drill mode wants two as a floor.
+    Opening every destination is a different picture with a different job:
+    there, one category is still worth naming, because the question is where
+    the money went rather than which pile is largest.
   */
-  const drilled = DRILLABLE.map((cashflow) => {
-    const bucket = buckets.find((candidate) => candidate.id === BUCKET_OF[cashflow])
-    return {
+  const candidates = buckets
+    .map((bucket) => ({
       bucket,
       categories:
-        bucket && bucket.amount > 0n
-          ? totalsByCategory(entries, { cashflows: [cashflow] }).filter((row) => row.amount > 0n)
+        bucket.amount > 0n
+          ? totalsByCategory(entries, { cashflows: [bucket.cashflow] }).filter(
+              (row) => row.amount > 0n,
+            )
           : [],
+    }))
+    .filter((candidate) =>
+      drill === 'all'
+        ? candidate.categories.length >= 1
+        : (DRILLABLE as readonly CashflowType[]).includes(candidate.bucket.cashflow) &&
+          candidate.categories.length > 1,
+    )
+    .sort((a, b) => (b.bucket.amount > a.bucket.amount ? 1 : -1))
+
+  const opened = drill === 'all' ? candidates : candidates.slice(0, 1)
+  if (opened.length === 0) return { nodes, links, folded: [], foldedInto: null }
+
+  const folded: CategoryTotal[] = []
+
+  opened.forEach(({ bucket, categories }, rank) => {
+    const named = namedLimit === null ? categories : categories.slice(0, namedLimit)
+    const tail = namedLimit === null ? [] : categories.slice(namedLimit)
+    const rest = tail.reduce((sum, row) => sum + row.amount, 0n)
+    folded.push(...tail)
+
+    for (const row of named) {
+      nodes.push({
+        // Prefixed by its destination, because the same category name can sit
+        // under two of them and one id would merge two different ribbons.
+        id: `cat-${bucket.id}-${row.category}`,
+        label: row.category,
+        column: 2,
+        tone: bucket.tone,
+        hue: options.hueOf?.(row.category),
+        // Keeps a destination's categories together in the column, in the same
+        // order as the destinations themselves.
+        order: rank,
+      })
+      links.push({
+        source: bucket.id,
+        target: `cat-${bucket.id}-${row.category}`,
+        value: row.amount,
+      })
+    }
+
+    if (rest > 0n) {
+      nodes.push({
+        id: `cat-rest-${bucket.id}`,
+        label: `${tail.length} kategori lain`,
+        column: 2,
+        tone: 'neutral',
+        order: rank,
+      })
+      links.push({ source: bucket.id, target: `cat-rest-${bucket.id}`, value: rest })
     }
   })
-    .filter((candidate) => candidate.bucket !== undefined && candidate.categories.length > 1)
-    .sort((a, b) => (b.bucket!.amount > a.bucket!.amount ? 1 : -1))
-    .at(0)
 
-  if (!drilled?.bucket) return { nodes, links, folded: [], foldedInto: null }
-
-  const { bucket, categories } = drilled
-  const named = categories.slice(0, NAMED_LIMIT)
-  const folded = categories.slice(NAMED_LIMIT)
-  const rest = folded.reduce((sum, row) => sum + row.amount, 0n)
-
-  for (const row of named) {
-    nodes.push({ id: `cat-${row.category}`, label: row.category, column: 2, tone: bucket.tone })
-    links.push({ source: bucket.id, target: `cat-${row.category}`, value: row.amount })
+  return {
+    nodes,
+    links,
+    folded,
+    // Only meaningful when exactly one destination was opened; with several,
+    // the folded tail belongs to no single one of them.
+    foldedInto: opened.length === 1 ? opened[0].bucket.label : null,
   }
-
-  if (rest > 0n) {
-    nodes.push({
-      id: 'cat-rest',
-      label: `${folded.length} kategori lain`,
-      column: 2,
-      tone: 'neutral',
-    })
-    links.push({ source: bucket.id, target: 'cat-rest', value: rest })
-  }
-
-  return { nodes, links, folded, foldedInto: bucket.label }
 }

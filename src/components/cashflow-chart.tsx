@@ -1,8 +1,12 @@
 import { median } from '@/lib/planning/lifestyle'
 import { buildScale } from '@/lib/ledger/scale'
+import { buildMonthDetails, type DetailOptions } from '@/lib/ledger/month-detail'
 import type { MonthlySeries } from '@/lib/ledger/monthly'
+import type { LedgerEntry } from '@/lib/ledger/types'
 import { formatIdrCompact } from '@/lib/money'
 import { CashflowChartView, type MonthView, type Tick } from './cashflow-chart-view'
+
+type Entry = LedgerEntry & { categoryName?: string | null; isPassThrough?: boolean }
 
 /**
  * Income against spending, month by month.
@@ -26,9 +30,21 @@ function shortMonth(key: string): string {
 
 interface Props {
   series: MonthlySeries[]
+  /** Every row of the ledger, so the month a reader pins can be broken down. */
+  entries?: Entry[]
+  look?: DetailOptions['look']
+  /** Scoped to one account, which changes what in and out mean. */
+  scope?: DetailOptions['account']
+  caption?: string
 }
 
-export function CashflowChart({ series }: Props) {
+export function CashflowChart({
+  series,
+  entries = [],
+  look,
+  scope,
+  caption = 'Pemasukan dan pengeluaran',
+}: Props) {
   if (series.length === 0) {
     return (
       <p className="border border-line bg-surface p-6 text-sm text-ink-muted">
@@ -96,7 +112,8 @@ export function CashflowChart({ series }: Props) {
         text: formatIdrCompact(medianSpending),
       }}
       hasDeficit={hasDeficit}
-      caption="Pemasukan dan pengeluaran"
+      caption={caption}
+      details={buildMonthDetails(series, entries, { look, account: scope })}
     />
   )
 }

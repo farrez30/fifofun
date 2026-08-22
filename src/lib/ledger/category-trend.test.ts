@@ -135,6 +135,18 @@ describe('buildCategoryTrends', () => {
     expect(review.trends[0].category).toBe('Belanja')
   })
 
+  it('hands back what it left out, not only a count of it', () => {
+    // A figure a reader cannot open is a dead end. The panel offers these
+    // behind a summary rather than leaving them as a number.
+    const review = buildCategoryTrends(JAJAN, { top: 1 })
+    expect(review.rest).toHaveLength(review.omitted)
+    expect(review.rest.map((trend) => trend.category)).not.toContain(review.trends[0].category)
+    expect(review.rest.reduce((sum, trend) => sum + trend.total, 0n)).toBe(review.omittedTotal)
+    // Still ordered by size, like the ones that made the cut.
+    const totals = review.rest.map((trend) => trend.total)
+    expect([...totals].sort((a, b) => (b > a ? 1 : b < a ? -1 : 0))).toEqual(totals)
+  })
+
   it('keeps only the top slice and says what it left out', () => {
     const review = buildCategoryTrends(JAJAN, { top: 1 })
     expect(review.trends).toHaveLength(1)
