@@ -37,6 +37,9 @@ import type { ChildPlan } from '@/lib/planning/children'
 import { templateProfile } from '@/lib/planning/lifestyle'
 import { AccountMark, CashflowChip, CategoryMark, DirectionMark } from '@/components/marks'
 import { TransactionTable } from '@/components/transaction-table'
+import { BudgetTable } from '@/app/anggaran/budget-table'
+import { buildBudgetPlan, type BudgetCategory } from '@/lib/ledger/budget-plan'
+import type { MonthCategoryTotals } from '@/lib/ledger/categories'
 import { EditEntryForm, type EntryView } from '@/app/transaksi/[id]/edit-form'
 import { SplitForm } from '@/app/transaksi/[id]/split-form'
 import { editableFields } from '@/lib/ledger/edit'
@@ -480,6 +483,60 @@ const FLOW = buildFlow(
   behaviour would be testing React rather than the markup.
 */
 const inert = () => undefined
+
+const BUDGET_CATEGORIES: BudgetCategory[] = [
+  { id: 'c-belanja', name: 'Belanja', cashflow: 'spending', icon: 'ShoppingBag', hue: 137 },
+  { id: 'c-jajan', name: 'Jajan', cashflow: 'spending', icon: 'Cookie', hue: 40 },
+  // Never spent on, which is a different thing from spending nothing.
+  { id: 'c-lain', name: 'Other spending', cashflow: 'spending', icon: null, hue: null },
+  { id: 'c-wifi', name: 'Wifi', cashflow: 'bills', icon: 'WifiHigh', hue: 210 },
+  { id: 'c-kosan', name: 'Kosan', cashflow: 'bills', icon: 'House', hue: 280 },
+]
+
+const BUDGET_HISTORY: MonthCategoryTotals[] = [
+  {
+    month: '2026-05',
+    byCategory: { 'c-belanja': idr('1.000.000,00'), 'c-jajan': idr('200.000,00') },
+  },
+  {
+    month: '2026-06',
+    byCategory: {
+      'c-belanja': idr('1.200.000,00'),
+      'c-jajan': idr('180.000,00'),
+      'c-wifi': idr('300.000,00'),
+    },
+  },
+  {
+    month: '2026-07',
+    byCategory: {
+      'c-belanja': idr('1.500.000,00'),
+      'c-jajan': idr('220.000,00'),
+      'c-wifi': idr('300.000,00'),
+    },
+  },
+]
+
+const BUDGET_PLAN = buildBudgetPlan({
+  period: '2026-07',
+  previous: '2026-06',
+  categories: BUDGET_CATEGORIES,
+  history: BUDGET_HISTORY,
+  // Belanja is over its budget; Kosan has one last month and none here, which
+  // is what makes the copy button worth offering.
+  saved: { 'c-belanja': idr('1.300.000,00'), 'c-wifi': idr('300.000,00') },
+  previousSaved: { 'c-wifi': idr('300.000,00'), 'c-kosan': idr('1.800.000,00') },
+})
+
+// A household on its first month: no history to take a median from, and no
+// spending recorded yet either.
+const BUDGET_PLAN_EMPTY = buildBudgetPlan({
+  period: '2026-01',
+  previous: '2025-12',
+  categories: BUDGET_CATEGORIES,
+  history: [],
+  saved: {},
+  previousSaved: {},
+})
 
 /*
   One statement row and one typed row. Which fields the form draws is decided
@@ -1377,6 +1434,8 @@ export const FIXTURES = {
   ),
   // Four accounts, one of them archived, so the row that keeps its place in the
   // list and the row that does not are both drawn.
+  'budget-table': <BudgetTable plan={BUDGET_PLAN} />,
+  'budget-table-empty': <BudgetTable plan={BUDGET_PLAN_EMPTY} />,
   'transaction-table': (
     <TransactionTable
       rows={TABLE_ROWS}

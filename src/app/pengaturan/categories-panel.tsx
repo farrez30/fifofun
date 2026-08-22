@@ -125,7 +125,7 @@ function Table({
   caption: string
 }) {
   return (
-    <div className="mt-2 overflow-x-auto border border-line bg-surface">
+    <div className="relative mt-2 overflow-x-auto border border-line bg-surface">
       <table className="w-full min-w-[34rem] border-collapse text-sm">
         <caption className="sr-only">{caption}</caption>
         <thead>

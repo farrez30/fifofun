@@ -15,7 +15,7 @@ import { Waterfall } from '@/components/chart/waterfall'
 import { BillsPanel } from '@/components/bills-panel'
 import { Money, Stat } from '@/components/money'
 import { ReceivablesPanel } from '@/components/receivables-panel'
-import { formatJakarta } from '@/lib/datetime'
+import { formatJakarta, formatMonthKey } from '@/lib/datetime'
 import { reviewBills } from '@/lib/ledger/bills'
 import { reviewReceivables } from '@/lib/ledger/receivables'
 import { proposeBudget, reviewBudget } from '@/lib/ledger/budget'
@@ -317,10 +317,20 @@ async function Dashboard({ akun }: { akun: string }) {
       </section>
 
       <section aria-labelledby="anggaran">
-        <h2 id="anggaran" className="mb-3 text-sm font-medium text-ink">
-          Anggaran dan realisasi
-          <span className="ml-2 font-normal text-ink-muted">{latest.month}</span>
-        </h2>
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+          <h2 id="anggaran" className="text-sm font-medium text-ink">
+            Anggaran dan realisasi
+            <span className="ml-2 font-normal text-ink-muted">{latest.month}</span>
+          </h2>
+          {/* The panel judges spending against a budget. Until this link
+              existed, the only way to set one was a database client. */}
+          <a
+            href={`/anggaran?bulan=${latest.month}`}
+            className="text-sm text-accent underline underline-offset-2"
+          >
+            Atur anggaran {formatMonthKey(latest.month)}
+          </a>
+        </div>
         <div className="space-y-4">
           <BudgetBullet
             review={budgetReview}

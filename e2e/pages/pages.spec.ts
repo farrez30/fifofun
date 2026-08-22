@@ -135,6 +135,7 @@ test.describe('the pages that need somebody signed in', () => {
     '/undangan',
     '/catat',
     '/pengaturan',
+    '/anggaran',
     '/transaksi/00000000-0000-4000-8000-000000000000',
   ]) {
     test(`${path} sends a stranger to the login page`, async ({ page }) => {

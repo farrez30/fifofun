@@ -1321,6 +1321,7 @@ test.describe('lebar halaman', () => {
       'transaction-table',
       'transaksi-edit-manual',
       'transaksi-split',
+      'budget-table',
     ]) {
       await open(page, fixture)
 

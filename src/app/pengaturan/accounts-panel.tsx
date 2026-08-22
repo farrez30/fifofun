@@ -53,7 +53,7 @@ export function AccountsPanel({ accounts }: { accounts: AccountView[] }) {
         {archived.length > 0 ? `, ${archived.length} diarsipkan` : ''}.
       </p>
 
-      <div className="mt-3 overflow-x-auto border border-line bg-surface">
+      <div className="relative mt-3 overflow-x-auto border border-line bg-surface">
         <table className="w-full min-w-[46rem] border-collapse text-sm">
           <caption className="sr-only">Akun beserta kunci impor dan urutannya</caption>
           <thead>
