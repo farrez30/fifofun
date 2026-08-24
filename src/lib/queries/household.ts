@@ -384,6 +384,8 @@ export interface UnconfirmedRow {
   fromAccountId: string | null
   toAccountId: string | null
   source: EntrySource
+  /** Set when a person told tidying to leave this row's category alone. */
+  categoryLockedAt: Date | null
 }
 
 /**
@@ -409,7 +411,7 @@ export async function getUnconfirmed(
     const filtered = supabase
       .from('transactions')
       .select(
-        'id, description, raw_description, amount, cashflow, occurred_at, from_account_id, to_account_id, source, categories(name)',
+        'id, description, raw_description, amount, cashflow, occurred_at, from_account_id, to_account_id, source, category_locked_at, categories(name)',
       )
       .eq('household_id', householdId)
       .is('deleted_at', null)
@@ -441,6 +443,9 @@ export async function getUnconfirmed(
         fromAccountId: (row.from_account_id as string | null) ?? null,
         toAccountId: (row.to_account_id as string | null) ?? null,
         source: row.source as EntrySource,
+        categoryLockedAt: row.category_locked_at
+          ? new Date(row.category_locked_at as string)
+          : null,
       })
     }
 

@@ -907,6 +907,7 @@ function queueRow(
     fromAccountId: incoming ? null : accountId,
     toAccountId: incoming ? accountId : null,
     source: 'xlsx',
+    categoryLockedAt: null,
   }
 }
 
@@ -1178,16 +1179,98 @@ const REPORT_ROWS = [
   reportRow('Gaji', '6.330.000,00', 'Handoko Afandy - Sal TUKK MitraPlus', 'income'),
 ]
 
+/*
+  The panel opens its largest move by default, so a static render shows one move
+  already unfolded. That is what makes the rows, the rule that claimed each of
+  them, and the per-row dropdown testable in a harness with no hydration.
+*/
 const TIDY_VIEW = {
   moves: [
-    { from: 'Makan/minum', to: 'Bensin', cashflow: 'spending' as CashflowType, icon: 'GasPump', hue: 60, count: 45, amount: 'Rp4.401.205' },
-    { from: 'Belanja', to: 'Listrik', cashflow: 'bills' as CashflowType, icon: 'Lightning', hue: 185, count: 16, amount: 'Rp6.098.000' },
-    { from: 'Other spending', to: 'Laundry', cashflow: 'spending' as CashflowType, icon: 'WashingMachine', hue: 300, count: 20, amount: 'Rp1.171.439' },
+    {
+      key: 'Makan%2Fminum|cat-bensin',
+      from: 'Makan/minum',
+      to: 'Bensin',
+      toCategoryId: 'cat-bensin',
+      cashflow: 'spending' as CashflowType,
+      icon: 'GasPump',
+      hue: 60,
+      count: 2,
+      amount: 'Rp350.000',
+      entries: [
+        {
+          id: 'q101',
+          occurredAt: '12 Agu 2026',
+          description: 'SPBU 31.11802 Kalideres',
+          amount: 'Rp150.000',
+          cashflow: 'spending' as CashflowType,
+          pattern: 'spbu',
+        },
+        {
+          id: 'q102',
+          occurredAt: '09 Agu 2026',
+          description: 'Shell Jatimekar',
+          amount: 'Rp200.000',
+          cashflow: 'spending' as CashflowType,
+          pattern: 'shell',
+        },
+      ],
+    },
+    {
+      key: 'Belanja|cat-listrik',
+      from: 'Belanja',
+      to: 'Listrik',
+      toCategoryId: 'cat-listrik',
+      cashflow: 'bills' as CashflowType,
+      icon: 'Lightning',
+      hue: 185,
+      count: 1,
+      amount: 'Rp200.000',
+      entries: [
+        {
+          id: 'q103',
+          occurredAt: '01 Agu 2026',
+          description: 'Aeropolis Token Listrik',
+          amount: 'Rp200.000',
+          cashflow: 'bills' as CashflowType,
+          pattern: 'token listrik',
+        },
+      ],
+    },
+    {
+      key: 'Other%20spending|cat-laundry',
+      from: 'Other spending',
+      to: 'Laundry',
+      toCategoryId: 'cat-laundry',
+      cashflow: 'spending' as CashflowType,
+      icon: 'WashingMachine',
+      hue: 300,
+      count: 1,
+      amount: 'Rp45.000',
+      entries: [
+        {
+          id: 'q104',
+          occurredAt: '30 Jul 2026',
+          description: 'Laundry Kiloan Tata',
+          amount: 'Rp45.000',
+          cashflow: 'spending' as CashflowType,
+          pattern: 'laundry',
+        },
+      ],
+    },
   ],
-  count: 81,
-  amount: 'Rp11.670.644',
+  count: 4,
+  amount: 'Rp595.000',
   protectedCount: 310,
+  heldCount: 4,
 }
+
+/** The pots a row may be redirected to, including the ones the moves point at. */
+const TIDY_CATEGORIES = [
+  ...QUEUE_CATEGORIES,
+  { id: 'cat-bensin', name: 'Bensin', cashflow: 'spending' as CashflowType, parentId: null },
+  { id: 'cat-listrik', name: 'Listrik', cashflow: 'bills' as CashflowType, parentId: null },
+  { id: 'cat-laundry', name: 'Laundry', cashflow: 'spending' as CashflowType, parentId: null },
+]
 
 export const FIXTURES = {
   marks: MARKS,
@@ -1557,7 +1640,7 @@ export const FIXTURES = {
       ]}
     />
   ),
-  'tinjau-rapikan': <TidyPanel view={TIDY_VIEW} />,
+  'tinjau-rapikan': <TidyPanel view={TIDY_VIEW} categories={TIDY_CATEGORIES} />,
   'laporan-per-kategori': (
     <PeriodReport
       summary={summarisePeriod(REPORT_ROWS, {}, REPORT_GROUPS)}

@@ -109,28 +109,85 @@ test.describe('rapikan transaksi lama', () => {
     await open(page, 'tinjau-rapikan')
 
     // The point of the panel is that nothing is a surprise: each move is a row
-    // a person can read, with the pot it leaves, the pot it joins, and both
+    // a person can read, with the pot it joins, the pot it leaves, and both
     // figures.
-    const rows = page.locator('table tbody tr')
-    await expect(rows).toHaveCount(3)
-    await expect(rows.first()).toContainText('Makan/minum')
-    await expect(rows.first()).toContainText('Bensin')
-    await expect(rows.first()).toContainText('Rp4.401.205')
+    const moves = page.locator('#rapikan > ul > li')
+    await expect(moves).toHaveCount(3)
+    await expect(moves.first()).toContainText('Bensin')
+    await expect(moves.first()).toContainText('sekarang di Makan/minum')
+    await expect(moves.first()).toContainText('Rp350.000')
+
+    // A closed move says what opening it gives you, since nothing else on the
+    // row looks like a control.
+    await expect(moves.last()).toContainText('lihat transaksinya')
+  })
+
+  test('opens the largest move into the transactions that make it', async ({ page }) => {
+    await open(page, 'tinjau-rapikan')
+
+    // A line reading "Makan/minum to Bensin, 45, Rp4.401.205" cannot be judged
+    // right or wrong from the outside, and there is no undo, so the evidence
+    // has to be reachable before the button is.
+    await expect(page.getByText('SPBU 31.11802 Kalideres')).toBeVisible()
+    await expect(page.getByText('12 Agu 2026')).toBeVisible()
+
+    // And the reason it is in this move at all.
+    await expect(page.getByText('cocok dengan aturan “spbu”')).toBeVisible()
+  })
+
+  test('lets one transaction go somewhere other than where the rule said', async ({ page }) => {
+    await open(page, 'tinjau-rapikan')
+
+    const choice = page.getByLabel('Pos untuk SPBU 31.11802 Kalideres')
+    await expect(choice).toBeVisible()
+    // Filled with what the rule decided, so leaving it alone agrees with the
+    // plan and touching it is a deliberate act.
+    await expect(choice).toHaveValue('cat-bensin')
+    await expect(choice.getByRole('option', { name: /Jangan pindahkan/ })).toHaveCount(1)
+    // Only pots facing the same way: an incoming category on an outgoing row is
+    // the shape the account-sides check refuses.
+    await expect(choice.getByRole('option', { name: 'Gaji' })).toHaveCount(0)
+  })
+
+  test('runs one move on its own, and says what that move will do', async ({ page }) => {
+    await open(page, 'tinjau-rapikan')
+
+    await expect(
+      page.getByRole('button', { name: 'Pindahkan 2 transaksi ke Bensin' }),
+    ).toBeVisible()
   })
 
   test('says what it will not touch', async ({ page }) => {
     await open(page, 'tinjau-rapikan')
     await expect(page.getByText('310 transaksi')).toBeVisible()
+    // Two different refusals, told apart: one is a category somebody picked,
+    // the other a row somebody said no to.
+    await expect(page.getByText('4 transaksi yang pernah kamu tahan')).toBeVisible()
   })
 
-  test('will not run until somebody says they read it', async ({ page }) => {
+  test('will not run everything until somebody says they read it', async ({ page }) => {
     await open(page, 'tinjau-rapikan')
 
     // The button starts refused, and the checkbox beside it is the only thing
     // that lifts the refusal. Whether it lifts is a React state change, which
     // this harness renders without; what is asserted here is that a page
     // arriving before hydration cannot move a thousand rows by one stray click.
-    await expect(page.getByRole('button', { name: 'Rapikan sekarang' })).toBeDisabled()
+    await expect(page.getByRole('button', { name: 'Rapikan semua' })).toBeDisabled()
     await expect(page.getByRole('checkbox')).not.toBeChecked()
+  })
+
+  test('keeps every control a real target on a phone', async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 780 })
+    await open(page, 'tinjau-rapikan')
+
+    const heights = await page
+      .locator('#rapikan button, #rapikan select')
+      .evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().height))
+    expect(Math.min(...heights)).toBeGreaterThanOrEqual(44)
+
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    )
+    expect(overflow).toBeLessThanOrEqual(0)
   })
 })

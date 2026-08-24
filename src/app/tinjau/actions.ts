@@ -2,9 +2,10 @@
 
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
-import { DIRECTION_LABELS, directionOf, ruleAgreesWithDirection } from '@/lib/ledger/direction'
+import { directionRefusal, ruleAgreesWithDirection } from '@/lib/ledger/direction'
 import { findConflict, matches, normalise, splitByDirection, type Rule } from '@/lib/ledger/rules'
 import { CASHFLOW_TYPES, type CashflowType } from '@/lib/ledger/types'
+import { resolveTidy } from '@/lib/ledger/tidy'
 import { groupRefusal } from '@/lib/queries/categories'
 import { getRules, getUnconfirmed } from '@/lib/queries/household'
 import { planLedgerTidy } from '@/lib/queries/tidy'
@@ -41,29 +42,31 @@ const singleSchema = z.object({
   categoryId: z.uuid(),
 })
 
+/** Tidying the whole plan at once, as opposed to one move out of it. */
+const SCOPE_ALL = 'semua'
+
+/** Per-row decisions arrive as `pilih:<transaction id>`. */
+const CHOICE_PREFIX = 'pilih:'
+
+/**
+ * More rows than the largest move holds, and far short of a request worth
+ * worrying about. The cap belongs here because the field names come from a
+ * form, and nothing else bounds how many of them may be sent.
+ */
+const MAX_CHOICES = 500
+
 export interface ActionResult {
   ok: boolean
   message: string
   detail?: string
   /** How many existing rows the decision settled. */
   applied?: number
+  /** Which move was run, so the panel can put the reply beside its button. */
+  scope?: string
 }
 
 function fail(message: string, detail?: string): ActionResult {
   return { ok: false, message, detail }
-}
-
-/**
- * Why a category cannot be written onto a row.
- *
- * A category carries a cashflow, and a cashflow decides which account sides a
- * row must have. Filing an outgoing payment under an income category would
- * produce exactly the shape `transactions_account_sides` refuses, and because
- * the update runs in batches of a hundred, one such row used to take ninety
- * nine correct ones down with it and report a raw Postgres message.
- */
-function mismatch(categoryName: string, category: CashflowType, row: CashflowType): string {
-  return `${categoryName} untuk uang ${DIRECTION_LABELS[directionOf(category)]}, transaksi ini uang ${DIRECTION_LABELS[directionOf(row)]}. Pilih kategori dengan arah yang sama.`
 }
 
 async function context() {
@@ -163,7 +166,7 @@ export async function applyCategory(
   if (agree.length === 0) {
     return fail(
       'Arah kategorinya tidak cocok dengan transaksinya.',
-      mismatch(category.name as string, cashflow, disagree[0].cashflow),
+      directionRefusal(category.name as string, cashflow, disagree[0].cashflow),
     )
   }
 
@@ -292,7 +295,7 @@ export async function categoriseOne(
   if (!ruleAgreesWithDirection(categoryCashflow, rowCashflow)) {
     return fail(
       'Arah kategorinya tidak cocok dengan transaksinya.',
-      mismatch(category.name as string, categoryCashflow, rowCashflow),
+      directionRefusal(category.name as string, categoryCashflow, rowCashflow),
     )
   }
 
@@ -339,6 +342,7 @@ export async function deleteRule(
   return { ok: true, message: 'Aturannya dihapus. Kategori yang sudah tersimpan tidak berubah.' }
 }
 
+
 /**
  * Runs every rule over the whole ledger, not just the queue.
  *
@@ -347,30 +351,66 @@ export async function deleteRule(
  * QRIS payment stamped as a meal on the way in, so the rows most in need of a
  * better rule were the ones a rule could not reach.
  *
- * Two things keep that safe. Only rows still sitting in one of the importer's
- * parking categories are eligible, so nothing anybody chose is overwritten. And
- * the plan is computed and shown before it is written, by the same pure
- * function on both sides, so the figures on the button are the figures applied.
+ * Three things keep that safe. Only rows still sitting in one of the importer's
+ * parking categories are eligible, so nothing anybody chose is overwritten. The
+ * plan is computed and shown before it is written, by the same pure function on
+ * both sides, so the figures under the button are the figures applied. And the
+ * plan is recomputed here rather than taken from the form: a person may redirect
+ * a row inside it or hold one back, never add one to it.
  */
 export async function tidyLedger(
   _previous: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
-  if (formData.get('confirm') !== 'ya') {
-    return fail('Perapian belum dijalankan.', 'Centang dulu persetujuannya.')
+  const scope = String(formData.get('scope') ?? SCOPE_ALL)
+
+  // Every refusal below names the move it came from, so the panel can put it
+  // under the button that was pressed rather than at the foot of the table.
+  const stop = (message: string, detail?: string): ActionResult => ({
+    ...fail(message, detail),
+    scope,
+  })
+
+  /*
+    A whole ledger at once is more than anybody can read, so that button asks
+    for the checkbox. A single move is a list somebody had to open to reach the
+    button underneath it, and the button names the pot and the count itself, so
+    a checkbox there would be friction standing in for consent already given.
+  */
+  if (scope === SCOPE_ALL && formData.get('confirm') !== 'ya') {
+    return stop('Perapian belum dijalankan.', 'Centang dulu persetujuannya.')
+  }
+
+  const choices = new Map<string, string>()
+  for (const [field, value] of formData.entries()) {
+    if (!field.startsWith(CHOICE_PREFIX) || typeof value !== 'string') continue
+    if (choices.size >= MAX_CHOICES) {
+      return stop(
+        'Terlalu banyak perubahan sekaligus.',
+        `Paling banyak ${MAX_CHOICES} baris dalam satu kali jalan. Jalankan per pindahan saja.`,
+      )
+    }
+    choices.set(field.slice(CHOICE_PREFIX.length), value)
   }
 
   const ctx = await context()
-  if (!ctx) return fail('Sesi kamu sudah berakhir. Masuk lagi lalu ulangi.')
+  if (!ctx) return stop('Sesi kamu sudah berakhir. Masuk lagi lalu ulangi.')
   const { supabase, householdId } = ctx
 
-  const plan = await planLedgerTidy(householdId)
-  if (plan.count === 0) {
+  const { plan, targets, groups } = await planLedgerTidy(householdId)
+  const resolved = resolveTidy(plan, choices, targets, groups, scope === SCOPE_ALL ? null : scope)
+
+  if (resolved.count === 0 && resolved.held.length === 0) {
     return {
-      ok: true,
-      message: 'Tidak ada yang perlu dipindahkan.',
-      detail: 'Setiap transaksi sudah berada di pos yang ditunjuk aturan.',
+      ok: resolved.rejected.length === 0,
+      message:
+        resolved.rejected.length > 0
+          ? 'Tidak ada yang bisa dipindahkan.'
+          : 'Tidak ada yang perlu dipindahkan.',
+      detail:
+        resolved.rejected[0]?.reason ?? 'Setiap transaksi sudah berada di pos yang ditunjuk aturan.',
       applied: 0,
+      scope,
     }
   }
 
@@ -380,26 +420,43 @@ export async function tidyLedger(
   const settledAt = new Date().toISOString()
   let written = 0
 
-  for (const move of plan.moves) {
-    for (let start = 0; start < move.ids.length; start += CHUNK) {
+  for (const write of resolved.writes) {
+    for (let start = 0; start < write.ids.length; start += CHUNK) {
+      const slice = write.ids.slice(start, start + CHUNK)
       const { error } = await supabase
         .from('transactions')
         .update({
-          category_id: move.toCategoryId,
-          cashflow: move.cashflow,
+          category_id: write.categoryId,
+          cashflow: write.cashflow,
           needs_review: false,
           confirmed_at: settledAt,
           updated_at: settledAt,
         })
-        .in('id', move.ids.slice(start, start + CHUNK))
+        .in('id', slice)
 
       if (error) {
-        return fail(
+        return stop(
           'Perapian berhenti di tengah jalan.',
           `${written} transaksi sudah dipindahkan. Jalankan lagi untuk melanjutkan sisanya. ${error.message}`,
         )
       }
-      written += move.ids.slice(start, start + CHUNK).length
+      written += slice.length
+    }
+  }
+
+  // A held row keeps its category. The stamp only stops tidying from offering
+  // to move it again, which is the difference between a decision and a default.
+  for (let start = 0; start < resolved.held.length; start += CHUNK) {
+    const { error } = await supabase
+      .from('transactions')
+      .update({ category_locked_at: settledAt, updated_at: settledAt })
+      .in('id', resolved.held.slice(start, start + CHUNK))
+
+    if (error) {
+      return stop(
+        'Perpindahannya jadi, penandaannya tidak.',
+        `${written} transaksi dipindahkan, tapi yang kamu tahan gagal ditandai dan akan ditawarkan lagi. ${error.message}`,
+      )
     }
   }
 
@@ -407,13 +464,24 @@ export async function tidyLedger(
   revalidatePath('/laporan')
   revalidatePath('/')
 
+  const notes = [
+    resolved.held.length > 0
+      ? `${resolved.held.length} ditahan dan tidak akan ditawarkan lagi.`
+      : '',
+    resolved.rejected.length > 0 ? resolved.rejected[0].reason : '',
+    scope === SCOPE_ALL && plan.protectedCount > 0
+      ? `${plan.protectedCount} transaksi yang kategorinya pernah kamu tetapkan sendiri tidak disentuh.`
+      : '',
+  ].filter(Boolean)
+
   return {
     ok: true,
-    message: `${written} transaksi dipindahkan ke ${plan.moves.length} pos.`,
-    detail:
-      plan.protectedCount > 0
-        ? `${plan.protectedCount} transaksi yang kategorinya pernah kamu tetapkan sendiri tidak disentuh.`
-        : undefined,
+    message:
+      written > 0
+        ? `${written} transaksi dipindahkan ke ${resolved.writes.length} pos.`
+        : `${resolved.held.length} transaksi ditahan.`,
+    detail: notes.length > 0 ? notes.join(' ') : undefined,
     applied: written,
+    scope,
   }
 }

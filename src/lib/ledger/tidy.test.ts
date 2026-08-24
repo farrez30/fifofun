@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import type { Rule } from './rules'
-import { PARKING_CATEGORIES, planTidy, type TidyRow, type TidyTarget } from './tidy'
+import {
+  HOLD,
+  PARKING_CATEGORIES,
+  moveKey,
+  planTidy,
+  resolveTidy,
+  type TidyRow,
+  type TidyTarget,
+} from './tidy'
 import type { CashflowType } from './types'
 
 /**
@@ -33,9 +41,19 @@ function row(
   categoryName: string | null,
   cashflow: CashflowType = 'spending',
   amount = 100_000_00n,
+  occurredAt = new Date('2026-05-01T03:00:00Z'),
 ): TidyRow {
   seq++
-  return { id: `row-${seq}`, description, rawDescription: description, amount, cashflow, categoryName }
+  return {
+    id: `row-${seq}`,
+    description,
+    rawDescription: description,
+    amount,
+    cashflow,
+    categoryName,
+    occurredAt,
+    categoryLockedAt: null,
+  }
 }
 
 describe('planTidy', () => {
@@ -143,5 +161,158 @@ describe('planTidy', () => {
     // Every name on the list has to be somewhere a row can actually sit.
     expect(PARKING_CATEGORIES).toContain('Other spending')
     expect(PARKING_CATEGORIES).not.toContain('Belanja Harian')
+  })
+})
+
+describe('planTidy, what a person has to read before agreeing', () => {
+  it('carries the transactions that make up a move, newest first', () => {
+    const plan = planTidy(
+      [
+        row('SPBU lama', 'Makan/minum', 'spending', 50_000_00n, new Date('2026-01-05T03:00:00Z')),
+        row('SPBU baru', 'Makan/minum', 'spending', 60_000_00n, new Date('2026-08-05T03:00:00Z')),
+      ],
+      [rule('spbu', 'bensin', 'spending')],
+      TARGETS,
+    )
+
+    expect(plan.moves[0].entries.map((entry) => entry.description)).toEqual([
+      'SPBU baru',
+      'SPBU lama',
+    ])
+  })
+
+  it('names the rule that claimed each row, which is the only "why" there is', () => {
+    const plan = planTidy(
+      [row('Aeropolis Token Listrik', 'Belanja', 'bills')],
+      [rule('token listrik', 'listrik', 'bills')],
+      TARGETS,
+    )
+    expect(plan.moves[0].entries[0].pattern).toBe('token listrik')
+  })
+
+  it('stops offering a row somebody has already said no to', () => {
+    const held = row('SPBU 31.11802', 'Other spending')
+    held.categoryLockedAt = new Date('2026-08-01T03:00:00Z')
+
+    const plan = planTidy([held], [rule('spbu', 'bensin', 'spending')], TARGETS)
+
+    expect(plan.count).toBe(0)
+    expect(plan.heldCount).toBe(1)
+    // Told apart from the other refusal on purpose: that one is "you picked
+    // this category", this one is "you told me to stop asking".
+    expect(plan.protectedCount).toBe(0)
+  })
+})
+
+describe('resolveTidy', () => {
+  const GROUPS = new Set<string>()
+  const rules = [rule('spbu', 'bensin', 'spending')]
+
+  function planOf(rows: TidyRow[]) {
+    return planTidy(rows, rules, TARGETS)
+  }
+
+  it('writes the plan as it stands when nobody changed anything', () => {
+    const plan = planOf([row('SPBU A', 'Makan/minum'), row('SPBU B', 'Makan/minum')])
+    const resolved = resolveTidy(plan, new Map(), TARGETS, GROUPS, null)
+
+    expect(resolved.writes).toHaveLength(1)
+    expect(resolved.writes[0]).toMatchObject({ categoryId: 'bensin', cashflow: 'spending' })
+    expect(resolved.count).toBe(2)
+    expect(resolved.held).toEqual([])
+  })
+
+  it('sends a redirected row to the pot the person picked instead', () => {
+    const first = row('SPBU A', 'Makan/minum')
+    const plan = planOf([first, row('SPBU B', 'Makan/minum')])
+
+    const resolved = resolveTidy(
+      plan,
+      new Map([[first.id, 'listrik']]),
+      TARGETS,
+      GROUPS,
+      null,
+    )
+
+    expect(resolved.writes).toHaveLength(2)
+    expect(resolved.writes.find((write) => write.categoryId === 'listrik')?.ids).toEqual([first.id])
+    expect(resolved.count).toBe(2)
+  })
+
+  it('takes a held row out of every write rather than filing it somewhere', () => {
+    const first = row('SPBU A', 'Makan/minum')
+    const plan = planOf([first, row('SPBU B', 'Makan/minum')])
+
+    const resolved = resolveTidy(plan, new Map([[first.id, HOLD]]), TARGETS, GROUPS, null)
+
+    expect(resolved.held).toEqual([first.id])
+    expect(resolved.writes.flatMap((write) => write.ids)).not.toContain(first.id)
+    expect(resolved.count).toBe(1)
+  })
+
+  it('refuses a row the plan does not contain', () => {
+    // Narrowing is always allowed, widening never is: an id from outside the
+    // plan is a row tidying has no business touching, whether it was settled in
+    // another tab or made up in a request.
+    const plan = planOf([row('SPBU A', 'Makan/minum')])
+    const resolved = resolveTidy(
+      plan,
+      new Map([['row-tidak-ada', 'bensin']]),
+      TARGETS,
+      GROUPS,
+      null,
+    )
+
+    expect(resolved.rejected).toHaveLength(1)
+    expect(resolved.rejected[0].reason).toContain('Muat ulang')
+  })
+
+  it('refuses a pot facing the other way, with the sentence saying which way', () => {
+    const first = row('SPBU A', 'Makan/minum')
+    const plan = planOf([first])
+    const resolved = resolveTidy(plan, new Map([[first.id, 'gaji']]), TARGETS, GROUPS, null)
+
+    expect(resolved.count).toBe(0)
+    expect(resolved.rejected[0].reason).toContain('uang masuk')
+  })
+
+  it('refuses a group, because a group holding a row double counts it', () => {
+    const first = row('SPBU A', 'Makan/minum')
+    const plan = planOf([first])
+    const resolved = resolveTidy(
+      plan,
+      new Map([[first.id, 'bensin']]),
+      TARGETS,
+      new Set(['bensin']),
+      null,
+    )
+
+    expect(resolved.count).toBe(0)
+    expect(resolved.rejected[0].reason).toContain('kelompok')
+  })
+
+  it('leaves every other move alone when one move is run', () => {
+    const plan = planTidy(
+      [row('SPBU A', 'Makan/minum'), row('SPBU B', 'Belanja')],
+      rules,
+      TARGETS,
+    )
+    const resolved = resolveTidy(
+      plan,
+      new Map(),
+      TARGETS,
+      GROUPS,
+      moveKey('Belanja', 'bensin'),
+    )
+
+    expect(resolved.count).toBe(1)
+    expect(resolved.writes[0].ids).toHaveLength(1)
+  })
+
+  it('keys a move so a category name cannot be read as another move', () => {
+    // The name half is whatever somebody typed. Joined raw, a name containing
+    // the separator would produce the key of a different move, and the wrong
+    // rows would be written.
+    expect(moveKey('Makan|minum', 'bensin')).not.toBe(moveKey('Makan', 'minum|bensin'))
   })
 })

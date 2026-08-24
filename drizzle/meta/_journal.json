@@ -64,6 +64,13 @@
       "when": 1787570856772,
       "tag": "0008_category_parents",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1787579052359,
+      "tag": "0009_category_lock",
+      "breakpoints": true
     }
   ]
 }

@@ -83,6 +83,23 @@ export const DIRECTION_LABELS: Record<Direction, string> = {
   neither: 'antar akun',
 }
 
+/**
+ * Why a category cannot be written onto a row.
+ *
+ * A category carries a cashflow, and a cashflow decides which account sides a
+ * row must have. Filing an outgoing payment under an income category would
+ * produce exactly the shape `transactions_account_sides` refuses, and because
+ * the updates run in batches of a hundred, one such row used to take ninety
+ * nine correct ones down with it and report a raw Postgres message.
+ */
+export function directionRefusal(
+  categoryName: string,
+  category: CashflowType,
+  row: CashflowType,
+): string {
+  return `${categoryName} untuk uang ${DIRECTION_LABELS[directionOf(category)]}, transaksi ini uang ${DIRECTION_LABELS[directionOf(row)]}. Pilih kategori dengan arah yang sama.`
+}
+
 export const ACCOUNT_KIND_LABELS: Record<AccountKind, string> = {
   bank: 'Bank',
   ewallet: 'Dompet digital',

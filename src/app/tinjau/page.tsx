@@ -15,6 +15,7 @@ import { getUser } from '@/lib/supabase/server'
 import { DuplicatesPanel } from '@/app/catat/duplicates-panel'
 import { toDuplicateView } from '@/app/catat/duplicates-view'
 import { planLedgerTidy } from '@/lib/queries/tidy'
+import { formatJakarta } from '@/lib/datetime'
 import { categoryHue } from '@/lib/ledger/palette'
 import { formatIdr } from '@/lib/money'
 import { buildQueueOptions, toGroupOptions, type QueueOptions } from './query'
@@ -71,25 +72,42 @@ async function Queue({ options }: { options: QueueOptions }) {
 
   // Money crosses the boundary as text. A bigint would arrive as a number and
   // a rupiah figure through a float is a rounding error waiting for a large
-  // enough total.
+  // enough total. Dates go the same way, formatted in Jakarta here rather than
+  // in whatever timezone the reader's browser happens to sit in.
   const lookOf = new Map(categories.map((category) => [category.name, category]))
   const tidyView = {
-    moves: tidy.moves.map((move) => {
+    moves: tidy.plan.moves.map((move) => {
       const look = lookOf.get(move.to)
       return {
+        key: move.key,
         from: move.from,
         to: move.to,
+        toCategoryId: move.toCategoryId,
         cashflow: move.cashflow,
         icon: look?.icon ?? null,
         hue: look ? categoryHue(look) : null,
         count: move.count,
         amount: formatIdr(move.amount),
+        entries: move.entries.map((entry) => ({
+          id: entry.id,
+          occurredAt: formatJakarta(entry.occurredAt, 'date'),
+          description: entry.description,
+          amount: formatIdr(entry.amount),
+          cashflow: entry.cashflow,
+          pattern: entry.pattern,
+        })),
       }
     }),
-    count: tidy.count,
-    amount: formatIdr(tidy.amount),
-    protectedCount: tidy.protectedCount,
+    count: tidy.plan.count,
+    amount: formatIdr(tidy.plan.amount),
+    protectedCount: tidy.plan.protectedCount,
+    heldCount: tidy.plan.heldCount,
   }
+
+  // One list, two readers: the queue offers it for rows nobody has settled, the
+  // tidy panel for rows a rule would move. Filtering it twice would let them
+  // disagree about what may be chosen.
+  const assignable = categories.filter((category) => ASSIGNABLE.has(category.cashflow))
 
   const groups = groupBySuggestion(pending, rules as Rule[], toGroupOptions(options))
   const remaining = {
@@ -101,11 +119,11 @@ async function Queue({ options }: { options: QueueOptions }) {
     <div className="grid gap-8 lg:grid-cols-[1fr_18rem]">
       <div className="space-y-5">
         <DuplicatesPanel pairs={duplicates.map(toDuplicateView)} />
-        <TidyPanel view={tidyView} />
+        <TidyPanel view={tidyView} categories={assignable} />
         <QueueControls options={options} />
         <ReviewQueue
           groups={groups}
-          categories={categories.filter((category) => ASSIGNABLE.has(category.cashflow))}
+          categories={assignable}
           accounts={accounts.map((account) => ({
             id: account.id,
             name: account.name,

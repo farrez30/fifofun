@@ -232,6 +232,17 @@ export const transactions = pgTable(
      * default category with full confidence, which is a guess nobody agreed to.
      */
     confirmedAt: timestamp('confirmed_at', { withTimezone: true }),
+    /**
+     * When a person said this row's category is right as it stands, so tidying
+     * should stop offering to move it.
+     *
+     * `confirmed_at` cannot answer this either. Tidying exists precisely because
+     * every row in this ledger carries a confirmation stamp it never earned, so
+     * a row deliberately left in Other spending looks exactly like a row parked
+     * there by the importer. Without somewhere to record the difference, the
+     * panel would keep proposing the same rows forever and never reach zero.
+     */
+    categoryLockedAt: timestamp('category_locked_at', { withTimezone: true }),
     /** Untouched source text, kept because bank formats change without notice. */
     rawDescription: text('raw_description'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
