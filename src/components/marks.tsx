@@ -1,3 +1,4 @@
+import { AirplaneTilt } from '@phosphor-icons/react/dist/ssr/AirplaneTilt'
 import { ArrowDownLeft } from '@phosphor-icons/react/dist/ssr/ArrowDownLeft'
 import { ArrowUpRight } from '@phosphor-icons/react/dist/ssr/ArrowUpRight'
 import { ArrowsLeftRight } from '@phosphor-icons/react/dist/ssr/ArrowsLeftRight'
@@ -10,14 +11,18 @@ import { Car } from '@phosphor-icons/react/dist/ssr/Car'
 import { ChartLine } from '@phosphor-icons/react/dist/ssr/ChartLine'
 import { ChartLineUp } from '@phosphor-icons/react/dist/ssr/ChartLineUp'
 import { CloudArrowUp } from '@phosphor-icons/react/dist/ssr/CloudArrowUp'
+import { Coffee } from '@phosphor-icons/react/dist/ssr/Coffee'
 import { Coins } from '@phosphor-icons/react/dist/ssr/Coins'
 import { Confetti } from '@phosphor-icons/react/dist/ssr/Confetti'
 import { Cookie } from '@phosphor-icons/react/dist/ssr/Cookie'
 import { CreditCard } from '@phosphor-icons/react/dist/ssr/CreditCard'
 import { DeviceMobile } from '@phosphor-icons/react/dist/ssr/DeviceMobile'
 import { Drop } from '@phosphor-icons/react/dist/ssr/Drop'
+import { DropSimple } from '@phosphor-icons/react/dist/ssr/DropSimple'
+import { FilmSlate } from '@phosphor-icons/react/dist/ssr/FilmSlate'
 import { FirstAid } from '@phosphor-icons/react/dist/ssr/FirstAid'
 import { ForkKnife } from '@phosphor-icons/react/dist/ssr/ForkKnife'
+import { GameController } from '@phosphor-icons/react/dist/ssr/GameController'
 import { GasPump } from '@phosphor-icons/react/dist/ssr/GasPump'
 import { Gift } from '@phosphor-icons/react/dist/ssr/Gift'
 import { GraduationCap } from '@phosphor-icons/react/dist/ssr/GraduationCap'
@@ -30,20 +35,35 @@ import { Invoice } from '@phosphor-icons/react/dist/ssr/Invoice'
 import { Key } from '@phosphor-icons/react/dist/ssr/Key'
 import { Laptop } from '@phosphor-icons/react/dist/ssr/Laptop'
 import { Lightning } from '@phosphor-icons/react/dist/ssr/Lightning'
+import { Motorcycle } from '@phosphor-icons/react/dist/ssr/Motorcycle'
 import { MusicNote } from '@phosphor-icons/react/dist/ssr/MusicNote'
+import { Package } from '@phosphor-icons/react/dist/ssr/Package'
 import { PiggyBank } from '@phosphor-icons/react/dist/ssr/PiggyBank'
+import { Pill } from '@phosphor-icons/react/dist/ssr/Pill'
 import { Receipt } from '@phosphor-icons/react/dist/ssr/Receipt'
+import { Robot } from '@phosphor-icons/react/dist/ssr/Robot'
 import { Scales } from '@phosphor-icons/react/dist/ssr/Scales'
+import { Scissors } from '@phosphor-icons/react/dist/ssr/Scissors'
 import { ShieldCheck } from '@phosphor-icons/react/dist/ssr/ShieldCheck'
 import { ShoppingBag } from '@phosphor-icons/react/dist/ssr/ShoppingBag'
+import { ShoppingCart } from '@phosphor-icons/react/dist/ssr/ShoppingCart'
+import { Sparkle } from '@phosphor-icons/react/dist/ssr/Sparkle'
+import { Stethoscope } from '@phosphor-icons/react/dist/ssr/Stethoscope'
 import { Storefront } from '@phosphor-icons/react/dist/ssr/Storefront'
+import { TShirt } from '@phosphor-icons/react/dist/ssr/TShirt'
 import { Tag } from '@phosphor-icons/react/dist/ssr/Tag'
 import { Target } from '@phosphor-icons/react/dist/ssr/Target'
 import { Television } from '@phosphor-icons/react/dist/ssr/Television'
+import { Ticket } from '@phosphor-icons/react/dist/ssr/Ticket'
+import { Toolbox } from '@phosphor-icons/react/dist/ssr/Toolbox'
+import { Train } from '@phosphor-icons/react/dist/ssr/Train'
 import { Users } from '@phosphor-icons/react/dist/ssr/Users'
+import { UsersThree } from '@phosphor-icons/react/dist/ssr/UsersThree'
 import { Vault } from '@phosphor-icons/react/dist/ssr/Vault'
 import { Wallet } from '@phosphor-icons/react/dist/ssr/Wallet'
+import { WashingMachine } from '@phosphor-icons/react/dist/ssr/WashingMachine'
 import { WifiHigh } from '@phosphor-icons/react/dist/ssr/WifiHigh'
+import { Wrench } from '@phosphor-icons/react/dist/ssr/Wrench'
 import type { Icon } from '@phosphor-icons/react'
 import {
   ACCOUNT_KIND_LABELS,
@@ -73,6 +93,7 @@ import { CASHFLOW_LABELS, type AccountKind, type CashflowType } from '@/lib/ledg
  */
 
 export const ICONS = {
+  AirplaneTilt,
   ArrowDownLeft,
   ArrowUpRight,
   ArrowsLeftRight,
@@ -85,14 +106,18 @@ export const ICONS = {
   ChartLine,
   ChartLineUp,
   CloudArrowUp,
+  Coffee,
   Coins,
   Confetti,
   Cookie,
   CreditCard,
   DeviceMobile,
   Drop,
+  DropSimple,
+  FilmSlate,
   FirstAid,
   ForkKnife,
+  GameController,
   GasPump,
   Gift,
   GraduationCap,
@@ -105,20 +130,35 @@ export const ICONS = {
   Key,
   Laptop,
   Lightning,
+  Motorcycle,
   MusicNote,
+  Package,
   PiggyBank,
+  Pill,
   Receipt,
+  Robot,
   Scales,
+  Scissors,
   ShieldCheck,
   ShoppingBag,
+  ShoppingCart,
+  Sparkle,
+  Stethoscope,
   Storefront,
+  TShirt,
   Tag,
   Target,
   Television,
+  Ticket,
+  Toolbox,
+  Train,
   Users,
+  UsersThree,
   Vault,
   Wallet,
+  WashingMachine,
   WifiHigh,
+  Wrench,
 } satisfies Record<string, Icon>
 
 export type IconName = keyof typeof ICONS

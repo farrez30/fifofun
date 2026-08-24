@@ -66,6 +66,10 @@ memaksa pembaca menahan penjelasan di kepala untuk sesuatu yang belum dilihat.
   "Other spending", supaya angkanya bisa dibandingkan baris per baris dengan
   spreadsheet lama. Padanan Indonesianya bukan kategori kedua: satu pos punya satu
   nama dalam satu cashflow, dan dua nama untuk pos yang sama memecah angkanya.
+- **Kelompok kategori hanya satu tingkat, dan tidak menampung transaksi.** Kelompok
+  adalah jumlah dari isinya. Kalau sebuah transaksi bisa masuk ke kelompoknya
+  langsung, angkanya muncul dua kali di kolom yang sama dan tidak ada yang bisa
+  membedakan mana yang sudah termasuk apa.
 - **Sebut ketidaktahuan sebagai ketidaktahuan.** Angka yang tidak bisa dihitung
   ditulis sebagai tidak diketahui, bukan nol.
 

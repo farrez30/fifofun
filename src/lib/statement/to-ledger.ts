@@ -83,7 +83,10 @@ export const CASHFLOW_BY_KIND: Record<TransactionKind, CashflowType> = {
   'transfer-in': 'income',
   'qris-payment': 'spending',
   'ecommerce-card': 'spending',
-  'biller-payment': 'spending',
+  // Paying a biller is paying a bill: electricity, water, broadband, road tax.
+  // Counting these as ordinary spending is why the Bills figure read zero for
+  // a year while a year of PLN receipts sat under Belanja.
+  'biller-payment': 'bills',
   'transfer-out': 'spending',
   'bank-fee': 'spending',
   'wallet-topup': 'transfer',

@@ -103,3 +103,34 @@ test.describe('antrean tinjau', () => {
     await expect(page.locator('nav a[aria-current="true"]')).toHaveCount(1)
   })
 })
+
+test.describe('rapikan transaksi lama', () => {
+  test('names every pot that moves before anything is agreed to', async ({ page }) => {
+    await open(page, 'tinjau-rapikan')
+
+    // The point of the panel is that nothing is a surprise: each move is a row
+    // a person can read, with the pot it leaves, the pot it joins, and both
+    // figures.
+    const rows = page.locator('table tbody tr')
+    await expect(rows).toHaveCount(3)
+    await expect(rows.first()).toContainText('Makan/minum')
+    await expect(rows.first()).toContainText('Bensin')
+    await expect(rows.first()).toContainText('Rp4.401.205')
+  })
+
+  test('says what it will not touch', async ({ page }) => {
+    await open(page, 'tinjau-rapikan')
+    await expect(page.getByText('310 transaksi')).toBeVisible()
+  })
+
+  test('will not run until somebody says they read it', async ({ page }) => {
+    await open(page, 'tinjau-rapikan')
+
+    // The button starts refused, and the checkbox beside it is the only thing
+    // that lifts the refusal. Whether it lifts is a React state change, which
+    // this harness renders without; what is asserted here is that a page
+    // arriving before hydration cannot move a thousand rows by one stray click.
+    await expect(page.getByRole('button', { name: 'Rapikan sekarang' })).toBeDisabled()
+    await expect(page.getByRole('checkbox')).not.toBeChecked()
+  })
+})

@@ -189,12 +189,30 @@ async function Dashboard({ akun }: { akun: string }) {
     }
   }
 
-  // Every category the month touched gets its own ribbon, named and coloured.
-  // Six named categories and a node called "9 kategori lain" answered the
-  // question with a number rather than with the names it stood for.
+  /*
+    One ribbon per group, named and coloured, with where the money came from on
+    the left.
+
+    Every category used to get its own ribbon, which was right while there were
+    twenty of them: six named and a node called "9 kategori lain" answered the
+    question with a number rather than with the names it stood for. There are
+    forty-three now, and a column of forty-three is the same failure the other
+    way round. The names are all still there, one level down, in Laporan.
+  */
+  const groupNameOf = new Map(
+    categories
+      .filter((category) => category.parentId !== null)
+      .map((category) => [
+        category.name,
+        categories.find((row) => row.id === category.parentId)?.name ?? null,
+      ]),
+  )
+
   const flow = buildFlow(latest.statement, latestEntries, {
     drill: 'all',
     namedLimit: null,
+    sources: true,
+    groupOf: (name) => groupNameOf.get(name) ?? null,
     hueOf: (name) => look(name).hue,
   })
 

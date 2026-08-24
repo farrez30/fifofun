@@ -66,18 +66,43 @@ const SEED_ICONS: Record<string, string> = {
   Pinjaman: 'Handshake',
   'Penyesuaian Income': 'Scales',
   'Other Income': 'HandCoins',
+  'Jual Barang': 'Coins',
+  'Transfer Keluarga': 'Users',
+  'Makan & Minum': 'ForkKnife',
   'Makan/minum': 'ForkKnife',
+  'Kopi & Snack': 'Coffee',
+  Warung: 'Storefront',
   Transport: 'Bus',
+  'Ojek & Taksi Online': 'Car',
+  'Kereta & Bus': 'Train',
+  'Parkir & Tol': 'Ticket',
+  'Servis Kendaraan': 'Wrench',
   Belanja: 'ShoppingBag',
+  'Belanja Harian': 'ShoppingCart',
+  'Belanja Online': 'Package',
+  Pakaian: 'TShirt',
+  'Elektronik & Gadget': 'Laptop',
   Internet: 'WifiHigh',
+  Sosial: 'UsersThree',
   Keluarga: 'Users',
   Rumah: 'House',
+  'Kos & Sewa': 'Key',
+  Laundry: 'WashingMachine',
+  'Perabot & Perkakas': 'Toolbox',
   Jajan: 'Cookie',
   Sedekah: 'HandHeart',
+  'Perawatan Diri': 'Sparkle',
+  'Barbershop & Salon': 'Scissors',
   'Skin & Body Care': 'Drop',
   Hiburan: 'Television',
+  'Bioskop & Tontonan': 'FilmSlate',
+  Game: 'GameController',
+  'Jalan-jalan': 'AirplaneTilt',
+  'Olahraga & Gym': 'Barbell',
   Hadiah: 'Gift',
   Kesehatan: 'FirstAid',
+  'Klinik & Dokter': 'Stethoscope',
+  'Obat & Apotek': 'Pill',
   Kosan: 'Bed',
   Dating: 'Heart',
   Kendaraan: 'Car',
@@ -86,6 +111,15 @@ const SEED_ICONS: Record<string, string> = {
   'Biaya Bank': 'Bank',
   'Other spending': 'Tag',
   'Penyesuaian Spending': 'Scales',
+  Tagihan: 'Receipt',
+  'Tagihan Lain': 'Invoice',
+  'Internet & TV': 'WifiHigh',
+  Air: 'DropSimple',
+  'Langganan Digital': 'CreditCard',
+  'Langganan AI': 'Robot',
+  'Cicilan & Utang': 'Handshake',
+  'Cicilan Motor (Ibu)': 'Motorcycle',
+  'Bayar Utang': 'Invoice',
   'Bayar Kontrakan': 'Key',
   'Langganan Parkee': 'Car',
   'Aeropolis Gym & Pool': 'Barbell',
@@ -111,17 +145,30 @@ const SEED_ICONS: Record<string, string> = {
 }
 
 /*
-  Hues are handed out along the golden angle in seed order. Neighbouring seed
-  names (Makan/minum, Transport, Belanja) are the ones that sit next to each
-  other in a Sankey column, and the golden angle keeps any run of consecutive
-  names as far apart as a run of that length can be. A pot that exists under
-  two cashflows, Tabungan as a contribution and as a withdrawal, is one name
-  and therefore one hue.
+  Hues are handed out along the golden angle, which keeps any run of
+  consecutive names as far apart as a run of that length can be. A pot that
+  exists under two cashflows, Tabungan as a contribution and as a withdrawal,
+  is one name and therefore one hue.
+
+  Groups are numbered first, before anything inside them. Eighty-two names
+  cannot all be far apart on a circle of three hundred and sixty degrees, so
+  the spread has to be spent where it is seen: the groups are the ribbons drawn
+  side by side in a Sankey column, and they take the widest-spaced numbers.
+  Names inside a group land later in the sequence and are still a third of the
+  circle from their own siblings, which is the only comparison a reader makes
+  between them.
 */
 const GOLDEN_ANGLE = 137.50776
 
+const HUE_ORDER = [
+  ...new Set([
+    ...SEED_CATEGORIES.filter((category) => !category.parent).map((category) => category.name),
+    ...SEED_CATEGORIES.map((category) => category.name),
+  ]),
+]
+
 export const SEED_PALETTE: Record<string, { hue: number; icon: string }> = Object.fromEntries(
-  [...new Set(SEED_CATEGORIES.map((category) => category.name))].map((name, index) => [
+  HUE_ORDER.map((name, index) => [
     name,
     {
       hue: Math.round(index * GOLDEN_ANGLE) % HUE_COUNT,

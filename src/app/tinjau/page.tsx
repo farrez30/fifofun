@@ -14,10 +14,14 @@ import {
 import { getUser } from '@/lib/supabase/server'
 import { DuplicatesPanel } from '@/app/catat/duplicates-panel'
 import { toDuplicateView } from '@/app/catat/duplicates-view'
+import { planLedgerTidy } from '@/lib/queries/tidy'
+import { categoryHue } from '@/lib/ledger/palette'
+import { formatIdr } from '@/lib/money'
 import { buildQueueOptions, toGroupOptions, type QueueOptions } from './query'
 import { QueueControls } from './queue-controls'
 import { ReviewQueue } from './review-queue'
 import { RulesList } from './rules-list'
+import { TidyPanel } from './tidy-panel'
 
 export const metadata: Metadata = { title: 'Tinjau' }
 
@@ -56,13 +60,36 @@ async function Queue({ options }: { options: QueueOptions }) {
     redirect('/gabung')
   }
 
-  const [pending, rules, categories, accounts, duplicates] = await Promise.all([
+  const [pending, rules, categories, accounts, duplicates, tidy] = await Promise.all([
     getUnconfirmed(household.id),
     getRules(household.id),
     getCategories(household.id),
     getAccounts(household.id),
     getSuspectedDuplicates(household.id),
+    planLedgerTidy(household.id),
   ])
+
+  // Money crosses the boundary as text. A bigint would arrive as a number and
+  // a rupiah figure through a float is a rounding error waiting for a large
+  // enough total.
+  const lookOf = new Map(categories.map((category) => [category.name, category]))
+  const tidyView = {
+    moves: tidy.moves.map((move) => {
+      const look = lookOf.get(move.to)
+      return {
+        from: move.from,
+        to: move.to,
+        cashflow: move.cashflow,
+        icon: look?.icon ?? null,
+        hue: look ? categoryHue(look) : null,
+        count: move.count,
+        amount: formatIdr(move.amount),
+      }
+    }),
+    count: tidy.count,
+    amount: formatIdr(tidy.amount),
+    protectedCount: tidy.protectedCount,
+  }
 
   const groups = groupBySuggestion(pending, rules as Rule[], toGroupOptions(options))
   const remaining = {
@@ -74,6 +101,7 @@ async function Queue({ options }: { options: QueueOptions }) {
     <div className="grid gap-8 lg:grid-cols-[1fr_18rem]">
       <div className="space-y-5">
         <DuplicatesPanel pairs={duplicates.map(toDuplicateView)} />
+        <TidyPanel view={tidyView} />
         <QueueControls options={options} />
         <ReviewQueue
           groups={groups}

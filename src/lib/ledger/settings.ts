@@ -1,6 +1,6 @@
 import { FUND_CASHFLOWS } from './funds'
 import { DEFAULT_CATEGORY_BY_KIND } from './seed-data'
-import type { CashflowType } from './types'
+import { CASHFLOW_LABELS, type CashflowType } from './types'
 
 /**
  * The rules behind managing accounts and categories.
@@ -95,6 +95,80 @@ export function twinsOf(cashflow: CashflowType): CashflowType[] {
   if (cashflow === 'receivable_new') return ['receivable_settled']
   if (cashflow === 'receivable_settled') return ['receivable_new']
   return []
+}
+
+export interface Grouped {
+  id: string
+  parentId: string | null
+}
+
+/**
+ * The categories something else rolls up into.
+ *
+ * A group holds nothing itself. Letting one take a transaction would split a
+ * figure between the group and the things inside it, so the same money would
+ * be both counted once in the group's own row and again in the group's total,
+ * and no reader could tell which. Every place that writes a category asks this
+ * first, and the dropdowns never offer one.
+ */
+export function groupIds(rows: Grouped[]): Set<string> {
+  const groups = new Set<string>()
+  for (const row of rows) if (row.parentId) groups.add(row.parentId)
+  return groups
+}
+
+/** Whether this category is a group, given the whole list it came from. */
+export function isGroup(rows: Grouped[], id: string): boolean {
+  return rows.some((row) => row.parentId === id)
+}
+
+export interface Selectable extends Grouped {
+  name: string
+  cashflow: CashflowType
+}
+
+export interface OptionGroup<T> {
+  label: string
+  options: T[]
+}
+
+/**
+ * The categories a person may pick, arranged under the heading they belong to.
+ *
+ * Groups are dropped from the list and become the headings instead, which is
+ * the only arrangement `<optgroup>` allows: it does not nest, so a heading is
+ * either the group or the cashflow, and the group is the more useful of the
+ * two once there is one. Anything without a group keeps its cashflow heading,
+ * the way the whole list used to read.
+ *
+ * Order follows the list as it arrives, which is the household's own ordering,
+ * so a heading appears where its first member does.
+ */
+export function optionGroups<T extends Selectable>(categories: T[]): OptionGroup<T>[] {
+  const groups = groupIds(categories)
+  const nameById = new Map(categories.map((category) => [category.id, category.name]))
+  const ordered: OptionGroup<T>[] = []
+  const byLabel = new Map<string, OptionGroup<T>>()
+
+  for (const category of categories) {
+    if (groups.has(category.id)) continue
+
+    const label = category.parentId
+      ? (nameById.get(category.parentId) ?? CASHFLOW_LABELS[category.cashflow])
+      : CASHFLOW_LABELS[category.cashflow]
+
+    const existing = byLabel.get(label)
+    if (existing) {
+      existing.options.push(category)
+      continue
+    }
+
+    const group = { label, options: [category] }
+    byLabel.set(label, group)
+    ordered.push(group)
+  }
+
+  return ordered
 }
 
 /** Every category name the importer looks for literally. */

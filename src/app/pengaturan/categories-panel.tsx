@@ -22,6 +22,8 @@ export interface CategoryView {
   id: string
   name: string
   cashflow: CashflowType
+  /** The group it rolls up into, or empty when it is one or belongs to none. */
+  parentId: string
   icon: string
   /** Degrees as text, or empty for the hue derived from the name. */
   hue: string
@@ -34,9 +36,27 @@ export function CategoriesPanel({ categories }: { categories: CategoryView[] }) 
   const live = categories.filter((category) => !category.archived)
   const archived = categories.filter((category) => category.archived)
 
+  /*
+    Each group followed by what is inside it, so the list on screen reads the
+    way the report does. Sorting alone would not do it: a group and its members
+    are ordered by the household's own numbering, and a member can be numbered
+    anywhere.
+  */
+  const arranged = (rows: CategoryView[]) => {
+    const children = new Map<string, CategoryView[]>()
+    for (const row of rows) {
+      if (!row.parentId) continue
+      children.set(row.parentId, [...(children.get(row.parentId) ?? []), row])
+    }
+    return rows
+      .filter((row) => !row.parentId)
+      .flatMap((row) => [row, ...(children.get(row.id) ?? [])])
+      .concat(rows.filter((row) => row.parentId && !rows.some((other) => other.id === row.parentId)))
+  }
+
   const groups = CASHFLOW_TYPES.map((cashflow) => ({
     cashflow,
-    rows: live.filter((category) => category.cashflow === cashflow),
+    rows: arranged(live.filter((category) => category.cashflow === cashflow)),
   })).filter((group) => group.rows.length > 0)
 
   return (
@@ -55,6 +75,7 @@ export function CategoriesPanel({ categories }: { categories: CategoryView[] }) 
             <h3 className="text-sm font-medium text-ink">{CASHFLOW_LABELS[group.cashflow]}</h3>
             <Table
               rows={group.rows}
+              siblings={categories}
               editing={editing}
               onToggle={(id) => setEditing(editing === id ? null : id)}
               caption={`Kategori bercashflow ${CASHFLOW_LABELS[group.cashflow]}`}
@@ -67,6 +88,7 @@ export function CategoriesPanel({ categories }: { categories: CategoryView[] }) 
             <h3 className="text-sm font-medium text-ink">Diarsipkan</h3>
             <Table
               rows={archived}
+              siblings={categories}
               editing={editing}
               onToggle={(id) => setEditing(editing === id ? null : id)}
               caption="Kategori yang diarsipkan"
@@ -106,7 +128,7 @@ export function CategoriesPanel({ categories }: { categories: CategoryView[] }) 
       <details className="mt-3 border border-line bg-surface">
         <summary className="cursor-pointer px-4 py-3 text-sm text-accent">Tambah kategori</summary>
         <div className="border-t border-line p-4">
-          <CategoryForm />
+          <CategoryForm siblings={categories} />
         </div>
       </details>
     </section>
@@ -115,11 +137,13 @@ export function CategoriesPanel({ categories }: { categories: CategoryView[] }) 
 
 function Table({
   rows,
+  siblings,
   editing,
   onToggle,
   caption,
 }: {
   rows: CategoryView[]
+  siblings: CategoryView[]
   editing: string | null
   onToggle: (id: string) => void
   caption: string
@@ -149,6 +173,8 @@ function Table({
             <Row
               key={category.id}
               category={category}
+              siblings={siblings}
+              isGroup={siblings.some((row) => row.parentId === category.id)}
               first={index === 0}
               last={index === rows.length - 1}
               open={editing === category.id}
@@ -163,12 +189,18 @@ function Table({
 
 function Row({
   category,
+  siblings,
+  isGroup,
   first,
   last,
   open,
   onToggle,
 }: {
   category: CategoryView
+  /** The whole household, so the edit form can offer the groups it may join. */
+  siblings: CategoryView[]
+  /** Something rolls up into this one, so it takes no transactions of its own. */
+  isGroup: boolean
   first: boolean
   last: boolean
   open: boolean
@@ -177,7 +209,12 @@ function Row({
   return (
     <>
       <tr className="border-b border-line last:border-0">
-        <th scope="row" className="px-4 py-2.5 text-left font-normal text-ink">
+        <th
+          scope="row"
+          className={`py-2.5 pr-4 text-left font-normal text-ink ${
+            category.parentId ? 'pl-9' : 'pl-4'
+          }`}
+        >
           <CategoryMark
             name={category.name}
             cashflow={category.cashflow}
@@ -186,6 +223,9 @@ function Row({
           />
           {isLookedUpByName(category.name) ? (
             <span className="ml-2 text-xs text-ink-faint">dicari impor</span>
+          ) : null}
+          {isGroup ? (
+            <span className="ml-2 text-xs text-ink-faint">kelompok, tidak menampung transaksi</span>
           ) : null}
         </th>
         <td className="tnum whitespace-nowrap px-4 py-2.5 text-right font-mono text-ink-muted">
@@ -224,7 +264,7 @@ function Row({
       {open ? (
         <tr className="border-b border-line bg-sunken last:border-0">
           <td colSpan={4} className="p-4">
-            <CategoryForm category={category} />
+            <CategoryForm category={category} siblings={siblings} />
           </td>
         </tr>
       ) : null}

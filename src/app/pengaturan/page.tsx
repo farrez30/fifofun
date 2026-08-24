@@ -65,6 +65,7 @@ async function Settings() {
     id: category.id,
     name: category.name,
     cashflow: category.cashflow,
+    parentId: category.parentId ?? '',
     icon: category.icon ?? '',
     hue: category.hue === null ? '' : String(category.hue),
     archived: category.archivedAt !== null,

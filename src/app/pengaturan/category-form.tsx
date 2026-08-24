@@ -36,20 +36,34 @@ interface Props {
   category?: CategoryView
   /** Fixes the cashflow of a new category, when one section asks for it. */
   cashflow?: CashflowType
+  /** Everything in the household, so the group choices can be worked out here. */
+  siblings: CategoryView[]
 }
 
-export function CategoryForm({ category, cashflow }: Props) {
+export function CategoryForm({ category, cashflow, siblings }: Props) {
   const [result, action] = useActionState<ActionResult | null, FormData>(
     category ? updateCategory : createCategory,
     null,
   )
 
-  const ids = { name: useId(), cashflow: useId(), hue: useId() }
+  const ids = { name: useId(), cashflow: useId(), hue: useId(), parent: useId() }
 
   const [name, setName] = useState(category?.name ?? '')
   const [flow, setFlow] = useState<CashflowType>(category?.cashflow ?? cashflow ?? 'spending')
   const [icon, setIcon] = useState(category?.icon ?? '')
   const [hue, setHue] = useState(category?.hue ?? '')
+  const [parentId, setParentId] = useState(category?.parentId ?? '')
+
+  /*
+    A group can only be a category of the same cashflow that is not already
+    inside one, and never this category itself. A category that already has
+    things inside it cannot join a group either, because that would make its
+    contents grandchildren and every report would need to know how deep to look.
+  */
+  const hasChildren = siblings.some((row) => row.parentId === category?.id)
+  const parents = siblings.filter(
+    (row) => row.cashflow === flow && row.parentId === '' && row.id !== category?.id,
+  )
 
   const locked = category !== undefined && category.usage > 0
   const twins = twinsOf(flow)
@@ -113,6 +127,32 @@ export function CategoryForm({ category, cashflow }: Props) {
             </p>
           ) : null}
         </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <FieldLabel htmlFor={ids.parent}>Kelompok</FieldLabel>
+        <select
+          id={ids.parent}
+          name="parentId"
+          value={hasChildren ? '' : parentId}
+          disabled={hasChildren || parents.length === 0}
+          onChange={(event) => setParentId(event.target.value)}
+          className={`${CONTROL} disabled:opacity-60`}
+        >
+          <option value="">Berdiri sendiri</option>
+          {parents.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.name}
+            </option>
+          ))}
+        </select>
+        <p className="text-xs text-ink-muted">
+          {hasChildren
+            ? 'Kategori ini sendiri sebuah kelompok, jadi tidak bisa dimasukkan ke kelompok lain. Kelompok tidak menampung transaksi; yang dijumlahkan adalah isinya.'
+            : parents.length === 0
+              ? 'Belum ada kategori lain di cashflow ini yang bisa jadi kelompoknya.'
+              : 'Kalau dimasukkan ke sebuah kelompok, angkanya ikut dijumlahkan di baris kelompok itu pada Laporan, dan bisa dibuka satu per satu di sana.'}
+        </p>
       </div>
 
       <fieldset>

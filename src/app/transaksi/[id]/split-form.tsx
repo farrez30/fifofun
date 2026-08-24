@@ -5,7 +5,7 @@ import { useFormStatus } from 'react-dom'
 import { BUTTON_PRIMARY, CONTROL } from '@/components/field-base'
 import { MoneyInput } from '@/components/money-input'
 import { SPLIT_MAX, SPLIT_MIN, splitBlocker } from '@/lib/ledger/edit'
-import { CASHFLOW_LABELS, type CashflowType } from '@/lib/ledger/types'
+import { optionGroups } from '@/lib/ledger/settings'
 import { formatIdr } from '@/lib/money'
 import type { ActionResult } from '@/lib/actions'
 import { splitEntry } from '../actions'
@@ -59,10 +59,7 @@ export function SplitForm({
             ? `Bagian ${blocker.part} masih nol.`
             : `Bagian ${blocker.part} belum punya kategori.`
 
-  const byCashflow = new Map<CashflowType, CategoryOption[]>()
-  for (const category of categories) {
-    byCashflow.set(category.cashflow, [...(byCashflow.get(category.cashflow) ?? []), category])
-  }
+  const grouped = optionGroups(categories)
 
   function update(index: number, patch: Partial<Part>) {
     setParts((current) =>
@@ -97,8 +94,8 @@ export function SplitForm({
               <option value="" disabled>
                 Pilih kategori
               </option>
-              {[...byCashflow.entries()].map(([cashflow, options]) => (
-                <optgroup key={cashflow} label={CASHFLOW_LABELS[cashflow]}>
+              {grouped.map(({ label, options }) => (
+                <optgroup key={label} label={label}>
                   {options.map((category) => (
                     <option key={category.id} value={category.id}>
                       {category.name}

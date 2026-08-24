@@ -163,3 +163,99 @@ describe('summarisePeriod', () => {
     expect(summary.net).toBe(0n)
   })
 })
+
+describe('summarisePeriod, one level up', () => {
+  const GROUPS = { Jajan: 'Makan & Minum', Kosan: 'Rumah', Belanja: 'Belanja' }
+
+  it('adds a group up from the categories inside it', () => {
+    const summary = summarisePeriod(
+      [
+        entry('2026-03-01', 'Jajan', idr('80.500,00'), 'spending'),
+        entry('2026-03-02', 'Makan/minum', idr('19.500,00'), 'spending', {
+          categoryName: 'Makan/minum',
+        }),
+      ],
+      {},
+      { ...GROUPS, 'Makan/minum': 'Makan & Minum' },
+    )
+
+    expect(summary.byGroup).toHaveLength(1)
+    expect(summary.byGroup[0].group).toBe('Makan & Minum')
+    expect(summary.byGroup[0].total).toBe(idr('100.000,00'))
+    expect(summary.byGroup[0].count).toBe(2)
+    expect(summary.byGroup[0].categories.map((line) => line.category)).toEqual([
+      'Jajan',
+      'Makan/minum',
+    ])
+  })
+
+  it('leaves a category with no group standing on its own', () => {
+    const summary = summarisePeriod(
+      [entry('2026-03-01', 'Biaya Bank', idr('2.500,00'), 'spending')],
+      {},
+      GROUPS,
+    )
+    expect(summary.byGroup[0].group).toBe('Biaya Bank')
+    expect(summary.byGroup[0].categories).toHaveLength(1)
+  })
+
+  it('loses nothing on the way up', () => {
+    // Every rupiah in byCategory has to appear in byGroup exactly once, or the
+    // two readings of the same report disagree.
+    const summary = summarisePeriod(LEDGER, {}, GROUPS)
+    const flat = summary.byCategory.reduce((total, line) => total + line.total, 0n)
+    const grouped = summary.byGroup.reduce((total, group) => total + group.total, 0n)
+    expect(grouped).toBe(flat)
+    expect(summary.byGroup.reduce((n, group) => n + group.categories.length, 0)).toBe(
+      summary.byCategory.length,
+    )
+  })
+
+  it('never folds two cashflows into one group', () => {
+    // Piutang exists on both sides of a loan. Adding the two would report a
+    // figure that is neither money in nor money out.
+    const summary = summarisePeriod(
+      [
+        entry('2026-03-01', 'Piutang', idr('500.000,00'), 'receivable_new'),
+        entry('2026-03-02', 'Piutang', idr('500.000,00'), 'receivable_settled'),
+      ],
+      {},
+      { Piutang: 'Piutang' },
+    )
+    expect(summary.byGroup).toHaveLength(2)
+  })
+
+  it('shares are a hundred per cent of each direction', () => {
+    const summary = summarisePeriod(LEDGER, {}, GROUPS)
+    const out = summary.byGroup
+      .filter((group) => ['spending', 'bills'].includes(group.cashflow))
+      .reduce((total, group) => total + group.share, 0)
+    expect(out).toBeCloseTo(100, 1)
+  })
+
+  it('names who the money went to inside a category', () => {
+    const summary = summarisePeriod(
+      [
+        entry('2026-03-01', 'SPBU 31.11802 - isi bensin', idr('100.000,00'), 'spending', {
+          categoryName: 'Bensin',
+        }),
+        entry('2026-03-02', 'SPBU 31.11802 - isi lagi', idr('50.000,00'), 'spending', {
+          categoryName: 'Bensin',
+        }),
+        entry('2026-03-03', 'Shell Jatimekar', idr('30.000,00'), 'spending', {
+          categoryName: 'Bensin',
+        }),
+      ],
+      {},
+      {},
+    )
+
+    const bensin = summary.byCategory.find((line) => line.category === 'Bensin')
+    // The payment note after the dash belongs to one payment and never to the
+    // counterparty, so two fills at one station are one line here.
+    expect(bensin?.merchants).toEqual([
+      { label: 'spbu 31.11802', total: idr('150.000,00'), count: 2 },
+      { label: 'shell jatimekar', total: idr('30.000,00'), count: 1 },
+    ])
+  })
+})

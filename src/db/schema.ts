@@ -116,6 +116,16 @@ export const categories = pgTable(
       .references(() => households.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
     cashflow: cashflowType('cashflow').notNull(),
+    /**
+     * The group this category belongs to, or null when it is a group itself or
+     * stands alone. One level only: a parent may not have a parent of its own,
+     * which a trigger enforces because no CHECK can see another row. A category
+     * with children never holds transactions; the app refuses that, so a figure
+     * is never split between a group and the things inside it.
+     */
+    parentId: uuid('parent_id').references((): AnyPgColumn => categories.id, {
+      onDelete: 'set null',
+    }),
     /** Opening balance for savings, sinking fund and goal buckets. */
     openingBalance: bigint('opening_balance', { mode: 'bigint' }).notNull().default(sql`0`),
     /**
@@ -146,6 +156,7 @@ export const categories = pgTable(
     // type because it matched them by text. Scoping the constraint to the
     // cashflow type removes that limitation without losing the safeguard.
     uniqueIndex('categories_unique_name').on(table.householdId, table.cashflow, table.name),
+    index('categories_parent_idx').on(table.householdId, table.parentId),
   ],
 )
 

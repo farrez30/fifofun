@@ -57,7 +57,39 @@ const categorySchema = z.object({
   cashflow: z.enum(CASHFLOW_TYPES),
   icon: z.enum(ICON_NAMES as [string, ...string[]]).or(z.literal('')),
   hue: hueField,
+  /** The group this rolls up into. Empty means it is one, or belongs to none. */
+  parentId: z.uuid().or(z.literal('')),
 })
+
+/**
+ * Why a group cannot be the one that was asked for.
+ *
+ * The database refuses these too, through a trigger, because a rule about two
+ * rows is not something a CHECK can see. Refusing here as well is what turns a
+ * raw Postgres message into a sentence, and keeps the reason in the same place
+ * as the reason for every other refusal on this form.
+ */
+function parentProblem(
+  rows: CategoryRecord[],
+  parentId: string,
+  cashflow: CashflowType,
+  self?: string,
+): string | null {
+  if (self && parentId === self) return 'Sebuah kategori tidak bisa jadi kelompok dirinya sendiri.'
+
+  const parent = rows.find((row) => row.id === parentId)
+  if (!parent) return 'Kelompok itu tidak ada di rumah tangga ini.'
+  if (parent.cashflow !== cashflow) {
+    return `${parent.name} bercashflow ${CASHFLOW_LABELS[parent.cashflow]}, jadi totalnya bukan tempat kategori ini ikut dijumlahkan.`
+  }
+  if (parent.parentId !== null) {
+    return `${parent.name} sudah ada di dalam kelompok lain. Pengelompokan hanya satu tingkat.`
+  }
+  if (self && rows.some((row) => row.parentId === self)) {
+    return 'Kategori ini sudah punya isi, jadi tidak bisa dimasukkan ke kelompok lain.'
+  }
+  return null
+}
 
 /** Indonesian case-insensitive comparison, which is what a person means by "same name". */
 function sameName(a: string, b: string): boolean {
@@ -97,6 +129,7 @@ interface CategoryRecord {
   id: string
   name: string
   cashflow: CashflowType
+  parentId: string | null
   sortOrder: number
   archivedAt: string | null
 }
@@ -107,7 +140,7 @@ async function categoriesOf(
 ): Promise<CategoryRecord[]> {
   const { data } = await supabase
     .from('categories')
-    .select('id, name, cashflow, sort_order, archived_at')
+    .select('id, name, cashflow, parent_id, sort_order, archived_at')
     .eq('household_id', householdId)
     .order('sort_order')
     .order('name')
@@ -116,6 +149,7 @@ async function categoriesOf(
     id: row.id as string,
     name: row.name as string,
     cashflow: row.cashflow as CashflowType,
+    parentId: (row.parent_id as string | null) ?? null,
     sortOrder: Number(row.sort_order ?? 0),
     archivedAt: (row.archived_at as string | null) ?? null,
   }))
@@ -340,12 +374,18 @@ export async function createCategory(
     return fail(`Sudah ada kategori ${values.name} di ${CASHFLOW_LABELS[values.cashflow]}.`)
   }
 
+  if (values.parentId) {
+    const problem = parentProblem(rows, values.parentId, values.cashflow)
+    if (problem) return fail('Kelompoknya tidak bisa dipakai.', problem)
+  }
+
   const { error } = await ctx.supabase
     .from('categories')
     .insert({
       household_id: ctx.householdId,
       name: values.name,
       cashflow: values.cashflow,
+      parent_id: values.parentId || null,
       icon: values.icon || null,
       color: values.hue === null ? null : String(values.hue),
       sort_order: rows.length + 1,
@@ -426,11 +466,17 @@ export async function updateCategory(
     )
   }
 
+  if (values.parentId) {
+    const problem = parentProblem(rows, values.parentId, values.cashflow, current.id)
+    if (problem) return fail('Kelompoknya tidak bisa dipakai.', problem)
+  }
+
   const { data, error } = await ctx.supabase
     .from('categories')
     .update({
       name: values.name,
       cashflow: values.cashflow,
+      parent_id: values.parentId || null,
       icon: values.icon || null,
       color: values.hue === null ? null : String(values.hue),
     })
@@ -550,6 +596,7 @@ function readCategory(formData: FormData) {
     cashflow: formData.get('cashflow') ?? '',
     icon: formData.get('icon') ?? '',
     hue: formData.get('hue') ?? '',
+    parentId: formData.get('parentId') ?? '',
   }
 }
 

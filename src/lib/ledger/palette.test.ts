@@ -39,13 +39,40 @@ describe('SEED_PALETTE', () => {
     }
   })
 
-  it('spreads the spending seed hues at least 8 degrees apart', () => {
-    // The spending names are the column the Sankey draws side by side.
-    const hues = SEED_CATEGORIES.filter((c) => c.cashflow === 'spending')
+  it('spreads the spending groups at least 8 degrees apart', () => {
+    /*
+      The groups are the ribbons a Sankey column draws side by side, so this is
+      the comparison the spread has to survive.
+
+      This used to cover every spending name, which was affordable while there
+      were twenty of them. There are forty-three now, and eight degrees apiece
+      would need three hundred and forty-four of the three hundred and sixty
+      available, leaving a scheme with no room to also keep consecutive names
+      apart. Spread is finite; it is spent where it is looked at.
+    */
+    const hues = SEED_CATEGORIES.filter((c) => c.cashflow === 'spending' && !c.parent)
       .map((c) => SEED_PALETTE[c.name].hue)
       .sort((a, b) => a - b)
     for (let i = 1; i < hues.length; i++) expect(hues[i] - hues[i - 1]).toBeGreaterThanOrEqual(8)
     expect(hues[0] + HUE_COUNT - hues[hues.length - 1]).toBeGreaterThanOrEqual(8)
+  })
+
+  it('spreads the names inside one group at least 8 degrees apart', () => {
+    // Siblings are the other comparison a reader makes: they sit in one column
+    // under their group, and in one block of rows under it in the report.
+    const families = new Map<string, number[]>()
+    for (const category of SEED_CATEGORIES) {
+      if (!category.parent) continue
+      const hue = SEED_PALETTE[category.name].hue
+      families.set(category.parent, [...(families.get(category.parent) ?? []), hue])
+    }
+
+    for (const [parent, all] of families) {
+      const hues = [...new Set(all)].sort((a, b) => a - b)
+      expect(hues.length, parent).toBe(all.length)
+      for (let i = 1; i < hues.length; i++)
+        expect(hues[i] - hues[i - 1], parent).toBeGreaterThanOrEqual(8)
+    }
   })
 
   it('shares one hue between both sides of a pot', () => {

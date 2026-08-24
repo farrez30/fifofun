@@ -26,6 +26,7 @@ import {
 import { computeAccountMovements } from '@/lib/ledger/monthly'
 import { validateEntry, type CashflowType } from '@/lib/ledger/types'
 import { formatIdr } from '@/lib/money'
+import { groupRefusal } from '@/lib/queries/categories'
 import { getAccounts, getAllTransactions } from '@/lib/queries/household'
 
 /**
@@ -129,6 +130,9 @@ export async function recordEntry(
     .is('archived_at', null)
     .maybeSingle()
   if (!category) return fail('Kategori itu tidak ada di rumah tangga ini.')
+
+  const isGroup = await groupRefusal(householdId, input.categoryId, category.name as string)
+  if (isGroup) return fail('Kelompok tidak bisa dipakai langsung.', isGroup)
 
   const cashflow = category.cashflow as CashflowType
   const sides = sidesFor(cashflow, input)

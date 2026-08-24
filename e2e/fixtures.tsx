@@ -38,6 +38,9 @@ import { templateProfile } from '@/lib/planning/lifestyle'
 import { AccountMark, CashflowChip, CategoryMark, DirectionMark } from '@/components/marks'
 import { TransactionTable } from '@/components/transaction-table'
 import { BudgetTable } from '@/app/anggaran/budget-table'
+import { PeriodReport } from '@/components/period-report'
+import { TidyPanel } from '@/app/tinjau/tidy-panel'
+import { summarisePeriod } from '@/lib/ledger/period'
 import { buildBudgetPlan, type BudgetCategory } from '@/lib/ledger/budget-plan'
 import type { MonthCategoryTotals } from '@/lib/ledger/categories'
 import { EditEntryForm, type EntryView } from '@/app/transaksi/[id]/edit-form'
@@ -553,7 +556,12 @@ const TABLE_CATEGORIES = [
   { id: 'cat-wifi', name: 'Wifi', cashflow: 'bills' as const, icon: 'WifiHigh', hue: 210 },
 ]
 
-const SPLIT_OPTIONS = TABLE_CATEGORIES.map(({ id, name, cashflow }) => ({ id, name, cashflow }))
+const SPLIT_OPTIONS = TABLE_CATEGORIES.map(({ id, name, cashflow }) => ({
+  id,
+  name,
+  cashflow,
+  parentId: null,
+}))
 
 function tableRow(
   id: string,
@@ -676,14 +684,17 @@ const SETTINGS_ACCOUNTS: AccountView[] = [
 ]
 
 const SETTINGS_CATEGORIES: CategoryView[] = [
-  { id: 'cat-gaji', name: 'Gaji', cashflow: 'income', icon: 'Briefcase', hue: '0', archived: false, usage: 24 },
-  { id: 'cat-makan', name: 'Makan/minum', cashflow: 'spending', icon: 'ForkKnife', hue: '137', archived: false, usage: 612 },
+  { id: 'cat-gaji', name: 'Gaji', cashflow: 'income', parentId: '', icon: 'Briefcase', hue: '0', archived: false, usage: 24 },
+  // A group and the two things inside it, so the indent and the "kelompok"
+  // note are both drawn.
+  { id: 'cat-makan-group', name: 'Makan & Minum', cashflow: 'spending', parentId: '', icon: 'ForkKnife', hue: '137', archived: false, usage: 0 },
+  { id: 'cat-makan', name: 'Makan/minum', cashflow: 'spending', parentId: 'cat-makan-group', icon: 'ForkKnife', hue: '137', archived: false, usage: 612 },
   // Nothing filed under it yet, so its cashflow is still free to move.
-  { id: 'cat-kopi', name: 'Kopi', cashflow: 'spending', icon: '', hue: '', archived: false, usage: 0 },
-  { id: 'cat-wifi', name: 'Wifi', cashflow: 'bills', icon: 'WifiHigh', hue: '210', archived: false, usage: 12 },
-  { id: 'cat-tabungan', name: 'Tabungan', cashflow: 'invest_savings', icon: 'PiggyBank', hue: '300', archived: false, usage: 9 },
-  { id: 'cat-tabungan-keluar', name: 'Tabungan', cashflow: 'from_asset', icon: 'PiggyBank', hue: '300', archived: false, usage: 2 },
-  { id: 'cat-lama', name: 'Langganan lama', cashflow: 'bills', icon: 'Receipt', hue: '', archived: true, usage: 5 },
+  { id: 'cat-kopi', name: 'Kopi', cashflow: 'spending', parentId: 'cat-makan-group', icon: '', hue: '', archived: false, usage: 0 },
+  { id: 'cat-wifi', name: 'Wifi', cashflow: 'bills', parentId: '', icon: 'WifiHigh', hue: '210', archived: false, usage: 12 },
+  { id: 'cat-tabungan', name: 'Tabungan', cashflow: 'invest_savings', parentId: '', icon: 'PiggyBank', hue: '300', archived: false, usage: 9 },
+  { id: 'cat-tabungan-keluar', name: 'Tabungan', cashflow: 'from_asset', parentId: '', icon: 'PiggyBank', hue: '300', archived: false, usage: 2 },
+  { id: 'cat-lama', name: 'Langganan lama', cashflow: 'bills', parentId: '', icon: 'Receipt', hue: '', archived: true, usage: 5 },
 ]
 
 /*
@@ -849,11 +860,30 @@ const QUEUE_ACCOUNTS = [
 ]
 
 const QUEUE_CATEGORIES = [
-  { id: 'cat-keluarga', name: 'Keluarga', cashflow: 'spending' as CashflowType },
-  { id: 'cat-makan', name: 'Makan/minum', cashflow: 'spending' as CashflowType },
-  { id: 'cat-wifi', name: 'Wifi', cashflow: 'bills' as CashflowType },
-  { id: 'cat-gaji', name: 'Gaji', cashflow: 'income' as CashflowType },
-  { id: 'cat-penyesuaian', name: 'Penyesuaian Income', cashflow: 'income' as CashflowType },
+  { id: 'cat-keluarga', name: 'Keluarga', cashflow: 'spending' as CashflowType, parentId: null },
+  // A group and the two things inside it, so the dropdown is exercised with a
+  // heading that is a category rather than a cashflow.
+  { id: 'cat-makan-group', name: 'Makan & Minum', cashflow: 'spending' as CashflowType, parentId: null },
+  {
+    id: 'cat-makan',
+    name: 'Makan/minum',
+    cashflow: 'spending' as CashflowType,
+    parentId: 'cat-makan-group',
+  },
+  {
+    id: 'cat-kopi-snack',
+    name: 'Kopi & Snack',
+    cashflow: 'spending' as CashflowType,
+    parentId: 'cat-makan-group',
+  },
+  { id: 'cat-wifi', name: 'Wifi', cashflow: 'bills' as CashflowType, parentId: null },
+  { id: 'cat-gaji', name: 'Gaji', cashflow: 'income' as CashflowType, parentId: null },
+  {
+    id: 'cat-penyesuaian',
+    name: 'Penyesuaian Income',
+    cashflow: 'income' as CashflowType,
+    parentId: null,
+  },
 ]
 
 let queueSeq = 0
@@ -1107,6 +1137,57 @@ const SPARKS_MANY = buildCategoryTrends(
   ],
   { top: 4 },
 )
+
+/*
+  A ledger with two groups, so the report is exercised on the shape it was built
+  for: a group that opens into several categories, and a category standing on
+  its own.
+*/
+const REPORT_GROUPS = {
+  'Kopi & Snack': 'Makan & Minum',
+  'Makan/minum': 'Makan & Minum',
+  Bensin: 'Transport',
+  'Parkir & Tol': 'Transport',
+}
+
+let reportSeq = 0
+const reportRow = (name: string, amount: string, description: string, cashflow: CashflowType) => {
+  reportSeq += 1
+  return {
+    id: `rep-${reportSeq}`,
+    occurredAt: new Date('2026-07-10T05:00:00.000Z'),
+    description,
+    amount: idr(amount),
+    cashflow,
+    categoryId: null,
+    categoryName: name,
+    fromAccountId: 'acc-mandiri',
+    toAccountId: null,
+    source: 'xlsx' as const,
+  }
+}
+
+const REPORT_ROWS = [
+  reportRow('Kopi & Snack', '120.000,00', 'Flash Coffee Aeropolis', 'spending'),
+  reportRow('Kopi & Snack', '48.000,00', 'Flash Coffee Aeropolis - kopi susu', 'spending'),
+  reportRow('Makan/minum', '234.000,00', 'Pondok Sate Tegal Ibu R', 'spending'),
+  reportRow('Bensin', '400.000,00', 'SPBU 31.11802 Kalideres', 'spending'),
+  reportRow('Bensin', '150.000,00', 'Shell Jatimekar 1 BKS', 'spending'),
+  reportRow('Parkir & Tol', '36.000,00', 'LynkID', 'spending'),
+  reportRow('Laundry', '85.000,00', 'Antar Jemput Laundry', 'spending'),
+  reportRow('Gaji', '6.330.000,00', 'Handoko Afandy - Sal TUKK MitraPlus', 'income'),
+]
+
+const TIDY_VIEW = {
+  moves: [
+    { from: 'Makan/minum', to: 'Bensin', cashflow: 'spending' as CashflowType, icon: 'GasPump', hue: 60, count: 45, amount: 'Rp4.401.205' },
+    { from: 'Belanja', to: 'Listrik', cashflow: 'bills' as CashflowType, icon: 'Lightning', hue: 185, count: 16, amount: 'Rp6.098.000' },
+    { from: 'Other spending', to: 'Laundry', cashflow: 'spending' as CashflowType, icon: 'WashingMachine', hue: 300, count: 20, amount: 'Rp1.171.439' },
+  ],
+  count: 81,
+  amount: 'Rp11.670.644',
+  protectedCount: 310,
+}
 
 export const FIXTURES = {
   marks: MARKS,
@@ -1458,7 +1539,12 @@ export const FIXTURES = {
   'settings-categories': <CategoriesPanel categories={SETTINGS_CATEGORIES} />,
   // A category nothing has been filed under yet, so the cashflow is still open,
   // beside one where it is locked.
-  'settings-category-form': <CategoryForm category={SETTINGS_CATEGORIES[2]} />,
+  'settings-category-form': (
+    <CategoryForm
+      category={SETTINGS_CATEGORIES.find((row) => row.id === 'cat-kopi')!}
+      siblings={SETTINGS_CATEGORIES}
+    />
+  ),
   'plan-index': (
     <PlanIndex
       sections={[
@@ -1469,6 +1555,17 @@ export const FIXTURES = {
         { id: 'gap', label: 'Jarak' },
         { id: 'tujuan', label: 'Tujuan' },
       ]}
+    />
+  ),
+  'tinjau-rapikan': <TidyPanel view={TIDY_VIEW} />,
+  'laporan-per-kategori': (
+    <PeriodReport
+      summary={summarisePeriod(REPORT_ROWS, {}, REPORT_GROUPS)}
+      filter={{}}
+      raw={{}}
+      categories={['Bensin', 'Kopi & Snack', 'Laundry', 'Makan/minum', 'Parkir & Tol']}
+      accounts={['Bank Mandiri']}
+      ledgerSize={REPORT_ROWS.length}
     />
   ),
 }

@@ -408,8 +408,15 @@ export function classify(row: StatementRow, options: ClassifyOptions = {}): Clas
     })
   }
 
+  /*
+    Nothing matched. Only the purpose is unknown; which way the money went is
+    not in doubt, and `unknown` maps to a spending cashflow. Filing an arrival
+    as spending is the shape `transactions_account_sides` refuses, and even
+    where it slips through it reads as an expense that never happened. Money
+    arriving without a recognisable sender is a transfer in, whoever sent it.
+  */
   return make({
-    kind: 'unknown',
+    kind: direction === 'in' ? 'transfer-in' : 'unknown',
     channel: 'unknown',
     counterparty: { name: first || null, account: second || null, truncated: false },
     confidence: 'low',

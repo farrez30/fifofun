@@ -104,10 +104,26 @@ async function Report({ params }: { params: Record<string, string | string[] | u
     Object.entries(params).map(([key, value]) => [key, first(value)]),
   )
 
+  /*
+    Which group each category name belongs to.
+
+    By name because a summary is built from ledger entries, and an entry carries
+    the name its category had rather than a link to the row. An entry naming a
+    category nobody keeps any more simply stands on its own, which is the same
+    thing that happens to a category with no group.
+  */
+  const nameById = new Map(categories.map((category) => [category.id, category.name]))
+  const groupNames = Object.fromEntries(
+    categories
+      .filter((category) => category.parentId !== null)
+      .map((category) => [category.name, nameById.get(category.parentId as string)])
+      .filter((pair): pair is [string, string] => pair[1] !== undefined),
+  )
+
   return (
     <div className="space-y-8">
       <PeriodReport
-        summary={summarisePeriod(enriched, filter)}
+        summary={summarisePeriod(enriched, filter, groupNames)}
         filter={filter}
         raw={params}
         categories={categories.map((category) => category.name)}

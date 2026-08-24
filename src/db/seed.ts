@@ -71,7 +71,7 @@ async function main(): Promise<void> {
   const { readXlsx } = await import('@/lib/xlsx')
   const { parseMandiriStatement } = await import('@/lib/statement/mandiri-xlsx')
   const { statementToLedger } = await import('@/lib/statement/to-ledger')
-  const { SEED_ACCOUNTS, SEED_CATEGORIES, DEFAULT_CATEGORY_BY_KIND } = await import(
+  const { SEED_ACCOUNTS, SEED_CATEGORIES, SEED_RULES, DEFAULT_CATEGORY_BY_KIND } = await import(
     '@/lib/ledger/seed-data'
   )
   const { SEED_PALETTE } = await import('@/lib/ledger/palette')
@@ -175,17 +175,27 @@ async function main(): Promise<void> {
   const categoryIds = new Map<string, string>()
   const keyOf = (cashflow: string, name: string) => `${cashflow} ${name}`
 
-  for (const seed of SEED_CATEGORIES) {
+  // Groups before the things inside them, so a child always finds its parent's
+  // id already written. The trigger refuses a parent that does not exist yet,
+  // and would refuse the whole seed on the first child of an unseeded group.
+  const inOrder = [
+    ...SEED_CATEGORIES.filter((category) => !category.parent),
+    ...SEED_CATEGORIES.filter((category) => category.parent),
+  ]
+
+  for (const seed of inOrder) {
     // The same colour and icon the migration backfills, so a database seeded
     // on a laptop looks like one migrated in production rather than falling
     // back to a hash for every row.
     const look = SEED_PALETTE[seed.name]
+    const parentId = seed.parent ? (categoryIds.get(keyOf(seed.cashflow, seed.parent)) ?? null) : null
     const [created] = await db
       .insert(schema.categories)
       .values({
         householdId: household.id,
         name: seed.name,
         cashflow: seed.cashflow,
+        parentId,
         icon: look?.icon ?? null,
         color: look === undefined ? null : String(look.hue),
       })
@@ -210,18 +220,62 @@ async function main(): Promise<void> {
       .limit(1)
     if (!existing) continue
 
-    if (look && (existing.icon === null || existing.color === null)) {
+    // A row seeded before groups existed has no parent yet. Filling it in is
+    // the whole point of running the seed again after this migration; a parent
+    // somebody moved by hand is left where they put it.
+    const needsLook = look && (existing.icon === null || existing.color === null)
+    if (needsLook || (parentId && existing.parentId === null)) {
       await db
         .update(schema.categories)
         .set({
-          icon: existing.icon ?? look.icon,
-          color: existing.color ?? String(look.hue),
+          icon: existing.icon ?? look?.icon ?? null,
+          color: existing.color ?? (look === undefined ? null : String(look.hue)),
+          parentId: existing.parentId ?? parentId,
         })
         .where(eq(schema.categories.id, existing.id))
     }
     categoryIds.set(keyOf(seed.cashflow, seed.name), existing.id)
   }
   console.log(`${categoryIds.size} categories ready`)
+
+  /*
+    The starting rules.
+
+    `categorization_rules` has no unique index to conflict on, so idempotence is
+    a read before the write. Anything the household has since edited or deleted
+    stays edited or deleted: a seed that reinstated a rule somebody threw away
+    would be a seed nobody could run twice.
+  */
+  let rulesAdded = 0
+  for (const rule of SEED_RULES) {
+    const categoryId = categoryIds.get(keyOf(rule.cashflow, rule.category))
+    if (!categoryId) continue
+
+    const [existing] = await db
+      .select({ id: schema.categorizationRules.id })
+      .from(schema.categorizationRules)
+      .where(
+        and(
+          eq(schema.categorizationRules.householdId, household.id),
+          eq(schema.categorizationRules.pattern, rule.pattern),
+          eq(schema.categorizationRules.matchType, rule.matchType),
+        ),
+      )
+      .limit(1)
+    if (existing) continue
+
+    await db.insert(schema.categorizationRules).values({
+      householdId: household.id,
+      pattern: rule.pattern,
+      matchType: rule.matchType,
+      cashflow: rule.cashflow,
+      categoryId,
+      priority: rule.priority,
+      autoApply: true,
+    })
+    rulesAdded++
+  }
+  console.log(`${rulesAdded} rules added, ${SEED_RULES.length} in the starting set`)
 
   if (args.setupOnly) {
     console.log('Setup only, statements left alone.')

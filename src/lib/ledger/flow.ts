@@ -61,6 +61,47 @@ export interface FlowOptions {
   namedLimit?: number | null
   /** The hue that identifies a category everywhere else in the app. */
   hueOf?: (category: string) => number
+  /**
+   * Rolls a category up to the group it belongs to before it is drawn.
+   *
+   * Forty-three ribbons in one column is a column nobody can read, and the
+   * question a diagram answers is the coarse one anyway. Return null for a
+   * category that belongs to no group and it keeps its own name.
+   */
+  groupOf?: (category: string) => string | null
+  /**
+   * Draws where the money came from, as a column before Pemasukan.
+   *
+   * Without it the left edge is a single node labelled Pemasukan, which says
+   * that money arrived and nothing about from where. A household with a salary,
+   * a side income and money coming back out of savings sees three different
+   * things there.
+   */
+  sources?: boolean
+}
+
+/**
+ * Categories folded into the groups they belong to, largest first.
+ *
+ * Without a mapping this is the list it was given. A category with no group
+ * keeps its own name, which is what makes the two kinds of row sit in one
+ * column without a reader having to know which is which.
+ */
+function rollUp(
+  categories: CategoryTotal[],
+  groupOf?: (category: string) => string | null,
+): CategoryTotal[] {
+  if (!groupOf) return categories
+
+  const totals = new Map<string, bigint>()
+  for (const row of categories) {
+    const name = groupOf(row.category) ?? row.category
+    totals.set(name, (totals.get(name) ?? 0n) + row.amount)
+  }
+
+  return [...totals.entries()]
+    .map(([category, amount]) => ({ category, amount }))
+    .sort((a, b) => (a.amount === b.amount ? a.category.localeCompare(b.category, 'id') : b.amount > a.amount ? 1 : -1))
 }
 
 export function buildFlow(
@@ -70,8 +111,27 @@ export function buildFlow(
 ): MonthFlow {
   const drill = options.drill ?? 'largest'
   const namedLimit = options.namedLimit === undefined ? NAMED_LIMIT : options.namedLimit
-  const nodes: SankeyNode[] = [{ id: 'in', label: 'Pemasukan', column: 0, tone: 'income' }]
+  // Every column shifts right by one when the sources column is drawn, so the
+  // positions are written relative to Pemasukan rather than as fixed numbers.
+  const base = options.sources ? 1 : 0
+  const nodes: SankeyNode[] = [{ id: 'in', label: 'Pemasukan', column: base, tone: 'income' }]
   const links: SankeyLink[] = []
+
+  if (options.sources) {
+    const sources = totalsByCategory(entries, { cashflows: ['income'] }).filter(
+      (row) => row.amount > 0n,
+    )
+    for (const row of sources) {
+      nodes.push({
+        id: `src-${row.category}`,
+        label: row.category,
+        column: 0,
+        tone: 'income',
+        hue: options.hueOf?.(row.category),
+      })
+      links.push({ source: `src-${row.category}`, target: 'in', value: row.amount })
+    }
+  }
 
   const buckets: {
     id: string
@@ -120,7 +180,7 @@ export function buildFlow(
 
   for (const bucket of buckets) {
     if (bucket.amount <= 0n) continue
-    nodes.push({ id: bucket.id, label: bucket.label, column: 1, tone: bucket.tone })
+    nodes.push({ id: bucket.id, label: bucket.label, column: base + 1, tone: bucket.tone })
     links.push({ source: 'in', target: bucket.id, value: bucket.amount })
   }
 
@@ -128,7 +188,7 @@ export function buildFlow(
   // the difference between a diagram that balances and one that quietly does not.
   const kept = statement.sisaUang - statement.saldoAwal
   if (kept > 0n) {
-    nodes.push({ id: 'kept', label: 'Sisa', column: 1, tone: 'income' })
+    nodes.push({ id: 'kept', label: 'Sisa', column: base + 1, tone: 'income' })
     links.push({ source: 'in', target: 'kept', value: kept })
   }
 
@@ -165,7 +225,8 @@ export function buildFlow(
 
   const folded: CategoryTotal[] = []
 
-  opened.forEach(({ bucket, categories }, rank) => {
+  opened.forEach(({ bucket, categories: raw }, rank) => {
+    const categories = rollUp(raw, options.groupOf)
     const named = namedLimit === null ? categories : categories.slice(0, namedLimit)
     const tail = namedLimit === null ? [] : categories.slice(namedLimit)
     const rest = tail.reduce((sum, row) => sum + row.amount, 0n)
@@ -177,7 +238,7 @@ export function buildFlow(
         // under two of them and one id would merge two different ribbons.
         id: `cat-${bucket.id}-${row.category}`,
         label: row.category,
-        column: 2,
+        column: base + 2,
         tone: bucket.tone,
         hue: options.hueOf?.(row.category),
         // Keeps a destination's categories together in the column, in the same
@@ -195,7 +256,7 @@ export function buildFlow(
       nodes.push({
         id: `cat-rest-${bucket.id}`,
         label: `${tail.length} kategori lain`,
-        column: 2,
+        column: base + 2,
         tone: 'neutral',
         order: rank,
       })

@@ -57,6 +57,13 @@
       "when": 1787564687145,
       "tag": "0007_merge_income_lainnya",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1787570856772,
+      "tag": "0008_category_parents",
+      "breakpoints": true
     }
   ]
 }

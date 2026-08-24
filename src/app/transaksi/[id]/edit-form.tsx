@@ -7,6 +7,7 @@ import { BUTTON_PRIMARY, CONTROL, FieldLabel } from '@/components/field-base'
 import { MoneyInput } from '@/components/money-input'
 import { CASHFLOW_LABELS, type CashflowType } from '@/lib/ledger/types'
 import type { Editable } from '@/lib/ledger/edit'
+import { optionGroups } from '@/lib/ledger/settings'
 import type { ActionResult } from '@/lib/actions'
 import { updateEntry } from '../actions'
 
@@ -24,6 +25,8 @@ export interface CategoryOption {
   id: string
   name: string
   cashflow: CashflowType
+  /** The group it is listed under, or null when it is listed by cashflow. */
+  parentId: string | null
 }
 
 export interface EntryView {
@@ -61,10 +64,7 @@ export function EditEntryForm({
   const [amount, setAmount] = useState(() => BigInt(entry.amount || '0'))
   const [passThrough, setPassThrough] = useState(entry.isPassThrough)
 
-  const byCashflow = new Map<CashflowType, CategoryOption[]>()
-  for (const category of categories) {
-    byCashflow.set(category.cashflow, [...(byCashflow.get(category.cashflow) ?? []), category])
-  }
+  const grouped = optionGroups(categories)
 
   return (
     <form action={action} className="space-y-4 border border-line bg-surface p-4">
@@ -90,8 +90,8 @@ export function EditEntryForm({
             ) : (
               <option value="">{CASHFLOW_LABELS.transfer}</option>
             )}
-            {[...byCashflow.entries()].map(([cashflow, options]) => (
-              <optgroup key={cashflow} label={CASHFLOW_LABELS[cashflow]}>
+            {grouped.map(({ label, options }) => (
+              <optgroup key={label} label={label}>
                 {options.map((category) => (
                   <option key={category.id} value={category.id}>
                     {category.name}

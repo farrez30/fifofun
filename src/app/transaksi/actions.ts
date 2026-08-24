@@ -18,6 +18,7 @@ import { isBankFact, planSplit, SPLIT_MAX, SPLIT_MIN } from '@/lib/ledger/edit'
 import { describeProblem, sidesFor, withinDateBounds } from '@/lib/ledger/manual'
 import { validateEntry, type CashflowType, type EntrySource } from '@/lib/ledger/types'
 import { formatIdr } from '@/lib/money'
+import { groupRefusal } from '@/lib/queries/categories'
 
 /**
  * Changing one transaction after the fact.
@@ -139,6 +140,9 @@ export async function updateEntry(
       .is('archived_at', null)
       .maybeSingle()
     if (!category) return fail('Kategori itu tidak ada di rumah tangga ini.')
+
+    const isGroup = await groupRefusal(householdId, input.categoryId, category.name as string)
+    if (isGroup) return fail('Kelompok tidak bisa dipakai langsung.', isGroup)
 
     const cashflow = category.cashflow as CashflowType
     if (directionOf(cashflow) !== directionOf(row.cashflow)) {
@@ -318,10 +322,29 @@ export async function splitEntry(
     .is('archived_at', null)
 
   const byId = new Map((categories ?? []).map((row) => [row.id as string, row]))
+
+  // One query for all six parts rather than one apiece: a group is a category
+  // something else names as its parent.
+  const { data: groups } = await supabase
+    .from('categories')
+    .select('parent_id')
+    .eq('household_id', householdId)
+    .in(
+      'parent_id',
+      parts.map((part) => part.categoryId),
+    )
+  const isGroup = new Set((groups ?? []).map((row) => row.parent_id as string))
+
   const wanted = directionOf(parent.cashflow)
   for (const part of parts) {
     const category = byId.get(part.categoryId)
     if (!category) return fail('Ada kategori yang tidak ada di rumah tangga ini.')
+    if (isGroup.has(part.categoryId)) {
+      return fail(
+        'Kelompok tidak bisa dipakai langsung.',
+        `${category.name} adalah kelompok. Pilih salah satu pos di dalamnya, supaya angkanya tidak terhitung dua kali.`,
+      )
+    }
     if (directionOf(category.cashflow as CashflowType) !== wanted) {
       return fail(
         'Arah kategorinya tidak cocok dengan transaksinya.',

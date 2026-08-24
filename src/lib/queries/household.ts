@@ -51,6 +51,8 @@ export interface CategoryRow {
   id: string
   name: string
   cashflow: CashflowType
+  /** The group this rolls up into, or null when it is a group or stands alone. */
+  parentId: string | null
   /** What was already in this pot before the ledger starts. Zero for the rest. */
   openingBalance: bigint
   /** Only savings, sinking funds and goals carry a target. */
@@ -134,7 +136,7 @@ export async function getCategories(
   let query = supabase
     .from('categories')
     .select(
-      'id, name, cashflow, opening_balance, target_amount, target_month, planned_monthly, planned_share_bp, icon, color, sort_order, archived_at',
+      'id, name, cashflow, parent_id, opening_balance, target_amount, target_month, planned_monthly, planned_share_bp, icon, color, sort_order, archived_at',
     )
     .eq('household_id', householdId)
     // Ordered by the household's own arrangement, with the name as the
@@ -154,6 +156,7 @@ export async function getCategories(
     id: row.id as string,
     name: row.name as string,
     cashflow: row.cashflow as CashflowType,
+    parentId: (row.parent_id as string | null) ?? null,
     openingBalance: BigInt(row.opening_balance ?? 0),
     target: row.target_amount === null ? null : BigInt(row.target_amount),
     targetMonth: (row.target_month as string | null) ?? null,
@@ -389,22 +392,34 @@ export interface UnconfirmedRow {
  * Transfers are left out: their category is decided by which accounts they move
  * money between, not by a person's judgement, and asking about them would bury
  * the rows that actually need an opinion.
+ *
+ * `includeSettled` drops the confirmed filter, which is what tidying a ledger
+ * needs: a row settled by an old rule is exactly the row a better rule is
+ * meant to reach. Nothing else uses it, and the caller that does refuses to
+ * write over a category a person chose.
  */
-export async function getUnconfirmed(householdId: string): Promise<UnconfirmedRow[]> {
+export async function getUnconfirmed(
+  householdId: string,
+  options: { includeSettled?: boolean } = {},
+): Promise<UnconfirmedRow[]> {
   const supabase = await createClient()
   const all: UnconfirmedRow[] = []
 
   for (let offset = 0; ; offset += PAGE_SIZE) {
-    const { data, error } = await supabase
+    const filtered = supabase
       .from('transactions')
       .select(
         'id, description, raw_description, amount, cashflow, occurred_at, from_account_id, to_account_id, source, categories(name)',
       )
       .eq('household_id', householdId)
       .is('deleted_at', null)
-      .is('confirmed_at', null)
       .neq('cashflow', 'transfer')
       .neq('source', 'manual')
+
+    const { data, error } = await (options.includeSettled
+      ? filtered
+      : filtered.is('confirmed_at', null)
+    )
       // Paging on a non-unique sort key lets rows swap between pages, so a row
       // can appear twice or not at all. Amounts repeat constantly in a ledger,
       // so the id is there purely to make the order total.

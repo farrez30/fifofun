@@ -5,7 +5,9 @@ import { z } from 'zod'
 import { DIRECTION_LABELS, directionOf, ruleAgreesWithDirection } from '@/lib/ledger/direction'
 import { findConflict, matches, normalise, splitByDirection, type Rule } from '@/lib/ledger/rules'
 import { CASHFLOW_TYPES, type CashflowType } from '@/lib/ledger/types'
+import { groupRefusal } from '@/lib/queries/categories'
 import { getRules, getUnconfirmed } from '@/lib/queries/household'
+import { planLedgerTidy } from '@/lib/queries/tidy'
 import { createClient } from '@/lib/supabase/server'
 
 /**
@@ -124,6 +126,9 @@ export async function applyCategory(
     .maybeSingle()
 
   if (!category) return fail('Kategori itu tidak ada di rumah tangga ini.')
+
+  const isGroup = await groupRefusal(householdId, categoryId, category.name as string)
+  if (isGroup) return fail('Kelompok tidak bisa dipakai langsung.', isGroup)
 
   const cashflow = category.cashflow as (typeof CASHFLOW_TYPES)[number]
 
@@ -268,6 +273,9 @@ export async function categoriseOne(
     .maybeSingle()
   if (!category) return fail('Kategori itu tidak ada di rumah tangga ini.')
 
+  const isGroup = await groupRefusal(householdId, parsed.data.categoryId, category.name as string)
+  if (isGroup) return fail('Kelompok tidak bisa dipakai langsung.', isGroup)
+
   // The row's own direction is read from the database rather than taken from
   // the page, which may have been open since before somebody else changed it.
   const { data: row } = await supabase
@@ -329,4 +337,83 @@ export async function deleteRule(
 
   revalidatePath('/tinjau')
   return { ok: true, message: 'Aturannya dihapus. Kategori yang sudah tersimpan tidak berubah.' }
+}
+
+/**
+ * Runs every rule over the whole ledger, not just the queue.
+ *
+ * A rule has always stopped at the unconfirmed rows, which is right when the
+ * rule is new and wrong when the rules were the problem. This ledger had every
+ * QRIS payment stamped as a meal on the way in, so the rows most in need of a
+ * better rule were the ones a rule could not reach.
+ *
+ * Two things keep that safe. Only rows still sitting in one of the importer's
+ * parking categories are eligible, so nothing anybody chose is overwritten. And
+ * the plan is computed and shown before it is written, by the same pure
+ * function on both sides, so the figures on the button are the figures applied.
+ */
+export async function tidyLedger(
+  _previous: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  if (formData.get('confirm') !== 'ya') {
+    return fail('Perapian belum dijalankan.', 'Centang dulu persetujuannya.')
+  }
+
+  const ctx = await context()
+  if (!ctx) return fail('Sesi kamu sudah berakhir. Masuk lagi lalu ulangi.')
+  const { supabase, householdId } = ctx
+
+  const plan = await planLedgerTidy(householdId)
+  if (plan.count === 0) {
+    return {
+      ok: true,
+      message: 'Tidak ada yang perlu dipindahkan.',
+      detail: 'Setiap transaksi sudah berada di pos yang ditunjuk aturan.',
+      applied: 0,
+    }
+  }
+
+  // Same chunking as applyCategory, for the same reason: PostgREST puts the id
+  // list in the query string.
+  const CHUNK = 100
+  const settledAt = new Date().toISOString()
+  let written = 0
+
+  for (const move of plan.moves) {
+    for (let start = 0; start < move.ids.length; start += CHUNK) {
+      const { error } = await supabase
+        .from('transactions')
+        .update({
+          category_id: move.toCategoryId,
+          cashflow: move.cashflow,
+          needs_review: false,
+          confirmed_at: settledAt,
+          updated_at: settledAt,
+        })
+        .in('id', move.ids.slice(start, start + CHUNK))
+
+      if (error) {
+        return fail(
+          'Perapian berhenti di tengah jalan.',
+          `${written} transaksi sudah dipindahkan. Jalankan lagi untuk melanjutkan sisanya. ${error.message}`,
+        )
+      }
+      written += move.ids.slice(start, start + CHUNK).length
+    }
+  }
+
+  revalidatePath('/tinjau')
+  revalidatePath('/laporan')
+  revalidatePath('/')
+
+  return {
+    ok: true,
+    message: `${written} transaksi dipindahkan ke ${plan.moves.length} pos.`,
+    detail:
+      plan.protectedCount > 0
+        ? `${plan.protectedCount} transaksi yang kategorinya pernah kamu tetapkan sendiri tidak disentuh.`
+        : undefined,
+    applied: written,
+  }
 }

@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { ACCOUNT_KEYS, ACCOUNT_KEY_LABELS, isLookedUpByName, parseIdentifiers, planReorder, twinsOf } from './settings'
+import {
+  ACCOUNT_KEYS,
+  ACCOUNT_KEY_LABELS,
+  groupIds,
+  isGroup,
+  isLookedUpByName,
+  optionGroups,
+  parseIdentifiers,
+  planReorder,
+  twinsOf,
+} from './settings'
 import { SEED_ACCOUNTS } from './seed-data'
 import { ACCOUNT_KINDS, CASHFLOW_HELP, CASHFLOW_TYPES } from './types'
 
@@ -152,5 +162,45 @@ describe('CASHFLOW_HELP', () => {
   it('says something different about each one', () => {
     const sentences = CASHFLOW_TYPES.map((cashflow) => CASHFLOW_HELP[cashflow])
     expect(new Set(sentences).size).toBe(sentences.length)
+  })
+})
+
+describe('groups', () => {
+  const rows = [
+    { id: 'makan', name: 'Makan & Minum', cashflow: 'spending' as const, parentId: null },
+    { id: 'warung', name: 'Warung', cashflow: 'spending' as const, parentId: 'makan' },
+    { id: 'kopi', name: 'Kopi & Snack', cashflow: 'spending' as const, parentId: 'makan' },
+    { id: 'bank', name: 'Biaya Bank', cashflow: 'spending' as const, parentId: null },
+    { id: 'gaji', name: 'Gaji', cashflow: 'income' as const, parentId: null },
+  ]
+
+  it('names a category a group only when something rolls up into it', () => {
+    expect([...groupIds(rows)]).toEqual(['makan'])
+    expect(isGroup(rows, 'makan')).toBe(true)
+    // A category with nothing inside it takes rows like any other.
+    expect(isGroup(rows, 'bank')).toBe(false)
+  })
+
+  it('offers the things inside a group, never the group', () => {
+    const offered = optionGroups(rows).flatMap((group) => group.options.map((o) => o.id))
+    expect(offered).not.toContain('makan')
+    expect(offered).toEqual(['warung', 'kopi', 'bank', 'gaji'])
+  })
+
+  it('heads a list with the group, and falls back to the cashflow without one', () => {
+    expect(optionGroups(rows).map((group) => group.label)).toEqual([
+      'Makan & Minum',
+      'Spending',
+      'Income',
+    ])
+  })
+
+  it('keeps a child whose group is not in the list it was given', () => {
+    // The transaction page filters categories by direction first, so a child
+    // can arrive without its group. Dropping it would hide a real choice.
+    const partial = rows.filter((row) => row.id !== 'makan')
+    const offered = optionGroups(partial)
+    expect(offered.map((group) => group.label)).toEqual(['Spending', 'Income'])
+    expect(offered[0].options.map((o) => o.id)).toEqual(['warung', 'kopi', 'bank'])
   })
 })

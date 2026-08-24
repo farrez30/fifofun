@@ -13,7 +13,8 @@ import {
   type Direction,
 } from '@/lib/ledger/direction'
 import { MATCH_LABELS, type MatchType, type ReviewGroup } from '@/lib/ledger/rules'
-import { CASHFLOW_LABELS, type CashflowType } from '@/lib/ledger/types'
+import { optionGroups } from '@/lib/ledger/settings'
+import type { CashflowType } from '@/lib/ledger/types'
 import type { UnconfirmedRow } from '@/lib/queries/household'
 import type { QueueOptions } from './query'
 import { applyCategory, categoriseOne, type ActionResult } from './actions'
@@ -41,6 +42,8 @@ export interface CategoryOption {
   id: string
   name: string
   cashflow: CashflowType
+  /** The group it is listed under, or null when it is listed by cashflow. */
+  parentId: string | null
 }
 
 export interface AccountOption {
@@ -307,10 +310,7 @@ function CategorySelect({
   compactLabel?: boolean
 }) {
   const empty = categories.length === 0
-  const byCashflow = new Map<CashflowType, CategoryOption[]>()
-  for (const category of categories) {
-    byCashflow.set(category.cashflow, [...(byCashflow.get(category.cashflow) ?? []), category])
-  }
+  const grouped = optionGroups(categories)
 
   return (
     <label className="block">
@@ -334,8 +334,8 @@ function CategorySelect({
         <option value="" disabled>
           {empty ? `Tidak ada kategori untuk uang ${DIRECTION_LABELS[direction]}` : 'Pilih kategori'}
         </option>
-        {[...byCashflow.entries()].map(([cashflow, options]) => (
-          <optgroup key={cashflow} label={CASHFLOW_LABELS[cashflow]}>
+        {grouped.map(({ label, options }) => (
+          <optgroup key={label} label={label}>
             {options.map((category) => (
               <option key={category.id} value={category.id}>
                 {category.name}

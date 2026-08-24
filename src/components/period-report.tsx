@@ -1,5 +1,5 @@
 import { formatJakarta } from '@/lib/datetime'
-import type { PeriodFilter, PeriodSummary } from '@/lib/ledger/period'
+import type { CategoryTotal, PeriodFilter, PeriodSummary } from '@/lib/ledger/period'
 import { CASHFLOW_LABELS, CASHFLOW_TYPES } from '@/lib/ledger/types'
 import { formatIdr } from '@/lib/money'
 
@@ -31,6 +31,73 @@ const FIELD =
   'mt-1 w-full rounded-sm border border-line bg-paper px-2.5 py-1.5 text-sm text-ink focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent'
 
 const LABEL = 'block text-xs font-medium uppercase tracking-wide text-ink-faint'
+
+/** One row of the report: a name, a share, a figure, and a bar for the share. */
+function Line({
+  name,
+  note,
+  share,
+  total,
+}: {
+  name: string
+  note: string
+  share: number
+  total: bigint
+}) {
+  return (
+    <>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <span className="text-sm text-ink">
+          {name}
+          <span className="ml-2 text-xs text-ink-faint">{note}</span>
+        </span>
+        <span className="flex items-baseline gap-3">
+          <span className="tnum text-xs text-ink-faint">
+            {share.toFixed(1).replace('.', ',')}%
+          </span>
+          <span className="tnum font-mono text-sm text-ink">{formatIdr(total)}</span>
+        </span>
+      </div>
+
+      <div className="mt-2 h-1.5 bg-sunken">
+        <div className="h-full bg-accent" style={{ width: `${Math.min(100, share)}%` }} />
+      </div>
+    </>
+  )
+}
+
+/**
+ * Who the money went to inside one category.
+ *
+ * The level underneath the numbers, and the one that answers why a figure is
+ * what it is. Eight at most: past that the honest answer is the ledger itself,
+ * which the filter above reaches in one click.
+ */
+function Merchants({ line }: { line: CategoryTotal }) {
+  if (line.merchants.length < 2) return null
+
+  return (
+    <details className="mt-1">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center text-xs text-ink-muted underline underline-offset-2 marker:content-none">
+        Ke mana perginya
+      </summary>
+      <ul className="mt-1.5 space-y-1">
+        {line.merchants.map((merchant) => (
+          <li
+            key={merchant.label}
+            className="flex flex-wrap items-baseline justify-between gap-x-3 text-xs"
+          >
+            <span className="text-ink-muted">
+              {merchant.label}
+              <span className="ml-2 text-ink-faint">{merchant.count}x</span>
+            </span>
+            <span className="tnum font-mono text-ink-muted">{formatIdr(merchant.total)}</span>
+          </li>
+        ))}
+      </ul>
+    </details>
+  )
+}
 
 export function PeriodReport({ summary, raw, categories, accounts, ledgerSize }: Props) {
   const filtered =
@@ -202,35 +269,49 @@ export function PeriodReport({ summary, raw, categories, accounts, ledgerSize }:
         </section>
       ) : null}
 
-      {summary.byCategory.length > 0 ? (
+      {summary.byGroup.length > 0 ? (
         <section aria-labelledby="per-kategori">
           <h2 id="per-kategori" className="mb-3 text-sm font-medium text-ink">
             Per kategori
           </h2>
           <ul className="divide-y divide-line border border-line bg-surface">
-            {summary.byCategory.map((line) => (
-              <li key={`${line.cashflow} ${line.category}`} className="p-3">
-                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                  <span className="text-sm text-ink">
-                    {line.category}
-                    <span className="ml-2 text-xs text-ink-faint">
-                      {CASHFLOW_LABELS[line.cashflow]}
-                    </span>
-                  </span>
-                  <span className="flex items-baseline gap-3">
-                    <span className="tnum text-xs text-ink-faint">
-                      {line.share.toFixed(1).replace('.', ',')}%
-                    </span>
-                    <span className="tnum font-mono text-sm text-ink">{formatIdr(line.total)}</span>
-                  </span>
-                </div>
+            {summary.byGroup.map((group) => (
+              <li key={`${group.cashflow} ${group.group}`} className="p-3">
+                <Line
+                  name={group.group}
+                  note={CASHFLOW_LABELS[group.cashflow]}
+                  share={group.share}
+                  total={group.total}
+                />
 
-                <div className="mt-2 h-1.5 bg-sunken">
-                  <div
-                    className="h-full bg-accent"
-                    style={{ width: `${Math.min(100, line.share)}%` }}
-                  />
-                </div>
+                {/* A group of one is the category itself, and opening it would
+                    show the same figure a second time. */}
+                {group.categories.length > 1 ? (
+                  <details className="mt-1">
+                    {/* The whole row is the target, not the eight pixels of
+                        text in it: a disclosure the size of its own label is
+                        the smallest thing on the page and the one most often
+                        reached for on a phone. */}
+                    <summary className="flex min-h-11 cursor-pointer list-none items-center text-xs text-accent underline underline-offset-2 marker:content-none">
+                      {group.categories.length} pos di dalamnya
+                    </summary>
+                    <ul className="mt-2 space-y-2 border-l border-line pl-3">
+                      {group.categories.map((line) => (
+                        <li key={`${line.cashflow} ${line.category}`}>
+                          <Line
+                            name={line.category}
+                            note={`${line.count} transaksi`}
+                            share={line.share}
+                            total={line.total}
+                          />
+                          <Merchants line={line} />
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                ) : (
+                  group.categories.map((line) => <Merchants key={line.category} line={line} />)
+                )}
               </li>
             ))}
           </ul>

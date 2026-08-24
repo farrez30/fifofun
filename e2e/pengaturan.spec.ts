@@ -107,9 +107,10 @@ test.describe('kategori', () => {
 
   test('marks the names the importer looks for literally', async ({ page }) => {
     await open(page, 'settings-categories')
-    await expect(page.getByRole('rowheader', { name: /Makan\/minum/ })).toContainText(
-      'dicari impor',
-    )
+    // Makan/minum used to be one of these, back when every QRIS payment was
+    // filed as a meal. The importer no longer guesses that, so the name it does
+    // still look for is the one the payroll line lands on.
+    await expect(page.getByRole('rowheader', { name: /Gaji/ })).toContainText('dicari impor')
     await expect(page.getByRole('rowheader', { name: /^Kopi/ })).not.toContainText('dicari impor')
 
     // And lists all of them in one place rather than leaving it to be guessed.

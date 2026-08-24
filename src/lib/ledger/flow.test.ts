@@ -315,3 +315,54 @@ describe('buildFlow, every destination opened', () => {
     expect(flow.foldedInto).toBe('Pengeluaran')
   })
 })
+
+describe('buildFlow, one level up', () => {
+  it('draws a group instead of the categories inside it', () => {
+    const flow = buildFlow(
+      statement({ spending: idr('300.000,00') }),
+      [
+        entry('spending', 'Kopi & Snack', '100.000,00'),
+        entry('spending', 'Warung', '120.000,00'),
+        entry('spending', 'Bensin', '80.000,00'),
+      ],
+      {
+        drill: 'all',
+        namedLimit: null,
+        groupOf: (name) =>
+          name === 'Kopi & Snack' || name === 'Warung' ? 'Makan & Minum' : null,
+      },
+    )
+
+    const labels = flow.nodes.filter((node) => node.column === 2).map((node) => node.label)
+    expect(labels).toEqual(['Makan & Minum', 'Bensin'])
+
+    const makan = flow.links.find((link) => link.target === 'cat-spending-Makan & Minum')
+    expect(makan?.value).toBe(idr('220.000,00'))
+  })
+
+  it('names where the money came from, when asked', () => {
+    const flow = buildFlow(
+      statement({ income: idr('500.000,00'), spending: idr('100.000,00') }),
+      [
+        entry('income', 'Gaji', '400.000,00'),
+        entry('income', 'Freelance', '100.000,00'),
+        entry('spending', 'Bensin', '100.000,00'),
+      ],
+      { sources: true },
+    )
+
+    const first = flow.nodes.filter((node) => node.column === 0).map((node) => node.label)
+    expect(first).toEqual(['Gaji', 'Freelance'])
+    // Everything else shifts right, so Pemasukan is no longer the left edge.
+    expect(flow.nodes.find((node) => node.id === 'in')?.column).toBe(1)
+    expect(flow.links.filter((link) => link.target === 'in')).toHaveLength(2)
+  })
+
+  it('leaves the left edge alone when it is not asked', () => {
+    const flow = buildFlow(statement({ spending: idr('100.000,00') }), [
+      entry('spending', 'Bensin', '100.000,00'),
+    ])
+    expect(flow.nodes.find((node) => node.id === 'in')?.column).toBe(0)
+    expect(flow.nodes.some((node) => node.id.startsWith('src-'))).toBe(false)
+  })
+})
