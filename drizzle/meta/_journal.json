@@ -50,6 +50,13 @@
       "when": 1787365305141,
       "tag": "0006_manual_entries_plans",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1787564687145,
+      "tag": "0007_merge_income_lainnya",
+      "breakpoints": true
     }
   ]
 }

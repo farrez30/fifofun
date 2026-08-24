@@ -20,7 +20,6 @@ export const SEED_CATEGORIES: SeedCategory[] = [
   { name: 'Pinjaman', cashflow: 'income' },
   { name: 'Penyesuaian Income', cashflow: 'income' },
   { name: 'Other Income', cashflow: 'income' },
-  { name: 'Income Lainnya', cashflow: 'income' },
 
   { name: 'Makan/minum', cashflow: 'spending' },
   { name: 'Transport', cashflow: 'spending' },

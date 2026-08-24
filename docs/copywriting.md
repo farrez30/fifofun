@@ -64,7 +64,8 @@ memaksa pembaca menahan penjelasan di kepala untuk sesuatu yang belum dilihat.
 - **Bahasa Indonesia di seluruh teks yang dilihat pengguna.** Nama kategori dari
   spreadsheet dipertahankan apa adanya, termasuk yang berbahasa Inggris seperti
   "Other spending", supaya angkanya bisa dibandingkan baris per baris dengan
-  spreadsheet lama.
+  spreadsheet lama. Padanan Indonesianya bukan kategori kedua: satu pos punya satu
+  nama dalam satu cashflow, dan dua nama untuk pos yang sama memecah angkanya.
 - **Sebut ketidaktahuan sebagai ketidaktahuan.** Angka yang tidak bisa dihitung
   ditulis sebagai tidak diketahui, bukan nol.
 

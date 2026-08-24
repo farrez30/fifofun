@@ -66,7 +66,6 @@ const SEED_ICONS: Record<string, string> = {
   Pinjaman: 'Handshake',
   'Penyesuaian Income': 'Scales',
   'Other Income': 'HandCoins',
-  'Income Lainnya': 'HandCoins',
   'Makan/minum': 'ForkKnife',
   Transport: 'Bus',
   Belanja: 'ShoppingBag',
