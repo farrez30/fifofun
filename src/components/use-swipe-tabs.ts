@@ -13,15 +13,21 @@ import type { NavHref } from '@/components/nav'
  * than leave the page. Getting that wrong does not degrade the gesture, it
  * breaks every diagram in the app.
  *
- * So the gesture declines in six situations, and the order matters only in that
- * the cheap checks come first:
+ * So the gesture declines in five situations, and the order matters only in
+ * that the cheap checks come first:
  *
- *   1. a stated preference for less motion
- *   2. a pointer that is not a finger, or a screen wide enough for the nav row
- *   3. a sheet is open, where a swipe means something else or nothing
- *   4. the gesture began inside something that can scroll sideways
- *   5. it began in the strip iOS keeps for its own back gesture
- *   6. it was mostly vertical, or too short to be meant
+ *   1. a pointer that is not a finger, or a screen wide enough for the nav row
+ *   2. a sheet is open, where a swipe means something else or nothing
+ *   3. the gesture began inside something that can scroll sideways
+ *   4. it began in the strip iOS keeps for its own back gesture
+ *   5. it was mostly vertical, or too short to be meant
+ *
+ * `prefers-reduced-motion` is deliberately not on that list. It asks for less
+ * animation, not for fewer ways to get around, and this is a way to get around.
+ * The animation it would ask about is the page fade, which is a CSS animation
+ * the global reduce block already removes; taking the gesture away as well
+ * would leave the reader who asked for calm with one route into a page instead
+ * of two.
  *
  * Pointer events rather than touch events, which is the idiom `drag-axis.tsx`
  * already established here.
@@ -54,7 +60,6 @@ export function useSwipeTabs(order: readonly NavHref[], current: NavHref) {
   const router = useRouter()
 
   useEffect(() => {
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return
     if (!matchMedia('(pointer: coarse)').matches) return
 
     let startX = 0
