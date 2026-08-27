@@ -79,7 +79,7 @@ export function CrunchTimeline({ projection, caption, onBirthYearChange }: Props
       </figcaption>
 
       <div
-        className="relative overflow-x-auto pb-1"
+        data-pannable="true" className="relative overflow-x-auto pb-1"
         tabIndex={0}
         role="region"
         aria-label="Linimasa biaya anak, bisa digeser ke samping"

@@ -326,7 +326,7 @@ export function Sankey({ nodes, links, height: fixedHeight, caption, note, id }:
       <figcaption className="mb-3 text-sm font-medium text-ink">{caption}</figcaption>
 
       <div
-        className="relative overflow-x-auto"
+        data-pannable="true" className="relative overflow-x-auto"
         tabIndex={0}
         role="region"
         aria-label={caption}

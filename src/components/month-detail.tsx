@@ -35,7 +35,7 @@ export function MonthDetailPanel({ detail }: { detail: MonthDetail }) {
             role="region"
             tabIndex={0}
             aria-label={`Tabel per kategori ${detail.label}, bisa digeser ke samping`}
-            className="relative mt-3 overflow-x-auto border border-line bg-surface"
+            data-pannable="true" className="relative mt-3 overflow-x-auto border border-line bg-surface"
           >
             <table className="w-full min-w-[30rem] text-sm">
               <caption className="sr-only">Per kategori, {detail.label}</caption>
@@ -105,7 +105,7 @@ export function MonthDetailPanel({ detail }: { detail: MonthDetail }) {
             role="region"
             tabIndex={0}
             aria-label={`Tabel transaksi terbesar ${detail.label}, bisa digeser ke samping`}
-            className="relative mt-2 overflow-x-auto border border-line bg-surface"
+            data-pannable="true" className="relative mt-2 overflow-x-auto border border-line bg-surface"
           >
             <table className="w-full min-w-[30rem] text-sm">
               <caption className="sr-only">Transaksi terbesar, {detail.label}</caption>

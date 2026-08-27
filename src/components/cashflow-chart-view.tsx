@@ -249,7 +249,7 @@ export function CashflowChartView({
         </div>
 
         <div
-          className="relative min-w-0 flex-1 overflow-x-auto"
+          data-pannable="true" className="relative min-w-0 flex-1 overflow-x-auto"
           tabIndex={0}
           role="region"
           aria-label={`${caption}, bisa digeser ke samping`}

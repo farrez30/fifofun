@@ -1,4 +1,4 @@
-import { BalanceRows } from '@/app/catat/adjust-balance'
+import { BalanceCards, BalanceRows } from '@/app/catat/adjust-balance'
 import { formatJakarta } from '@/lib/datetime'
 import type { AccountMovement, BankReconciliation, StalledAccount } from '@/lib/ledger/monthly'
 import type { AccountKind } from '@/lib/ledger/types'
@@ -52,10 +52,27 @@ export function Balances({
     .filter((account) => account.accountId !== reconciliation?.accountId)
     .reduce((sum, account) => sum + account.closing, 0n)
 
+  /* Built once and handed to both trees, so a card and a row can never disagree
+     about what an account holds. */
+  const balanceRows = movements.map((account) => ({
+    accountId: account.accountId,
+    name: account.name,
+    kind: kinds.get(account.accountId) ?? ('cash' as const),
+    stalled: stalledIds.has(account.accountId),
+    credit: formatIdr(account.credit),
+    debit: formatIdr(account.debit),
+    closing: formatIdr(account.closing),
+    closingSen: account.closing.toString(),
+    reconciled: account.accountId === reconciliation?.accountId,
+    today,
+    entryKey: entryKeys[account.accountId] ?? account.accountId,
+  }))
+
   return (
     <div className="space-y-4">
       {/* The split comes first because it is the answer. Everything below is
           the evidence for one half and the explanation for the other. */}
+
       <div className="grid gap-3 sm:grid-cols-2">
         <Split
           label="Dipastikan bank"
@@ -156,12 +173,15 @@ export function Balances({
         </div>
       ) : null}
 
+      <BalanceCards rows={balanceRows} />
+
       <div
-        className="relative overflow-x-auto border border-line bg-surface"
+        className="relative hidden overflow-x-auto border border-line bg-surface sm:block"
         tabIndex={0}
         role="region"
         aria-label="Tabel saldo per akun, bisa digeser ke samping"
       >
+
         <table className="w-full text-sm">
           <caption className="sr-only">Saldo tiap akun, dari saldo awal ditambah masuk dikurangi keluar</caption>
           <thead>
@@ -186,21 +206,8 @@ export function Balances({
           {/* The rows are a client island so a correction can be typed in
               place. Everything above stays on the server, where the bigint
               arithmetic and the reconciliation live. */}
-          <BalanceRows
-            rows={movements.map((account) => ({
-              accountId: account.accountId,
-              name: account.name,
-              kind: kinds.get(account.accountId) ?? 'cash',
-              stalled: stalledIds.has(account.accountId),
-              credit: formatIdr(account.credit),
-              debit: formatIdr(account.debit),
-              closing: formatIdr(account.closing),
-              closingSen: account.closing.toString(),
-              reconciled: account.accountId === reconciliation?.accountId,
-              today,
-              entryKey: entryKeys[account.accountId] ?? account.accountId,
-            }))}
-          />
+          <BalanceRows rows={balanceRows} />
+
         </table>
       </div>
     </div>

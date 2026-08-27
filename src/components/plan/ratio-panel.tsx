@@ -97,7 +97,7 @@ export function RatioPanel({ snapshot }: { snapshot: FinancialSnapshot }) {
                   className="block rounded-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                 >
                   <span
-                    className={`flex h-6 items-center justify-center border text-[0.625rem] ${
+                    className={`flex h-7 items-center justify-center border text-[0.625rem] sm:h-6 ${
                       style ? style.chip : 'border-line bg-sunken text-ink-faint'
                     }`}
                   >

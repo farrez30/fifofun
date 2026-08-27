@@ -101,7 +101,80 @@ export function BalanceRows({ rows }: { rows: BalanceRow[] }) {
   )
 }
 
+/**
+ * The same rows as cards, for a screen the table does not fit on.
+ *
+ * Five columns want 736px and a phone has 327, so the table was read by
+ * dragging it sideways one column at a time. Worse, the adjustment form opened
+ * *inside* that scroll track, which meant typing a balance while panning to see
+ * the field. Here it opens under the card that owns it, at the full width of
+ * the screen.
+ *
+ * Its own open state rather than one shared with `BalanceRows`. Only one of the
+ * two is ever on screen, and threading state between two trees that cannot both
+ * be seen buys nothing.
+ */
+export function BalanceCards({ rows }: { rows: BalanceRow[] }) {
+  const [open, setOpen] = useState<string | null>(null)
+
+  return (
+    <ul
+      aria-label="Saldo tiap akun"
+      className="divide-y divide-line border border-line bg-surface sm:hidden"
+    >
+      {rows.map((row) => {
+        // Distinct from the table's, because both trees are in the document.
+        const panelId = `sesuaikan-kartu-${row.accountId}`
+
+        return (
+          <li key={row.accountId} className="p-3">
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="min-w-0 flex-1 text-sm text-ink">
+                {row.stalled ? (
+                  <span aria-hidden="true" className="mr-1.5 text-warn">
+                    ◆
+                  </span>
+                ) : null}
+                <AccountMark name={row.name} kind={row.kind} />
+              </span>
+              <span className="tnum shrink-0 font-mono text-sm text-ink">{row.closing}</span>
+            </div>
+
+            <dl className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-ink-muted">
+              <div className="flex gap-1.5">
+                <dt>Masuk</dt>
+                <dd className="tnum font-mono">{row.credit}</dd>
+              </div>
+              <div className="flex gap-1.5">
+                <dt>Keluar</dt>
+                <dd className="tnum font-mono">{row.debit}</dd>
+              </div>
+            </dl>
+
+            <button
+              type="button"
+              aria-expanded={open === row.accountId}
+              aria-controls={panelId}
+              onClick={() => setOpen(open === row.accountId ? null : row.accountId)}
+              className="mt-2.5 h-11 w-full rounded-sm border border-line text-sm text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
+            >
+              Sesuaikan saldo
+            </button>
+
+            {open === row.accountId ? (
+              <div id={panelId} className="mt-3 border-t border-line pt-3">
+                <AdjustBalanceForm row={row} />
+              </div>
+            ) : null}
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
 export function AdjustBalanceForm({ row }: { row: BalanceRow }) {
+
   const titleId = useId()
   const [actual, setActual] = useState(0n)
   const [touched, setTouched] = useState(false)
