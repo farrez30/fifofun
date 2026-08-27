@@ -294,123 +294,23 @@
   }
 
   /*
-    The page crossfade.
+    The content arrives rather than appearing.
 
-    Paired with the `ViewTransition` around `main` in the app shell. The old
-    content leaves quickly so it stops competing for attention, and the new
-    content arrives a little slower and slightly from below, which is the
-    difference between a page arriving and a page appearing. Everything outside
-    `main` rides the root snapshot, so the frame holds still.
-
-    No library. The browser owns the animation and React only names the pair.
-    A browser without support swaps the content with no animation, which is the
-    correct fallback and needs no code.
+    A plain CSS animation on the main element, which the app shell re-creates on
+    every navigation because it is not a layout. That is the whole mechanism: no
+    JavaScript, nothing to install, and crucially nothing that touches how React
+    releases streamed content. The reduce block earlier in this file already
+    reaches it, because unlike a view transition pseudo element it is a real
+    element on the page.
   */
-  ::view-transition-old(.page-swap) {
-    animation: 110ms ease-in both page-fade reverse;
+  .page-enter {
+    animation: page-enter 220ms ease-out both;
   }
 
-  ::view-transition-new(.page-swap) {
-    animation:
-      170ms ease-out 60ms both page-fade,
-      260ms ease-out both page-rise;
-  }
-
-  @keyframes page-fade {
+  @keyframes page-enter {
     from {
       opacity: 0;
-    }
-  }
-
-  @keyframes page-rise {
-    from {
       transform: translateY(6px);
-    }
-  }
-
-  /*
-    A swipe moves the page the way the thumb moved it.
-
-    A crossfade would be the wrong answer to a gesture that has a direction in
-    it: the hand said which way, and content that dissolves instead of
-    travelling contradicts it. Only a swipe carries these types, so a tap on the
-    same tab still crossfades.
-  */
-  ::view-transition-old(.swipe-next),
-  ::view-transition-old(.swipe-prev) {
-    animation: 200ms cubic-bezier(0.4, 0, 0.2, 1) both page-slide-out;
-  }
-
-  ::view-transition-new(.swipe-next),
-  ::view-transition-new(.swipe-prev) {
-    animation: 240ms cubic-bezier(0.4, 0, 0.2, 1) both page-slide-in;
-  }
-
-  ::view-transition-old(.swipe-next),
-  ::view-transition-new(.swipe-prev) {
-    --slide-from: 0;
-    --slide-to: -18%;
-  }
-
-  ::view-transition-new(.swipe-next) {
-    --slide-from: 100%;
-    --slide-to: 0;
-  }
-
-  ::view-transition-old(.swipe-prev) {
-    --slide-from: 0;
-    --slide-to: 18%;
-  }
-
-  ::view-transition-new(.swipe-prev) {
-    --slide-from: -100%;
-    --slide-to: 0;
-  }
-
-  @keyframes page-slide-out {
-    from {
-      opacity: 1;
-      transform: translateX(var(--slide-from));
-    }
-    to {
-      opacity: 0;
-      transform: translateX(var(--slide-to));
-    }
-  }
-
-  @keyframes page-slide-in {
-    from {
-      opacity: 0;
-      transform: translateX(var(--slide-from));
-    }
-    to {
-      opacity: 1;
-      transform: translateX(var(--slide-to));
-    }
-  }
-
-  /*
-    The transition overlay swallows pointer events while it runs, so a tap
-    landing during the animation is simply lost. Letting them through is the
-    difference between a fast interface and one that ignores you.
-  */
-
-  ::view-transition {
-    pointer-events: none;
-  }
-
-  /*
-    A stated preference for less motion outranks all of the above. The global
-    reduce block earlier in this file cannot reach these: they are pseudo
-    elements on the document root rather than descendants of anything it
-    matches.
-  */
-  @media (prefers-reduced-motion: reduce) {
-    ::view-transition-group(*),
-    ::view-transition-old(*),
-    ::view-transition-new(*) {
-      animation-duration: 0s !important;
-      animation-delay: 0s !important;
     }
   }
 

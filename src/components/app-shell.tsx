@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { signOut } from '@/app/login/actions'
 import { MobileTabs } from '@/components/mobile-tabs'
-import { PageTransition } from '@/components/page-transition'
 import { NAV, type NavHref } from '@/components/nav'
 
 /**
@@ -93,11 +92,30 @@ export function AppShell({ title, email, current, lead, children }: Props) {
         {lead ? <p className="mt-1 max-w-2xl text-sm text-ink-muted">{lead}</p> : null}
       </header>
 
-      {/* The header, the footer and the tab bar sit outside this, so the
-          frame holds still and only the content changes. */}
-      <PageTransition>
-        <main id="main">{children}</main>
-      </PageTransition>
+      {/*
+        The content fades up on arrival, which is what makes a navigation read
+        as a page turning rather than a swap. The animation is on the container
+        and defined in globals.css, so the header, the footer and the tab bar
+        hold still while it plays.
+
+        A plain CSS animation rather than React's `ViewTransition`, which is
+        the other way to do this and is what the framework documents.
+
+        `ViewTransition` buys one thing this does not: a slide that knows which
+        way the thumb moved, because a swipe can tag its navigation with a type
+        the animation reads. It costs a machinery that sits between React and
+        how streamed content is released, and the trade only pays if the
+        direction is worth it. Here the tab order is flat, so a page arriving
+        from the left says nothing a fade does not.
+
+        Kept in reach on purpose: `use-swipe-tabs.ts` already knows the
+        direction, so restoring the slide is a `transitionTypes` argument on the
+        push and a pair of keyframes, not a rewrite.
+
+      */}
+      <main id="main" className="page-enter">
+        {children}
+      </main>
 
       <footer className="mt-16 border-t border-line pt-5 text-xs text-ink-faint">
         {/* Settings and the invitation link are in the sheet on a phone. The

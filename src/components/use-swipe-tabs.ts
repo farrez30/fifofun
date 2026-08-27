@@ -92,9 +92,7 @@ export function useSwipeTabs(order: readonly NavHref[], current: NavHref) {
       const next = dx < 0 ? index + 1 : index - 1
       if (next < 0 || next >= order.length) return
 
-      router.push(order[next], {
-        transitionTypes: [dx < 0 ? 'swipe-next' : 'swipe-prev'],
-      })
+      router.push(order[next])
     }
 
     // The browser claimed the gesture for a scroll, so it was never ours.

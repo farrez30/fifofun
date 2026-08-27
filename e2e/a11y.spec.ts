@@ -52,6 +52,23 @@ test.describe('accessibility', () => {
         // and both move when the real face replaces the fallback mid-run.
         await page.evaluate(() => document.fonts.ready)
 
+        /*
+          They move while an animation is playing too. The app shell fades its
+          content up on arrival, and a ratio sampled halfway through measures
+          whatever opacity that had reached rather than the one a reader sees.
+          The skeleton sweeps forever on purpose, so it is skipped rather than
+          waited for.
+        */
+        await page.evaluate(() =>
+          Promise.all(
+            document
+              .getAnimations()
+              .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
+              .map((animation) => animation.finished.catch(() => undefined)),
+          ),
+        )
+
+
         const { violations } = await new AxeBuilder({ page })
           .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
           .analyze()

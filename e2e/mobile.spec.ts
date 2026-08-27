@@ -36,7 +36,26 @@ async function open(page: Page, fixture: string) {
   // Geometry is read off laid-out boxes, and those move when the real face
   // replaces the fallback mid-run.
   await page.evaluate(() => document.fonts.ready)
+
+  /*
+    And settled boxes, not moving ones. The page fades up on arrival, and a
+    contrast ratio sampled halfway through that reads whatever opacity the
+    animation happened to be at, which is a failure the finished page does not
+    have.
+
+    Endless ones are skipped rather than awaited. The loading skeleton sweeps
+    forever by design, so waiting for it to finish waits for the timeout.
+  */
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
+        .map((animation) => animation.finished.catch(() => undefined)),
+    ),
+  )
 }
+
 
 test('the device really reports a coarse pointer', async ({ page }) => {
   /*
