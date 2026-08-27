@@ -10,8 +10,20 @@ import { type ReactNode } from 'react'
  * how two inputs end up a pixel apart.
  */
 
+/*
+  16px on a phone, 14px from the small breakpoint up.
+
+  Not a preference. iOS Safari zooms the whole viewport when a focused control
+  measures under 16px, and there is no way to decline it from the page: the
+  viewport meta cannot forbid it and `-webkit-text-size-adjust` does not govern
+  it. Every data entry screen in this app was doing that on every tap.
+
+  The floor is easy to lose again, because 14px is the right size everywhere
+  else and `text-sm` is what anyone would reach for. `e2e/mobile.spec.ts` reads
+  the computed size of every control in every fixture and fails under 16px.
+*/
 export const CONTROL =
-  'h-11 w-full rounded-sm border border-line bg-surface px-3 text-sm text-ink transition-colors duration-150 placeholder:text-ink-faint hover:border-line-strong focus:border-accent'
+  'h-11 w-full rounded-sm border border-line bg-surface px-3 text-base text-ink transition-colors duration-150 placeholder:text-ink-faint hover:border-line-strong focus:border-accent sm:text-sm'
 
 /*
   The two buttons, and the difference between them is a claim about which one a

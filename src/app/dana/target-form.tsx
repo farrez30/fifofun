@@ -127,7 +127,7 @@ export function TargetForm({
               name="month"
               defaultValue={month}
               aria-label={`Bulan target untuk ${name}`}
-              className="h-10 border border-line bg-paper px-2 text-sm text-ink"
+              className="h-10 border border-line bg-paper px-2 text-base text-ink sm:text-sm"
             />
           </label>
         ) : (

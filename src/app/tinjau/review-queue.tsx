@@ -245,7 +245,7 @@ function GroupCard({
                       value={pattern}
                       onChange={(event) => setPattern(event.target.value)}
                       maxLength={120}
-                      className="mt-1 h-11 w-full border border-line bg-paper px-2 text-sm text-ink"
+                      className="mt-1 h-11 w-full border border-line bg-paper px-2 text-base text-ink sm:text-sm"
                     />
                   </label>
                   <label className="block">
@@ -255,7 +255,7 @@ function GroupCard({
                     <select
                       value={matchType}
                       onChange={(event) => setMatchType(event.target.value as MatchType)}
-                      className="mt-1 h-11 border border-line bg-paper px-2 text-sm text-ink"
+                      className="mt-1 h-11 border border-line bg-paper px-2 text-base text-ink sm:text-sm"
                     >
                       {(Object.keys(MATCH_LABELS) as MatchType[]).map((type) => (
                         <option key={type} value={type}>
@@ -329,7 +329,7 @@ function CategorySelect({
         disabled={empty}
         defaultValue=""
         aria-label={compactLabel ? label : undefined}
-        className="mt-1 h-11 w-full border border-line bg-paper px-2 text-sm text-ink disabled:opacity-60"
+        className="mt-1 h-11 w-full border border-line bg-paper px-2 text-base text-ink disabled:opacity-60 sm:text-sm"
       >
         <option value="" disabled>
           {empty ? `Tidak ada kategori untuk uang ${DIRECTION_LABELS[direction]}` : 'Pilih kategori'}

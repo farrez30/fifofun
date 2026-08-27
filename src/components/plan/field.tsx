@@ -74,7 +74,7 @@ export function NumberField({
           min={min}
           max={max}
           onChange={(event) => onChange(clamp(Number(event.target.value)))}
-          className={`${field} border-y border-line bg-surface px-2 text-center tnum font-mono text-sm text-ink focus:border-accent`}
+          className={`${field} border-y border-line bg-surface px-2 text-center tnum font-mono text-base text-ink focus:border-accent sm:text-sm`}
         />
         <button
           type="button"

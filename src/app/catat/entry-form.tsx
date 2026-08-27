@@ -145,7 +145,7 @@ export function EntryForm({ accounts, categories, defaults, entryKey }: Props) {
           name="categoryId"
           required
           defaultValue=""
-          className="mt-1.5 h-11 w-full border border-line bg-paper px-2 text-sm text-ink"
+          className="mt-1.5 h-11 w-full border border-line bg-paper px-2 text-base text-ink sm:text-sm"
         >
           <option value="" disabled>
             {direction === 'neither'

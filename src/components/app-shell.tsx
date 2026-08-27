@@ -1,56 +1,60 @@
 import Link from 'next/link'
 import { signOut } from '@/app/login/actions'
+import { MobileTabs } from '@/components/mobile-tabs'
+import { NAV, type NavHref } from '@/components/nav'
 
 /**
  * The frame every signed-in page sits in.
  *
- * Navigation is a plain row of links rather than a sidebar. Even at eight
- * destinations a sidebar would be furniture rather than orientation, and the
- * row wraps on a phone where a sidebar would have to become a menu behind a
- * button. The current page is marked with `aria-current` and a border rather
- * than colour alone, so it is legible to a screen reader and to anyone who
- * cannot separate the accent from the ink.
+ * From the small breakpoint up, navigation is a plain row of links rather than
+ * a sidebar. Even at eight destinations a sidebar would be furniture rather
+ * than orientation. The current page is marked with `aria-current` and a border
+ * rather than colour alone, so it is legible to a screen reader and to anyone
+ * who cannot separate the accent from the ink.
  *
- * Two things deliberately sit outside it. Settings is used twice a year and a
- * permanent tab for that costs every other page a little attention, so it
- * lives in the footer beside the invitation link. And a single transaction has
- * no tab at all: it is reached from wherever it was seen.
+ * Below it, that row is replaced by a bar pinned to the bottom of the screen.
+ *
+ * This reverses what stood here before, which argued the row was right on a
+ * phone too because it wrapped where a sidebar would have had to become a menu
+ * behind a button. Wrapping is what turned out to be the cost: eight links wrap
+ * to three or four lines at 375px, and with the account row and the heading
+ * above them the header spent most of the first screen before a single figure
+ * appeared.
+ *
+ * The reasoning that produced the old decision still holds, and the bar keeps
+ * it. What it refused was orientation hidden behind a button, not a bottom bar:
+ * five destinations stay visible at all times, and only the four periodic ones
+ * sit behind a tab that is itself always on screen. Two of those already lived
+ * in the footer on the same argument.
+ *
+ * Settings is used twice a year and a permanent tab for that costs every other
+ * page a little attention, so it stays in the footer beside the invitation
+ * link. And a single transaction has no tab at all: it is reached from wherever
+ * it was seen.
  */
-
-const NAV = [
-  { href: '/', label: 'Ringkasan' },
-  { href: '/laporan', label: 'Laporan' },
-  { href: '/dana', label: 'Dana' },
-  { href: '/anggaran', label: 'Anggaran' },
-  { href: '/tinjau', label: 'Tinjau' },
-  { href: '/catat', label: 'Catat' },
-  { href: '/rencana', label: 'Rencana' },
-  { href: '/impor', label: 'Impor' },
-] as const
 
 interface Props {
   title: string
   email: string
-  /**
-   * Which nav item is the current page.
-   *
-   * A route that sits outside the navigation passes its own href and nothing
-   * highlights, which is the truthful answer. Undangan is used twice and then
-   * never again, and a permanent tab for that costs every other page a little
-   * attention, so it lives in the footer instead.
-   */
-  current: (typeof NAV)[number]['href'] | '/undangan' | '/pengaturan' | '/transaksi'
+  current: NavHref
   lead?: string
   children: React.ReactNode
 }
 
 export function AppShell({ title, email, current, lead, children }: Props) {
   return (
-    <div className="mx-auto max-w-5xl px-6 py-8">
+    /*
+      The bottom padding clears the fixed bar. Without it the last row of every
+      page sits underneath the tab bar, which is invisible until it is the row
+      you needed.
+    */
+    <div className="mx-auto max-w-5xl px-4 pb-[calc(4.5rem+var(--spacing-safe-b))] pt-8 sm:px-6 sm:pb-8">
       <header className="mb-8 border-b border-line pb-5">
+        {/* The account row is the tab bar's sheet on a phone, so it is not
+            repeated here. */}
         <div className="flex flex-wrap items-baseline justify-between gap-4">
           <p className="font-mono text-xs uppercase tracking-widest text-ink-faint">FiFoFun</p>
-          <form action={signOut} className="flex items-baseline gap-3">
+          <form action={signOut} className="hidden items-baseline gap-3 sm:flex">
             <span className="text-sm text-ink-muted">{email}</span>
             <button
               type="submit"
@@ -61,7 +65,7 @@ export function AppShell({ title, email, current, lead, children }: Props) {
           </form>
         </div>
 
-        <nav aria-label="Halaman utama" className="mt-4">
+        <nav aria-label="Halaman utama" className="mt-4 hidden sm:block">
           <ul className="flex flex-wrap gap-1">
             {NAV.map((item) => {
               const active = item.href === current
@@ -91,24 +95,33 @@ export function AppShell({ title, email, current, lead, children }: Props) {
       <main id="main">{children}</main>
 
       <footer className="mt-16 border-t border-line pt-5 text-xs text-ink-faint">
-        <ul className="flex flex-wrap gap-4">
-          <li>
+        {/* Settings and the invitation link are in the sheet on a phone. The
+            legal pages are not, because they are the two a reader looks for at
+            the bottom of a page rather than in a menu. */}
+        <ul className="flex flex-wrap gap-x-4 gap-y-1 sm:gap-4">
+          <li className="hidden sm:block">
             <Link href="/pengaturan" className="hover:text-ink">
               Pengaturan
             </Link>
           </li>
-          <li>
+          <li className="hidden sm:block">
             <Link href="/undangan" className="hover:text-ink">
               Undang anggota
             </Link>
           </li>
           <li>
-            <Link href="/legal/privasi" className="hover:text-ink">
+            <Link
+              href="/legal/privasi"
+              className="inline-flex min-h-11 items-center hover:text-ink sm:min-h-0"
+            >
               Kebijakan Privasi
             </Link>
           </li>
           <li>
-            <Link href="/legal/ketentuan" className="hover:text-ink">
+            <Link
+              href="/legal/ketentuan"
+              className="inline-flex min-h-11 items-center hover:text-ink sm:min-h-0"
+            >
               Ketentuan Penggunaan
             </Link>
           </li>
@@ -117,7 +130,7 @@ export function AppShell({ title, email, current, lead, children }: Props) {
               href="https://github.com/farrez30/fifofun"
               target="_blank"
               rel="noreferrer noopener"
-              className="hover:text-ink"
+              className="inline-flex min-h-11 items-center hover:text-ink sm:min-h-0"
             >
               Kode sumber
             </a>
@@ -127,6 +140,8 @@ export function AppShell({ title, email, current, lead, children }: Props) {
           Angka di aplikasi ini hitungan dari asumsi, bukan nasihat keuangan.
         </p>
       </footer>
+
+      <MobileTabs current={current} email={email} />
     </div>
   )
 }

@@ -28,7 +28,21 @@
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
 
+  /*
+    The strip a phone keeps for itself: the home indicator along the bottom, the
+    notch across the top. `viewport-fit=cover` in `layout.tsx` is what opts this
+    application into drawing underneath them, and these are what let anything
+    fixed to an edge draw around them again. A browser without support resolves
+    them to zero, which is the right answer on a desktop anyway.
+  */
+  --spacing-safe-b: env(safe-area-inset-bottom, 0px);
+  --spacing-safe-t: env(safe-area-inset-top, 0px);
+  --spacing-safe-l: env(safe-area-inset-left, 0px);
+  --spacing-safe-r: env(safe-area-inset-right, 0px);
+
+
   /* Surfaces */
+
   --color-paper: oklch(98.6% 0.004 85);
   --color-surface: oklch(100% 0 0);
   --color-sunken: oklch(96.4% 0.006 85);
@@ -63,7 +77,18 @@
   --color-under-wash: oklch(95.5% 0.028 172);
   --color-warn: oklch(66% 0.13 75);
   --color-warn-wash: oklch(96% 0.035 75);
+
+  /*
+    The scrim behind a modal sheet.
+
+    Not derived from ink, which is the trap here: ink flips to near-white in dark
+    mode, and a scrim that follows it would brighten the screen instead of
+    dimming it. A scrim darkens under both themes, so it is its own token and
+    goes darker rather than lighter when the surfaces do.
+  */
+  --color-scrim: oklch(24% 0.012 75 / 45%);
 }
+
 
 @layer base {
   :root {
@@ -119,8 +144,11 @@
 
       --category-l: 74%;
       --category-c: 0.1;
+
+      --color-scrim: oklch(10% 0.008 75 / 62%);
     }
   }
+
 
   html {
     -webkit-text-size-adjust: 100%;
@@ -134,7 +162,24 @@
     line-height: 1.5;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
+    /*
+      Held clear of the notch in landscape. Here rather than in the app shell
+      because the login, join and legal pages have no shell and are read on the
+      same phone. Zero everywhere else, including every desktop.
+    */
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
   }
+
+  /*
+    A modal dialog makes the page behind it inert, which stops it being clicked
+    or tabbed into but not scrolled. Scrolling a page you cannot touch, behind a
+    sheet, reads as the sheet being broken.
+  */
+  body:has(dialog[open]) {
+    overflow: hidden;
+  }
+
 
   /* Every figure in the app is tabular, so columns align without extra work. */
   .tnum,
@@ -162,13 +207,38 @@
     }
   }
 
-  /* Touch targets stay finger-sized on coarse pointers. */
+  /*
+    Touch targets stay finger-sized on coarse pointers.
+
+    `select` and `summary` join the list for the same reason the rest are on it:
+    both are standalone controls carrying no height of their own, and a native
+    select left alone renders around 35 pixels tall.
+
+    A plain `a` is deliberately still absent. A link in the middle of a sentence
+    has no business being 44 pixels tall, and WCAG exempts it for exactly that
+    reason. The links that are really controls are sized where they are written.
+
+    Height is granted more widely than width. A summary is a line of text, and
+    stretching one to 44 pixels wide buys the finger nothing while breaking the
+    layout of every disclosure in the app.
+  */
   @media (pointer: coarse) {
-    :where(button, a[role='button'], input[type='checkbox'], input[type='radio']) {
+    :where(
+      button,
+      a[role='button'],
+      select,
+      summary,
+      input[type='checkbox'],
+      input[type='radio']
+    ) {
       min-height: 2.75rem;
+    }
+
+    :where(button, a[role='button'], select, input[type='checkbox'], input[type='radio']) {
       min-width: 2.75rem;
     }
   }
+
 
   ::selection {
     background-color: var(--color-accent-wash);

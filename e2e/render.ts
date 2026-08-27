@@ -72,7 +72,20 @@ async function fontFaces(): Promise<string> {
   return rules.join('\n')
 }
 
-export async function documentFor(element: ReactElement): Promise<string> {
+/**
+ * @param bare Render straight into the body, with no padded `main` around it.
+ *
+ * A component that carries its own frame has to be measured inside its own
+ * frame. The application shell sets its own gutters and pins a bar to the
+ * bottom of the viewport, and the harness's `p-6` both double-counts the
+ * gutters and pushes the page 48px wider than the screen it is being checked
+ * against, which reads as an overflow the application does not have.
+ */
+export async function documentFor(element: ReactElement, bare = false): Promise<string> {
+  const body = bare
+    ? renderToStaticMarkup(element)
+    : `<main class="p-6">${renderToStaticMarkup(element)}</main>`
+
   return `<!doctype html>
 <html lang="id">
 <head>
@@ -82,7 +95,8 @@ export async function documentFor(element: ReactElement): Promise<string> {
 <style>${await stylesheet()}</style>
 </head>
 <body class="bg-paper text-ink">
-<main class="p-6">${renderToStaticMarkup(element)}</main>
+${body}
 </body>
 </html>`
 }
+

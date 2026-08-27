@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react'
 import { useFormStatus } from 'react-dom'
+import { CONTROL } from '@/components/field-base'
 import { type AuthState, authenticate } from './actions'
 
 const EMPTY: AuthState = {}
@@ -51,7 +52,7 @@ export function LoginForm() {
           required
           aria-describedby={state.error ? 'auth-message' : undefined}
           aria-invalid={state.error ? true : undefined}
-          className="h-11 w-full rounded-sm border border-line bg-surface px-3 text-sm text-ink placeholder:text-ink-faint focus:border-accent"
+          className={CONTROL}
           placeholder="nama@email.com"
         />
       </div>
@@ -67,7 +68,7 @@ export function LoginForm() {
           autoComplete="current-password"
           required
           minLength={8}
-          className="h-11 w-full rounded-sm border border-line bg-surface px-3 text-sm text-ink focus:border-accent"
+          className={CONTROL}
         />
         <p className="text-xs text-ink-faint">Minimal 8 karakter.</p>
       </div>
@@ -89,7 +90,7 @@ export function LoginForm() {
           spellCheck={false}
           placeholder="ABCDE-FGHJK"
           aria-describedby="code-hint"
-          className="h-11 w-full rounded-sm border border-line bg-surface px-3 font-mono text-sm uppercase tracking-widest text-ink placeholder:tracking-widest placeholder:text-ink-faint focus:border-accent"
+          className="h-11 w-full rounded-sm border border-line bg-surface px-3 font-mono text-base uppercase tracking-widest text-ink placeholder:tracking-widest placeholder:text-ink-faint focus:border-accent"
         />
         <p id="code-hint" className="text-xs text-ink-faint">
           Akun baru hanya bisa dibuat dengan undangan dari anggota rumah tangga.

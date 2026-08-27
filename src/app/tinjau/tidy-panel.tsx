@@ -355,7 +355,7 @@ function EntryChoice({
       value={value}
       onChange={(event) => onChoose(entry.id, event.target.value)}
       aria-label={`Pos untuk ${entry.description}`}
-      className="mt-1.5 h-11 w-full max-w-sm border border-line bg-paper px-2 text-sm text-ink"
+      className="mt-1.5 h-11 w-full max-w-sm border border-line bg-paper px-2 text-base text-ink sm:text-sm"
     >
       <option value={HOLD}>Jangan pindahkan, biarkan di {move.from}</option>
       {allowed.map((group) => (

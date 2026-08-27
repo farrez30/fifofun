@@ -27,8 +27,14 @@ function value(raw: Props['raw'], key: string): string {
   return found ?? ''
 }
 
+/*
+  The filter row was the one place in the app that sized its controls with
+  padding instead of a height, which left six of them around 35px while every
+  other form in the app stood at 44. Six controls is also the densest form here,
+  so it is the worst place to be the exception.
+*/
 const FIELD =
-  'mt-1 w-full rounded-sm border border-line bg-paper px-2.5 py-1.5 text-sm text-ink focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent'
+  'mt-1 h-11 w-full rounded-sm border border-line bg-paper px-2.5 text-base text-ink focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent sm:text-sm'
 
 const LABEL = 'block text-xs font-medium uppercase tracking-wide text-ink-faint'
 
@@ -175,18 +181,19 @@ export function PeriodReport({ summary, raw, categories, accounts, ledgerSize }:
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <button
             type="submit"
-            className="rounded-sm bg-accent px-4 py-2 text-sm font-medium text-paper transition-colors duration-150 hover:bg-accent-strong"
+            className="h-11 rounded-sm bg-accent px-4 text-sm font-medium text-paper transition-colors duration-150 hover:bg-accent-strong"
           >
             Terapkan
           </button>
 
           {filtered ? (
-            /* Padded to the same height as the button beside it. A standalone
-               control 20 pixels tall is under the 24 pixel minimum, and the
-               inline-in-a-sentence exemption does not cover a lone link. */
+            /* Sized to the button beside it rather than to its own text. A
+               standalone control is not covered by the inline-in-a-sentence
+               exemption, and padding alone left this at 37px against the 44 a
+               finger needs. */
             <a
               href="/laporan"
-              className="rounded-sm px-2 py-2 text-sm text-ink-muted underline underline-offset-2"
+              className="inline-flex min-h-11 items-center rounded-sm px-2 text-sm text-ink-muted underline underline-offset-2"
             >
               Bersihkan
             </a>

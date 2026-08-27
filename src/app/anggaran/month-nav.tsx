@@ -59,7 +59,7 @@ export function MonthNav({ period, thisMonth }: { period: string; thisMonth: str
           type="month"
           name="bulan"
           defaultValue={period}
-          className="h-11 rounded-sm border border-line bg-surface px-2 text-sm text-ink"
+          className="h-11 rounded-sm border border-line bg-surface px-2 text-base text-ink sm:text-sm"
         />
         <button
           type="submit"

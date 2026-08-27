@@ -1,4 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises'
+import type { ReactElement } from 'react'
+import { AppShell } from '@/components/app-shell'
 import { BillsPanel } from '@/components/bills-panel'
 import { ReceivablesPanel } from '@/components/receivables-panel'
 import { Stat } from '@/components/money'
@@ -1670,12 +1672,47 @@ function goal(target: bigint, years: number, saved = 0n) {
   }
 }
 
+/*
+  The pages that bring their own frame, rendered without the harness's padded
+  `main`. See the `bare` argument in `render.ts` for why that matters.
+*/
+const SHELL_FIXTURES: Record<string, ReactElement> = {
+  'shell-ringkasan': (
+    <AppShell
+      title="Ringkasan"
+      email="rumah.tangga@contoh.com"
+      current="/"
+      lead="Angka bulan berjalan, dihitung dari transaksi yang sudah masuk."
+    >
+      <TransactionTable
+        rows={TABLE_ROWS}
+        accounts={TABLE_ACCOUNTS}
+        categories={TABLE_CATEGORIES}
+        caption="Transaksi terakhir"
+        emptyText="Belum ada transaksi."
+      />
+    </AppShell>
+  ),
+  // A page whose destination lives in the sheet: the Lainnya tab carries the
+  // current marker instead of any of the four.
+  'shell-lainnya-aktif': (
+    <AppShell title="Rencana" email="rumah.tangga@contoh.com" current="/rencana">
+      <p className="text-sm text-ink-muted">Isi halaman.</p>
+    </AppShell>
+  ),
+}
+
 async function write() {
   await mkdir(FIXTURE_DIR, { recursive: true })
   for (const [name, element] of Object.entries(FIXTURES)) {
     await writeFile(`${FIXTURE_DIR}/${name}.html`, await documentFor(element), 'utf8')
   }
-  console.log(`${Object.keys(FIXTURES).length} fixture pages written to ${FIXTURE_DIR}`)
+  for (const [name, element] of Object.entries(SHELL_FIXTURES)) {
+    await writeFile(`${FIXTURE_DIR}/${name}.html`, await documentFor(element, true), 'utf8')
+  }
+  const total = Object.keys(FIXTURES).length + Object.keys(SHELL_FIXTURES).length
+  console.log(`${total} fixture pages written to ${FIXTURE_DIR}`)
 }
+
 
 void write()
