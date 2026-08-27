@@ -16,6 +16,8 @@ import { UsersThree } from '@phosphor-icons/react/dist/ssr/UsersThree'
 import { Wallet } from '@phosphor-icons/react/dist/ssr/Wallet'
 import type { Icon } from '@phosphor-icons/react'
 import { signOut } from '@/app/login/actions'
+import { PullToRefresh } from '@/components/pull-to-refresh'
+import { useSwipeTabs } from '@/components/use-swipe-tabs'
 import type { NavHref } from '@/components/nav'
 
 /**
@@ -66,10 +68,15 @@ const SHEET: readonly Tab[] = [
 
 const TAB = 'flex h-16 flex-1 flex-col items-center justify-center gap-1 transition-colors duration-150'
 
+/* The order a thumb moves through, which is the order they are drawn in. */
+const SWIPE_ORDER = TABS.map((tab) => tab.href)
+
 export function MobileTabs({ current, email }: { current: NavHref; email: string }) {
   const sheet = useRef<HTMLDialogElement>(null)
   const [open, setOpen] = useState(false)
   const inSheet = SHEET.some((item) => item.href === current)
+
+  useSwipeTabs(SWIPE_ORDER, current)
 
   /*
     Closing has to be observed rather than assumed. A dialog is dismissed by the
@@ -92,6 +99,8 @@ export function MobileTabs({ current, email }: { current: NavHref; email: string
 
   return (
     <>
+      <PullToRefresh />
+
       <nav
         aria-label="Halaman utama"
         /* `sm:hidden` and not a media query in JavaScript: the bar must be

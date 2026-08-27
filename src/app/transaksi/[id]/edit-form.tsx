@@ -123,7 +123,10 @@ export function EditEntryForm({
         {entry.editable.amount ? (
           <>
             <MoneyInput label="Nominal" value={amount} onChange={setAmount} name="amount" />
-            <div className="grid grid-cols-2 gap-3">
+            {/* Side by side from the small breakpoint up. On a phone the
+                pair is two 141px native pickers, and a date field is the one
+                control where being cramped costs the most. */}
+            <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <FieldLabel htmlFor={ids.date}>Tanggal</FieldLabel>
                 <input

@@ -1,8 +1,13 @@
 import { readFile } from 'node:fs/promises'
-import type { ReactElement } from 'react'
+import { createElement, type ReactElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
+import {
+  AppRouterContext,
+  type AppRouterInstance,
+} from 'next/dist/shared/lib/app-router-context.shared-runtime'
 import postcss from 'postcss'
 import tailwind from '@tailwindcss/postcss'
+
 
 /**
  * Puts one component on a page of its own, with the project's real stylesheet.
@@ -20,6 +25,34 @@ import tailwind from '@tailwindcss/postcss'
  */
 
 export const FIXTURE_DIR = 'e2e/.fixtures'
+
+/**
+ * A router that goes nowhere, for components that ask for one.
+ *
+ * `useRouter` throws outright when the App Router context is missing, so a
+ * component that only touches the router inside an event handler still cannot
+ * be rendered without it. That is every gesture in the mobile shell.
+ *
+ * Inert on purpose rather than a spy. These fixtures are measured, not driven:
+ * what a specification here asks is how wide a thing rendered and what colour
+ * it came out, and a navigation that actually went somewhere would only be a
+ * way for one fixture to become another.
+ *
+ * The import reaches into Next rather than through its public surface because
+ * there is no public surface for this. It is the same path every testing setup
+ * for the App Router uses, and it is here in the harness rather than in
+ * anything that ships.
+ */
+const INERT_ROUTER = {
+  back: () => {},
+  forward: () => {},
+  refresh: () => {},
+  push: () => {},
+  replace: () => {},
+  prefetch: () => {},
+  bfcacheId: 'fixture',
+} satisfies AppRouterInstance
+
 
 /**
  * The same faces `next/font` loads in `layout.tsx`, from a package instead.
@@ -82,9 +115,11 @@ async function fontFaces(): Promise<string> {
  * against, which reads as an overflow the application does not have.
  */
 export async function documentFor(element: ReactElement, bare = false): Promise<string> {
-  const body = bare
-    ? renderToStaticMarkup(element)
-    : `<main class="p-6">${renderToStaticMarkup(element)}</main>`
+  const markup = renderToStaticMarkup(
+    createElement(AppRouterContext.Provider, { value: INERT_ROUTER }, element),
+  )
+  const body = bare ? markup : `<main class="p-6">${markup}</main>`
+
 
   return `<!doctype html>
 <html lang="id">

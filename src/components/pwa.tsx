@@ -34,7 +34,17 @@ export function ProgressiveWebApp() {
     <div
       role="status"
       aria-live="polite"
-      className="fixed inset-x-0 bottom-0 z-50 border-t border-warn/40 bg-warn-wash px-4 py-3 text-center text-sm text-ink"
+      /*
+        Top on a phone, bottom from the small breakpoint up.
+
+        Not a style choice. The tab bar is fixed to the bottom edge, and so was
+        this, so the two covered each other. Offsetting it above the bar was the
+        other option and it is wrong on the three screens that have no bar:
+        login, join and the legal pages would show a banner floating 64px off
+        the bottom for no reason. The top is also where a phone puts
+        connectivity, and it is clear of the notch here.
+      */
+      className="fixed inset-x-0 top-0 z-50 border-b border-warn/40 bg-warn-wash px-4 pb-3 pt-[calc(0.75rem+var(--spacing-safe-t))] text-center text-sm text-ink sm:bottom-0 sm:top-auto sm:border-b-0 sm:border-t sm:py-3"
     >
       <span aria-hidden="true" className="mr-2 text-warn">
         ▲

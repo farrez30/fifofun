@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { signOut } from '@/app/login/actions'
 import { MobileTabs } from '@/components/mobile-tabs'
+import { PageTransition } from '@/components/page-transition'
 import { NAV, type NavHref } from '@/components/nav'
 
 /**
@@ -92,7 +93,11 @@ export function AppShell({ title, email, current, lead, children }: Props) {
         {lead ? <p className="mt-1 max-w-2xl text-sm text-ink-muted">{lead}</p> : null}
       </header>
 
-      <main id="main">{children}</main>
+      {/* The header, the footer and the tab bar sit outside this, so the
+          frame holds still and only the content changes. */}
+      <PageTransition>
+        <main id="main">{children}</main>
+      </PageTransition>
 
       <footer className="mt-16 border-t border-line pt-5 text-xs text-ink-faint">
         {/* Settings and the invitation link are in the sheet on a phone. The
