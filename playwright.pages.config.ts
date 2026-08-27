@@ -26,7 +26,20 @@ export default defineConfig({
     viewport: { width: 1280, height: 900 },
     trace: 'on-first-retry',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    /*
+      The same pages on a phone.
+
+      Cheap, because these routes need no session and the server is already
+      running for the desktop project. It covers the one thing the fixture
+      suite structurally cannot: login, join and the legal pages have no app
+      shell, so no fixture renders them, and they are the first screens anybody
+      ever sees on a phone.
+    */
+    { name: 'iphone', use: { ...devices['iPhone 13'], browserName: 'chromium' } },
+  ],
+
   webServer: {
     // `next start`, not `next dev`: the content security policy differs between
     // them, and the strict one is the only one worth asserting.
