@@ -149,8 +149,30 @@ function Table({
   caption: string
 }) {
   return (
-    <div className="relative mt-2 overflow-x-auto border border-line bg-surface">
+    <>
+      {/* One list per cashflow group, so this runs six times on the settings
+          page and each one was its own sideways drag. */}
+      <ul
+        aria-label={caption}
+        className="mt-2 divide-y divide-line border border-line bg-surface sm:hidden"
+      >
+        {rows.map((category, index) => (
+          <Card
+            key={category.id}
+            category={category}
+            siblings={siblings}
+            isGroup={siblings.some((row) => row.parentId === category.id)}
+            first={index === 0}
+            last={index === rows.length - 1}
+            open={editing === category.id}
+            onToggle={() => onToggle(category.id)}
+          />
+        ))}
+      </ul>
+
+      <div className="relative mt-2 hidden overflow-x-auto border border-line bg-surface sm:block">
       <table className="w-full min-w-[34rem] border-collapse text-sm">
+
         <caption className="sr-only">{caption}</caption>
         <thead>
           <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-faint">
@@ -183,11 +205,87 @@ function Table({
           ))}
         </tbody>
       </table>
-    </div>
+      </div>
+    </>
+  )
+}
+
+/** One category as a card, for a screen the table does not fit on. */
+function Card({
+  category,
+  siblings,
+  isGroup,
+  first,
+  last,
+  open,
+  onToggle,
+}: {
+  category: CategoryView
+  siblings: CategoryView[]
+  isGroup: boolean
+  first: boolean
+  last: boolean
+  open: boolean
+  onToggle: () => void
+}) {
+  return (
+    /* The indent is the tier: a category that rolls up into another sits
+       under it here the same way it does in the table. */
+    <li className={`py-3 pr-3 ${category.parentId ? 'pl-7' : 'pl-3'}`}>
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="min-w-0 flex-1 text-sm text-ink">
+          <CategoryMark
+            name={category.name}
+            cashflow={category.cashflow}
+            icon={category.icon || null}
+            hue={category.hue === '' ? null : Number(category.hue)}
+          />
+        </span>
+        <span className="tnum shrink-0 font-mono text-xs text-ink-muted">
+          {category.usage} transaksi
+        </span>
+      </div>
+
+      {isLookedUpByName(category.name) || isGroup ? (
+        <p className="mt-1 text-xs text-ink-faint">
+          {[
+            isLookedUpByName(category.name) ? 'dicari impor' : null,
+            isGroup ? 'kelompok, tidak menampung transaksi' : null,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+        </p>
+      ) : null}
+
+      <div className="mt-2.5 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={open}
+          className="h-11 flex-1 rounded-sm border border-line px-3 text-sm text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
+        >
+          {open ? 'Tutup' : 'Ubah'}
+        </button>
+        <ArchiveButton category={category} />
+        {category.archived ? null : (
+          <div className="flex gap-2">
+            <MoveButton id={category.id} direction="up" name={category.name} disabled={first} />
+            <MoveButton id={category.id} direction="down" name={category.name} disabled={last} />
+          </div>
+        )}
+      </div>
+
+      {open ? (
+        <div className="mt-3 border-t border-line pt-3">
+          <CategoryForm category={category} siblings={siblings} />
+        </div>
+      ) : null}
+    </li>
   )
 }
 
 function Row({
+
   category,
   siblings,
   isGroup,

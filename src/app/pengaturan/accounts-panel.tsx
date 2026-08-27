@@ -53,8 +53,31 @@ export function AccountsPanel({ accounts }: { accounts: AccountView[] }) {
         {archived.length > 0 ? `, ${archived.length} diarsipkan` : ''}.
       </p>
 
-      <div className="relative mt-3 overflow-x-auto border border-line bg-surface">
+      {/*
+        Six columns want 736px, which is the widest table in the app against
+        the 327px a phone has. Worse, the edit form opened inside that scroll
+        track and inherited its width, so changing an account meant panning
+        sideways through a form.
+
+        Every action here is its own form, so rendering both trees is safe: the
+        hidden one cannot be submitted, and only the visible one is reachable.
+      */}
+      <ul aria-label="Akun" className="mt-3 divide-y divide-line border border-line bg-surface sm:hidden">
+        {[...live, ...archived].map((account, index) => (
+          <Card
+            key={account.id}
+            account={account}
+            first={index === 0}
+            last={index === live.length - 1}
+            open={editing === account.id}
+            onToggle={() => setEditing(editing === account.id ? null : account.id)}
+          />
+        ))}
+      </ul>
+
+      <div className="relative mt-3 hidden overflow-x-auto border border-line bg-surface sm:block">
         <table className="w-full min-w-[46rem] border-collapse text-sm">
+
           <caption className="sr-only">Akun beserta kunci impor dan urutannya</caption>
           <thead>
             <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-faint">
@@ -185,7 +208,78 @@ function Row({
   )
 }
 
+/** One account as a card, for a screen the table does not fit on. */
+function Card({
+  account,
+  first,
+  last,
+  open,
+  onToggle,
+}: {
+  account: AccountView
+  first: boolean
+  last: boolean
+  open: boolean
+  onToggle: () => void
+}) {
+  return (
+    <li className="p-3">
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="min-w-0 flex-1 text-sm text-ink">
+          <AccountMark name={account.name} kind={account.kind} />
+          {account.archived ? <span className="ml-2 text-xs text-ink-faint">(arsip)</span> : null}
+        </span>
+        <span className="tnum shrink-0 font-mono text-sm text-ink-muted">
+          {formatIdr(BigInt(account.openingBalance))}
+        </span>
+      </div>
+
+      <p className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs text-ink-muted">
+        {account.key === '' ? (
+          <span>tidak diimpor</span>
+        ) : (
+          <span>
+            <code className="text-ink">{account.key}</code>{' '}
+            {ACCOUNT_KEY_LABELS[account.key as AccountKey]}
+          </span>
+        )}
+        <span aria-hidden="true" className="text-ink-faint">
+          ·
+        </span>
+        <span>
+          <span className="tnum font-mono">{account.usage}</span> transaksi
+        </span>
+      </p>
+
+      <div className="mt-2.5 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={open}
+          className="h-11 flex-1 rounded-sm border border-line px-3 text-sm text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
+        >
+          {open ? 'Tutup' : 'Ubah'}
+        </button>
+        <ArchiveButton account={account} />
+        {account.archived ? null : (
+          <div className="flex gap-2">
+            <MoveButton id={account.id} direction="up" name={account.name} disabled={first} />
+            <MoveButton id={account.id} direction="down" name={account.name} disabled={last} />
+          </div>
+        )}
+      </div>
+
+      {open ? (
+        <div className="mt-3 border-t border-line pt-3">
+          <AccountForm account={account} />
+        </div>
+      ) : null}
+    </li>
+  )
+}
+
 function MoveButton({
+
   id,
   direction,
   name,

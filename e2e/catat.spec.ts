@@ -88,8 +88,14 @@ test.describe('kemungkinan ganda', () => {
     const rows = page.locator('tbody tr')
     await expect(rows.filter({ hasText: 'Manual' })).toHaveCount(2)
     await expect(rows.filter({ hasText: 'Bank' })).toHaveCount(2)
-    // Only the second pair's bank row was already settled by somebody.
-    await expect(page.getByText('(sudah dipastikan)')).toHaveCount(3)
+    /*
+      Only the second pair's bank row was already settled by somebody.
+
+      Visible ones. Each pair is in the document twice, as a table for this
+      viewport and as a stacked list for a phone, and a plain text match counts
+      the display:none one as well.
+    */
+    await expect(page.getByText('(sudah dipastikan)').filter({ visible: true })).toHaveCount(3)
     await expect(page.getByText('Selisih waktu 2 hari')).toBeVisible()
   })
 })
@@ -100,7 +106,8 @@ test.describe('saldo per akun', () => {
     await expect(page.getByText('Saldo Bank Mandiri cocok')).toBeVisible()
     await expect(page.locator('th', { hasText: 'Penyesuaian' })).toHaveCount(1)
     await expect(page.getByRole('button', { name: 'Sesuaikan saldo' })).toHaveCount(4)
-    // Zero is written as zero; a dash would read as unknown.
-    await expect(page.getByText('Rp0')).toHaveCount(1)
+    // Zero is written as zero; a dash would read as unknown. Visible only:
+    // the cards for a phone carry the same figure behind display:none.
+    await expect(page.getByText('Rp0').filter({ visible: true })).toHaveCount(1)
   })
 })

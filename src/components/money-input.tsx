@@ -93,7 +93,7 @@ export function MoneyInput({
           autoComplete="off"
           value={text}
           onChange={(event) => handle(event.target.value)}
-          className={`${CONTROL} tnum font-mono ${compact ? 'h-10 w-36 pl-8' : 'pl-10'}`}
+          className={`${CONTROL} tnum font-mono ${compact ? 'h-11 w-36 pl-8 sm:h-10' : 'pl-10'}`}
           placeholder="0"
         />
         {/* The visible field carries no name: what the server reads is sen,

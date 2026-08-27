@@ -55,12 +55,71 @@ export function RecentEntries({ rows }: { rows: RecentEntry[] }) {
         </p>
       ) : null}
 
+      {/* Six columns, every one of them nowrap. The delete form is its own
+          form per row, so both trees can be rendered: the hidden one is not
+          reachable and cannot be submitted. */}
+      <ul
+        aria-label="Catatan manual terakhir"
+        className="divide-y divide-line border border-line bg-surface sm:hidden"
+      >
+        {rows.map((row) => (
+          <li key={row.id} className="p-3">
+            <div className="flex items-baseline justify-between gap-3">
+              <a
+                href={`/transaksi/${row.id}`}
+                className="min-w-0 flex-1 truncate text-sm text-ink underline underline-offset-2"
+              >
+                {row.description}
+              </a>
+              <span className="inline-flex shrink-0 items-center gap-1">
+                <DirectionMark direction={row.direction} />
+                <span className="tnum font-mono text-sm text-ink">{row.amount}</span>
+              </span>
+            </div>
+
+            <p className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs text-ink-muted">
+              <span className="tnum">{row.when}</span>
+              <span aria-hidden="true" className="text-ink-faint">
+                ·
+              </span>
+              <span className="min-w-0 truncate">{row.categoryName}</span>
+              <span aria-hidden="true" className="text-ink-faint">
+                ·
+              </span>
+              <span className="min-w-0 truncate">{row.account}</span>
+            </p>
+
+            <div className="mt-2.5 flex flex-wrap items-center gap-2">
+              <form action={action}>
+                <input type="hidden" name="transactionId" value={row.id} />
+                <button
+                  type="submit"
+                  aria-label={`Hapus ${row.description}`}
+                  className="h-11 rounded-sm border border-line-strong px-3 text-sm text-ink transition-colors duration-150 hover:bg-sunken"
+                >
+                  Hapus
+                </button>
+              </form>
+              {row.duplicateSuspected ? (
+                <a
+                  href="/tinjau#kemungkinan-ganda"
+                  className="inline-flex min-h-11 items-center rounded-xs border border-warn/40 bg-warn-wash px-2 text-xs text-ink"
+                >
+                  kemungkinan ganda
+                </a>
+              ) : null}
+            </div>
+          </li>
+        ))}
+      </ul>
+
       <div
-        className="relative overflow-x-auto border border-line bg-surface"
+        className="relative hidden overflow-x-auto border border-line bg-surface sm:block"
         tabIndex={0}
         role="region"
         aria-label="Tabel catatan manual terakhir, bisa digeser ke samping"
       >
+
         <table className="w-full text-sm">
           <caption className="sr-only">Sepuluh catatan manual terakhir</caption>
           <thead>

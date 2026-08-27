@@ -50,7 +50,9 @@ test.describe('akun', () => {
 
   test('draws every account with its own mark', async ({ page }) => {
     await open(page, 'settings-accounts')
-    expect(await page.locator('[data-mark="account"]').count()).toBe(4)
+    // Visible only: the panel renders a table for this viewport and a list of
+    // cards for a phone, and an attribute selector matches through display:none.
+    expect(await page.locator('[data-mark="account"]:visible').count()).toBe(4)
   })
 })
 

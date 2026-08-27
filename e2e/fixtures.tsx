@@ -57,6 +57,7 @@ import { ReviewQueue } from '@/app/tinjau/review-queue'
 import { EntryForm } from '@/app/catat/entry-form'
 import { AdjustBalanceForm, type BalanceRow } from '@/app/catat/adjust-balance'
 import { DuplicatesPanel } from '@/app/catat/duplicates-panel'
+import { RecentEntries } from '@/app/catat/recent-entries'
 import type { DuplicateView } from '@/app/catat/duplicates-view'
 import { Balances } from '@/components/balances'
 import { AccountScope } from '@/components/account-scope'
@@ -1643,6 +1644,45 @@ export const FIXTURES = {
     />
   ),
   'tinjau-rapikan': <TidyPanel view={TIDY_VIEW} categories={TIDY_CATEGORIES} />,
+  // Long descriptions and a duplicate flag, because those are what push the
+  // row past the width of a phone.
+  'catat-terakhir': (
+    <RecentEntries
+      rows={[
+        {
+          id: 'ent-1',
+          when: '15 Jul 2026',
+          description: 'Makan siang Warung Bu Tini depan kantor',
+          categoryName: 'Makan/minum',
+          account: 'Dompet tunai',
+          amount: idrText('35.000,00'),
+          direction: 'out',
+          duplicateSuspected: true,
+        },
+        {
+          id: 'ent-2',
+          when: '14 Jul 2026',
+          description: 'Parkir',
+          categoryName: 'Transport',
+          account: 'Dompet tunai',
+          amount: idrText('5.000,00'),
+          direction: 'out',
+          duplicateSuspected: false,
+        },
+        {
+          id: 'ent-3',
+          when: '13 Jul 2026',
+          description: 'Uang kembalian dari Ibu',
+          categoryName: 'Other Income',
+          account: 'Dompet tunai',
+          amount: idrText('150.000,00'),
+          direction: 'in',
+          duplicateSuspected: false,
+        },
+      ]}
+    />
+  ),
+
   'laporan-per-kategori': (
     <PeriodReport
       summary={summarisePeriod(REPORT_ROWS, {}, REPORT_GROUPS)}

@@ -14,9 +14,15 @@ import { defineConfig, devices } from '@playwright/test'
  */
 export default defineConfig({
   testDir: './e2e',
-  // Whole-page tests need a build and a server, so they live in their own
-  // config. Keeping them out of this one is what lets this one stay fast.
-  testIgnore: '**/pages/**',
+  /*
+    Whole-page tests need a build and a server, and the phone suite needs a
+    phone's viewport and pointer, so both live in their own config. Keeping
+    them out of this one is what lets this one stay fast, and what stops the
+    phone's assertions being made against a 1280px window that fails them all
+    for the right reason while telling nobody anything.
+  */
+  testIgnore: ['**/pages/**', '**/mobile.spec.ts'],
+
   fullyParallel: true,
   // A test that only passes on the second attempt is a test nobody can trust.
   retries: 0,

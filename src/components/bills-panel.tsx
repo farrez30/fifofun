@@ -76,12 +76,61 @@ export function BillsPanel({ review }: Props) {
         </p>
       </div>
 
+      {/* Five columns want 512px and a phone has 327. The status glyph leads
+          each card because it is what the panel is read for. */}
+      <ul aria-label="Tagihan bulan ini" className="divide-y divide-line sm:hidden">
+        {bills.map((bill) => {
+          const style = STATE[bill.state]
+          return (
+            <li key={bill.category} className="p-3">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="flex min-w-0 flex-1 items-baseline gap-1.5 text-sm text-ink">
+                  <span aria-hidden="true" className={style.text}>
+                    {style.glyph}
+                  </span>
+                  <span className="min-w-0 truncate">{bill.category}</span>
+                </span>
+                <span className="tnum shrink-0 font-mono text-sm text-ink">
+                  {bill.paid > 0n ? formatIdr(bill.paid) : <span className="text-ink-faint">–</span>}
+                </span>
+              </div>
+
+              <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs text-ink-muted">
+                <span>{style.label}</span>
+                <span aria-hidden="true" className="text-ink-faint">
+                  ·
+                </span>
+                {/* "Belum diketahui" is not zero, and the distinction is the
+                    reason this column exists. It survives into the card. */}
+                <span>
+                  biasanya{' '}
+                  {bill.usual > 0n ? (
+                    <span className="tnum font-mono">{formatIdr(bill.usual)}</span>
+                  ) : (
+                    <span className="text-ink-faint">belum diketahui</span>
+                  )}
+                </span>
+                {bill.account ? (
+                  <>
+                    <span aria-hidden="true" className="text-ink-faint">
+                      ·
+                    </span>
+                    <span className="min-w-0 truncate">{bill.account}</span>
+                  </>
+                ) : null}
+              </div>
+            </li>
+          )
+        })}
+      </ul>
+
       <div
-        className="relative overflow-x-auto"
+        className="relative hidden overflow-x-auto sm:block"
         tabIndex={0}
         role="region"
         aria-label="Tabel tagihan, bisa digeser ke samping"
       >
+
         <table className="w-full min-w-lg border-collapse text-sm">
           <thead>
             <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-faint">

@@ -54,32 +54,48 @@ export function BudgetTable({ plan }: { plan: BudgetPlanView }) {
       <form action={action} className="space-y-3">
         <input type="hidden" name="period" value={plan.period} />
 
-        {/* Positioned, so the sr-only spans inside the cells are clipped by
-            this box rather than escaping it and widening the page. */}
+        {/*
+          The one table in the app that does not get a second tree of cards.
+
+          Everywhere else both trees are rendered and one is hidden, which costs
+          nothing because the hidden one only repeats text. Here every row holds
+          a named input, so a second tree would put two fields called `b-<id>`
+          inside one form and post every budget twice.
+
+          So the row collapses instead of duplicating. Below the small
+          breakpoint the three columns that are context rather than input are
+          hidden, and their figures move under the category name, which leaves
+          the name and the field itself on one line at 327px. Dragging sideways
+          while typing a figure was the worst interaction in the application.
+
+          Positioned, so the sr-only spans inside the cells are clipped by this
+          box rather than escaping it and widening the page.
+        */}
         <div className="relative overflow-x-auto border border-line bg-surface">
-          <table className="w-full min-w-[38rem] border-collapse text-sm">
+          <table className="w-full border-collapse text-sm sm:min-w-[38rem]">
             <caption className="sr-only">Anggaran {label} per kategori</caption>
             <thead>
               <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-faint">
-                <th scope="col" className="px-4 py-2 font-medium">
+                <th scope="col" className="px-3 py-2 font-medium sm:px-4">
                   Kategori
                 </th>
-                <th scope="col" className="px-4 py-2 text-right font-medium">
+                <th scope="col" className="hidden px-4 py-2 text-right font-medium sm:table-cell">
                   Biasanya
                 </th>
-                <th scope="col" className="px-4 py-2 text-right font-medium">
+                <th scope="col" className="hidden px-4 py-2 text-right font-medium sm:table-cell">
                   Bulan lalu
                 </th>
-                <th scope="col" className="px-4 py-2 text-right font-medium">
+                <th scope="col" className="px-3 py-2 text-right font-medium sm:px-4">
                   Anggaran
                 </th>
                 {plan.hasData ? (
-                  <th scope="col" className="px-4 py-2 text-right font-medium">
+                  <th scope="col" className="hidden px-4 py-2 text-right font-medium sm:table-cell">
                     Realisasi
                   </th>
                 ) : null}
               </tr>
             </thead>
+
 
             {groups.map((group) => (
               <tbody key={group.cashflow}>
@@ -141,16 +157,17 @@ function Row({
 }) {
   return (
     <tr className="border-b border-line last:border-0">
-      <th scope="row" className="px-4 py-2 text-left font-normal text-ink">
+      <th scope="row" className="px-3 py-2 text-left font-normal text-ink sm:px-4">
         <CategoryMark
           name={line.name}
           cashflow={line.cashflow}
           icon={line.icon}
           hue={line.hue}
         />
+        <Context line={line} hasData={hasData} hasHistory={hasHistory} />
       </th>
 
-      <td className="tnum whitespace-nowrap px-4 py-2 text-right font-mono text-ink-muted">
+      <td className="tnum hidden whitespace-nowrap px-4 py-2 text-right font-mono text-ink-muted sm:table-cell">
         {line.usual ?? (
           <span className="font-sans text-ink-faint">
             {hasHistory ? 'belum pernah muncul' : 'tidak diketahui'}
@@ -158,7 +175,7 @@ function Row({
         )}
       </td>
 
-      <td className="tnum whitespace-nowrap px-4 py-2 text-right font-mono text-ink-muted">
+      <td className="tnum hidden whitespace-nowrap px-4 py-2 text-right font-mono text-ink-muted sm:table-cell">
         {line.lastMonth ? (
           <>
             {line.lastMonth.derived ? (
@@ -176,12 +193,13 @@ function Row({
         )}
       </td>
 
-      <td className="whitespace-nowrap px-4 py-2 text-right">
+      <td className="whitespace-nowrap px-3 py-2 text-right sm:px-4">
         <BudgetCell line={line} />
       </td>
 
       {hasData ? (
-        <td className="whitespace-nowrap px-4 py-2 text-right">
+        <td className="hidden whitespace-nowrap px-4 py-2 text-right sm:table-cell">
+
           {line.actual ? (
             <>
               <span className="tnum font-mono text-ink">
@@ -214,7 +232,93 @@ function Row({
   )
 }
 
+/**
+ * The three columns a phone has no room for, under the name instead.
+ *
+ * Hidden from the small breakpoint up, where the columns themselves are back
+ * and repeating them would say everything twice.
+ *
+ * "Belum pernah muncul" and "tidak diketahui" are carried through rather than
+ * collapsed into a dash. A category the ledger has never seen and one whose
+ * history is missing are different answers, and that distinction is the reason
+ * the columns exist at all.
+ */
+function Context({
+  line,
+  hasData,
+  hasHistory,
+}: {
+  line: BudgetLineView
+  hasData: boolean
+  hasHistory: boolean
+}) {
+  return (
+    <span className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs text-ink-muted sm:hidden">
+      <span>
+        biasanya{' '}
+        {line.usual ? (
+          <span className="tnum font-mono">{line.usual}</span>
+        ) : (
+          <span className="text-ink-faint">
+            {hasHistory ? 'belum pernah muncul' : 'tidak diketahui'}
+          </span>
+        )}
+      </span>
+
+      <span aria-hidden="true" className="text-ink-faint">
+        ·
+      </span>
+
+      <span>
+        bulan lalu{' '}
+        {line.lastMonth ? (
+          <span className="tnum font-mono">
+            {line.lastMonth.derived ? (
+              <>
+                <span aria-hidden="true" className="mr-0.5 text-ink-faint">
+                  ◆
+                </span>
+                <span className="sr-only">realisasi, bukan anggaran: </span>
+              </>
+            ) : null}
+            {line.lastMonth.text}
+          </span>
+        ) : (
+          <span className="text-ink-faint">tidak ada</span>
+        )}
+      </span>
+
+      {hasData ? (
+        <>
+          <span aria-hidden="true" className="text-ink-faint">
+            ·
+          </span>
+          <span>
+            realisasi{' '}
+            {line.actual ? (
+              <span className={`tnum font-mono ${line.actual.over ? 'text-ink' : ''}`}>
+                {line.actual.over ? (
+                  <>
+                    <span aria-hidden="true" className="mr-0.5 text-warn">
+                      ▲
+                    </span>
+                    <span className="sr-only">lewat anggaran: </span>
+                  </>
+                ) : null}
+                {line.actual.text}
+              </span>
+            ) : (
+              <span className="text-ink-faint">belum ada</span>
+            )}
+          </span>
+        </>
+      ) : null}
+    </span>
+  )
+}
+
 function BudgetCell({ line }: { line: BudgetLineView }) {
+
   const [amount, setAmount] = useState(() => BigInt(line.amount || '0'))
   /*
     The figure this cell last agreed with the server about.

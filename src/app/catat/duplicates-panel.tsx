@@ -87,12 +87,57 @@ export function DuplicatesPanel({ pairs }: { pairs: DuplicateView[] }) {
       <ul className="mt-3 space-y-3">
         {pairs.map((pair) => (
           <li key={pair.manualId} className="border border-line bg-surface">
+            {/*
+              Stacked rather than side by side, and still a comparison. The two
+              amounts stay on one right edge one above the other, which is what
+              the reader is actually comparing; five columns at 327px was a
+              366px sideways drag to see the second half of either row.
+            */}
+            <ul
+              aria-label={`Catatan manual dan baris bank untuk ${pair.manual.description}`}
+              className="divide-y divide-line sm:hidden"
+            >
+              {(
+                [
+                  ['Manual', pair.manual],
+                  ['Bank', pair.imported],
+                ] as const
+              ).map(([label, row]) => (
+                <li key={label} className="p-3">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <p className="shrink-0 text-xs font-medium uppercase tracking-wide text-ink-faint">
+                      {label}
+                    </p>
+                    <p className="tnum shrink-0 font-mono text-sm text-ink">{row.amount}</p>
+                  </div>
+                  <p className="mt-1 text-sm text-ink">
+                    {row.description}
+                    {row.note ? (
+                      <span className="block text-xs text-ink-muted">{row.note}</span>
+                    ) : null}
+                  </p>
+                  <p className="mt-0.5 flex flex-wrap items-baseline gap-x-2 text-xs text-ink-muted">
+                    <span className="tnum">{row.when}</span>
+                    <span aria-hidden="true" className="text-ink-faint">
+                      ·
+                    </span>
+                    <span>
+                      {row.categoryName}
+                      {row.confirmed ? ' (sudah dipastikan)' : ''}
+                    </span>
+                  </p>
+                </li>
+              ))}
+            </ul>
+
+
             <div
-              className="relative overflow-x-auto"
+              className="relative hidden overflow-x-auto sm:block"
               tabIndex={0}
               role="region"
               aria-label={`Catatan manual dan baris bank untuk ${pair.manual.description}`}
             >
+
               <table className="w-full text-sm">
                 <caption className="sr-only">
                   Catatan manual dan baris bank yang diduga sama
