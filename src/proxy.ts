@@ -55,6 +55,14 @@ function contentSecurityPolicy(nonce: string): string {
       allowing them there leaves `<style>` elements and stylesheets locked to the
       nonce. Inline styles are also a far weaker vector than inline scripts,
       which keep the nonce and `strict-dynamic`.
+
+      `next dev` fills the console with `style-src-elem` refusals and they are
+      expected. Turbopack hands the stylesheet to the page through JavaScript so
+      it can hot reload it, and a `<style>` element written at runtime has no
+      nonce to carry. A production build serves the same CSS as a file, which
+      `'self'` allows, and the pages suite asserts on a real build that nothing
+      is refused at all. So the noise is the development server, not the policy:
+      before chasing it, check whether it survives `next build`.
     */
     `style-src 'self' 'nonce-${nonce}'`,
     `style-src-elem 'self' 'nonce-${nonce}'`,
