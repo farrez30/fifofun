@@ -53,12 +53,16 @@ const TABS: readonly Tab[] = [
   { href: '/', label: 'Ringkasan', glyph: ChartPieSlice },
   { href: '/laporan', label: 'Laporan', glyph: Receipt },
   { href: '/catat', label: 'Catat', glyph: NotePencil },
-  { href: '/anggaran', label: 'Anggaran', glyph: Wallet },
+  // Catat and Tinjau are the two screens with work in them: one puts a row in,
+  // the other decides what a row is. A budget is set once a month and read from
+  // the summary for the rest of it, so it reaches further than a thumb should
+  // have to.
+  { href: '/tinjau', label: 'Tinjau', glyph: ListChecks },
 ] as const
 
 /** Everything the bar has no room for, in the order it is reached for. */
 const SHEET: readonly Tab[] = [
-  { href: '/tinjau', label: 'Tinjau', glyph: ListChecks },
+  { href: '/anggaran', label: 'Anggaran', glyph: Wallet },
   { href: '/dana', label: 'Dana', glyph: Coins },
   { href: '/rencana', label: 'Rencana', glyph: Target },
   { href: '/impor', label: 'Impor', glyph: CloudArrowUp },
