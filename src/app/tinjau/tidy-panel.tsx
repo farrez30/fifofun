@@ -206,7 +206,7 @@ export function TidyPanel({ view, categories }: { view: TidyView; categories: Ca
             value="ya"
             checked={agreed}
             onChange={(event) => setAgreed(event.target.checked)}
-            className="size-5 accent-[var(--accent)]"
+            className="size-5"
           />
           Saya sudah membaca daftarnya
         </label>

@@ -216,6 +216,23 @@
     font-feature-settings: 'tnum' 1;
   }
 
+  /*
+    A ticked box is the accent, not whatever blue the operating system likes.
+
+    This was being set per control and had drifted into four spellings, two of
+    which did nothing: one named `--accent`, which is not a token here, and one
+    said nothing at all. Both rendered the system blue, and on a page whose only
+    stated colour rule is one accent and semantic tokens, that blue was the one
+    hue on screen the design never chose. It also landed on the box that turns a
+    single decision into a standing rule.
+
+    `:where` carries no specificity, so any control that genuinely wants a
+    different colour still says so and still wins.
+  */
+  :where(input[type='checkbox'], input[type='radio']) {
+    accent-color: var(--color-accent);
+  }
+
   /* A focus ring that is actually visible, on every interactive element. */
   :where(a, button, input, select, textarea, [tabindex]):focus-visible {
     outline: 2px solid var(--color-accent);
