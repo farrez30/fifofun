@@ -13,14 +13,19 @@ import type { NavHref } from '@/components/nav'
  * than leave the page. Getting that wrong does not degrade the gesture, it
  * breaks every diagram in the app.
  *
- * So the gesture declines in five situations, and the order matters only in
+ * So the gesture declines in six situations, and the order matters only in
  * that the cheap checks come first:
  *
  *   1. a pointer that is not a finger, or a screen wide enough for the nav row
  *   2. a sheet is open, where a swipe means something else or nothing
  *   3. the gesture began inside something that can scroll sideways
  *   4. it began in the strip iOS keeps for its own back gesture
- *   5. it was mostly vertical, or too short to be meant
+ *   5. it began in a form somebody has already typed into
+ *   6. it was mostly vertical, or too short to be meant
+ *
+ * The first four ask whether the gesture belongs to something else on the page.
+ * The fifth asks what leaving would cost, which is a different question and was
+ * missing: every refusal was about diagrams, and none of them was about work.
  *
  * `prefers-reduced-motion` is deliberately not on that list. It asks for less
  * animation, not for fewer ways to get around, and this is a way to get around.
@@ -76,6 +81,47 @@ export function swipeTarget(
 }
 
 /**
+ * Whether the press landed in a form somebody has already put work into.
+ *
+ * The five refusals below all ask the same question, which is whether the
+ * gesture belongs to something else on the page. This asks a different one:
+ * what leaving costs. A swipe navigates, a navigation unmounts the form, and
+ * the entry screen is 942px tall on a 664px phone, so a thumb is travelling
+ * across it constantly. Losing a transaction to a gesture nobody knew was there
+ * does not teach the gesture, it teaches that the application drops things.
+ *
+ * Dirty rather than merely present, because a form is not rare here: the
+ * report filters are a form, and declining on those would take the gesture off
+ * the page it is most useful on. A field that still holds what the server
+ * rendered has nothing to lose.
+ *
+ * Exported for the same reason as `pannableAncestor`: only a real browser has
+ * a `defaultValue` to compare against.
+ */
+export function dirtyFormAncestor(node: EventTarget | null): boolean {
+  const form = node instanceof Element ? node.closest('form') : null
+  if (!form) return false
+
+  for (const field of form.elements) {
+    if (field instanceof HTMLInputElement) {
+      if (field.type === 'checkbox' || field.type === 'radio') {
+        if (field.checked !== field.defaultChecked) return true
+      } else if (field.value !== field.defaultValue) {
+        return true
+      }
+    } else if (field instanceof HTMLTextAreaElement) {
+      if (field.value !== field.defaultValue) return true
+    } else if (field instanceof HTMLSelectElement) {
+      for (const option of field.options) {
+        if (option.selected !== option.defaultSelected) return true
+      }
+    }
+  }
+
+  return false
+}
+
+/**
  * Exported for the phone suite, which measures it against real layout.
  *
  * This one cannot join the others above: `scrollWidth` and a computed
@@ -119,6 +165,7 @@ export function useSwipeTabs(order: readonly NavHref[], current: NavHref) {
       if (document.querySelector('dialog[open]')) return
       if (inEdgeStrip(event.clientX, window.innerWidth)) return
       if (pannableAncestor(event.target)) return
+      if (dirtyFormAncestor(event.target)) return
 
       startX = event.clientX
       startY = event.clientY

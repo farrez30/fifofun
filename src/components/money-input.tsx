@@ -81,7 +81,7 @@ export function MoneyInput({
         <span
           aria-hidden="true"
           className={`pointer-events-none absolute inset-y-0 flex items-center font-mono text-sm text-ink-faint ${
-            compact ? 'left-2' : 'left-3'
+            compact ? 'left-1.5 sm:left-2' : 'left-3'
           }`}
         >
           Rp
@@ -93,7 +93,20 @@ export function MoneyInput({
           autoComplete="off"
           value={text}
           onChange={(event) => handle(event.target.value)}
-          className={`${CONTROL} tnum font-mono ${compact ? 'h-11 w-36 pl-8 sm:h-10' : 'pl-10'}`}
+          /*
+            The compact field is 144px wide from the small breakpoint up, which
+            is the density a row of them wants on a desktop. On a phone it is
+            not wide enough to hold what people type into it: at the 16px the
+            iOS zoom rule imposes below `sm`, a monthly household budget of
+            1.300.000 needs 130px of the 99px it had, and the field showed
+            `Rp 1.300.` with no scrollbar and no other sign that the rest was
+            still there. A budget you cannot read back is worse than an ugly
+            one, and `tnum font-mono` is on this field precisely so figures can
+            be checked by eye.
+          */
+          className={`${CONTROL} tnum font-mono ${
+            compact ? 'h-11 w-full pl-7 pr-2 sm:h-10 sm:w-36 sm:pl-8 sm:pr-3' : 'pl-10'
+          }`}
           placeholder="0"
         />
         {/* The visible field carries no name: what the server reads is sen,

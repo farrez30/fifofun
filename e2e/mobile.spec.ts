@@ -1,7 +1,7 @@
 import { readFile, readdir } from 'node:fs/promises'
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
-import { pannableAncestor } from '../src/components/use-swipe-tabs'
+import { dirtyFormAncestor, pannableAncestor } from '../src/components/use-swipe-tabs'
 import { FIXTURE_DIR } from './render'
 
 /**
@@ -182,6 +182,59 @@ test('no control is small enough to make iOS zoom', async ({ page }) => {
   expect(small, 'controls under 16px, which iOS Safari zooms into on focus').toEqual([])
 })
 
+test('no control hides the value it is holding', async ({ page }) => {
+  /*
+    The bug the 16px rule caused while fixing another one.
+
+    Raising every control to 16px below `sm` stops iOS zooming on focus, and it
+    also makes every string inside those controls wider. A budget field that was
+    144px for a reason on a desktop then held `Rp 1.300.` of `Rp 1.300.000` and
+    said nothing about the rest: an input does not scroll a bar, so a figure
+    that does not fit simply ends.
+
+    That is the worst way for this application in particular to fail. Figures
+    are `tnum font-mono` here so they can be checked by eye, and a truncated one
+    still reads as a whole number somebody chose.
+
+    Nothing else in this suite could see it. Overflow tests ask about the
+    document, tap-target tests ask about the box; both are satisfied by a field
+    that quietly holds more than it shows.
+  */
+  const hidden: { fixture: string; where: string; shows: string; needs: string }[] = []
+
+  for (const fixture of await fixtures()) {
+    await open(page, fixture)
+
+    hidden.push(
+      ...(await page.evaluate((name) => {
+        const bad: { fixture: string; where: string; shows: string; needs: string }[] = []
+
+        type Control = HTMLInputElement | HTMLTextAreaElement
+        for (const node of document.querySelectorAll<Control>('input, textarea')) {
+          if (node instanceof HTMLInputElement) {
+            if (node.type === 'hidden' || node.type === 'checkbox' || node.type === 'radio') continue
+          }
+          if (node.getBoundingClientRect().width === 0) continue
+          // A textarea wraps, so more content than box is a scrollbar, not a loss.
+          if (node instanceof HTMLTextAreaElement) continue
+          if (node.scrollWidth <= node.clientWidth + 1) continue
+
+          bad.push({
+            fixture: name,
+            where: `${node.id ? `#${node.id}` : node.name || node.tagName.toLowerCase()}: ${node.value}`,
+            shows: `${node.clientWidth}px`,
+            needs: `${node.scrollWidth}px`,
+          })
+        }
+
+        return bad
+      }, fixture)),
+    )
+  }
+
+  expect(hidden, 'controls showing less than they hold').toEqual([])
+})
+
 /*
   Links that are genuinely inside a sentence, which WCAG exempts and which would
   break the line box if they were padded to 44px. Everything else that can be
@@ -350,6 +403,54 @@ test('the swipe stands aside exactly where the page can be panned', async ({ pag
   }
 
   expect(wrong, 'swipes handed to the wrong owner').toEqual([])
+})
+
+test('the swipe stands aside once a form has work in it', async ({ page }) => {
+  /*
+    The refusal that is about the user rather than about the page.
+
+    A swipe navigates, and navigating unmounts whatever was half typed. The
+    entry screen is taller than the phone, so a thumb crosses it constantly.
+
+    Both halves of the rule are checked here, and the second is the one that
+    would quietly rot: a form is common in this application, and a guard that
+    declined on any form at all would take the gesture off the report screen,
+    whose filters are a form that is almost always untouched. So an untouched
+    form must still swipe.
+
+    Needs a browser for the same reason the pannable check does. `defaultValue`
+    is the parser's record of what the markup said, and only a parser has one.
+  */
+  await open(page, 'catat-entry.html')
+  await page.addScriptTag({ content: `window.__dirty = ${dirtyFormAncestor.toString()}` })
+
+  const verdicts = await page.evaluate(() => {
+    const decides = (window as unknown as { __dirty: (n: Element) => boolean }).__dirty
+    const field = document.querySelector<HTMLInputElement>('input[type="text"], input:not([type])')
+    const form = field?.closest('form')
+    const outside = document.querySelector('h1') ?? document.body
+
+    if (!field || !form) return { found: false }
+
+    const pristine = decides(field)
+    field.value = `${field.value} catatan yang belum tersimpan`
+    const afterTyping = decides(field)
+    field.value = field.defaultValue
+
+    return {
+      found: true,
+      pristine,
+      afterTyping,
+      restored: decides(field),
+      outsideAnyForm: decides(outside),
+    }
+  })
+
+  expect(verdicts.found, 'the entry fixture no longer has a text field in a form').toBe(true)
+  expect(verdicts.pristine, 'an untouched form must still swipe').toBe(false)
+  expect(verdicts.afterTyping, 'a form with typing in it must not').toBe(true)
+  expect(verdicts.restored, 'putting the value back makes it swipeable again').toBe(false)
+  expect(verdicts.outsideAnyForm, 'nothing outside a form is affected').toBe(false)
 })
 
 for (const scheme of ['light', 'dark'] as const) {

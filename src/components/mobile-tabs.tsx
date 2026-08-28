@@ -37,6 +37,11 @@ import type { NavHref } from '@/components/nav'
  * The current tab is marked three ways and only one of them is colour: the
  * glyph fills, the label takes medium weight, and `aria-current` says so. The
  * accent is the least of the three on purpose.
+ *
+ * That third mark had to be put on the Lainnya button by hand. The six
+ * destinations behind it carry it inside the sheet, and a closed sheet renders
+ * nothing, so a reader on one of those six pages was hearing about a button
+ * with no state at all while a sighted reader saw the tab lit up.
  */
 
 interface Tab {
@@ -140,6 +145,15 @@ export function MobileTabs({ current, email }: { current: NavHref; email: string
                 sheet.current?.showModal()
                 setOpen(true)
               }}
+              /*
+                The six destinations behind here are marked inside the sheet,
+                and the sheet is closed, so without this a reader on any of them
+                is told nothing at all about where they are: the tab turns the
+                accent on and takes medium weight, and both of those are ink.
+                `true` rather than `page`, because the button is not the page.
+                It is the item in the set that stands for it.
+              */
+              aria-current={inSheet ? 'true' : undefined}
               aria-expanded={open}
               aria-haspopup="dialog"
               className={`${TAB} ${inSheet ? 'text-accent' : 'text-ink-muted'}`}

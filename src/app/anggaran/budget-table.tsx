@@ -85,7 +85,11 @@ export function BudgetTable({ plan }: { plan: BudgetPlanView }) {
                 <th scope="col" className="hidden px-4 py-2 text-right font-medium sm:table-cell">
                   Bulan lalu
                 </th>
-                <th scope="col" className="px-3 py-2 text-right font-medium sm:px-4">
+                {/* Held wide enough on a phone for the figure to fit inside it.
+                    Two columns are visible at that width and the automatic
+                    layout hands almost all of it to the category name, which
+                    can wrap; the amount cannot. */}
+                <th scope="col" className="w-52 px-3 py-2 text-right font-medium sm:w-auto sm:px-4">
                   Anggaran
                 </th>
                 {plan.hasData ? (
