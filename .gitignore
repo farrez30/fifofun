@@ -68,6 +68,7 @@ CLAUDE.md
 
 # agent tooling
 .claude/
+.impeccable/
 skills-lock.json
 # axe-core copied here on demand for accessibility audits against a real build
 public/_axe.js
