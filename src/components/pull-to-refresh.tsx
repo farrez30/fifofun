@@ -24,9 +24,27 @@ import { useRouter } from 'next/navigation'
  */
 
 /** How far down before the release means it. */
-const THRESHOLD = 72
+export const THRESHOLD = 72
 /** Past this the indicator stops following, so it cannot be dragged to the middle of the screen. */
 const CEILING = 108
+/**
+ * The indicator slows as it is pulled rather than tracking the finger all the
+ * way down, which is what makes the gesture feel like it is resisting.
+ */
+const RESISTANCE = 0.5
+
+/**
+ * How far the indicator has travelled for a finger that has moved `dy` down.
+ *
+ * Separated from the handler so the sums can be checked without a browser, the
+ * same way `drag-axis.ts` separates its own. The resistance is the part worth
+ * checking: it means the finger has to travel twice the threshold, and reading
+ * that off the two constants is easy to get wrong.
+ */
+export function pullDistance(dy: number): number {
+  if (dy <= 0) return 0
+  return Math.min(CEILING, dy * RESISTANCE)
+}
 
 export function PullToRefresh() {
   const router = useRouter()
@@ -61,9 +79,7 @@ export function PullToRefresh() {
         return
       }
 
-      // Resistance, so the indicator slows as it is pulled rather than
-      // tracking the finger one to one all the way down.
-      setPull(Math.min(CEILING, dy * 0.5))
+      setPull(pullDistance(dy))
     }
 
     function up() {

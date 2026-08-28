@@ -1,6 +1,7 @@
 import { readFile, readdir } from 'node:fs/promises'
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
+import { pannableAncestor } from '../src/components/use-swipe-tabs'
 import { FIXTURE_DIR } from './render'
 
 /**
@@ -292,6 +293,63 @@ test('focus never lands behind the furniture pinned to the screen', async ({ pag
   }
 
   expect(covered, 'focused controls covered by something fixed to the screen').toEqual([])
+})
+
+test('the swipe stands aside exactly where the page can be panned', async ({ page }) => {
+  /*
+    The half of the swipe that a unit runner cannot answer.
+
+    `use-swipe-tabs.test.ts` covers the sums. This covers the one rule that
+    needs a browser: a swipe beginning inside something that scrolls sideways
+    belongs to that thing, not to the navigation. Getting it wrong does not make
+    the gesture feel rough, it makes every chart in the application impossible
+    to pan, and both `overflow-x` and `scrollWidth` are answers only a laid-out
+    page has.
+
+    The function's own source is lifted into the page rather than reimplemented
+    here, because a copy of the rule would pass while the rule was broken.
+  */
+  const wrong: { fixture: string; where: string; expected: string }[] = []
+
+  for (const fixture of await fixtures()) {
+    await open(page, fixture)
+    await page.addScriptTag({ content: `window.__pannable = ${pannableAncestor.toString()}` })
+
+    wrong.push(
+      ...(await page.evaluate((name) => {
+        const decides = (window as unknown as { __pannable: (n: Element) => boolean }).__pannable
+        const bad: { fixture: string; where: string; expected: string }[] = []
+        const label = (node: Element) =>
+          `${node.tagName.toLowerCase()}.${node.className}`.slice(0, 60)
+
+        for (const region of document.querySelectorAll('[data-pannable]')) {
+          // At this width the region may not overflow at all, and a region with
+          // nothing to pan is not one the gesture has to stand aside for.
+          if (region.scrollWidth <= region.clientWidth + 1) continue
+
+          // Where a finger would actually land: on the drawing, not the box.
+          let deepest: Element = region
+          while (deepest.firstElementChild) deepest = deepest.firstElementChild
+
+          if (!decides(deepest)) {
+            bad.push({ fixture: name, where: label(deepest), expected: 'left to the region' })
+          }
+        }
+
+        // And the opposite error, which is the gesture quietly disappearing:
+        // the ledger scrolls nowhere, so a swipe across it is a swipe.
+        for (const row of document.querySelectorAll('a[href^="/transaksi/"]')) {
+          if (decides(row)) {
+            bad.push({ fixture: name, where: label(row), expected: 'left to the navigation' })
+          }
+        }
+
+        return bad
+      }, fixture)),
+    )
+  }
+
+  expect(wrong, 'swipes handed to the wrong owner').toEqual([])
 })
 
 for (const scheme of ['light', 'dark'] as const) {

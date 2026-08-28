@@ -37,9 +37,53 @@ import type { NavHref } from '@/components/nav'
 const DISTANCE = 64
 const BIAS = 2
 /** Both screen edges belong to the browser's own back and forward gestures. */
-const EDGE = 24
+export const EDGE = 24
 
-function pannableAncestor(node: EventTarget | null): boolean {
+/**
+ * The sums, kept apart from the event handling.
+ *
+ * `drag-axis.ts` separates its arithmetic for the same reason and says why:
+ * what goes wrong in a gesture is almost always the numbers, and the numbers
+ * reproduce without a browser once they are not tangled up in listeners.
+ */
+
+/** True in the strip at either screen edge that the browser has claimed. */
+export function inEdgeStrip(clientX: number, width: number): boolean {
+  return clientX < EDGE || clientX > width - EDGE
+}
+
+/**
+ * Where a finished swipe lands, or null when it was not a swipe or there is
+ * nowhere for it to go.
+ */
+export function swipeTarget(
+  order: readonly NavHref[],
+  current: NavHref,
+  dx: number,
+  dy: number,
+): NavHref | null {
+  if (Math.abs(dx) < DISTANCE) return null
+  if (Math.abs(dx) < Math.abs(dy) * BIAS) return null
+
+  const index = order.indexOf(current)
+  // A page that is not one of the tabs has no neighbours to swipe to.
+  if (index === -1) return null
+
+  const next = dx < 0 ? index + 1 : index - 1
+  if (next < 0 || next >= order.length) return null
+
+  return order[next]
+}
+
+/**
+ * Exported for the phone suite, which measures it against real layout.
+ *
+ * This one cannot join the others above: `scrollWidth` and a computed
+ * `overflow-x` only mean anything once a browser has laid the page out, and the
+ * unit runner lays nothing out. So the suite lifts this function's own source
+ * into a page that has a real chart on it. Nothing else imports it.
+ */
+export function pannableAncestor(node: EventTarget | null): boolean {
   let element = node instanceof Element ? node : null
 
   while (element && element !== document.body) {
@@ -73,7 +117,7 @@ export function useSwipeTabs(order: readonly NavHref[], current: NavHref) {
       // The nav row is back at this width and a swipe would contradict it.
       if (!matchMedia('(max-width: 639px)').matches) return
       if (document.querySelector('dialog[open]')) return
-      if (event.clientX < EDGE || event.clientX > window.innerWidth - EDGE) return
+      if (inEdgeStrip(event.clientX, window.innerWidth)) return
       if (pannableAncestor(event.target)) return
 
       startX = event.clientX
@@ -85,19 +129,8 @@ export function useSwipeTabs(order: readonly NavHref[], current: NavHref) {
       if (!tracking) return
       tracking = false
 
-      const dx = event.clientX - startX
-      const dy = event.clientY - startY
-      if (Math.abs(dx) < DISTANCE) return
-      if (Math.abs(dx) < Math.abs(dy) * BIAS) return
-
-      const index = order.indexOf(current)
-      // A page that is not one of the tabs has no neighbours to swipe to.
-      if (index === -1) return
-
-      const next = dx < 0 ? index + 1 : index - 1
-      if (next < 0 || next >= order.length) return
-
-      router.push(order[next])
+      const target = swipeTarget(order, current, event.clientX - startX, event.clientY - startY)
+      if (target) router.push(target)
     }
 
     // The browser claimed the gesture for a scroll, so it was never ours.
