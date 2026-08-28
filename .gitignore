@@ -76,3 +76,9 @@ public/_axe.js
 /e2e/.fixtures/
 /test-results/
 /playwright-report/
+
+# throwaway scripts for measuring a fixture in a real browser. They have to sit
+# at the root so imports resolve against node_modules, which puts them exactly
+# where `git add -A` picks them up; one already reached a commit that way.
+*.tmp.mjs
+*.tmp.ts
