@@ -88,8 +88,9 @@ chart that reconciles perfectly and cannot be read on a phone is still broken.
 
 ```bash
 pnpm install
-pnpm test        # unit
-pnpm test:e2e    # components in a real browser, plus the accessibility sweep
+pnpm test             # unit
+pnpm test:e2e         # components in a real browser, plus the accessibility sweep
+pnpm test:e2e:mobile  # the same fixtures at 390px, with a finger instead of a mouse
 ```
 
 ## Deployment

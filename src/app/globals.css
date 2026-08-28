@@ -154,6 +154,25 @@
     -webkit-text-size-adjust: 100%;
   }
 
+  /*
+    Keyboard focus stops above the tab bar rather than behind it.
+
+    The bar is fixed, so the browser does not count it as occupied space: a
+    focused row that sits in the bottom 64px is already "in view" as far as
+    scrolling is concerned, and nothing moves. Two rows of the ledger ended up
+    completely covered that way, which is a plain 2.4.11 failure.
+
+    `scroll-padding` is the property that exists for this. It shrinks the region
+    the browser scrolls things into, so the same focus now scrolls the row clear
+    of the bar. The shell's bottom padding already handles the last element on a
+    page; this handles every element before it.
+  */
+  @media (max-width: 639px) {
+    html {
+      scroll-padding-bottom: calc(4.5rem + var(--spacing-safe-b));
+    }
+  }
+
   body {
     background-color: var(--color-paper);
     color: var(--color-ink);

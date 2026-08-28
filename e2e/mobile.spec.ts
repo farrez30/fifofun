@@ -226,6 +226,74 @@ test('every target a finger has to hit is at least 44px', async ({ page }) => {
   expect(small, 'tap targets under 44px tall').toEqual([])
 })
 
+test('focus never lands behind the furniture pinned to the screen', async ({ page }) => {
+  /*
+    WCAG 2.2 2.4.11. A fixed bar does not occupy space as far as scrolling is
+    concerned, so the browser considers a row sitting behind it to be in view
+    and does not move. Two rows of the ledger were completely covered by the tab
+    bar this way, and a keyboard user would have had no idea where they were.
+
+    `scroll-padding-bottom` in globals.css is the fix, and this is what holds it.
+    Written against anything fixed rather than against the tab bar, because the
+    offline banner is fixed too and the next one will be as well.
+
+    Only the fixtures that have such furniture are walked. Focusing every
+    control on all sixty fixtures to prove that a page with nothing pinned to it
+    cannot cover anything would cost two minutes to learn nothing.
+  */
+  const covered: { fixture: string; where: string; over: number }[] = []
+
+  for (const fixture of await fixtures()) {
+    await open(page, fixture)
+
+    covered.push(
+      ...(await page.evaluate(async (name) => {
+        const settle = () =>
+          new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+
+        const pinned = [...document.querySelectorAll<HTMLElement>('body *')].filter(
+          (node) => getComputedStyle(node).position === 'fixed',
+        )
+        if (pinned.length === 0) return []
+
+        const bad: { fixture: string; where: string; over: number }[] = []
+        const selector = 'a[href], button, input, select, textarea, summary, [tabindex="0"]'
+
+        for (const node of document.querySelectorAll<HTMLElement>(selector)) {
+          if (pinned.some((fixed) => fixed.contains(node))) continue
+          if (node.getBoundingClientRect().height === 0) continue
+
+          window.scrollTo(0, 0)
+          await settle()
+          node.focus()
+          await settle()
+
+          const box = node.getBoundingClientRect()
+          for (const fixed of pinned) {
+            const over = fixed.getBoundingClientRect()
+            if (over.width === 0 || over.height === 0) continue
+
+            const overlap =
+              Math.min(box.bottom, over.bottom) - Math.max(box.top, over.top) > 0 &&
+              Math.min(box.right, over.right) - Math.max(box.left, over.left) > 0
+            if (!overlap) continue
+
+            bad.push({
+              fixture: name,
+              where: (node.textContent ?? node.tagName).trim().slice(0, 40),
+              over: Math.round(Math.min(box.bottom, over.bottom) - Math.max(box.top, over.top)),
+            })
+          }
+        }
+
+        return bad
+      }, fixture)),
+    )
+  }
+
+  expect(covered, 'focused controls covered by something fixed to the screen').toEqual([])
+})
+
 for (const scheme of ['light', 'dark'] as const) {
   test(`every fixture passes axe at phone width in ${scheme} mode`, async ({ page }) => {
     await page.emulateMedia({ colorScheme: scheme })

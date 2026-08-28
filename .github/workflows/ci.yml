@@ -81,6 +81,14 @@ jobs:
       - name: Browser tests
         run: pnpm test:e2e
 
+      # The same fixtures at 390px with a coarse pointer, which is where the
+      # 16px input floor, the 44px tap floor and the no-sideways-dragging rule
+      # are actually enforced. A step in this job rather than a job of its own:
+      # the fixtures and Chromium are already here, and a second job would
+      # spend a minute installing them to save fifty seconds.
+      - name: Browser tests at phone width
+        run: pnpm exec playwright test --config playwright.mobile.config.ts
+
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
