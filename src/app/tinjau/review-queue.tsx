@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useOptimistic, useState } from 'react'
 import { useFormStatus } from 'react-dom'
 import { AccountMark, CashflowChip, DirectionMark } from '@/components/marks'
 import { SignedMoney } from '@/components/money'
@@ -18,6 +18,7 @@ import type { CashflowType } from '@/lib/ledger/types'
 import type { UnconfirmedRow } from '@/lib/queries/household'
 import type { QueueOptions } from './query'
 import { applyCategory, categoriseOne, type ActionResult } from './actions'
+import { subtractSettled } from './optimistic'
 
 /**
  * The categorisation queue.
@@ -64,6 +65,19 @@ interface Props {
 export function ReviewQueue({ groups, categories, accounts, remaining, options }: Props) {
   const [open, setOpen] = useState<string | null>(groups[0]?.key ?? null)
 
+  /*
+    Keys of the groups whose "Terapkan ke N" is on its way to the server. The
+    base is always the empty list, rebuilt from props on every render: when the
+    revalidated list arrives without the group, the entry has nothing left to
+    hide, and when the action fails, React discards it and the card simply
+    comes back with the error the form already renders. No rollback to write.
+  */
+  const [settling, markSettling] = useOptimistic<string[], string>([], (keys, key) => [
+    ...keys,
+    key,
+  ])
+  const shown = subtractSettled(remaining, groups, settling)
+
   if (groups.length === 0) {
     return (
       <div className="border border-line bg-surface p-10 text-center">
@@ -84,8 +98,8 @@ export function ReviewQueue({ groups, categories, accounts, remaining, options }
     <div className="space-y-5">
       <div className="border border-line bg-sunken p-4">
         <p className="text-sm text-ink">
-          <span className="tnum font-mono">{remaining.count}</span> transaksi menunggu, senilai{' '}
-          <span className="tnum font-mono">{formatIdr(remaining.total)}</span>.
+          <span className="tnum font-mono">{shown.count}</span> transaksi menunggu, senilai{' '}
+          <span className="tnum font-mono">{formatIdr(shown.total)}</span>.
         </p>
         <p className="mt-1 text-sm text-ink-muted">
           Terkumpul jadi {groups.length} kelompok: {out} keluar, {incoming} masuk.
@@ -105,6 +119,8 @@ export function ReviewQueue({ groups, categories, accounts, remaining, options }
               accounts={byName}
               open={open === group.key}
               onToggle={() => setOpen(open === group.key ? null : group.key)}
+              settling={settling.includes(group.key)}
+              onSettle={markSettling}
             />
           </li>
         ))}
@@ -133,6 +149,8 @@ function GroupCard({
   accounts,
   open,
   onToggle,
+  settling,
+  onSettle,
 }: {
   group: ReviewGroup<UnconfirmedRow>
   index: number
@@ -140,6 +158,8 @@ function GroupCard({
   accounts: Map<string, AccountOption>
   open: boolean
   onToggle: () => void
+  settling: boolean
+  onSettle: (key: string) => void
 }) {
   const [result, action] = useActionState<ActionResult | null, FormData>(applyCategory, null)
   const [pattern, setPattern] = useState(group.pattern)
@@ -150,6 +170,28 @@ function GroupCard({
     (category) => directionOf(category.cashflow) === group.direction,
   )
   const label = group.kind === 'month' ? formatMonthKey(group.month ?? '') : group.pattern
+
+  /*
+    The optimistic mark rides inside the form action, which React runs in a
+    transition; from an onClick the update would be dropped with a warning.
+    On success the revalidated list arrives without this group and the slim
+    card below is replaced by its absence. On failure the card comes back on
+    its own, error and all.
+  */
+  const settleAction = (formData: FormData) => {
+    onSettle(group.key)
+    action(formData)
+  }
+
+  if (settling) {
+    return (
+      <div role="status" aria-busy="true" className="border border-line bg-surface px-4 py-3">
+        <span className="text-sm text-ink-muted">
+          Menyimpan {group.count} transaksi dari {label}
+        </span>
+      </div>
+    )
+  }
 
   return (
     <div className="border border-line bg-surface">
@@ -214,7 +256,7 @@ function GroupCard({
           </div>
 
           {group.kind === 'counterparty' ? (
-            <form action={action} className="space-y-3">
+            <form action={settleAction} className="space-y-3">
               <input type="hidden" name="pattern" value={pattern} />
               <input type="hidden" name="matchType" value={matchType} />
 
@@ -386,6 +428,9 @@ function SingleRows({
 }) {
   const [result, action] = useActionState<ActionResult | null, FormData>(categoriseOne, null)
 
+  /* Same shape as the group mark above: ids in flight, base always empty. */
+  const [settled, markSettled] = useOptimistic<string[], string>([], (ids, id) => [...ids, id])
+
   return (
     <details className="mt-4 border-t border-line pt-3 text-sm" open={categories.length === 0}>
       <summary className="cursor-pointer text-ink-muted">
@@ -402,9 +447,22 @@ function SingleRows({
       <ul className="mt-2 space-y-2">
         {entries.slice(0, 25).map((entry) => {
           const account = accounts.get(entry.fromAccountId ?? entry.toAccountId ?? '')
+          if (settled.includes(entry.id)) {
+            return (
+              <li key={entry.id} className="border-b border-line pb-2 last:border-0">
+                <p role="status" aria-busy="true" className="truncate py-2 text-ink-muted">
+                  Menyimpan {entry.description}
+                </p>
+              </li>
+            )
+          }
+          const settleOne = (formData: FormData) => {
+            markSettled(entry.id)
+            action(formData)
+          }
           return (
             <li key={entry.id} className="border-b border-line pb-2 last:border-0">
-              <form action={action} className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
+              <form action={settleOne} className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
                 <input type="hidden" name="transactionId" value={entry.id} />
 
                 <div className="min-w-0">

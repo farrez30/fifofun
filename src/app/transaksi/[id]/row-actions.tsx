@@ -32,7 +32,7 @@ export function DeleteEntryButton({ id }: { id: string }) {
       </p>
       <form action={action} className="mt-3 flex flex-wrap items-center gap-3">
         <input type="hidden" name="id" value={id} />
-        <Submit label="Ya, hapus" />
+        <Submit label="Ya, hapus" pendingLabel="Menghapus" />
         {result ? (
           <p role="status" className={`text-sm ${result.ok ? 'text-under' : 'text-over'}`}>
             {result.message}
@@ -50,7 +50,7 @@ export function RestoreEntryButton({ id }: { id: string }) {
   return (
     <form action={action} className="mt-3 flex flex-wrap items-center gap-3">
       <input type="hidden" name="id" value={id} />
-      <Submit label="Kembalikan transaksi ini" />
+      <Submit label="Kembalikan transaksi ini" pendingLabel="Mengembalikan" />
       {result ? (
         <p role="status" className={`text-sm ${result.ok ? 'text-under' : 'text-over'}`}>
           {result.message}
@@ -67,7 +67,7 @@ export function UnsplitButton({ id }: { id: string }) {
   return (
     <form action={action} className="flex flex-wrap items-center gap-3">
       <input type="hidden" name="id" value={id} />
-      <Submit label="Gabungkan kembali" />
+      <Submit label="Gabungkan kembali" pendingLabel="Menggabungkan" />
       {result ? (
         <p role="status" className={`text-sm ${result.ok ? 'text-under' : 'text-over'}`}>
           {result.message}
@@ -78,7 +78,8 @@ export function UnsplitButton({ id }: { id: string }) {
   )
 }
 
-function Submit({ label }: { label: string }) {
+/* Named per verb: "Memproses" said nothing about which of the three was running. */
+function Submit({ label, pendingLabel }: { label: string; pendingLabel: string }) {
   const { pending } = useFormStatus()
   return (
     <button
@@ -86,7 +87,7 @@ function Submit({ label }: { label: string }) {
       disabled={pending}
       className={BUTTON_QUIET}
     >
-      {pending ? 'Memproses' : label}
+      {pending ? pendingLabel : label}
     </button>
   )
 }

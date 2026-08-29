@@ -1,8 +1,20 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { useRef, useState, type KeyboardEvent } from 'react'
-import { MonthDetailPanel } from '@/components/month-detail'
 import type { MonthDetail } from '@/lib/ledger/month-detail'
+
+/*
+  Loaded when a month is first pinned, not with the page. The panel is a table
+  the initial render never shows, and this file is a client component, which is
+  the side of the boundary where `dynamic()` actually splits (a server
+  component dynamically importing a client one does not). The placeholder
+  holds roughly the panel's height for the beat the chunk takes to arrive.
+*/
+const MonthDetailPanel = dynamic(
+  () => import('@/components/month-detail').then((mod) => mod.MonthDetailPanel),
+  { loading: () => <div aria-hidden="true" className="skeleton mt-4 h-40 border border-line" /> },
+)
 
 /**
  * The interactive half of the income and spending chart.
