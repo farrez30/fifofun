@@ -1,6 +1,7 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { updateTag } from 'next/cache'
+import { txTag } from '@/lib/queries/tags'
 import { z } from 'zod'
 import {
   SESSION_EXPIRED,
@@ -233,7 +234,7 @@ export async function updateEntry(
   if (error) return fail('Perubahannya gagal disimpan.', error.message)
   if (!data || data.length === 0) return fail('Transaksinya tidak ditemukan.')
 
-  revalidateEverywhere(row.id)
+  revalidateEverywhere(householdId)
   return {
     ok: true,
     message: 'Transaksinya disimpan.',
@@ -431,7 +432,7 @@ export async function splitEntry(
     .select('id')
   if (parentError) return fail('Transaksi aslinya gagal disembunyikan.', parentError.message)
 
-  revalidateEverywhere(parent.id)
+  revalidateEverywhere(householdId)
   return {
     ok: true,
     message: `Dipisah jadi ${plan.children.length} bagian.`,
@@ -504,7 +505,7 @@ export async function unsplitEntry(
   if (error) return fail('Transaksi aslinya gagal dikembalikan.', error.message)
   if (!data || data.length === 0) return fail('Transaksinya tidak ditemukan.')
 
-  revalidateEverywhere(id.data)
+  revalidateEverywhere(householdId)
   return {
     ok: true,
     message: `Digabungkan kembali dari ${childIds.length} bagian.`,
@@ -563,7 +564,7 @@ export async function restoreEntry(
     return fail('Transaksi itu tidak ditemukan, atau memang tidak terhapus.')
   }
 
-  revalidateEverywhere(id.data)
+  revalidateEverywhere(householdId)
   return {
     ok: true,
     message: 'Transaksinya dikembalikan.',
@@ -571,10 +572,11 @@ export async function restoreEntry(
   }
 }
 
-/** Every page that counts transactions is now stale, which is all of them. */
-function revalidateEverywhere(id: string) {
-  for (const path of ['/', '/laporan', '/tinjau', '/catat', '/dana', '/anggaran']) {
-    revalidatePath(path)
-  }
-  revalidatePath(`/transaksi/${id}`)
+/**
+ * Every page that counts transactions reads the ledger through the one tag,
+ * the detail page included (`getTransaction` carries it too). Expiring it
+ * also clears the client's router cache, so what streams back is the write.
+ */
+function revalidateEverywhere(householdId: string) {
+  updateTag(txTag(householdId))
 }

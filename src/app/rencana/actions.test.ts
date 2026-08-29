@@ -14,7 +14,13 @@ import { planFields } from '@/lib/planning/plan'
 const stub = createSupabaseStub()
 
 vi.mock('@/lib/supabase/server', () => ({ createClient: async () => stub.client }))
-vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
+vi.mock('next/cache', () => ({
+  revalidatePath: vi.fn(),
+  updateTag: vi.fn(),
+  revalidateTag: vi.fn(),
+  cacheTag: vi.fn(),
+  cacheLife: vi.fn(),
+}))
 
 const { savePlan, resetPlan } = await import('./actions')
 

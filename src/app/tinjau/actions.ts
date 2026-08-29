@@ -1,6 +1,7 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { updateTag } from 'next/cache'
+import { rulesTag, txTag } from '@/lib/queries/tags'
 import { z } from 'zod'
 import { directionRefusal, ruleAgreesWithDirection } from '@/lib/ledger/direction'
 import { findConflict, matches, normalise, splitByDirection, type Rule } from '@/lib/ledger/rules'
@@ -236,8 +237,9 @@ export async function applyCategory(
     }
   }
 
-  revalidatePath('/tinjau')
-  revalidatePath('/')
+  // Rules too: a remembered pattern was just written above.
+  updateTag(txTag(householdId))
+  updateTag(rulesTag(householdId))
 
   const left =
     disagree.length > 0
@@ -311,8 +313,7 @@ export async function categoriseOne(
 
   if (error) return fail('Gagal menyimpan kategorinya.', error.message)
 
-  revalidatePath('/tinjau')
-  revalidatePath('/')
+  updateTag(txTag(householdId))
   return { ok: true, message: `Masuk ke ${category.name as string}.`, applied: 1 }
 }
 
@@ -337,7 +338,7 @@ export async function deleteRule(
 
   if (error) return fail('Gagal menghapus aturannya.', error.message)
 
-  revalidatePath('/tinjau')
+  updateTag(rulesTag(ctx.householdId))
   return { ok: true, message: 'Aturannya dihapus. Kategori yang sudah tersimpan tidak berubah.' }
 }
 
@@ -459,9 +460,7 @@ export async function tidyLedger(
     }
   }
 
-  revalidatePath('/tinjau')
-  revalidatePath('/laporan')
-  revalidatePath('/')
+  updateTag(txTag(householdId))
 
   const notes = [
     resolved.held.length > 0

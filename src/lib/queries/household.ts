@@ -1,5 +1,7 @@
 import { cache } from 'react'
+import { cacheLife, cacheTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { budgetsTag, importsTag, planTag, txTag } from '@/lib/queries/tags'
 import { parseHue } from '@/lib/ledger/palette'
 import type { AccountKind, CashflowType, EntrySource, LedgerEntry } from '@/lib/ledger/types'
 import {
@@ -240,7 +242,15 @@ function escapeLike(value: string): string {
   return value.replace(/[\\%_]/g, (ch) => `\\${ch}`)
 }
 
-/** Transactions for a household, newest first. */
+/**
+ * Transactions for a household, newest first.
+ *
+ * Deliberately not `use cache: private`, along with every reader that feeds a
+ * balance (`getMatchingTransactions`, `getAllTransactions`, `getUsage`).
+ * These are the inputs every headline figure is computed from, and reading
+ * them fresh from the database on every render is what makes "never show a
+ * stale balance" trivially true instead of carefully true.
+ */
 export async function getTransactions(
   householdId: string,
   options: FetchOptions = {},
@@ -364,6 +374,10 @@ export async function countLedger(householdId: string): Promise<number> {
  * offset from zero rather than a real balance.
  */
 export async function getOpeningBalance(householdId: string): Promise<bigint> {
+  'use cache: private'
+  cacheTag(importsTag(householdId))
+  cacheLife({ stale: 30 })
+
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('import_batches')
@@ -389,6 +403,10 @@ export async function getBudgets(
   householdId: string,
   period: string,
 ): Promise<Record<string, bigint>> {
+  'use cache: private'
+  cacheTag(budgetsTag(householdId))
+  cacheLife({ stale: 30 })
+
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('budgets')
@@ -411,6 +429,10 @@ export async function getBudgets(
 export async function getLatestClosingBalance(
   householdId: string,
 ): Promise<{ closing: bigint; periodEnd: Date } | null> {
+  'use cache: private'
+  cacheTag(importsTag(householdId))
+  cacheLife({ stale: 30 })
+
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('import_batches')
@@ -607,6 +629,10 @@ export async function getTransaction(
   householdId: string,
   id: string,
 ): Promise<TransactionDetail | null> {
+  'use cache: private'
+  cacheTag(txTag(householdId))
+  cacheLife({ stale: 30 })
+
   const supabase = await createClient()
 
   const { data: row, error } = await supabase
@@ -662,6 +688,10 @@ export async function getTransaction(
 
 /** The most recent rows a person typed, for the page they typed them on. */
 export async function getManualEntries(householdId: string, limit = 10): Promise<TransactionRow[]> {
+  'use cache: private'
+  cacheTag(txTag(householdId))
+  cacheLife({ stale: 30 })
+
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('transactions')
@@ -722,6 +752,10 @@ function toDuplicateSide(row: Row): DuplicateSide {
  * than half rendered.
  */
 export async function getSuspectedDuplicates(householdId: string): Promise<DuplicatePair[]> {
+  'use cache: private'
+  cacheTag(txTag(householdId))
+  cacheLife({ stale: 30 })
+
   const supabase = await createClient()
 
   const { data: manual, error } = await supabase
@@ -807,6 +841,10 @@ export interface BudgetRow {
  * actuals are keyed by.
  */
 export async function getBudgetRows(householdId: string, period: string): Promise<BudgetRow[]> {
+  'use cache: private'
+  cacheTag(budgetsTag(householdId))
+  cacheLife({ stale: 30 })
+
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('budgets')
@@ -831,6 +869,10 @@ export async function getBudgetRows(householdId: string, period: string): Promis
  * loss than one that starts from something incoherent.
  */
 export async function getPlan(householdId: string): Promise<PlanValues | null> {
+  'use cache: private'
+  cacheTag(planTag(householdId))
+  cacheLife({ stale: 300 })
+
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('plans')

@@ -1,6 +1,7 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { updateTag } from 'next/cache'
+import { accountsTag, categoriesTag } from '@/lib/queries/tags'
 import { z } from 'zod'
 import { SESSION_EXPIRED, context, fail, isoDateField, senField, type ActionResult } from '@/lib/actions'
 import { ICON_NAMES } from '@/components/marks'
@@ -194,7 +195,7 @@ export async function createAccount(
 
   if (error) return keyClash(error, values.key) ?? fail('Akunnya gagal disimpan.', error.message)
 
-  revalidateSettings()
+  revalidateSettings(ctx.householdId)
   return { ok: true, message: `Akun ${values.name} dibuat.` }
 }
 
@@ -253,7 +254,7 @@ export async function updateAccount(
   if (error) return keyClash(error, values.key) ?? fail('Akunnya gagal disimpan.', error.message)
   if (!data || data.length === 0) return fail('Akun itu tidak ditemukan.')
 
-  revalidateSettings()
+  revalidateSettings(ctx.householdId)
   return {
     ok: true,
     message: `Akun ${values.name} disimpan.`,
@@ -291,7 +292,7 @@ export async function setAccountArchived(
   if (error) return fail('Akunnya gagal diarsipkan.', error.message)
   if (!data || data.length === 0) return fail('Akun itu tidak ditemukan.')
 
-  revalidateSettings()
+  revalidateSettings(ctx.householdId)
   return {
     ok: true,
     message: archive ? `Akun ${current.name} diarsipkan.` : `Akun ${current.name} dipakai lagi.`,
@@ -352,7 +353,7 @@ async function move(formData: FormData, table: 'accounts' | 'categories'): Promi
     if (error) return fail('Urutannya gagal disimpan.', error.message)
   }
 
-  revalidateSettings()
+  revalidateSettings(ctx.householdId)
   return { ok: true, message: 'Urutannya disimpan.' }
 }
 
@@ -399,7 +400,7 @@ export async function createCategory(
     return fail('Kategorinya gagal disimpan.', error.message)
   }
 
-  revalidateSettings()
+  revalidateSettings(ctx.householdId)
   return {
     ok: true,
     message: `Kategori ${values.name} dibuat.`,
@@ -496,7 +497,7 @@ export async function updateCategory(
       .select('id')
   }
 
-  revalidateSettings()
+  revalidateSettings(ctx.householdId)
   return {
     ok: true,
     message: `Kategori ${values.name} disimpan.`,
@@ -540,7 +541,7 @@ export async function setCategoryArchived(
     if (error) return fail('Kategorinya gagal diarsipkan.', error.message)
   }
 
-  revalidateSettings()
+  revalidateSettings(ctx.householdId)
   return {
     ok: true,
     message: archive
@@ -600,7 +601,8 @@ function readCategory(formData: FormData) {
   }
 }
 
-/** Accounts and categories are read by every page, so every page is stale now. */
-function revalidateSettings() {
-  revalidatePath('/', 'layout')
+/** Accounts and categories are read by every page; both tags cover them. */
+function revalidateSettings(householdId: string) {
+  updateTag(accountsTag(householdId))
+  updateTag(categoriesTag(householdId))
 }

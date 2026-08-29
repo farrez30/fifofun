@@ -1,6 +1,7 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { updateTag } from 'next/cache'
+import { categoriesTag } from '@/lib/queries/tags'
 import { z } from 'zod'
 import {
   SESSION_EXPIRED,
@@ -96,8 +97,8 @@ export async function setFundTarget(
   if (error) return fail('Targetnya gagal disimpan.', error.message)
   if (!data || data.length === 0) return fail('Pos itu tidak bisa diberi target.')
 
-  revalidatePath('/dana')
-  revalidatePath('/')
+  // Fund targets live on category rows, so that is the tag that moved.
+  updateTag(categoriesTag(ctx.householdId))
 
   if (mode === 'setoran') {
     return {

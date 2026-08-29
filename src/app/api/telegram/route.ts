@@ -1,5 +1,7 @@
 import { timingSafeEqual } from 'node:crypto'
+import { revalidateTag } from 'next/cache'
 import { NextResponse } from 'next/server'
+import { txTag } from '@/lib/queries/tags'
 import { formatIdr } from '@/lib/money'
 import { isFailure, parseQuickEntry } from '@/lib/telegram/parse'
 import { CASHFLOW_TYPES } from '@/lib/ledger/types'
@@ -238,6 +240,16 @@ export async function POST(request: Request) {
     await reply(message.chat.id, 'Gagal menyimpan. Coba lagi.')
     return NextResponse.json({ ok: true })
   }
+
+  /*
+    `revalidateTag`, not `updateTag`: that one is Server-Action-only and
+    throws here. The difference a reader can notice: a browser already open
+    on the app keeps its private-cache entries for up to their stale window
+    (30 seconds) before the bot's row appears on a navigation. Before tags
+    the equivalent bound was "until the next full navigation", so this is
+    not a regression, just a number.
+  */
+  revalidateTag(txTag(householdId), 'max')
 
   const direction = isIncoming ? 'Masuk' : 'Keluar'
   await reply(

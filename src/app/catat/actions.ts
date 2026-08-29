@@ -1,6 +1,7 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { updateTag } from 'next/cache'
+import { txTag } from '@/lib/queries/tags'
 import { z } from 'zod'
 import {
   SESSION_EXPIRED,
@@ -88,15 +89,13 @@ function firstIssue(error: z.ZodError): string {
   return error.issues[0]?.message ?? 'Isiannya belum lengkap.'
 }
 
-/** Every page that shows money, since a hand-typed row moves all of them. */
-function revalidateLedger() {
-  revalidatePath('/')
-  revalidatePath('/catat')
-  revalidatePath('/laporan')
-  revalidatePath('/dana')
-  revalidatePath('/anggaran')
-  revalidatePath('/tinjau')
-  revalidatePath('/transaksi/[id]', 'page')
+/**
+ * A hand-typed row moves every page that shows money, and they all read the
+ * ledger through the one tag. Expiring it also clears the client's router
+ * cache, so the figures on screen are the written ones (read your own write).
+ */
+function revalidateLedger(householdId: string) {
+  updateTag(txTag(householdId))
 }
 
 export async function recordEntry(
@@ -214,7 +213,7 @@ export async function recordEntry(
     return fail('Catatannya gagal disimpan.', error.message)
   }
 
-  revalidateLedger()
+  revalidateLedger(householdId)
   return {
     ok: true,
     message: `${formatIdr(input.amount)} tercatat ke ${category.name as string}.`,
@@ -251,7 +250,7 @@ export async function deleteEntry(
     )
   }
 
-  revalidateLedger()
+  revalidateLedger(ctx.householdId)
   return {
     ok: true,
     message: 'Catatannya dihapus.',
@@ -359,7 +358,7 @@ export async function adjustBalance(
     return fail('Penyesuaiannya gagal disimpan.', error.message)
   }
 
-  revalidateLedger()
+  revalidateLedger(householdId)
   return {
     ok: true,
     message: `Saldo ${account.name} ${adjustment.delta < 0n ? 'dikurangi' : 'ditambah'} ${formatIdr(size)}.`,
@@ -459,7 +458,7 @@ export async function mergeDuplicate(
     return fail('Kategorinya pindah, tapi catatan manualnya gagal dihapus.', hideError.message)
   }
 
-  revalidateLedger()
+  revalidateLedger(householdId)
   return {
     ok: true,
     message: 'Digabungkan. Baris dari bank yang dipakai, catatan manualnya dihapus.',
@@ -508,8 +507,7 @@ export async function keepBoth(
     return fail('Pasangan itu tidak ditemukan lagi.', 'Mungkin sudah diselesaikan di tab lain.')
   }
 
-  revalidatePath('/tinjau')
-  revalidatePath('/catat')
+  updateTag(txTag(householdId))
   return {
     ok: true,
     message: 'Keduanya dipertahankan sebagai dua transaksi berbeda.',

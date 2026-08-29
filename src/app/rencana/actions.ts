@@ -1,6 +1,7 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { updateTag } from 'next/cache'
+import { planTag } from '@/lib/queries/tags'
 import { z } from 'zod'
 import { SESSION_EXPIRED, context, fail, senField, type ActionResult } from '@/lib/actions'
 import {
@@ -136,7 +137,7 @@ export async function savePlan(
     return fail('Rencananya tidak tersimpan.', 'Coba muat ulang halaman, lalu simpan lagi.')
   }
 
-  revalidatePath('/rencana')
+  updateTag(planTag(ctx.householdId))
   return {
     ok: true,
     message: 'Rencana tersimpan.',
@@ -156,7 +157,7 @@ export async function resetPlan(): Promise<ActionResult> {
 
   if (error) return fail('Rencananya gagal dihapus.', error.message)
 
-  revalidatePath('/rencana')
+  updateTag(planTag(ctx.householdId))
   // Deleting a plan that is not there is the state the caller wanted anyway.
   return {
     ok: true,

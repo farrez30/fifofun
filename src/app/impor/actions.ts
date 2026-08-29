@@ -1,7 +1,8 @@
 'use server'
 
 import { createHash } from 'node:crypto'
-import { revalidatePath } from 'next/cache'
+import { updateTag } from 'next/cache'
+import { importsTag, rulesTag, txTag } from '@/lib/queries/tags'
 import { formatIdr } from '@/lib/money'
 import { toJakartaInstant } from '@/lib/datetime'
 import { findLikelyDuplicates } from '@/lib/ledger/conflicts'
@@ -435,10 +436,10 @@ export async function importStatement(
     }
   }
 
-  revalidatePath('/')
-  revalidatePath('/rencana')
-  revalidatePath('/tinjau')
-  revalidatePath('/catat')
+  // Rules too: the import bumps hit counts on the ones it applied.
+  updateTag(txTag(household.id))
+  updateTag(importsTag(household.id))
+  updateTag(rulesTag(household.id))
 
   return {
     ok: true,

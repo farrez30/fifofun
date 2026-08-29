@@ -1,6 +1,7 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { updateTag } from 'next/cache'
+import { budgetsTag } from '@/lib/queries/tags'
 import { z } from 'zod'
 import {
   SESSION_EXPIRED,
@@ -125,8 +126,7 @@ export async function saveBudgets(
     if (error) return fail('Sebagian anggaran gagal dihapus.', error.message)
   }
 
-  revalidatePath('/anggaran')
-  revalidatePath('/')
+  updateTag(budgetsTag(householdId))
 
   return {
     ok: true,
@@ -206,8 +206,7 @@ export async function copyBudgets(
     return fail('Anggarannya gagal disalin.', error.message)
   }
 
-  revalidatePath('/anggaran')
-  revalidatePath('/')
+  updateTag(budgetsTag(householdId))
 
   return {
     ok: true,
