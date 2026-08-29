@@ -23,7 +23,10 @@ import { CASHFLOW_TYPES } from '@/lib/ledger/types'
  * than anything derived from the request.
  */
 
-export const runtime = 'nodejs'
+/*
+  No `runtime` export: Cache Components refuses the segment config, and the
+  Node runtime this route needs (node:crypto above) is the default anyway.
+*/
 
 interface TelegramUpdate {
   message?: {

@@ -16,6 +16,9 @@ import { FundsPanel } from './funds-panel'
 import { FundsSkeleton } from './skeleton'
 
 export const metadata: Metadata = { title: 'Dana' }
+/* Blocks on runtime data by design; the why lives in src/app/page.tsx above `instant`. */
+export const instant = false
+
 
 /**
  * Savings, sinking funds and goals, with their progress read from the ledger.

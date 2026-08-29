@@ -9,6 +9,9 @@ import { CategoriesPanel, type CategoryView } from './categories-panel'
 import { SettingsSkeleton } from './skeleton'
 
 export const metadata: Metadata = { title: 'Pengaturan' }
+/* Blocks on runtime data by design; the why lives in src/app/page.tsx above `instant`. */
+export const instant = false
+
 
 /**
  * The two tables every other page reads.

@@ -5,6 +5,9 @@ import { getUser } from '@/lib/supabase/server'
 import { JoinForm } from './join-form'
 
 export const metadata: Metadata = { title: 'Gabung rumah tangga' }
+/* Blocks on runtime data by design; the why lives in src/app/page.tsx above `instant`. */
+export const instant = false
+
 
 /**
  * Where an account with no household lands.

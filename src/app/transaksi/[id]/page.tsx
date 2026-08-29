@@ -13,6 +13,9 @@ import { DeleteEntryButton, RestoreEntryButton, UnsplitButton } from './row-acti
 import { SplitForm } from './split-form'
 
 export const metadata: Metadata = { title: 'Ubah transaksi' }
+/* Blocks on runtime data by design; the why lives in src/app/page.tsx above `instant`. */
+export const instant = false
+
 
 /**
  * One transaction, in whatever state it is in.

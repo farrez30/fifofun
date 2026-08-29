@@ -5,6 +5,9 @@ import { getUser } from '@/lib/supabase/server'
 import { ImportForm } from './import-form'
 
 export const metadata: Metadata = { title: 'Impor' }
+/* Blocks on runtime data by design; the why lives in src/app/page.tsx above `instant`. */
+export const instant = false
+
 
 export default async function ImporPage() {
   const user = await getUser()

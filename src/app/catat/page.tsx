@@ -13,6 +13,9 @@ import { RecentEntries, type RecentEntry } from './recent-entries'
 import { EntrySkeleton } from './skeleton'
 
 export const metadata: Metadata = { title: 'Catat' }
+/* Blocks on runtime data by design; the why lives in src/app/page.tsx above `instant`. */
+export const instant = false
+
 
 /**
  * Money the e-Statement cannot see.

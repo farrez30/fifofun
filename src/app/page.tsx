@@ -47,6 +47,25 @@ import { DashboardSkeleton } from './skeleton'
 
 export const metadata: Metadata = { title: 'Ringkasan' }
 
+/*
+  Every page here blocks on runtime data by declaration, not by accident.
+
+  Under Cache Components a page is expected to prerender a static shell and
+  stream the dynamic parts into it, and the build fails on any page that reads
+  cookies before returning JSX unless it either wraps everything in Suspense
+  or opts out. This app opts out, for a reason that outranks the shell: the
+  content security policy in proxy.ts is built around a nonce minted per
+  request, with `strict-dynamic`, and a shell served from a cache cannot carry
+  a nonce that does not exist yet. Dropping the nonce for hash-based SRI would
+  be a security-posture change, not a performance tweak.
+
+  So the wins live elsewhere: the data layer caches per-household answers
+  (`use cache: private` in lib/queries), Server Actions expire them by tag,
+  and loading.tsx repaints the chrome instantly on navigation. The other
+  twelve pages export the same flag with a pointer to this comment.
+*/
+export const instant = false
+
 function EmptyState() {
   return (
     <div className="border border-line bg-surface p-10 text-center">

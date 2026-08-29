@@ -18,6 +18,9 @@ import { pageCount, pageHref, pageSlice, parsePage } from './paging'
 import { ReportSkeleton } from './skeleton'
 
 export const metadata: Metadata = { title: 'Laporan' }
+/* Blocks on runtime data by design; the why lives in src/app/page.tsx above `instant`. */
+export const instant = false
+
 
 /**
  * The spreadsheet's Period Summary, with the month restriction lifted.

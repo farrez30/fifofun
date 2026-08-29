@@ -26,6 +26,9 @@ import { QueueSkeleton } from './skeleton'
 import { TidyPanel } from './tidy-panel'
 
 export const metadata: Metadata = { title: 'Tinjau' }
+/* Blocks on runtime data by design; the why lives in src/app/page.tsx above `instant`. */
+export const instant = false
+
 
 /** Categories a person can assign. Transfers are decided by accounts, not choice. */
 const ASSIGNABLE = new Set([

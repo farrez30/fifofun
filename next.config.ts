@@ -21,6 +21,18 @@ const securityHeaders = [
 ]
 
 const nextConfig: NextConfig = {
+  /*
+    Cache Components. What this buys today is the data-layer cache: query
+    functions marked `use cache: private` keep their answers in the browser's
+    copy of the page, tagged per household, and Server Actions expire exactly
+    the tags their write touched (`updateTag`) instead of naming every path
+    that might read them. What it deliberately does not buy is a static shell:
+    the CSP nonce in proxy.ts is minted per request, and a shell served from a
+    CDN cannot carry one, so every page exports `instant = false` and stays
+    fully dynamic. See the block comment in src/app/page.tsx.
+  */
+  cacheComponents: true,
+
   experimental: {
     /*
       Holds a failed navigation or Server Action pending instead of throwing, and

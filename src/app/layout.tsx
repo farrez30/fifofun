@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next'
+import { headers } from 'next/headers'
 import { IBM_Plex_Mono, IBM_Plex_Sans } from 'next/font/google'
 import { ProgressiveWebApp } from '@/components/pwa'
 import './globals.css'
@@ -82,7 +83,23 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 }
 
-export default function RootLayout({ children }: LayoutProps<'/'>) {
+/* Allowed to block: the nonce read below makes the whole tree per-request. */
+export const instant = false
+
+export default async function RootLayout({ children }: LayoutProps<'/'>) {
+  /*
+    Read per request, on purpose, and load-bearing: the content security
+    policy is built around a nonce the proxy mints for each request, and a
+    document assembled at build time cannot carry a nonce that does not exist
+    yet. Touching the request headers here keeps every route dynamically
+    rendered under Cache Components — the framework then stamps the fresh
+    nonce into its own script tags, exactly as it did before the flag. Without
+    this line the build bakes a static shell whose scripts the policy refuses,
+    and the pages suite fails on real CSP violations. Do not remove it while
+    proxy.ts still speaks `strict-dynamic`.
+  */
+  await headers()
+
   return (
     <html lang="id" className={`${sans.variable} ${mono.variable}`}>
       <body className="min-h-dvh antialiased">

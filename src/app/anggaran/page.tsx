@@ -18,6 +18,9 @@ import { MonthNav } from './month-nav'
 import { BudgetSkeleton } from './skeleton'
 
 export const metadata: Metadata = { title: 'Anggaran' }
+/* Blocks on runtime data by design; the why lives in src/app/page.tsx above `instant`. */
+export const instant = false
+
 
 /**
  * What a month is allowed to cost.

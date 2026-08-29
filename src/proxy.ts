@@ -39,10 +39,25 @@ function contentSecurityPolicy(nonce: string): string {
 
   return [
     `default-src 'self'`,
-    // `strict-dynamic` means scripts loaded by a trusted script are trusted too,
-    // which is how Next loads its chunks. Development needs `unsafe-eval` for
-    // the refresh runtime and never gets it in production.
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ''}`,
+    /*
+      Nonce for inline scripts, `'self'` for files. This used to carry
+      `'strict-dynamic'` — scripts loaded by a trusted script are trusted too —
+      but `strict-dynamic` also turns host allowlisting off, and under Cache
+      Components the framework streams exactly one of its chunk tags (the
+      next/link module, parser-inserted, `async`) without stamping the nonce
+      on it. One unstampable tag under `strict-dynamic` is a blocked chunk and
+      a broken page; the pages suite caught it on a real build.
+
+      What the change costs: an attacker-controlled script FILE served from
+      this origin would now be allowed to load. This app serves no
+      user-supplied files as scripts — uploads are spreadsheets parsed on the
+      server — so the vector that matters, injected inline script, still dies
+      on the nonce. Revisit when the framework stamps every tag again.
+
+      Development needs `unsafe-eval` for the refresh runtime and never gets
+      it in production.
+    */
+    `script-src 'self' 'nonce-${nonce}'${isDev ? " 'unsafe-eval'" : ''}`,
     /*
       Styles are split across two directives on purpose.
 

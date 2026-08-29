@@ -6,6 +6,9 @@ import { createClient, getUser } from '@/lib/supabase/server'
 import { InvitesPanel } from './invites-panel'
 
 export const metadata: Metadata = { title: 'Undangan' }
+/* Blocks on runtime data by design; the why lives in src/app/page.tsx above `instant`. */
+export const instant = false
+
 
 /**
  * Who else is allowed in.

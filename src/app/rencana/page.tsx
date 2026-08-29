@@ -17,6 +17,9 @@ import { getUser } from '@/lib/supabase/server'
 import { PlannerSkeleton } from './skeleton'
 
 export const metadata: Metadata = { title: 'Rencana' }
+/* Blocks on runtime data by design; the why lives in src/app/page.tsx above `instant`. */
+export const instant = false
+
 
 function NoData({ reason }: { reason: string }) {
   return (
