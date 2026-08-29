@@ -220,9 +220,24 @@ function toTransactionRow(row: Row): TransactionRow {
 
 interface FetchOptions {
   from?: Date
+  /** Exclusive: rows strictly before this instant. */
   to?: Date
   limit?: number
   offset?: number
+  cashflows?: CashflowType[]
+  /** Category ids to keep; `null` keeps the rows that have no category. */
+  categoryIds?: (string | null)[]
+  /** Rows touching any of these accounts, on either side. */
+  accountIds?: string[]
+  /** Case-insensitive substring of the description. */
+  search?: string
+  /** Pass `false` to hide pass-through rows; anything else leaves them in. */
+  includePassThrough?: boolean
+}
+
+/** LIKE wildcards typed into the search box are text, not syntax. */
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, (ch) => `\\${ch}`)
 }
 
 /** Transactions for a household, newest first. */
@@ -241,6 +256,32 @@ export async function getTransactions(
 
   if (options.from) query = query.gte('occurred_at', options.from.toISOString())
   if (options.to) query = query.lt('occurred_at', options.to.toISOString())
+  if (options.cashflows?.length) query = query.in('cashflow', options.cashflows)
+
+  if (options.categoryIds?.length) {
+    const ids = options.categoryIds.filter((id): id is string => id !== null)
+    const wantsNull = options.categoryIds.includes(null)
+    // Ids are uuids, so the `or` list needs no quoting.
+    if (ids.length && wantsNull) {
+      query = query.or(`category_id.in.(${ids.join(',')}),category_id.is.null`)
+    } else if (ids.length) {
+      query = query.in('category_id', ids)
+    } else {
+      query = query.is('category_id', null)
+    }
+  }
+
+  if (options.accountIds?.length) {
+    const ids = options.accountIds.join(',')
+    query = query.or(`from_account_id.in.(${ids}),to_account_id.in.(${ids})`)
+  }
+
+  if (options.search?.trim()) {
+    query = query.ilike('description', `%${escapeLike(options.search.trim())}%`)
+  }
+
+  if (options.includePassThrough === false) query = query.eq('is_pass_through', false)
+
   if (options.limit !== undefined) {
     const start = options.offset ?? 0
     // `range` is inclusive at both ends, so the end index is one short.
@@ -272,6 +313,49 @@ export async function getAllTransactions(householdId: string): Promise<Transacti
   }
 
   return all.reverse()
+}
+
+/**
+ * Every transaction a filter matches, newest first.
+ *
+ * The report used to read the whole ledger and sieve it in JavaScript; this
+ * moves the sieve into the query so only the matched rows travel. The
+ * JavaScript predicate still runs over what comes back — the totals and the
+ * visible page must come from one array filtered by one piece of code, and a
+ * database filter accidentally looser than `matchesFilter` then costs
+ * bandwidth, not correctness.
+ *
+ * Empty id lists mean the name in the address bar matched nothing the
+ * household owns, so nothing can match — answered without a query.
+ */
+export async function getMatchingTransactions(
+  householdId: string,
+  options: FetchOptions = {},
+): Promise<TransactionRow[]> {
+  if (options.categoryIds?.length === 0 || options.accountIds?.length === 0) return []
+
+  const all: TransactionRow[] = []
+
+  for (let offset = 0; ; offset += PAGE_SIZE) {
+    const page = await getTransactions(householdId, { ...options, offset, limit: PAGE_SIZE })
+    all.push(...page)
+    if (page.length < PAGE_SIZE) break
+  }
+
+  return all
+}
+
+/** How many live rows the ledger holds, without fetching any of them. */
+export async function countLedger(householdId: string): Promise<number> {
+  const supabase = await createClient()
+  const { count, error } = await supabase
+    .from('transactions')
+    .select('id', { head: true, count: 'exact' })
+    .eq('household_id', householdId)
+    .is('deleted_at', null)
+
+  if (error || count === null) return 0
+  return count
 }
 
 /**

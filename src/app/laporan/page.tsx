@@ -4,9 +4,15 @@ import { Suspense } from 'react'
 import { AppShell } from '@/components/app-shell'
 import { PeriodReport } from '@/components/period-report'
 import { TablePager, TransactionTable } from '@/components/transaction-table'
-import { matchesFilter, summarisePeriod, type PeriodFilter } from '@/lib/ledger/period'
+import { matchesFilter, summarisePeriod, UNCATEGORISED, type PeriodFilter } from '@/lib/ledger/period'
 import { CASHFLOW_TYPES, type CashflowType } from '@/lib/ledger/types'
-import { getAccounts, getAllTransactions, getCategories, getHousehold } from '@/lib/queries/household'
+import {
+  countLedger,
+  getAccounts,
+  getCategories,
+  getHousehold,
+  getMatchingTransactions,
+} from '@/lib/queries/household'
 import { getUser } from '@/lib/supabase/server'
 import { pageCount, pageHref, pageSlice, parsePage } from './paging'
 
@@ -30,6 +36,17 @@ function asDate(value: string): Date | undefined {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return undefined
   const date = new Date(`${value}T00:00:00`)
   return Number.isNaN(date.getTime()) ? undefined : date
+}
+
+/**
+ * Midnight after the given day. `matchesFilter` keeps a row up to 23:59:59.999
+ * of the `to` date; the query's `to` is exclusive, so the same range is asked
+ * for as "strictly before the next midnight".
+ */
+function dayAfter(date: Date): Date {
+  const copy = new Date(date)
+  copy.setHours(24, 0, 0, 0)
+  return copy
 }
 
 const MAX_SEARCH = 100
@@ -74,12 +91,49 @@ async function Report({ params }: { params: Record<string, string | string[] | u
     redirect('/gabung')
   }
 
-  const [transactions, categories, accounts] = await Promise.all([
-    getAllTransactions(household.id),
-    getCategories(household.id),
-    // Archived ones too: a report over last year has to be able to name the
-    // wallet those rows were paid from, even if nobody uses it any more.
+  const [allCategories, accounts] = await Promise.all([
+    // Archived categories and accounts too: a report over last year has to be
+    // able to name the wallet those rows were paid from, and a filter link
+    // saved before a category was retired should keep finding its rows.
+    getCategories(household.id, { includeArchived: true }),
     getAccounts(household.id, { includeArchived: true }),
+  ])
+  // The pickers only offer what is current; the archived rows above exist so
+  // a name arriving in the address bar can still be translated to its id.
+  const categories = allCategories.filter((category) => category.archivedAt === null)
+
+  const filter = buildFilter(params)
+
+  /*
+    The filter speaks in names (they come from the address bar); the query
+    speaks in ids. A name that matches nothing the household owns translates
+    to an empty list, which getMatchingTransactions answers without a query.
+  */
+  const categoryIds = filter.categories
+    ? [
+        ...allCategories
+          .filter((category) => filter.categories?.includes(category.name))
+          .map((category) => category.id),
+        ...(filter.categories.includes(UNCATEGORISED) ? [null] : []),
+      ]
+    : undefined
+  const accountIds = filter.accounts
+    ? accounts
+        .filter((account) => filter.accounts?.includes(account.name))
+        .map((account) => account.id)
+    : undefined
+
+  const [transactions, ledgerSize] = await Promise.all([
+    getMatchingTransactions(household.id, {
+      from: filter.from,
+      to: filter.to ? dayAfter(filter.to) : undefined,
+      cashflows: filter.cashflows,
+      categoryIds,
+      accountIds,
+      search: filter.search,
+      includePassThrough: filter.includePassThrough === true ? undefined : false,
+    }),
+    countLedger(household.id),
   ])
 
   const accountNameById = new Map(accounts.map((account) => [account.id, account.name]))
@@ -89,12 +143,11 @@ async function Report({ params }: { params: Record<string, string | string[] | u
     toAccountName: tx.toAccountId ? (accountNameById.get(tx.toAccountId) ?? null) : null,
   }))
 
-  const filter = buildFilter(params)
-
   /*
     The same predicate the totals above are computed from, so the list can
-    never disagree with the figures it sits under. The rows are already newest
-    first from the query.
+    never disagree with the figures it sits under: the database narrowed the
+    set, this decides it. The rows arrive newest first, which is also the
+    order the pages read in.
   */
   const matched = enriched.filter((entry) => matchesFilter(entry, filter))
   const page = parsePage(params.hal)
@@ -128,7 +181,7 @@ async function Report({ params }: { params: Record<string, string | string[] | u
         raw={params}
         categories={categories.map((category) => category.name)}
         accounts={accounts.map((account) => account.name)}
-        ledgerSize={transactions.length}
+        ledgerSize={ledgerSize}
       />
 
       <section aria-labelledby="daftar">

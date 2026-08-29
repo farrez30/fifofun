@@ -2,15 +2,13 @@
  * Turning a filtered ledger into pages.
  *
  * The slicing happens in memory, over the same array the totals above the
- * table are computed from. That is a deliberate trade: the filters are applied
- * in JavaScript because several of them (the search, the pass-through rule)
- * cannot be expressed in one PostgREST query, and a page fetched separately
- * would be filtered by different code than the totals it sits under.
- *
- * The ceiling is real and worth writing down: this reads the whole ledger on
- * every request. At a few thousand rows that is one query and a few
- * milliseconds. Past roughly ten thousand, the swap is `getTransactions` with
- * a limit and an offset, and the filters have to move into the query with it.
+ * table are computed from. The filters now also run in the query
+ * (`getMatchingTransactions`), so only the matched rows travel — but
+ * `matchesFilter` still decides membership over what comes back, because a
+ * page fetched separately would be filtered by different code than the totals
+ * it sits under. The old ceiling — reading the whole ledger on every request —
+ * is gone; what remains in memory is the matched set, which is what the
+ * summary needs to exist anyway.
  */
 
 export const PAGE_SIZE = 50
