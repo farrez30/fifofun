@@ -284,6 +284,39 @@
     }
   }
 
+  /*
+    Two lines of touch feel, both from the sibling project's measured findings.
+
+    `touch-action: manipulation` drops the double-tap-to-zoom wait on
+    controls; panning and pinch both survive, only the double-tap heuristic
+    goes. `:where()` keeps the specificity at zero so a `touch-none` written
+    in markup still wins — the sheet grabber and the chart pins depend on
+    exactly that — and `:not(.touch-none)` says the same thing twice on
+    purpose, once for the cascade and once for the reader.
+
+    The tap highlight is Android's grey flash over the whole element box. On
+    a rounded control it paints as a hard-edged rectangle, which reads as a
+    rendering fault rather than feedback; every control here already shows
+    its own pressed state.
+  */
+  :where(
+      a,
+      button,
+      summary,
+      label,
+      select,
+      input,
+      textarea,
+      [role='button'],
+      [role='slider']
+    ):not(.touch-none) {
+    touch-action: manipulation;
+  }
+
+  :where(a, button, summary, [role='button']) {
+    -webkit-tap-highlight-color: transparent;
+  }
+
 
   ::selection {
     background-color: var(--color-accent-wash);

@@ -13,15 +13,16 @@ import type { NavHref } from '@/components/nav'
  * than leave the page. Getting that wrong does not degrade the gesture, it
  * breaks every diagram in the app.
  *
- * So the gesture declines in six situations, and the order matters only in
+ * So the gesture declines in seven situations, and the order matters only in
  * that the cheap checks come first:
  *
  *   1. a pointer that is not a finger, or a screen wide enough for the nav row
  *   2. a sheet is open, where a swipe means something else or nothing
  *   3. the gesture began inside something that can scroll sideways
  *   4. it began in the strip iOS keeps for its own back gesture
- *   5. it began in a form somebody has already typed into
- *   6. it was mostly vertical, or too short to be meant
+ *   5. it began in a row that owns its own horizontal gesture
+ *   6. it began in a form somebody has already typed into
+ *   7. it was mostly vertical, or too short to be meant
  *
  * The first four ask whether the gesture belongs to something else on the page.
  * The fifth asks what leaving would cost, which is a different question and was
@@ -129,6 +130,18 @@ export function dirtyFormAncestor(node: EventTarget | null): boolean {
  * unit runner lays nothing out. So the suite lifts this function's own source
  * into a page that has a real chart on it. Nothing else imports it.
  */
+/**
+ * Whether the press landed in a row that holds its own horizontal gesture —
+ * the action tray on a ledger card. An attribute rather than a real scroller,
+ * on purpose: the tray moves by transform, so `pannableAncestor` cannot see
+ * it, and making it a genuine `overflow-x` region would fail the phone
+ * suite's rule that transaction rows are never sideways-scrollable. Exported
+ * for that same suite, which lifts this source into a real page.
+ */
+export function swipeActionAncestor(node: EventTarget | null): boolean {
+  return node instanceof Element && node.closest('[data-swipe-actions]') !== null
+}
+
 export function pannableAncestor(node: EventTarget | null): boolean {
   let element = node instanceof Element ? node : null
 
@@ -165,6 +178,7 @@ export function useSwipeTabs(order: readonly NavHref[], current: NavHref) {
       if (document.querySelector('dialog[open]')) return
       if (inEdgeStrip(event.clientX, window.innerWidth)) return
       if (pannableAncestor(event.target)) return
+      if (swipeActionAncestor(event.target)) return
       if (dirtyFormAncestor(event.target)) return
 
       startX = event.clientX
