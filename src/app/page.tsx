@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
 import { AppShell } from '@/components/app-shell'
+import { StatCarousel } from '@/components/stat-carousel'
 import { TransactionTable } from '@/components/transaction-table'
 import { Balances } from '@/components/balances'
 import { CashflowChart } from '@/components/cashflow-chart'
@@ -229,7 +230,7 @@ async function Dashboard({ akun }: { akun: string }) {
           Bulan terakhir tercatat
           <span className="ml-2 font-normal text-ink-muted">{latest.month}</span>
         </h2>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCarousel>
           <Stat
             label="Pemasukan"
             sen={latest.statement.income}
@@ -274,7 +275,7 @@ async function Dashboard({ akun }: { akun: string }) {
               hint="Semua akun, turunan dari bulan sebelumnya. Berapa yang dipastikan bank ada di bagian Uangnya ada di mana."
             />
           )}
-        </div>
+        </StatCarousel>
       </section>
 
       {overdrawn.length > 0 || needsReview > 0 ? (

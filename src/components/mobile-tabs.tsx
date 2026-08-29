@@ -94,13 +94,20 @@ export function MobileTabs({ current, email, review }: Props) {
     if (event.pointerType === 'mouse') return
     dragFrom.current = event.clientY
     dragged.current = false
-    event.currentTarget.setPointerCapture(event.pointerId)
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId)
+    } catch {
+      // iOS throws for a pointer already released; the drag works uncaptured,
+      // capture only smooths a thumb that wanders off the grabber.
+    }
   }
 
   function grabberMove(event: React.PointerEvent<HTMLButtonElement>) {
     if (dragFrom.current === null || !sheet.current) return
     const down = Math.max(0, event.clientY - dragFrom.current)
     if (down > 4) dragged.current = true
+    // No transition while the finger holds the sheet: it follows, not chases.
+    sheet.current.style.transition = 'none'
     sheet.current.style.transform = down > 0 ? `translateY(${down}px)` : ''
   }
 
@@ -108,6 +115,9 @@ export function MobileTabs({ current, email, review }: Props) {
     if (dragFrom.current === null || !sheet.current) return
     const down = event.clientY - dragFrom.current
     dragFrom.current = null
+    // Released short of the threshold, the sheet eases home instead of
+    // teleporting; the global reduced-motion block collapses the ease.
+    sheet.current.style.transition = ''
     sheet.current.style.transform = ''
     if (down > 96) sheet.current.close()
   }
@@ -237,7 +247,7 @@ export function MobileTabs({ current, email, review }: Props) {
         tabIndex={-1}
         /* A dialog centres itself. `mt-auto mb-0` drops it to the bottom edge,
            where the hand that opened it already is. */
-        className="mx-auto mb-0 mt-auto w-full max-w-none rounded-t-md border-t border-line bg-surface p-0 text-ink backdrop:bg-scrim sm:hidden"
+        className="mx-auto mb-0 mt-auto w-full max-w-none rounded-t-md border-t border-line bg-surface p-0 text-ink transition-transform duration-150 backdrop:bg-scrim sm:hidden"
         /* A click that lands on the dialog itself landed on the backdrop: every
            child covers its own area. */
         onClick={(event) => {

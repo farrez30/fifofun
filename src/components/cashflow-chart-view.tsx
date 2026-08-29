@@ -1,20 +1,16 @@
 'use client'
 
-import dynamic from 'next/dynamic'
 import { useRef, useState, type KeyboardEvent } from 'react'
-import type { MonthDetail } from '@/lib/ledger/month-detail'
-
 /*
-  Loaded when a month is first pinned, not with the page. The panel is a table
-  the initial render never shows, and this file is a client component, which is
-  the side of the boundary where `dynamic()` actually splits (a server
-  component dynamically importing a client one does not). The placeholder
-  holds roughly the panel's height for the beat the chunk takes to arrive.
+  A static import on purpose, after trying the dynamic one: the latest month
+  arrives already pinned, so the panel is on screen from the first paint and
+  splitting it out only traded a server-rendered table for a placeholder that
+  blinked on every dashboard load — and broke the fixture corpus, which
+  renders this tree statically. A split pays where the code waits for a user;
+  this code does not wait.
 */
-const MonthDetailPanel = dynamic(
-  () => import('@/components/month-detail').then((mod) => mod.MonthDetailPanel),
-  { loading: () => <div aria-hidden="true" className="skeleton mt-4 h-40 border border-line" /> },
-)
+import { MonthDetailPanel } from '@/components/month-detail'
+import type { MonthDetail } from '@/lib/ledger/month-detail'
 
 /**
  * The interactive half of the income and spending chart.
