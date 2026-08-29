@@ -2,6 +2,7 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import type { ReactElement } from 'react'
 import { AppShell } from '@/components/app-shell'
 import { ShellFallback } from '@/components/shell-fallback'
+import { StatCarousel } from '@/components/stat-carousel'
 import { DashboardSkeleton } from '@/app/skeleton'
 import { BillsPanel } from '@/components/bills-panel'
 import { ReceivablesPanel } from '@/components/receivables-panel'
@@ -610,6 +611,8 @@ const TABLE_ROWS = [
   tableRow('tx-5', 'Bagian dari struk', idr('50.000,00'), { splitOf: 'tx-1' }),
   // An account that no lookup will find, which must not read as a blank cell.
   tableRow('tx-6', 'Dari akun yang hilang', idr('12.000,00'), { fromAccountId: 'acc-hilang' }),
+  // A typed row, so the swipe tray's Hapus variant renders and gets measured.
+  tableRow('tx-8', 'Parkir motor', idr('2.000,00'), { source: 'manual' }),
 ]
 
 const BANK_ENTRY: EntryView = {
@@ -1377,7 +1380,9 @@ export const FIXTURES = {
     <BudgetBullet review={OVERCOMMITTED} caption="Per kategori" income={idr('6.000.000,00')} />
   ),
   stats: (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    // Through the carousel, the way the dashboard mounts them, so the deck's
+    // geometry and its pannable ownership face the phone suite.
+    <StatCarousel>
       <Stat
         label="Pemasukan"
         sen={idr('8.171.629,00')}
@@ -1395,7 +1400,7 @@ export const FIXTURES = {
       <Stat label="Tagihan" sen={idr('2.690.151,00')} previous={idr('2.690.151,00')} />
       {/* No earlier month at all, on the first month a household records. */}
       <Stat label="Sisa uang" sen={idr('5.151.154,00')} emphasis />
-    </div>
+    </StatCarousel>
   ),
   waterfall: <Waterfall statement={FEBRUARY} caption="Sisa uang Februari" />,
   'balance-trend': <BalanceTrend series={BALANCES} caption="Saldo di akhir tiap bulan" />,

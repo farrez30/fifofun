@@ -21,7 +21,9 @@ test.describe('tabel transaksi', () => {
     await open(page, 'transaction-table')
     const links = page.locator('tbody a')
 
-    await expect(links).toHaveCount(6)
+    // Seven rows: the six originals plus the typed one that exists so the
+    // swipe tray's Hapus variant renders in the corpus.
+    await expect(links).toHaveCount(7)
     await expect(links.first()).toHaveAttribute('href', '/transaksi/tx-1')
   })
 

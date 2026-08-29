@@ -1,8 +1,10 @@
 import Link from 'next/link'
 import { SignedMoney } from '@/components/money'
 import { AccountMark, CategoryMark } from '@/components/marks'
+import { SwipeActionRow, TrayDelete } from '@/components/swipe-action-row'
 import { formatJakarta } from '@/lib/datetime'
 import { signedDirection } from '@/lib/ledger/direction'
+import { editableFields } from '@/lib/ledger/edit'
 import { categoryHue, categoryIcon } from '@/lib/ledger/palette'
 import type { TransactionRow } from '@/lib/queries/household'
 import type { AccountKind, CashflowType } from '@/lib/ledger/types'
@@ -85,46 +87,73 @@ export function TransactionTable({ rows, accounts, categories, caption, emptyTex
       >
         {rows.map((row) => {
           const category = categoryOf(row, categoryById)
+          /*
+            The tray mirrors what the row can actually take: Ubah always (the
+            same place the card tap goes, one reveal away instead of hidden),
+            Hapus only where `editableFields` grants removal — a bank row's
+            tray offers no delete rather than a delete that scolds. Everything
+            here is reachable without the gesture too, on the detail page.
+
+            recent-entries and the review queue deliberately have no tray: the
+            first already shows its Hapus as a visible button, the second's
+            action needs a category picked first, which a tray cannot carry.
+          */
+          const removable = editableFields({ source: row.source, cashflow: row.cashflow }).remove
 
           return (
             <li key={row.id}>
-              {/* The whole card is the link. The description alone was a 20px
-                  target, and it was the only way into a transaction. */}
-              <Link
-                href={`/transaksi/${row.id}`}
-                className="block min-h-14 px-3 py-2.5 transition-colors duration-150 hover:bg-sunken"
+              <SwipeActionRow
+                actions={
+                  <>
+                    <Link
+                      href={`/transaksi/${row.id}`}
+                      className="flex h-full min-w-20 items-center justify-center border-l border-line bg-sunken px-4 text-sm font-medium text-ink"
+                    >
+                      Ubah
+                      <span className="sr-only"> {row.description}</span>
+                    </Link>
+                    {removable ? <TrayDelete id={row.id} description={row.description} /> : null}
+                  </>
+                }
               >
-                <div className="flex items-baseline justify-between gap-3">
-                  <span className="min-w-0 flex-1 truncate text-sm text-ink">
-                    {row.description}
-                  </span>
-                  <SignedMoney
-                    sen={row.amount}
-                    direction={signedDirection(row.cashflow)}
-                    className="shrink-0 text-sm"
-                  />
-                </div>
+                {/* The whole card is the link. The description alone was a 20px
+                    target, and it was the only way into a transaction. */}
+                <Link
+                  href={`/transaksi/${row.id}`}
+                  className="block min-h-14 px-3 py-2.5 transition-colors duration-150 hover:bg-sunken"
+                >
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="min-w-0 flex-1 truncate text-sm text-ink">
+                      {row.description}
+                    </span>
+                    <SignedMoney
+                      sen={row.amount}
+                      direction={signedDirection(row.cashflow)}
+                      className="shrink-0 text-sm"
+                    />
+                  </div>
 
-                <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-muted">
-                  <span className="tnum">{formatJakarta(row.occurredAt, 'date')}</span>
-                  <span aria-hidden="true" className="text-ink-faint">
-                    ·
-                  </span>
-                  <CategoryMark
-                    name={category.name}
-                    cashflow={row.cashflow}
-                    icon={category.icon}
-                    hue={category.hue}
-                    className="min-w-0"
-                  />
-                  <span aria-hidden="true" className="text-ink-faint">
-                    ·
-                  </span>
-                  <Accounts row={row} accountById={accountById} />
-                </div>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-muted">
+                    <span className="tnum">{formatJakarta(row.occurredAt, 'date')}</span>
+                    <span aria-hidden="true" className="text-ink-faint">
+                      ·
+                    </span>
+                    <CategoryMark
+                      name={category.name}
+                      cashflow={row.cashflow}
+                      icon={category.icon}
+                      hue={category.hue}
+                      className="min-w-0"
+                    />
+                    <span aria-hidden="true" className="text-ink-faint">
+                      ·
+                    </span>
+                    <Accounts row={row} accountById={accountById} />
+                  </div>
 
-                <RowTags row={row} className="mt-1.5 flex flex-wrap gap-1.5" />
-              </Link>
+                  <RowTags row={row} className="mt-1.5 flex flex-wrap gap-1.5" />
+                </Link>
+              </SwipeActionRow>
             </li>
           )
         })}

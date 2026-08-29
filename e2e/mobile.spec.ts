@@ -1,7 +1,7 @@
 import { readFile, readdir } from 'node:fs/promises'
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
-import { dirtyFormAncestor, pannableAncestor } from '../src/components/use-swipe-tabs'
+import { dirtyFormAncestor, pannableAncestor, swipeActionAncestor } from '../src/components/use-swipe-tabs'
 import { FIXTURE_DIR } from './render'
 
 /**
@@ -416,8 +416,11 @@ test('the swipe stands aside exactly where the page can be panned', async ({ pag
           }
         }
 
-        // And the opposite error, which is the gesture quietly disappearing:
-        // the ledger scrolls nowhere, so a swipe across it is a swipe.
+        // And the opposite error: a ledger row must never be a REAL sideways
+        // scroller. Its action tray moves by transform and claims the gesture
+        // through `swipeActionAncestor` (its own test below); a genuine
+        // overflow here would hand the row to this rule instead and hide the
+        // tray behind native scrolling.
         for (const row of document.querySelectorAll('a[href^="/transaksi/"]')) {
           if (decides(row)) {
             bad.push({ fixture: name, where: label(row), expected: 'left to the navigation' })
@@ -432,6 +435,50 @@ test('the swipe stands aside exactly where the page can be panned', async ({ pag
   }
 
   expect(wrong, 'swipes handed to the wrong owner').toEqual([])
+})
+
+test('the swipe stands aside inside a row action tray', async ({ page }) => {
+  /*
+    The seventh refusal: a ledger card owns its own horizontal gesture (the
+    action tray), so the tab swipe must decline there — and only there. Three
+    things pinned at once, same source-lifting idiom as the tests around it:
+
+    - every transaction card sits inside a `data-swipe-actions` wrapper, so
+      the row claims the press;
+    - the same card is still not a real scroller (`pannableAncestor` false) —
+      the invariant that keeps the tray a transform, because a refactor to a
+      genuine overflow region would pass the claim and break the no-sideways
+      rule above;
+    - a heading outside any row claims nothing, so the rest of the page still
+      swipes between tabs.
+  */
+  await open(page, 'transaction-table.html')
+  await page.addScriptTag({
+    content:
+      `window.__claims = ${swipeActionAncestor.toString()};` +
+      `window.__pannable = ${pannableAncestor.toString()}`,
+  })
+
+  const verdicts = await page.evaluate(() => {
+    const w = window as unknown as {
+      __claims: (n: Element) => boolean
+      __pannable: (n: Element) => boolean
+    }
+    const rows = [...document.querySelectorAll('ul a[href^="/transaksi/"]')]
+    const outside = document.querySelector('h1, caption, p') ?? document.body
+
+    return {
+      rows: rows.length,
+      claimed: rows.filter((row) => w.__claims(row)).length,
+      pannable: rows.filter((row) => w.__pannable(row)).length,
+      outsideClaimed: w.__claims(outside),
+    }
+  })
+
+  expect(verdicts.rows, 'the fixture has ledger cards to measure').toBeGreaterThan(0)
+  expect(verdicts.claimed, 'every card belongs to its tray').toBe(verdicts.rows)
+  expect(verdicts.pannable, 'no card is a real scroller').toBe(0)
+  expect(verdicts.outsideClaimed, 'the page outside rows still swipes').toBe(false)
 })
 
 test('the swipe stands aside once a form has work in it', async ({ page }) => {

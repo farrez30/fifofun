@@ -31,7 +31,9 @@ export function DeleteEntryButton({ id }: { id: string }) {
         dari e-Statement memang tidak bisa dihapus sama sekali.
       </p>
       <form action={action} className="mt-3 flex flex-wrap items-center gap-3">
-        <input type="hidden" name="id" value={id} />
+        {/* deleteEntry reads `transactionId`; this field carried `id` since the
+            page shipped, so the button always answered "tidak dikenali". */}
+        <input type="hidden" name="transactionId" value={id} />
         <Submit label="Ya, hapus" pendingLabel="Menghapus" />
         {result ? (
           <p role="status" className={`text-sm ${result.ok ? 'text-under' : 'text-over'}`}>
