@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { signOut } from '@/app/login/actions'
 import { MobileTabs } from '@/components/mobile-tabs'
 import { NAV, type NavHref } from '@/components/nav'
+import { countUnconfirmed } from '@/lib/queries/household'
 
 /**
  * The frame every signed-in page sits in.
@@ -42,6 +43,21 @@ interface Props {
 }
 
 export function AppShell({ title, email, current, lead, children }: Props) {
+  /* Below `sm` the heading would repeat the label the lit tab already shows,
+     500px apart. It stays in the markup for the reader and the outline, and
+     stays visible on any page that is not one of the tabs. */
+  const titled = NAV.find((item) => item.href === current)?.label === title
+
+  /*
+    Started, not awaited. Most pages render this shell before their data, so
+    that the frame paints while the figures are still being fetched, and a
+    badge worth having is not worth holding the whole page for. The promise
+    streams to the tab bar, where a Suspense boundary the size of the badge
+    reads it; until it lands, and anywhere it cannot land, there is simply no
+    badge.
+  */
+  const review = countUnconfirmed()
+
   return (
     /*
       The bottom padding clears the fixed bar. Without it the last row of every
@@ -53,7 +69,12 @@ export function AppShell({ title, email, current, lead, children }: Props) {
         {/* The account row is the tab bar's sheet on a phone, so it is not
             repeated here. */}
         <div className="flex flex-wrap items-baseline justify-between gap-4">
-          <p className="font-mono text-xs uppercase tracking-widest text-ink-faint">FiFoFun</p>
+          {/* The wordmark keeps the desktop header; on a phone the bar is the
+              furniture and the name is on the home screen icon. What a phone's
+              first screen needs is the figures the header was pushing down. */}
+          <p className="hidden font-mono text-xs uppercase tracking-widest text-ink-faint sm:block">
+            FiFoFun
+          </p>
           <form action={signOut} className="hidden items-baseline gap-3 sm:flex">
             <span className="text-sm text-ink-muted">{email}</span>
             <button
@@ -88,7 +109,13 @@ export function AppShell({ title, email, current, lead, children }: Props) {
           </ul>
         </nav>
 
-        <h1 className="mt-5 text-xl font-semibold tracking-tight text-ink">{title}</h1>
+        <h1
+          className={`text-xl font-semibold tracking-tight text-ink sm:mt-5 ${
+            titled ? 'sr-only sm:not-sr-only' : 'mt-2'
+          }`}
+        >
+          {title}
+        </h1>
         {lead ? <p className="mt-1 max-w-2xl text-sm text-ink-muted">{lead}</p> : null}
       </header>
 
@@ -164,7 +191,7 @@ export function AppShell({ title, email, current, lead, children }: Props) {
         </p>
       </footer>
 
-      <MobileTabs current={current} email={email} />
+      <MobileTabs current={current} email={email} review={review} />
     </div>
   )
 }

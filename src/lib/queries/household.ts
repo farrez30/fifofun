@@ -400,6 +400,42 @@ export interface UnconfirmedRow {
  * meant to reach. Nothing else uses it, and the caller that does refuses to
  * write over a category a person chose.
  */
+/**
+ * How many rows are waiting in Tinjau, and nothing else about them.
+ *
+ * For the badge on the tab bar. The shell starts this without awaiting it, so
+ * the page paints and the figure streams in behind it, which is why it
+ * resolves the household itself and why it never rejects: nothing upstream is
+ * positioned to catch it, and a badge is not worth an error page. `head: true`
+ * makes PostgREST return the count header without a single row.
+ *
+ * The filters must be the ones `getUnconfirmed` uses below: a badge that
+ * counts rows the queue will not list is a door that says occupied over an
+ * empty room.
+ */
+export async function countUnconfirmed(): Promise<number> {
+  try {
+    const household = await getHousehold()
+    if (!household) return 0
+
+    const supabase = await createClient()
+    const { count, error } = await supabase
+      .from('transactions')
+      .select('id', { count: 'exact', head: true })
+      .eq('household_id', household.id)
+      .is('deleted_at', null)
+      .neq('cashflow', 'transfer')
+      .neq('source', 'manual')
+      .is('confirmed_at', null)
+
+    return error ? 0 : (count ?? 0)
+  } catch {
+    // The fixture harness renders the shell with no request to read cookies
+    // from. It shows the badge's absence, which is also what it asserts on.
+    return 0
+  }
+}
+
 export async function getUnconfirmed(
   householdId: string,
   options: { includeSettled?: boolean } = {},
