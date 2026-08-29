@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { MAX_SEN, parseIdAmount } from '@/lib/money'
+import { authedUser } from '@/lib/supabase/auth-user'
 import { createClient } from '@/lib/supabase/server'
 
 /**
@@ -35,9 +36,7 @@ export const SESSION_EXPIRED = 'Sesi kamu sudah berakhir. Masuk lagi lalu ulangi
 /** The signed-in user and the household RLS lets them see, or null for either missing. */
 export async function context() {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await authedUser(supabase)
   if (!user) return null
 
   const { data: household } = await supabase

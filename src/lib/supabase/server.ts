@@ -1,5 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { cache } from 'react'
+import { authedUser, type AuthedUser } from '@/lib/supabase/auth-user'
 
 /**
  * Supabase client for Server Components, Server Actions and Route Handlers.
@@ -35,11 +37,18 @@ export async function createClient() {
   )
 }
 
-/** The signed-in user, or null. Never trust a session read from the client. */
-export async function getUser() {
+/**
+ * The signed-in user, or null. Never trust a session read from the client.
+ *
+ * Wrapped in React's `cache()` so one request answers this once no matter how
+ * many components ask — the app shell, the page, and a streamed child each
+ * call it, and without the wrapper each call was its own auth check. `cache()`
+ * rather than `'use cache'`/`unstable_cache`, deliberately: those refuse
+ * `cookies()` inside their scope, and every read here must run under the
+ * caller's own cookie session so RLS stays the authority. Per-request memoisation
+ * is the only cache that keeps that property.
+ */
+export const getUser = cache(async (): Promise<AuthedUser | null> => {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  return user
-}
+  return authedUser(supabase)
+})

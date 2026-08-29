@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { authedUser } from '@/lib/supabase/auth-user'
 
 /**
  * Two jobs on every request: refresh the Supabase session, and set the content
@@ -81,7 +82,25 @@ function contentSecurityPolicy(nonce: string): string {
   ].join('; ')
 }
 
+/**
+ * Per-request timings, published as a `Server-Timing` header.
+ *
+ * Every performance claim about this app so far has been argued from reading
+ * code; this header puts the breakdown in the browser's own Network panel, per
+ * navigation, in production — so "pindah menu terasa lambat" can be answered
+ * with a number instead of an opinion, and whoever migrates the Supabase JWT
+ * signing keys can watch `auth` collapse rather than take anyone's word for
+ * it. Two integers, no user data, cheap to leave on.
+ */
+function stampTimings(res: NextResponse, marks: Record<string, number>): NextResponse {
+  const parts = Object.entries(marks).map(([k, v]) => `${k};dur=${Math.round(v)}`)
+  if (parts.length) res.headers.set('Server-Timing', parts.join(', '))
+  return res
+}
+
 export async function proxy(request: NextRequest) {
+  const t0 = performance.now()
+  const marks: Record<string, number> = {}
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64')
   const csp = contentSecurityPolicy(nonce)
 
@@ -112,11 +131,16 @@ export async function proxy(request: NextRequest) {
     },
   )
 
-  // Reading the user is what triggers the refresh. Do not remove.
-  await supabase.auth.getUser()
+  // Reading the user is what triggers the refresh. Do not remove. The refresh
+  // itself happens in `getSession()` inside `getClaims()`, so going through
+  // `authedUser` keeps it while dropping the HTTPS round-trip to the auth
+  // service once the project's JWT keys are asymmetric — see auth-user.ts.
+  await authedUser(supabase)
+  marks.auth = performance.now() - t0
 
   response.headers.set('Content-Security-Policy', csp)
-  return response
+  marks.mw = performance.now() - t0
+  return stampTimings(response, marks)
 }
 
 export const config = {

@@ -9,6 +9,7 @@ import { resolveTidy } from '@/lib/ledger/tidy'
 import { groupRefusal } from '@/lib/queries/categories'
 import { getRules, getUnconfirmed } from '@/lib/queries/household'
 import { planLedgerTidy } from '@/lib/queries/tidy'
+import { authedUser } from '@/lib/supabase/auth-user'
 import { createClient } from '@/lib/supabase/server'
 
 /**
@@ -71,9 +72,7 @@ function fail(message: string, detail?: string): ActionResult {
 
 async function context() {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await authedUser(supabase)
   if (!user) return null
 
   const { data: household } = await supabase

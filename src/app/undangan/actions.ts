@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { expiryFrom, formatCode, generateCode, hashCode } from '@/lib/invites'
+import { authedUser } from '@/lib/supabase/auth-user'
 import { createClient } from '@/lib/supabase/server'
 
 /**
@@ -30,9 +31,7 @@ export interface IssueResult {
 
 async function context() {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await authedUser(supabase)
   if (!user) return null
 
   const { data: household } = await supabase

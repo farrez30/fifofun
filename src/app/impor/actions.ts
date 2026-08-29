@@ -10,6 +10,7 @@ import { firstMatch, type Rule } from '@/lib/ledger/rules'
 import { DEFAULT_CATEGORY_BY_KIND } from '@/lib/ledger/seed-data'
 import { parseMandiriStatement } from '@/lib/statement/mandiri-xlsx'
 import { statementToLedger } from '@/lib/statement/to-ledger'
+import { authedUser } from '@/lib/supabase/auth-user'
 import { createClient } from '@/lib/supabase/server'
 import { readXlsx } from '@/lib/xlsx'
 
@@ -107,9 +108,7 @@ export async function importStatement(
   }
 
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await authedUser(supabase)
   if (!user) return fail('Sesi kamu sudah berakhir. Masuk lagi lalu ulangi.')
 
   const { data: household } = await supabase

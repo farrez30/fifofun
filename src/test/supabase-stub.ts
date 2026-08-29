@@ -54,7 +54,13 @@ const WRITES = ['insert', 'update', 'upsert', 'delete'] as const
 
 export interface SupabaseStub {
   client: {
-    auth: { getUser: () => Promise<{ data: { user: { id: string } | null } }> }
+    auth: {
+      getUser: () => Promise<{ data: { user: { id: string } | null } }>
+      getClaims: () => Promise<{
+        data: { claims: { sub: string } } | null
+        error: null
+      }>
+    }
     from: (table: string) => unknown
     rpc: ReturnType<typeof vi.fn>
   }
@@ -129,7 +135,15 @@ export function createSupabaseStub(options: { user?: { id: string } | null } = {
 
   return {
     client: {
-      auth: { getUser: async () => ({ data: { user } }) },
+      auth: {
+        getUser: async () => ({ data: { user } }),
+        // Mirrors auth-js: a session answers with claims, no session answers
+        // `{ data: null, error: null }` — which authedUser treats as signed out.
+        getClaims: async () => ({
+          data: user ? { claims: { sub: user.id } } : null,
+          error: null,
+        }),
+      },
       from: (table: string) => builder(table),
       rpc: vi.fn(async () => ({ data: null, error: null })),
     },

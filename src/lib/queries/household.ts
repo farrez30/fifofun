@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { parseHue } from '@/lib/ledger/palette'
 import type { AccountKind, CashflowType, EntrySource, LedgerEntry } from '@/lib/ledger/types'
@@ -83,8 +84,14 @@ function toBigInt(value: unknown): bigint {
   return 0n
 }
 
-/** The household the signed-in user belongs to, or null if they have none yet. */
-export async function getHousehold(): Promise<HouseholdSummary | null> {
+/**
+ * The household the signed-in user belongs to, or null if they have none yet.
+ *
+ * React `cache()` because a dozen loaders ask this on a single render and the
+ * answer cannot change mid-request. Not `'use cache'`: that refuses the
+ * `cookies()` this read needs for RLS. Per-request memoisation only.
+ */
+export const getHousehold = cache(async (): Promise<HouseholdSummary | null> => {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('households')
@@ -94,7 +101,7 @@ export async function getHousehold(): Promise<HouseholdSummary | null> {
 
   if (error || !data) return null
   return data as HouseholdSummary
-}
+})
 
 export async function getAccounts(
   householdId: string,
