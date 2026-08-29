@@ -1,7 +1,7 @@
 import { cache } from 'react'
 import { cacheLife, cacheTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { budgetsTag, importsTag, planTag, txTag } from '@/lib/queries/tags'
+import { accountsTag, budgetsTag, categoriesTag, importsTag, planTag, rulesTag, txTag } from '@/lib/queries/tags'
 import { parseHue } from '@/lib/ledger/palette'
 import type { AccountKind, CashflowType, EntrySource, LedgerEntry } from '@/lib/ledger/types'
 import {
@@ -109,6 +109,10 @@ export async function getAccounts(
   householdId: string,
   options: ListOptions = {},
 ): Promise<AccountRow[]> {
+  'use cache: private'
+  cacheTag(accountsTag(householdId))
+  cacheLife({ stale: 300 })
+
   const supabase = await createClient()
   let query = supabase
     .from('accounts')
@@ -141,6 +145,10 @@ export async function getCategories(
   householdId: string,
   options: ListOptions = {},
 ): Promise<CategoryRow[]> {
+  'use cache: private'
+  cacheTag(categoriesTag(householdId))
+  cacheLife({ stale: 300 })
+
   const supabase = await createClient()
   let query = supabase
     .from('categories')
@@ -460,6 +468,10 @@ export interface RuleRow {
 }
 
 export async function getRules(householdId: string): Promise<RuleRow[]> {
+  'use cache: private'
+  cacheTag(rulesTag(householdId))
+  cacheLife({ stale: 300 })
+
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('categorization_rules')
@@ -553,6 +565,10 @@ export async function getUnconfirmed(
   householdId: string,
   options: { includeSettled?: boolean } = {},
 ): Promise<UnconfirmedRow[]> {
+  'use cache: private'
+  cacheTag(txTag(householdId))
+  cacheLife({ stale: 30 })
+
   const supabase = await createClient()
   const all: UnconfirmedRow[] = []
 

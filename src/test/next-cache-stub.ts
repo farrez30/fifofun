@@ -6,18 +6,18 @@
  * Server Action scope. The action tests exercise query order and scoping
  * against the Supabase stub, not the cache machinery, so here tagging and
  * expiring are no-ops. Wired up as an alias in vitest.config.mts.
+ *
+ * Declared without parameters on purpose: nothing imports this file's types,
+ * and a JavaScript function ignores extra arguments, so the callers' tags and
+ * profiles simply fall on the floor.
  */
 
-export function cacheTag(..._tags: string[]): void {}
+export function cacheTag(): void {}
 
-export function cacheLife(_profile: string | Record<string, number | undefined>): void {}
+export function cacheLife(): void {}
 
-export function updateTag(_tag: string): void {}
+export function updateTag(): void {}
 
-export function revalidateTag(_tag: string, _profile?: string): void {}
+export function revalidateTag(): void {}
 
-export function revalidatePath(_path: string, _type?: 'page' | 'layout'): void {}
-
-export function unstable_cache<T extends (...args: never[]) => unknown>(fn: T): T {
-  return fn
-}
+export function revalidatePath(): void {}
