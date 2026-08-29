@@ -2,21 +2,11 @@
 
 import { Suspense, use, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { ChartPieSlice } from '@phosphor-icons/react/dist/ssr/ChartPieSlice'
-import { CloudArrowUp } from '@phosphor-icons/react/dist/ssr/CloudArrowUp'
-import { Coins } from '@phosphor-icons/react/dist/ssr/Coins'
 import { DotsNine } from '@phosphor-icons/react/dist/ssr/DotsNine'
-import { Gear } from '@phosphor-icons/react/dist/ssr/Gear'
-import { ListChecks } from '@phosphor-icons/react/dist/ssr/ListChecks'
-import { NotePencil } from '@phosphor-icons/react/dist/ssr/NotePencil'
-import { Receipt } from '@phosphor-icons/react/dist/ssr/Receipt'
 import { SignOut } from '@phosphor-icons/react/dist/ssr/SignOut'
-import { Target } from '@phosphor-icons/react/dist/ssr/Target'
-import { UsersThree } from '@phosphor-icons/react/dist/ssr/UsersThree'
-import { Wallet } from '@phosphor-icons/react/dist/ssr/Wallet'
-import type { Icon } from '@phosphor-icons/react'
 import { signOut } from '@/app/login/actions'
 import { PullToRefresh } from '@/components/pull-to-refresh'
+import { SHEET, TAB, TABS } from '@/components/tabs'
 import { useSwipeTabs } from '@/components/use-swipe-tabs'
 import type { NavHref } from '@/components/nav'
 
@@ -43,39 +33,6 @@ import type { NavHref } from '@/components/nav'
  * nothing, so a reader on one of those six pages was hearing about a button
  * with no state at all while a sighted reader saw the tab lit up.
  */
-
-interface Tab {
-  href: NavHref
-  label: string
-  glyph: Icon
-}
-
-/*
-  Five is the ceiling. At 375px a sixth tab puts "Ringkasan" under 60px, which
-  is narrower than the word.
-*/
-const TABS: readonly Tab[] = [
-  { href: '/', label: 'Ringkasan', glyph: ChartPieSlice },
-  { href: '/laporan', label: 'Laporan', glyph: Receipt },
-  { href: '/catat', label: 'Catat', glyph: NotePencil },
-  // Catat and Tinjau are the two screens with work in them: one puts a row in,
-  // the other decides what a row is. A budget is set once a month and read from
-  // the summary for the rest of it, so it reaches further than a thumb should
-  // have to.
-  { href: '/tinjau', label: 'Tinjau', glyph: ListChecks },
-] as const
-
-/** Everything the bar has no room for, in the order it is reached for. */
-const SHEET: readonly Tab[] = [
-  { href: '/anggaran', label: 'Anggaran', glyph: Wallet },
-  { href: '/dana', label: 'Dana', glyph: Coins },
-  { href: '/rencana', label: 'Rencana', glyph: Target },
-  { href: '/impor', label: 'Impor', glyph: CloudArrowUp },
-  { href: '/pengaturan', label: 'Pengaturan', glyph: Gear },
-  { href: '/undangan', label: 'Undang anggota', glyph: UsersThree },
-] as const
-
-const TAB = 'flex h-16 flex-1 flex-col items-center justify-center gap-1 transition-colors duration-150'
 
 /* The order a thumb moves through, which is the order they are drawn in. */
 const SWIPE_ORDER = TABS.map((tab) => tab.href)

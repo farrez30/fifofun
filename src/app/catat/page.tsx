@@ -10,6 +10,7 @@ import { getAccounts, getCategories, getHousehold, getManualEntries } from '@/li
 import { getUser } from '@/lib/supabase/server'
 import { EntryForm } from './entry-form'
 import { RecentEntries, type RecentEntry } from './recent-entries'
+import { EntrySkeleton } from './skeleton'
 
 export const metadata: Metadata = { title: 'Catat' }
 
@@ -22,15 +23,6 @@ export const metadata: Metadata = { title: 'Catat' }
  * is where those payments get typed, and where a wallet balance that drifted
  * gets corrected.
  */
-
-function EntrySkeleton() {
-  return (
-    <div className="space-y-4" role="status" aria-busy="true" aria-label="Menyiapkan formulir">
-      <div className="skeleton h-96 border border-line" />
-      <div className="skeleton h-40 border border-line" />
-    </div>
-  )
-}
 
 async function Entry() {
   const household = await getHousehold()

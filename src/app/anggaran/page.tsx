@@ -15,6 +15,7 @@ import {
 import { getUser } from '@/lib/supabase/server'
 import { BudgetTable } from './budget-table'
 import { MonthNav } from './month-nav'
+import { BudgetSkeleton } from './skeleton'
 
 export const metadata: Metadata = { title: 'Anggaran' }
 
@@ -30,15 +31,6 @@ export const metadata: Metadata = { title: 'Anggaran' }
  * data, which is where the dashboard starts. Budgeting is about the month
  * being lived, and a link from the dashboard always carries its own `?bulan=`.
  */
-
-function BudgetSkeleton() {
-  return (
-    <div className="space-y-4" role="status" aria-busy="true" aria-label="Memuat anggaran">
-      <div className="skeleton h-12 border border-line" />
-      <div className="skeleton h-96 border border-line" />
-    </div>
-  )
-}
 
 async function Budgets({ params }: { params: Record<string, string | string[] | undefined> }) {
   const household = await getHousehold()

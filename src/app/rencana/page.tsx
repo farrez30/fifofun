@@ -14,22 +14,9 @@ import {
   getPlan,
 } from '@/lib/queries/household'
 import { getUser } from '@/lib/supabase/server'
+import { PlannerSkeleton } from './skeleton'
 
 export const metadata: Metadata = { title: 'Rencana' }
-
-function PlannerSkeleton() {
-  return (
-    <div className="space-y-8" role="status" aria-busy="true" aria-label="Menyiapkan simulasi">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="skeleton h-20 border border-line" />
-        ))}
-      </div>
-      <div className="skeleton h-72 border border-line" />
-      <div className="skeleton h-96 border border-line" />
-    </div>
-  )
-}
 
 function NoData({ reason }: { reason: string }) {
   return (

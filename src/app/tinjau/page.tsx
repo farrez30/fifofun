@@ -22,6 +22,7 @@ import { buildQueueOptions, toGroupOptions, type QueueOptions } from './query'
 import { QueueControls } from './queue-controls'
 import { ReviewQueue } from './review-queue'
 import { RulesList } from './rules-list'
+import { QueueSkeleton } from './skeleton'
 import { TidyPanel } from './tidy-panel'
 
 export const metadata: Metadata = { title: 'Tinjau' }
@@ -39,17 +40,6 @@ const ASSIGNABLE = new Set([
   'receivable_settled',
   'from_asset',
 ])
-
-function QueueSkeleton() {
-  return (
-    <div className="space-y-2" role="status" aria-busy="true" aria-label="Memuat antrean">
-      <div className="skeleton h-20 border border-line" />
-      {[0, 1, 2, 3, 4].map((i) => (
-        <div key={i} className="skeleton h-16 border border-line" />
-      ))}
-    </div>
-  )
-}
 
 async function Queue({ options }: { options: QueueOptions }) {
   const household = await getHousehold()

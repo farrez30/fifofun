@@ -1,6 +1,8 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import type { ReactElement } from 'react'
 import { AppShell } from '@/components/app-shell'
+import { ShellFallback } from '@/components/shell-fallback'
+import { DashboardSkeleton } from '@/app/skeleton'
 import { BillsPanel } from '@/components/bills-panel'
 import { ReceivablesPanel } from '@/components/receivables-panel'
 import { Stat } from '@/components/money'
@@ -1739,6 +1741,14 @@ const SHELL_FIXTURES: Record<string, ReactElement> = {
     <AppShell title="Rencana" email="rumah.tangga@contoh.com" current="/rencana">
       <p className="text-sm text-ink-muted">Isi halaman.</p>
     </AppShell>
+  ),
+  // What a route-level loading.tsx paints: the static chrome stand-in around a
+  // page skeleton. Its tab bar and account pill face the same geometry, axe and
+  // touch-floor sweeps as the real shell.
+  'shell-loading': (
+    <ShellFallback title="Ringkasan" current="/">
+      <DashboardSkeleton />
+    </ShellFallback>
   ),
 }
 

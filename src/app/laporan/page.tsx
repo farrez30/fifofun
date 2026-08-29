@@ -15,6 +15,7 @@ import {
 } from '@/lib/queries/household'
 import { getUser } from '@/lib/supabase/server'
 import { pageCount, pageHref, pageSlice, parsePage } from './paging'
+import { ReportSkeleton } from './skeleton'
 
 export const metadata: Metadata = { title: 'Laporan' }
 
@@ -69,16 +70,6 @@ export function buildFilter(params: Record<string, string | string[] | undefined
     search: first(params.cari).slice(0, MAX_SEARCH) || undefined,
     includePassThrough: first(params.titipan) === 'ya',
   }
-}
-
-function ReportSkeleton() {
-  return (
-    <div className="space-y-4" role="status" aria-busy="true" aria-label="Memuat laporan">
-      <div className="skeleton h-32 border border-line" />
-      <div className="skeleton h-24 border border-line" />
-      <div className="skeleton h-64 border border-line" />
-    </div>
-  )
 }
 
 async function Report({ params }: { params: Record<string, string | string[] | undefined> }) {

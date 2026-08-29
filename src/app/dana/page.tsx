@@ -13,6 +13,7 @@ import {
 } from '@/lib/queries/household'
 import { getUser } from '@/lib/supabase/server'
 import { FundsPanel } from './funds-panel'
+import { FundsSkeleton } from './skeleton'
 
 export const metadata: Metadata = { title: 'Dana' }
 
@@ -23,15 +24,6 @@ export const metadata: Metadata = { title: 'Dana' }
  * where the progress figure is typed in beside the target and drifts away from
  * the transactions that were supposed to produce it.
  */
-
-function FundsSkeleton() {
-  return (
-    <div className="space-y-4" role="status" aria-busy="true" aria-label="Memuat pos dana">
-      <div className="skeleton h-20 border border-line" />
-      <div className="skeleton h-96 border border-line" />
-    </div>
-  )
-}
 
 async function Funds() {
   const household = await getHousehold()

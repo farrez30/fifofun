@@ -6,6 +6,7 @@ import { getAccounts, getCategories, getHousehold, getUsage } from '@/lib/querie
 import { getUser } from '@/lib/supabase/server'
 import { AccountsPanel, type AccountView } from './accounts-panel'
 import { CategoriesPanel, type CategoryView } from './categories-panel'
+import { SettingsSkeleton } from './skeleton'
 
 export const metadata: Metadata = { title: 'Pengaturan' }
 
@@ -19,15 +20,6 @@ export const metadata: Metadata = { title: 'Pengaturan' }
  * the importer and the bot depend on, which are called out where they are set
  * rather than explained in a paragraph nobody reads.
  */
-
-function SettingsSkeleton() {
-  return (
-    <div className="space-y-8" role="status" aria-busy="true" aria-label="Memuat pengaturan">
-      <div className="skeleton h-64 border border-line" />
-      <div className="skeleton h-96 border border-line" />
-    </div>
-  )
-}
 
 async function Settings() {
   const household = await getHousehold()
