@@ -18,6 +18,15 @@ export async function expectMarksToRender(page: Page) {
     const bad: { axis: string; declared: string; measured: number; html: string }[] = []
 
     for (const node of document.querySelectorAll<HTMLElement>('[style]')) {
+      /*
+        Only marks the page is actually drawing. The tables grew card twins
+        that live behind `sm:hidden`, so at desktop width their share bars have
+        no boxes at all, which is not the failure this hunts: a collapsed bar
+        is in the layout and measures zero, an undrawn one is not in the layout
+        and has no client rects to measure.
+      */
+      if (node.getClientRects().length === 0) continue
+
       const box = node.getBoundingClientRect()
 
       for (const axis of ['height', 'width'] as const) {

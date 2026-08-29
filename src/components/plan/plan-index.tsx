@@ -51,7 +51,7 @@ export function PlanIndex({ sections }: { sections: PlanSection[] }) {
 
   return (
     <nav aria-label="Bagian rencana">
-      <ul data-pannable="true" className="flex gap-1 overflow-x-auto">
+      <ul className="flex gap-1 overflow-x-auto">
         {sections.map((section, index) => (
           <li key={section.id}>
             <a

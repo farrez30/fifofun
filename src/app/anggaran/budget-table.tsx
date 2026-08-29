@@ -315,6 +315,20 @@ function Context({
               <span className="text-ink-faint">belum ada</span>
             )}
           </span>
+
+          {/* The same bar the desktop column draws. It is the fastest read of
+              over versus under on the page, and it was the one thing the phone
+              lost when that column was hidden: for anyone who cannot separate
+              the warn colour from the accent, length is the signal that works
+              at arm's length. */}
+          {line.actual && line.actual.pct > 0 ? (
+            <span aria-hidden="true" className="block h-1 w-full bg-sunken">
+              <span
+                className={`block h-full ${line.actual.over ? 'bg-warn' : 'bg-accent'}`}
+                style={{ width: `max(2px, ${Math.min(100, line.actual.pct)}%)` }}
+              />
+            </span>
+          ) : null}
         </>
       ) : null}
     </span>

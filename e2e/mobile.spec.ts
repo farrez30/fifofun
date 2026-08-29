@@ -94,6 +94,24 @@ test('nothing widens the document', async ({ page }) => {
   expect(wide, `fixtures wider than the ${width}px screen`).toEqual([])
 })
 
+/*
+  The regions that are allowed to scroll sideways on a phone, each with the
+  reason it is a drawing rather than a ledger. This used to be a
+  `data-pannable` attribute in the markup, which had two problems: it shipped
+  test scaffolding into production HTML, and it let the component under test
+  silence the test. Two ledger tables were wearing it. Kept here as a list for
+  the same reason `INLINE_LINK` is: adding to it is a deliberate act with a
+  name attached, in the file whose job is to refuse.
+*/
+const PANNABLE = [
+  // The charts: axes drawn wider than a phone, keyboard-reachable by contract.
+  '[role="region"][aria-label*="bisa digeser"]',
+  // The Sankey, whose label is its caption: ribbons in an svg, panned as one.
+  '[role="region"]:has(> svg)',
+  // The plan's section chips: one row of links, panned the way iOS pans tabs.
+  'nav[aria-label="Bagian rencana"] > ul',
+]
+
 test('no table has to be dragged sideways to be read', async ({ page }) => {
   /*
     The check the overflow test cannot make.
@@ -103,8 +121,11 @@ test('no table has to be dragged sideways to be read', async ({ page }) => {
     the ledger is still read one column at a time. This is the one that fails
     when a table is added without the card list beside it.
 
-    A region that is meant to be panned says so in the markup with
-    `data-pannable`. A drawing is panned; a ledger is not.
+    A `<table>` inside the region fails it even when the region is on the
+    allowlist. That is the lesson of the two ledgers that spent a batch marked
+    as drawings: the person adding a table to a chart's scroller is exactly the
+    person who will not reopen this file, so the rule a label can express has
+    to hold structurally too. A drawing has no rows.
   */
   const dragged: { fixture: string; over: number; where: string }[] = []
 
@@ -112,27 +133,31 @@ test('no table has to be dragged sideways to be read', async ({ page }) => {
     await open(page, fixture)
 
     dragged.push(
-      ...(await page.evaluate((name) => {
-        const bad: { fixture: string; over: number; where: string }[] = []
+      ...(await page.evaluate(
+        ({ name, allowed }) => {
+          const bad: { fixture: string; over: number; where: string }[] = []
 
-        for (const node of document.querySelectorAll<HTMLElement>('*')) {
-          if (node.closest('[data-pannable]')) continue
+          for (const node of document.querySelectorAll<HTMLElement>('*')) {
+            const overflow = getComputedStyle(node).overflowX
+            if (overflow !== 'auto' && overflow !== 'scroll') continue
 
-          const overflow = getComputedStyle(node).overflowX
-          if (overflow !== 'auto' && overflow !== 'scroll') continue
+            const over = node.scrollWidth - node.clientWidth
+            if (over <= 1) continue
 
-          const over = node.scrollWidth - node.clientWidth
-          if (over <= 1) continue
+            const excused = allowed.some((sel) => node.matches(sel) || node.closest(sel))
+            if (excused && !node.querySelector('table')) continue
 
-          bad.push({
-            fixture: name,
-            over,
-            where: node.getAttribute('aria-label') ?? node.className.slice(0, 70),
-          })
-        }
+            bad.push({
+              fixture: name,
+              over,
+              where: node.getAttribute('aria-label') ?? node.className.slice(0, 70),
+            })
+          }
 
-        return bad
-      }, fixture)),
+          return bad
+        },
+        { name: fixture, allowed: PANNABLE },
+      )),
     )
   }
 
@@ -369,13 +394,15 @@ test('the swipe stands aside exactly where the page can be panned', async ({ pag
     await page.addScriptTag({ content: `window.__pannable = ${pannableAncestor.toString()}` })
 
     wrong.push(
-      ...(await page.evaluate((name) => {
+      ...(await page.evaluate(
+        ({ name, allowed }) => {
         const decides = (window as unknown as { __pannable: (n: Element) => boolean }).__pannable
         const bad: { fixture: string; where: string; expected: string }[] = []
         const label = (node: Element) =>
           `${node.tagName.toLowerCase()}.${node.className}`.slice(0, 60)
 
-        for (const region of document.querySelectorAll('[data-pannable]')) {
+        const regions = allowed.flatMap((sel) => [...document.querySelectorAll(sel)])
+        for (const region of regions) {
           // At this width the region may not overflow at all, and a region with
           // nothing to pan is not one the gesture has to stand aside for.
           if (region.scrollWidth <= region.clientWidth + 1) continue
@@ -398,7 +425,9 @@ test('the swipe stands aside exactly where the page can be panned', async ({ pag
         }
 
         return bad
-      }, fixture)),
+        },
+        { name: fixture, allowed: PANNABLE },
+      )),
     )
   }
 

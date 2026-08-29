@@ -171,8 +171,64 @@ export function ChildrenPanel({
         <h3 className="text-sm font-medium text-ink">Jarak antar anak</h3>
         <p className="mt-1 max-w-2xl text-sm text-ink-muted">{recommendation.reason}</p>
 
+        {/* Cards below `sm`, the same split as the ledger. This is a table of
+            verdicts, not a drawing, and it was being read one column at a time
+            on a phone. */}
+        <ul
+          aria-label="Jarak antar anak"
+          className="mt-3 divide-y divide-line border border-line bg-surface sm:hidden"
+        >
+          {spacing.map((option) => {
+            const style = VERDICT_STYLE[option.verdict]
+            const chosen = gaps.includes(option.years)
+            return (
+              <li key={option.years} className={`px-3 py-2.5 ${chosen ? 'bg-accent-wash' : ''}`}>
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="text-sm text-ink">
+                    <span className="tnum font-mono">{option.years}</span> tahun
+                    {chosen ? (
+                      <span className="ml-2 text-[0.625rem] uppercase tracking-wide text-accent">
+                        dipilih
+                      </span>
+                    ) : null}
+                  </span>
+                  <span
+                    className={`inline-flex shrink-0 items-center gap-1 rounded-xs border px-1.5 py-0.5 text-[0.625rem] uppercase tracking-wide ${style.chip}`}
+                  >
+                    <span aria-hidden="true">{style.glyph}</span>
+                    {style.label}
+                  </span>
+                </div>
+                <div className="mt-1 text-xs text-ink-muted">
+                  {option.collisions.length === 0 ? (
+                    'Tidak ada tabrakan uang pangkal'
+                  ) : (
+                    <>
+                      Tabrakan{' '}
+                      {option.collisions
+                        .map(
+                          (clash) =>
+                            `${clash.elderStage.toUpperCase()} + ${clash.youngerStage.toUpperCase()}`,
+                        )
+                        .join(', ')}
+                      {option.worstCollisionFee === 0n ? null : (
+                        <>
+                          {', terberat '}
+                          <span className="tnum font-mono">
+                            {formatIdrCompact(option.worstCollisionFee)}
+                          </span>
+                        </>
+                      )}
+                    </>
+                  )}
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+
         <div
-          data-pannable="true" className="relative mt-3 overflow-x-auto border border-line bg-surface"
+          className="relative mt-3 hidden overflow-x-auto border border-line bg-surface sm:block"
           tabIndex={0}
           role="region"
           aria-label="Tabel jarak antar anak, bisa digeser ke samping"
