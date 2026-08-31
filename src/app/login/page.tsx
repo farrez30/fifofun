@@ -7,6 +7,8 @@ import { LoginForm } from './login-form'
 export const metadata: Metadata = {
   title: 'Masuk',
 }
+/* Blocks on runtime data by design; the why lives in src/app/page.tsx above `instant`. */
+export const instant = false
 
 export default async function LoginPage() {
   if (await getUser()) redirect('/')

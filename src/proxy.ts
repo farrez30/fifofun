@@ -72,16 +72,18 @@ function contentSecurityPolicy(nonce: string): string {
       nonce. Inline styles are also a far weaker vector than inline scripts,
       which keep the nonce and `strict-dynamic`.
 
-      `next dev` fills the console with `style-src-elem` refusals and they are
-      expected. Turbopack hands the stylesheet to the page through JavaScript so
-      it can hot reload it, and a `<style>` element written at runtime has no
-      nonce to carry. A production build serves the same CSS as a file, which
-      `'self'` allows, and the pages suite asserts on a real build that nothing
-      is refused at all. So the noise is the development server, not the policy:
-      before chasing it, check whether it survives `next build`.
+      Development gets `unsafe-inline` for `<style>` elements instead of the
+      nonce (a nonce present would disable it, so the two cannot be combined).
+      Turbopack hands stylesheets to the page through JavaScript for hot
+      reload, and the Next dev-tools overlay styles itself the same way; under
+      the nonce rule both were refused, which filled the console with
+      expected noise and left the dev-tools badge rendering as a bare white
+      box. Production never relaxes: the build serves real CSS files, which
+      `'self'` allows, and the pages suite asserts on a real build that
+      nothing is refused at all.
     */
     `style-src 'self' 'nonce-${nonce}'`,
-    `style-src-elem 'self' 'nonce-${nonce}'`,
+    isDev ? `style-src-elem 'self' 'unsafe-inline'` : `style-src-elem 'self' 'nonce-${nonce}'`,
     `style-src-attr 'unsafe-inline'`,
     `img-src 'self' blob: data:`,
     // Fonts are self-hosted by next/font, so no external font origin is needed.
