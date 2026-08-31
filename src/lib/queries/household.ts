@@ -876,6 +876,34 @@ export async function getBudgetRows(householdId: string, period: string): Promis
 }
 
 /**
+ * Every stored budget row across a set of months, for the year strip. One
+ * indexed query instead of twelve. Callers pass the periods in a
+ * deterministic order (they are also the cache key); the rows come back
+ * unaggregated so the pure builder owns the arithmetic.
+ */
+export async function getBudgetsForPeriods(
+  householdId: string,
+  periods: string[],
+): Promise<{ period: string; amount: bigint }[]> {
+  'use cache: private'
+  cacheTag(budgetsTag(householdId))
+  cacheLife({ stale: 30 })
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('budgets')
+    .select('period, amount')
+    .eq('household_id', householdId)
+    .in('period', periods)
+
+  if (error || !data) return []
+  return data.map((row) => ({
+    period: row.period as string,
+    amount: toBigInt(row.amount),
+  }))
+}
+
+/**
  * The saved planner inputs, or null for a household that has never saved any.
  *
  * Null is also the answer when a stored framework, school track or lifestyle

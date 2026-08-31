@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useCallback, useState } from 'react'
 import { useFormStatus } from 'react-dom'
 import { CategoryMark } from '@/components/marks'
 import { BUTTON_PRIMARY, BUTTON_QUIET } from '@/components/field-base'
@@ -8,8 +8,10 @@ import { MoneyInput } from '@/components/money-input'
 import { formatMonthKey } from '@/lib/datetime'
 import { CASHFLOW_LABELS, type CashflowType } from '@/lib/ledger/types'
 import type { BudgetLineView, BudgetPlanView } from '@/lib/ledger/budget-plan'
+import type { MonthPace } from '@/lib/ledger/pace'
 import type { ActionResult } from '@/lib/actions'
 import { copyBudgets, saveBudgets } from './actions'
+import { BudgetSummary } from './budget-summary'
 
 /**
  * A month of budgets, decided as one set.
@@ -29,6 +31,40 @@ import { copyBudgets, saveBudgets } from './actions'
 export function BudgetTable({ plan }: { plan: BudgetPlanView }) {
   const [result, action] = useActionState<ActionResult | null, FormData>(saveBudgets, null)
   const label = formatMonthKey(plan.period)
+
+  /*
+    Every cell's amount, owned here instead of per cell, so the summary above
+    the table can sum what is being TYPED and answer at typing speed.
+
+    The `known` fingerprint is the same reconciliation the cells used to do
+    one by one, moved up a level, and it is load-bearing: after "salin bulan
+    lalu" the server confirms rows this state has never seen, the fingerprint
+    of the incoming lines differs, and everything resets to the copied
+    figures — without it the next Save would post the old zeroes back and
+    delete the copy it just made. The money input runs the same trick against
+    its own prop, one layer down.
+  */
+  const serverAmounts = plan.lines.map((line) => `${line.id}:${line.amount}`).join('|')
+  const [known, setKnown] = useState(serverAmounts)
+  const [amounts, setAmounts] = useState<Record<string, bigint>>(() =>
+    Object.fromEntries(plan.lines.map((line) => [line.id, BigInt(line.amount || '0')])),
+  )
+  if (serverAmounts !== known) {
+    setKnown(serverAmounts)
+    setAmounts(Object.fromEntries(plan.lines.map((line) => [line.id, BigInt(line.amount || '0')])))
+  }
+  const setOne = useCallback(
+    (id: string, sen: bigint) =>
+      setAmounts((prev) => (prev[id] === sen ? prev : { ...prev, [id]: sen })),
+    [],
+  )
+
+  // A reduce over a few dozen bigints per keystroke; not worth memoising.
+  const totalBudget = plan.lines.reduce((sum, line) => sum + (amounts[line.id] ?? 0n), 0n)
+  const totalOf = (cashflow: CashflowType) =>
+    plan.lines
+      .filter((line) => line.cashflow === cashflow)
+      .reduce((sum, line) => sum + (amounts[line.id] ?? 0n), 0n)
 
   const groups = (['spending', 'bills'] as CashflowType[])
     .map((cashflow) => ({ cashflow, rows: plan.lines.filter((line) => line.cashflow === cashflow) }))
@@ -50,6 +86,13 @@ export function BudgetTable({ plan }: { plan: BudgetPlanView }) {
           Angkanya akan terisi sendiri setelah satu bulan berjalan.
         </p>
       ) : null}
+
+      <BudgetSummary
+        plan={plan}
+        totalBudget={totalBudget}
+        spendingTotal={totalOf('spending')}
+        billsTotal={totalOf('bills')}
+      />
 
       <form action={action} className="space-y-3">
         <input type="hidden" name="period" value={plan.period} />
@@ -113,7 +156,15 @@ export function BudgetTable({ plan }: { plan: BudgetPlanView }) {
                   </th>
                 </tr>
                 {group.rows.map((line) => (
-                  <Row key={line.id} line={line} hasData={plan.hasData} hasHistory={plan.hasHistory} />
+                  <Row
+                    key={line.id}
+                    line={line}
+                    hasData={plan.hasData}
+                    hasHistory={plan.hasHistory}
+                    amount={amounts[line.id] ?? 0n}
+                    onAmount={setOne}
+                    pace={plan.pace}
+                  />
                 ))}
               </tbody>
             ))}
@@ -150,15 +201,40 @@ export function BudgetTable({ plan }: { plan: BudgetPlanView }) {
   )
 }
 
+/**
+ * The realisasi judged against the amount being TYPED, not the one saved.
+ * The server's own `line.actual` is the initial render (typed == saved at
+ * that moment, so the static markup is identical); from the first keystroke
+ * the denominator follows the field, which is the whole point of showing the
+ * bar next to an input.
+ */
+function judge(line: BudgetLineView, amount: bigint) {
+  if (line.actualSen === null || line.actual === null) return null
+  const spent = BigInt(line.actualSen)
+  return {
+    text: line.actual.text,
+    pct: amount > 0n ? Number((spent * 100n) / amount) : 0,
+    over: amount > 0n && spent > amount,
+  }
+}
+
 function Row({
   line,
   hasData,
   hasHistory,
+  amount,
+  onAmount,
+  pace,
 }: {
   line: BudgetLineView
   hasData: boolean
   hasHistory: boolean
+  amount: bigint
+  onAmount: (id: string, sen: bigint) => void
+  pace: MonthPace | null
 }) {
+  const actual = judge(line, amount)
+
   return (
     <tr className="border-b border-line last:border-0">
       <th scope="row" className="px-3 py-2 text-left font-normal text-ink sm:px-4">
@@ -168,7 +244,7 @@ function Row({
           icon={line.icon}
           hue={line.hue}
         />
-        <Context line={line} hasData={hasData} hasHistory={hasHistory} />
+        <Context line={line} hasData={hasData} hasHistory={hasHistory} actual={actual} pace={pace} />
       </th>
 
       <td className="tnum hidden whitespace-nowrap px-4 py-2 text-right font-mono text-ink-muted sm:table-cell">
@@ -198,16 +274,16 @@ function Row({
       </td>
 
       <td className="whitespace-nowrap px-3 py-2 text-right sm:px-4">
-        <BudgetCell line={line} />
+        <BudgetCell line={line} amount={amount} onAmount={onAmount} />
       </td>
 
       {hasData ? (
         <td className="hidden whitespace-nowrap px-4 py-2 text-right sm:table-cell">
 
-          {line.actual ? (
+          {actual ? (
             <>
               <span className="tnum font-mono text-ink">
-                {line.actual.over ? (
+                {actual.over ? (
                   <>
                     <span aria-hidden="true" className="mr-1 text-warn">
                       ▲
@@ -215,15 +291,31 @@ function Row({
                     <span className="sr-only">lewat anggaran: </span>
                   </>
                 ) : null}
-                {line.actual.text}
+                {actual.text}
+                {pace && line.projectedText ? (
+                  <span className="sr-only">
+                    ; sampai hari ke-{pace.day} dari {pace.days}, kalau ritmenya begini terus
+                    sekitar {line.projectedText} sampai akhir bulan
+                  </span>
+                ) : null}
               </span>
-              {line.actual.pct > 0 ? (
-                <span className="mt-1 block h-1 w-full bg-sunken">
+              {actual.pct > 0 ? (
+                <span className="relative mt-1 block h-1 w-full bg-sunken">
                   <span
                     data-budget={line.id}
-                    className={`block h-full ${line.actual.over ? 'bg-warn' : 'bg-accent'}`}
-                    style={{ width: `max(2px, ${Math.min(100, line.actual.pct)}%)` }}
+                    className={`block h-full ${actual.over ? 'bg-warn' : 'bg-accent'}`}
+                    style={{ width: `max(2px, ${Math.min(100, actual.pct)}%)` }}
                   />
+                  {/* Where in the month "today" sits: a bar visibly ahead of
+                      this hairline is spending faster than the calendar. */}
+                  {pace ? (
+                    <span
+                      aria-hidden="true"
+                      data-pace-mark
+                      className="absolute inset-y-0 w-px bg-ink"
+                      style={{ left: `${pace.elapsedPct}%` }}
+                    />
+                  ) : null}
                 </span>
               ) : null}
             </>
@@ -251,10 +343,15 @@ function Context({
   line,
   hasData,
   hasHistory,
+  actual,
+  pace,
 }: {
   line: BudgetLineView
   hasData: boolean
   hasHistory: boolean
+  /** Judged against the typed amount, by the row above. */
+  actual: { text: string; pct: number; over: boolean } | null
+  pace: MonthPace | null
 }) {
   return (
     <span className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs text-ink-muted sm:hidden">
@@ -299,9 +396,9 @@ function Context({
           </span>
           <span>
             realisasi{' '}
-            {line.actual ? (
-              <span className={`tnum font-mono ${line.actual.over ? 'text-ink' : ''}`}>
-                {line.actual.over ? (
+            {actual ? (
+              <span className={`tnum font-mono ${actual.over ? 'text-ink' : ''}`}>
+                {actual.over ? (
                   <>
                     <span aria-hidden="true" className="mr-0.5 text-warn">
                       ▲
@@ -309,7 +406,7 @@ function Context({
                     <span className="sr-only">lewat anggaran: </span>
                   </>
                 ) : null}
-                {line.actual.text}
+                {actual.text}
               </span>
             ) : (
               <span className="text-ink-faint">belum ada</span>
@@ -321,12 +418,18 @@ function Context({
               lost when that column was hidden: for anyone who cannot separate
               the warn colour from the accent, length is the signal that works
               at arm's length. */}
-          {line.actual && line.actual.pct > 0 ? (
-            <span aria-hidden="true" className="block h-1 w-full bg-sunken">
+          {actual && actual.pct > 0 ? (
+            <span aria-hidden="true" className="relative block h-1 w-full bg-sunken">
               <span
-                className={`block h-full ${line.actual.over ? 'bg-warn' : 'bg-accent'}`}
-                style={{ width: `max(2px, ${Math.min(100, line.actual.pct)}%)` }}
+                className={`block h-full ${actual.over ? 'bg-warn' : 'bg-accent'}`}
+                style={{ width: `max(2px, ${Math.min(100, actual.pct)}%)` }}
               />
+              {pace ? (
+                <span
+                  className="absolute inset-y-0 w-px bg-ink"
+                  style={{ left: `${pace.elapsedPct}%` }}
+                />
+              ) : null}
             </span>
           ) : null}
         </>
@@ -335,29 +438,25 @@ function Context({
   )
 }
 
-function BudgetCell({ line }: { line: BudgetLineView }) {
-
-  const [amount, setAmount] = useState(() => BigInt(line.amount || '0'))
-  /*
-    The figure this cell last agreed with the server about.
-
-    Without it, copying last month's budgets wrote rows the server confirmed
-    while every input still showed nothing, and the next Save posted those
-    zeroes back and deleted what had just been copied. The money input does the
-    same reconciliation against its own prop; this is the layer above it.
-  */
-  const [known, setKnown] = useState(line.amount)
-
-  if (line.amount !== known) {
-    setKnown(line.amount)
-    setAmount(BigInt(line.amount || '0'))
-  }
-
+/*
+  Stateless since the amounts moved up to the table (the summary needs to sum
+  them). The server-reconciliation that used to live here — the `known` trick
+  that keeps a copy from being deleted by the next Save — moved up with them.
+*/
+function BudgetCell({
+  line,
+  amount,
+  onAmount,
+}: {
+  line: BudgetLineView
+  amount: bigint
+  onAmount: (id: string, sen: bigint) => void
+}) {
   return (
     <MoneyInput
       label={`Anggaran ${line.name}`}
       value={amount}
-      onChange={setAmount}
+      onChange={(sen) => onAmount(line.id, sen)}
       name={`b-${line.id}`}
       size="sm"
       hideLabel

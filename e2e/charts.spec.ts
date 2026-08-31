@@ -140,6 +140,81 @@ test.describe('uang yang belum diberi pos', () => {
   })
 })
 
+test.describe('ringkasan alokasi anggaran', () => {
+  test('draws the typed total against typical income, with the pace of the month', async ({
+    page,
+  }) => {
+    await open(page, 'budget-table')
+
+    // The static default sums the saved budgets, so the fill and the income
+    // marker are both on screen before any hydration.
+    const fill = page.locator('[data-summary-fill]')
+    await expect(fill).toBeVisible()
+    expect(await fill.evaluate((node) => node.getBoundingClientRect().width)).toBeGreaterThan(1)
+    await expect(page.locator('[data-summary-income]')).toBeVisible()
+
+    // Day 15 of 31 in the fixture clock.
+    const paceText = await page.locator('[data-summary-pace]').innerText()
+    expect(paceText).toContain('Hari ke-15 dari 31')
+    expect(paceText).toContain('kalau ritmenya begini terus')
+  })
+
+  test('positions the pace hairline where the month actually is', async ({ page }) => {
+    await open(page, 'budget-table')
+
+    // 15/31 of the month elapsed; the mark should sit near halfway along its
+    // bar, measured rather than trusted.
+    const mark = page.locator('[data-pace-mark]').first()
+    const at = await mark.evaluate((node) => {
+      const bar = node.parentElement!.getBoundingClientRect()
+      const own = node.getBoundingClientRect()
+      return ((own.left - bar.left) / bar.width) * 100
+    })
+    expect(at).toBeGreaterThan(44)
+    expect(at).toBeLessThan(53)
+  })
+
+  test('says outright when the allocation cannot close', async ({ page }) => {
+    await open(page, 'budget-table-overcommitted')
+    const text = await page.locator('figure').first().innerText()
+
+    // Rp7,5 juta allocated against Rp6 juta of typical income.
+    expect(text).toContain('melewati pemasukan biasanya')
+    expect(text).toContain('Rp1.500.000')
+  })
+})
+
+test.describe('setahun ke belakang', () => {
+  test('draws every recorded month and marks the ones that broke their budget', async ({
+    page,
+  }) => {
+    await open(page, 'budget-year')
+
+    // Five months of history, each with a visible bar.
+    expect(await page.locator('[data-year-out]').count()).toBe(5)
+    for (const bar of await page.locator('[data-year-out]').all()) {
+      expect(await bar.evaluate((node) => node.getBoundingClientRect().height)).toBeGreaterThan(0)
+    }
+    // Four budget markers, one per budgeted month.
+    expect(await page.locator('[data-year-budget]').count()).toBe(4)
+
+    // The sr table keeps the three states apart: over, unbudgeted, absent.
+    const sr = await page.locator('figure table').innerText()
+    expect(sr).toContain('lewat anggaran')
+    expect(sr).toContain('tidak dianggarkan')
+    expect(sr).toContain('belum ada data')
+  })
+
+  test('pins the newest month by default and reads it out', async ({ page }) => {
+    await open(page, 'budget-year')
+
+    await expect(page.locator('[role="radio"][aria-checked="true"]')).toHaveCount(1)
+    const readout = await page.locator('figure > p').first().innerText()
+    expect(readout).toContain("Jul '26")
+    expect(readout).toContain('Buka anggarannya')
+  })
+})
+
 test.describe('perbandingan dengan bulan sebelumnya', () => {
   test('says which way each headline moved, and by how much', async ({ page }) => {
     await open(page, 'stats')
@@ -1365,6 +1440,8 @@ test.describe('lebar halaman', () => {
       'transaksi-edit-manual',
       'transaksi-split',
       'budget-table',
+      'budget-table-overcommitted',
+      'budget-year',
     ]) {
       await open(page, fixture)
 

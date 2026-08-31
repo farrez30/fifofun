@@ -42,7 +42,8 @@ const MONTHS: Record<string, number> = {
   des: 12,
 }
 
-function daysInMonth(year: number, month: number): number {
+/** Exported for the budget pace math; was a private validity helper first. */
+export function daysInMonth(year: number, month: number): number {
   return new Date(Date.UTC(year, month, 0)).getUTCDate()
 }
 

@@ -33,6 +33,9 @@ function plan(overrides: Partial<Parameters<typeof buildBudgetPlan>[0]> = {}) {
     history: HISTORY,
     saved: { 'c-belanja': idr('1.300.000,00') },
     previousSaved: { 'c-wifi': idr('300.000,00') },
+    income: idr('6.000.000,00'),
+    // Mid-month inside the edited period: day 15 of 31 in Jakarta.
+    now: new Date('2026-07-15T05:00:00Z'),
     ...overrides,
   })
 }
@@ -170,5 +173,48 @@ describe('buildBudgetPlan', () => {
       typeof value === 'bigint' ? '__bigint__' : value,
     )
     expect(seen).not.toContain('__bigint__')
+  })
+})
+
+describe('pace, income and projection', () => {
+  it('carries the income and the pace of the month being lived', () => {
+    const view = plan()
+    expect(view.incomeSen).toBe(idr('6.000.000,00').toString())
+    expect(view.incomeText).toBe('Rp6.000.000')
+    expect(view.pace).toEqual({ day: 15, days: 31, elapsedPct: (15 / 31) * 100 })
+  })
+
+  it('projects only the lines that have an actual, and sums exactly those', () => {
+    const view = plan()
+    const withActual = view.lines.filter((line) => line.actualSen !== null)
+    expect(withActual.length).toBeGreaterThan(0)
+    for (const line of view.lines) {
+      expect(line.projectedSen === null).toBe(line.actualSen === null)
+    }
+    // Day 15 of 31: linear doubling, floored by bigint division.
+    const belanja = view.lines.find((line) => line.id === 'c-belanja')
+    expect(belanja?.projectedSen).toBe(((idr('1.500.000,00') * 31n) / 15n).toString())
+
+    const summed = withActual.reduce((sum, line) => sum + BigInt(line.projectedSen ?? '0'), 0n)
+    expect(view.totalProjectedSen).toBe(summed.toString())
+  })
+
+  it('offers no projection for a month that is not being lived', () => {
+    const view = plan({ now: new Date('2026-09-10T05:00:00Z') })
+    expect(view.pace).toBeNull()
+    expect(view.totalProjectedSen).toBeNull()
+    expect(view.lines.every((line) => line.projectedSen === null)).toBe(true)
+  })
+
+  it('answers null income rather than a zero one', () => {
+    const view = plan({ income: null })
+    expect(view.incomeSen).toBeNull()
+    expect(view.incomeText).toBeNull()
+  })
+
+  it('mirrors the actual as raw sen for the client to re-judge', () => {
+    const view = plan()
+    const belanja = view.lines.find((line) => line.id === 'c-belanja')
+    expect(belanja?.actualSen).toBe(idr('1.500.000,00').toString())
   })
 })

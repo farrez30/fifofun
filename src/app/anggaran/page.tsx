@@ -3,19 +3,24 @@ import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
 import { AppShell } from '@/components/app-shell'
 import { buildBudgetPlan, parseMonthParam, type BudgetCategory } from '@/lib/ledger/budget-plan'
+import { buildBudgetYear } from '@/lib/ledger/budget-year'
 import { rollUpByMonthAndCategory } from '@/lib/ledger/categories'
 import { addMonths } from '@/lib/ledger/funds'
-import { monthKeyOf, monthKeyToString } from '@/lib/ledger/monthly'
+import { computeMonthlySeries, monthKeyOf, monthKeyToString } from '@/lib/ledger/monthly'
+import { typicalIncome } from '@/lib/ledger/snapshot'
 import {
   getAllTransactions,
   getBudgetRows,
+  getBudgetsForPeriods,
   getCategories,
   getHousehold,
+  getOpeningBalance,
 } from '@/lib/queries/household'
 import { getUser } from '@/lib/supabase/server'
 import { BudgetTable } from './budget-table'
 import { MonthNav } from './month-nav'
 import { BudgetSkeleton } from './skeleton'
+import { YearStrip } from './year-strip'
 
 export const metadata: Metadata = { title: 'Anggaran' }
 /* Blocks on runtime data by design; the why lives in src/app/page.tsx above `instant`. */
@@ -39,16 +44,28 @@ async function Budgets({ params }: { params: Record<string, string | string[] | 
   const household = await getHousehold()
   if (!household) redirect('/gabung')
 
-  const thisMonth = monthKeyToString(monthKeyOf(new Date()))
+  // One clock for the whole render: the month picker's default, the pace
+  // marker, and the projections must agree on what "now" is.
+  const now = new Date()
+  const thisMonth = monthKeyToString(monthKeyOf(now))
   const period = parseMonthParam(params.bulan, thisMonth)
   const previous = addMonths(period, -1)
+  // The twelve months the year strip shows, oldest first, ending at the one
+  // being edited. Deterministic order, so the private cache keys stably.
+  const yearPeriods = Array.from({ length: 12 }, (_, i) => addMonths(period, i - 11))
 
-  const [transactions, categories, saved, previousSaved] = await Promise.all([
-    getAllTransactions(household.id),
-    getCategories(household.id),
-    getBudgetRows(household.id, period),
-    getBudgetRows(household.id, previous),
-  ])
+  const [transactions, categories, saved, previousSaved, openingBalance, yearBudgets] =
+    await Promise.all([
+      getAllTransactions(household.id),
+      getCategories(household.id),
+      getBudgetRows(household.id, period),
+      getBudgetRows(household.id, previous),
+      getOpeningBalance(household.id),
+      getBudgetsForPeriods(household.id, yearPeriods),
+    ])
+
+  // The same figure /dana calls typical: the median month of recorded income.
+  const income = typicalIncome(computeMonthlySeries(transactions, openingBalance))
 
   const budgetable: BudgetCategory[] = categories
     .filter((category) => category.cashflow === 'spending' || category.cashflow === 'bills')
@@ -92,12 +109,17 @@ async function Budgets({ params }: { params: Record<string, string | string[] | 
     history,
     saved: Object.fromEntries(saved.map((row) => [row.categoryId, row.amount])),
     previousSaved: Object.fromEntries(previousSaved.map((row) => [row.categoryId, row.amount])),
+    income: income > 0n ? income : null,
+    now,
   })
+
+  const year = buildBudgetYear({ periods: yearPeriods, history, budgets: yearBudgets })
 
   return (
     <div className="space-y-5">
       <MonthNav period={period} thisMonth={thisMonth} />
       <BudgetTable plan={plan} />
+      <YearStrip view={year} />
     </div>
   )
 }

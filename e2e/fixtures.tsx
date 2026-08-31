@@ -47,6 +47,8 @@ import { PeriodReport } from '@/components/period-report'
 import { TidyPanel } from '@/app/tinjau/tidy-panel'
 import { summarisePeriod } from '@/lib/ledger/period'
 import { buildBudgetPlan, type BudgetCategory } from '@/lib/ledger/budget-plan'
+import { buildBudgetYear } from '@/lib/ledger/budget-year'
+import { YearStrip } from '@/app/anggaran/year-strip'
 import type { MonthCategoryTotals } from '@/lib/ledger/categories'
 import { EditEntryForm, type EntryView } from '@/app/transaksi/[id]/edit-form'
 import { SplitForm } from '@/app/transaksi/[id]/split-form'
@@ -534,6 +536,10 @@ const BUDGET_PLAN = buildBudgetPlan({
   // is what makes the copy button worth offering.
   saved: { 'c-belanja': idr('1.300.000,00'), 'c-wifi': idr('300.000,00') },
   previousSaved: { 'c-wifi': idr('300.000,00'), 'c-kosan': idr('1.800.000,00') },
+  income: idr('6.000.000,00'),
+  // Mid-month inside the edited period, so the pace marker and projections
+  // render deterministically: day 15 of 31 in Jakarta.
+  now: new Date('2026-07-15T05:00:00.000Z'),
 })
 
 // A household on its first month: no history to take a median from, and no
@@ -545,6 +551,55 @@ const BUDGET_PLAN_EMPTY = buildBudgetPlan({
   history: [],
   saved: {},
   previousSaved: {},
+  income: null,
+  now: new Date('2026-01-10T05:00:00.000Z'),
+})
+
+// Saved budgets past the typical income, so the summary's static default
+// state shows the over-commit callout with its triangle.
+const BUDGET_PLAN_OVER = buildBudgetPlan({
+  period: '2026-07',
+  previous: '2026-06',
+  categories: BUDGET_CATEGORIES,
+  history: BUDGET_HISTORY,
+  saved: { 'c-belanja': idr('5.000.000,00'), 'c-wifi': idr('2.500.000,00') },
+  previousSaved: {},
+  income: idr('6.000.000,00'),
+  now: new Date('2026-07-15T05:00:00.000Z'),
+})
+
+/*
+  A year with every state the strip distinguishes: months over their budget,
+  under it, spending with no budget, and no data at all.
+*/
+const BUDGET_YEAR = buildBudgetYear({
+  periods: [
+    '2025-08',
+    '2025-09',
+    '2025-10',
+    '2025-11',
+    '2025-12',
+    '2026-01',
+    '2026-02',
+    '2026-03',
+    '2026-04',
+    '2026-05',
+    '2026-06',
+    '2026-07',
+  ],
+  history: [
+    { month: '2026-02', byCategory: { 'c-belanja': idr('1.200.000,00') } },
+    { month: '2026-03', byCategory: { 'c-belanja': idr('2.400.000,00'), 'c-wifi': idr('300.000,00') } },
+    { month: '2026-05', byCategory: { 'c-belanja': idr('900.000,00') } },
+    { month: '2026-06', byCategory: { 'c-belanja': idr('1.500.000,00') } },
+    { month: '2026-07', byCategory: { 'c-belanja': idr('700.000,00') } },
+  ],
+  budgets: [
+    { period: '2026-03', amount: idr('1.800.000,00') },
+    { period: '2026-05', amount: idr('1.600.000,00') },
+    { period: '2026-06', amount: idr('1.000.000,00') },
+    { period: '2026-07', amount: idr('1.600.000,00') },
+  ],
 })
 
 /*
@@ -1610,6 +1665,8 @@ export const FIXTURES = {
   // list and the row that does not are both drawn.
   'budget-table': <BudgetTable plan={BUDGET_PLAN} />,
   'budget-table-empty': <BudgetTable plan={BUDGET_PLAN_EMPTY} />,
+  'budget-table-overcommitted': <BudgetTable plan={BUDGET_PLAN_OVER} />,
+  'budget-year': <YearStrip view={BUDGET_YEAR} />,
   'transaction-table': (
     <TransactionTable
       rows={TABLE_ROWS}
