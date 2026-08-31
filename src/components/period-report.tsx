@@ -17,9 +17,43 @@ interface Props {
   filter: PeriodFilter
   /** The query string as it arrived, so the form can show what was asked for. */
   raw: Record<string, string | string[] | undefined>
-  categories: string[]
+  /**
+   * Every category name a row can carry, with the group it rolls into.
+   *
+   * The group is the heading, exactly as the assignment pickers do it: a flat
+   * list puts "Belanja Harian" and "Jajan" side by side with nothing to say
+   * that the first is shopping and the second is eating, and leaves a child
+   * sitting next to a parent whose name it nearly repeats.
+   */
+  categories: { name: string; group: string | null }[]
   accounts: string[]
   ledgerSize: number
+}
+
+/**
+ * The names under their headings, in the order they arrived. A category with
+ * no group of its own gets one called "Lainnya" rather than floating above
+ * the headings, where a browser draws it as if it belonged to none of them.
+ */
+function groupedCategories(
+  categories: Props['categories'],
+): { label: string; names: string[] }[] {
+  const ordered: { label: string; names: string[] }[] = []
+  const byLabel = new Map<string, { label: string; names: string[] }>()
+
+  for (const category of categories) {
+    const label = category.group ?? 'Lainnya'
+    const existing = byLabel.get(label)
+    if (existing) {
+      existing.names.push(category.name)
+      continue
+    }
+    const group = { label, names: [category.name] }
+    byLabel.set(label, group)
+    ordered.push(group)
+  }
+
+  return ordered
 }
 
 function value(raw: Props['raw'], key: string): string {
@@ -145,10 +179,14 @@ export function PeriodReport({ summary, raw, categories, accounts, ledgerSize }:
             <span className={LABEL}>Kategori</span>
             <select name="kategori" defaultValue={value(raw, 'kategori')} className={FIELD}>
               <option value="">Semua</option>
-              {categories.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
+              {groupedCategories(categories).map((group) => (
+                <optgroup key={group.label} label={group.label}>
+                  {group.names.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
           </label>

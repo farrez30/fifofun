@@ -33,30 +33,66 @@ export function useStuck<T extends HTMLElement>(): [RefObject<T | null>, boolean
       to the top of the screen until they scroll all the way back up. One
       direct read at mount removes that whole class of failure.
     */
-    const rect = node.getBoundingClientRect()
-    if (rect.width !== 0 || rect.height !== 0) setStuck(rect.top < 0)
+    /*
+      One reading of the geometry, used by every path below. A sentinel inside
+      a hidden subtree measures all zeroes, which is not an answer about the
+      page — Cache Components keeps a departing route mounted and hidden — so
+      that reading is dropped and the last real one stands.
+    */
+    const measure = () => {
+      const rect = node.getBoundingClientRect()
+      if (rect.width === 0 && rect.height === 0 && rect.top === 0) return
+      setStuck(rect.top < 0)
+    }
 
-    if (typeof IntersectionObserver === 'undefined') return
+    measure()
+
+    /*
+      A scroll listener as well as the observer, and it is not redundant.
+
+      An IntersectionObserver only speaks when the intersection CHANGES, so a
+      single missed or stale callback is permanent: the sentinel is already
+      far above the viewport, nothing crosses anything again, and the dock
+      stays at full height over the content however far the reader scrolls.
+      That happened for real — a callback delivered in the same frame as a
+      scroll correction reported the sentinel as still visible — and the only
+      way out was scrolling all the way back to the top.
+
+      One `getBoundingClientRect` on one element, throttled to a frame, is what
+      every sticky header does; React drops the render when the boolean has
+      not changed, so the common case costs a rect and nothing else.
+    */
+    let frame = 0
+    const onScroll = () => {
+      if (frame) return
+      frame = requestAnimationFrame(() => {
+        frame = 0
+        measure()
+      })
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onScroll, { passive: true })
+
+    const stopListening = () => {
+      if (frame) cancelAnimationFrame(frame)
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onScroll)
+    }
+
+    if (typeof IntersectionObserver === 'undefined') return stopListening
 
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        /*
-          A zeroed rect means the sentinel sits in a display:none subtree —
-          which happens for real: Cache Components keeps the departing page in
-          a hidden Activity, and the observer can fire once more before this
-          effect's deferred cleanup runs. Acting on it would reset `stuck` on
-          a page that is scrolled deep, so the dock came back full-size over
-          the content when the reader returned. A hidden page has no answer;
-          keep the last one.
-        */
-        const rect = entry.boundingClientRect
-        if (rect.width === 0 && rect.height === 0 && rect.top === 0) return
-        setStuck(!entry.isIntersecting && rect.top < 0)
-      },
+      // The observer is the cheap path: it wakes the check on the crossing
+      // itself rather than waiting for the next scroll frame.
+      () => measure(),
       { threshold: 0 },
     )
     observer.observe(node)
-    return () => observer.disconnect()
+
+    return () => {
+      stopListening()
+      observer.disconnect()
+    }
   }, [])
 
   return [sentinel, stuck]

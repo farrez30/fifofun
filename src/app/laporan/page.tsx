@@ -160,6 +160,23 @@ async function Report({ params }: { params: Record<string, string | string[] | u
     thing that happens to a category with no group.
   */
   const nameById = new Map(categories.map((category) => [category.id, category.name]))
+  /*
+    Deduped by name and carrying the group it belongs to. The picker's
+    vocabulary is names — matchesFilter compares them and the id translation
+    above already resolves one name to every matching row — and the group is
+    what tells "Belanja Harian" apart from "Jajan" at a glance.
+  */
+  const categoryOptions = [
+    ...new Map(
+      categories.map((category) => [
+        category.name,
+        {
+          name: category.name,
+          group: category.parentId ? (nameById.get(category.parentId) ?? null) : null,
+        },
+      ]),
+    ).values(),
+  ]
   const groupNames = Object.fromEntries(
     categories
       .filter((category) => category.parentId !== null)
@@ -183,7 +200,7 @@ async function Report({ params }: { params: Record<string, string | string[] | u
           (The groupNames map above has the same collision and keeps the last
           row; a summary group is a display grouping, so last-wins is benign.)
         */
-        categories={[...new Set(categories.map((category) => category.name))]}
+        categories={categoryOptions}
         accounts={[...new Set(accounts.map((account) => account.name))]}
         ledgerSize={ledgerSize}
       />

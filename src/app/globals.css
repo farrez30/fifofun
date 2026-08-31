@@ -152,6 +152,27 @@
 
   html {
     -webkit-text-size-adjust: 100%;
+
+    /*
+      Scroll anchoring off, and this one is a bug fix rather than a taste.
+
+      Two screens carry a dock that shrinks once it sticks — the planner's
+      inputs, the budget's allocation bar — and the taller of them gives up
+      some five hundred pixels when it does. Chrome sees content above the
+      viewport change height, decides the reader's place must be preserved,
+      and subtracts that difference from the scroll position: scrolling past
+      the dock threw the page back to the very top, every time, so reaching
+      anything below took half a dozen attempts. Measured before and after,
+      the same six scroll steps: 120, 240, 0, 120, 240, 0 with anchoring on;
+      120 through 600 with it off.
+
+      What it costs is the compensation for content that grows above the
+      viewport while you read. Everything here is server-rendered in one
+      piece, with no images that settle late and no infinite lists, so the
+      cases anchoring exists for do not arise; the dock is the one thing that
+      changes height, and it is the thing anchoring was fighting.
+    */
+    overflow-anchor: none;
   }
 
   /*

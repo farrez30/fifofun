@@ -1774,7 +1774,15 @@ export const FIXTURES = {
       summary={summarisePeriod(REPORT_ROWS, {}, REPORT_GROUPS)}
       filter={{}}
       raw={{}}
-      categories={['Bensin', 'Kopi & Snack', 'Laundry', 'Makan/minum', 'Parkir & Tol']}
+      categories={[
+        { name: 'Bensin', group: 'Transport' },
+        // The pair that reads as one thing in a flat list and as two under
+        // headings: eating versus getting about.
+        { name: 'Kopi & Snack', group: 'Makan & Minum' },
+        { name: 'Makan/minum', group: 'Makan & Minum' },
+        { name: 'Laundry', group: 'Rumah' },
+        { name: 'Parkir & Tol', group: null },
+      ]}
       accounts={['Bank Mandiri']}
       ledgerSize={REPORT_ROWS.length}
     />
