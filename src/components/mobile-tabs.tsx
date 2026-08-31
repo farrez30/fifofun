@@ -1,10 +1,11 @@
 'use client'
 
-import { Suspense, use, useEffect, useRef, useState } from 'react'
+import { Suspense, use, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { DotsNine } from '@phosphor-icons/react/dist/ssr/DotsNine'
 import { SignOut } from '@phosphor-icons/react/dist/ssr/SignOut'
 import { signOut } from '@/app/login/actions'
+import { NavHint } from '@/components/nav-hint'
 import { PullToRefresh } from '@/components/pull-to-refresh'
 import { SHEET, TAB, TABS } from '@/components/tabs'
 import { useSwipeTabs } from '@/components/use-swipe-tabs'
@@ -127,18 +128,36 @@ export function MobileTabs({ current, email, review }: Props) {
   /*
     Closing has to be observed rather than assumed. A dialog is dismissed by the
     Escape key and by the browser's own back gesture as well as by the button,
-    and a flag set only where `close()` is called goes stale on both.
+    and a flag set only where `close()` is called goes stale on both. The
+    scroll-lock attribute on <html> is cleared here for the same reason: one
+    place sees every way the sheet can close.
+
+    The cleanup is the load-bearing half, and it exists because of Cache
+    Components: a navigation keeps this page — dialog included — mounted in a
+    hidden Activity instead of unmounting it. An open dialog surviving there
+    once kept the whole app's scroll locked (and, via `dialog[open]` checks,
+    silently disabled pull-to-refresh and the tab swipe) until a refresh.
+    Activity runs effect cleanups on hide, so this is the hook that puts the
+    sheet away; a layout effect, so it runs before the hidden frame paints.
   */
-  useEffect(() => {
+  useLayoutEffect(() => {
     const node = sheet.current
     if (!node) return
-    const sync = () => setOpen(node.open)
+    const sync = () => {
+      setOpen(node.open)
+      if (!node.open) delete document.documentElement.dataset.sheetOpen
+    }
     node.addEventListener('close', sync)
-    return () => node.removeEventListener('close', sync)
+    return () => {
+      node.removeEventListener('close', sync)
+      node.close()
+      delete document.documentElement.dataset.sheetOpen
+    }
   }, [])
 
   /* A route change while the sheet is open leaves it covering the page it just
-     navigated to. */
+     navigated to. Covers the searchParams-only case the cleanup above never
+     sees, because the instance survives those. */
   useEffect(() => {
     sheet.current?.close()
   }, [current])
@@ -180,6 +199,8 @@ export function MobileTabs({ current, email, review }: Props) {
                 <span className={`text-xs ${tab.href === current ? 'font-medium' : ''}`}>
                   {tab.label}
                 </span>
+                {/* Pending dot in the gap between glyph and label. */}
+                <NavHint className="absolute bottom-1 left-1/2 -translate-x-1/2" />
               </Link>
             </li>
           ))}
@@ -189,6 +210,7 @@ export function MobileTabs({ current, email, review }: Props) {
               type="button"
               onClick={() => {
                 sheet.current?.showModal()
+                document.documentElement.dataset.sheetOpen = 'true'
                 /*
                   Focus parks on the dialog, not its first control. `showModal`
                   focuses the grabber otherwise, and Chrome treats that
@@ -306,6 +328,10 @@ export function MobileTabs({ current, email, review }: Props) {
                 <li key={item.href}>
                   <Link
                     href={item.href}
+                    /* Closed at the moment the navigation STARTS, not when the
+                       route commits: the sheet must never travel, even for a
+                       frame, on top of the page it just opened. */
+                    onNavigate={() => sheet.current?.close()}
                     aria-current={item.href === current ? 'page' : undefined}
                     className={`flex min-h-14 items-center gap-3 px-4 text-sm transition-colors duration-150 hover:bg-sunken ${
                       item.href === current ? 'font-medium text-accent' : 'text-ink'
@@ -317,6 +343,7 @@ export function MobileTabs({ current, email, review }: Props) {
                       className="size-5 shrink-0 text-ink-muted"
                     />
                     {item.label}
+                    <NavHint className="ml-auto" />
                   </Link>
                 </li>
               ))}
