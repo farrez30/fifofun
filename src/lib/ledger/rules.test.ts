@@ -250,6 +250,16 @@ describe('groupBySuggestion', () => {
     expect(groupBySuggestion(rows)[0].samples).toHaveLength(3)
   })
 
+  it('shows three different examples rather than the same line three times', () => {
+    // A counterparty that writes an identical description every time: the
+    // samples are meant to show what the pattern covers, and a repeat shows
+    // nothing.
+    const rows = Array.from({ length: 5 }, (_, i) => arisan('ANIS RENGGANIS', `a${i}`))
+    const [group] = groupBySuggestion(rows)
+    expect(group.count).toBe(5)
+    expect(group.samples).toHaveLength(1)
+  })
+
   it('drops rows with no usable pattern rather than grouping them under nothing', () => {
     const tooShort = paid('AB', 'Pembayaran QR\nke AB\n601503995632', 1_000_00n, 'x')
     expect(groupBySuggestion([tooShort])).toEqual([])

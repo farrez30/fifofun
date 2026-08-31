@@ -152,6 +152,36 @@ describe('reviewBills', () => {
     expect(review.bills[0]).toMatchObject({ state: 'due', paid: 0n })
   })
 
+  it('drops a bill the household has retired, however long it was paid for', () => {
+    // The flat somebody moved out of: two years of rent in the ledger, and no
+    // reason at all to keep asking about it this month.
+    const review = reviewBills(
+      [
+        entry('2026-01', 'Bayar Kontrakan', idr('1.800.000,00')),
+        entry('2026-02', 'Bayar Kontrakan', idr('1.800.000,00')),
+        entry('2026-03', 'Wifi', idr('271.950,00')),
+      ],
+      '2026-03',
+      { known: ['Wifi'], ended: ['Bayar Kontrakan'] },
+    )
+
+    expect(review.bills.map((bill) => bill.category)).toEqual(['Wifi'])
+    expect(review.due).toEqual([])
+  })
+
+  it('still reports a bill that merely went quiet, which is a guess and not a decision', () => {
+    const review = reviewBills(
+      [
+        entry('2026-01', 'Bayar Kontrakan', idr('1.800.000,00')),
+        entry('2026-03', 'Wifi', idr('271.950,00')),
+      ],
+      '2026-03',
+      { known: ['Wifi'] },
+    )
+
+    expect(review.bills.map((bill) => bill.category)).toContain('Bayar Kontrakan')
+  })
+
   it('leaves pass-through money out, as every other total does', () => {
     const review = reviewBills(
       [entry('2026-03', 'Wifi', idr('271.950,00'), { isPassThrough: true } as Partial<Entry>)],

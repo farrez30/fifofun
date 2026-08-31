@@ -88,6 +88,16 @@ export interface BillsOptions {
    * and not yet used still appears. Anything found in the ledger is added.
    */
   known?: string[]
+  /**
+   * Categories the household has retired, which are dropped outright.
+   *
+   * Dormancy is a guess the ledger makes when payments stop; archiving is the
+   * household saying so. A flat somebody moved out of keeps its months in
+   * every historic figure, but it has no business sitting in this month's
+   * list waiting to be paid, and it would sit there forever: the payments
+   * that made it dormant never expire.
+   */
+  ended?: string[]
 }
 
 export function reviewBills(
@@ -117,7 +127,10 @@ export function reviewBills(
   }
 
   const months = monthsUpTo(earliest, period)
-  const categories = [...new Set([...(options.known ?? []), ...paidByCategoryMonth.keys()])]
+  const ended = new Set(options.ended ?? [])
+  const categories = [...new Set([...(options.known ?? []), ...paidByCategoryMonth.keys()])].filter(
+    (category) => !ended.has(category),
+  )
 
   const bills = categories
     .map<BillStatus>((category) => {

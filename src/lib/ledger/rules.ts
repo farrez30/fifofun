@@ -253,7 +253,15 @@ export function groupBySuggestion<T extends Groupable>(
       existing.entries.push(entry)
       existing.count += 1
       existing.total += entry.amount
-      if (existing.samples.length < 3) existing.samples.push(entry.description)
+      /*
+        Three DIFFERENT examples. A counterparty that writes the same line
+        every time was showing that line three times, which teaches nothing
+        about what the pattern covers and, being rendered by its own text,
+        collided as a React key.
+      */
+      if (existing.samples.length < 3 && !existing.samples.includes(entry.description)) {
+        existing.samples.push(entry.description)
+      }
       if (entry.categoryName && !existing.currentCategories.includes(entry.categoryName)) {
         existing.currentCategories.push(entry.categoryName)
       }

@@ -102,7 +102,14 @@ async function Dashboard({ akun }: { akun: string }) {
 
   const [accounts, categories, transactions, openingBalance, printed] = await Promise.all([
     getAccounts(household.id),
-    getCategories(household.id),
+    /*
+      Archived ones too. Every use of this list here is a lookup — the hue and
+      icon for a name, which group a name rolls into — and a row filed to a
+      category that has since been retired still deserves its mark. It is also
+      what lets the bills panel tell "we stopped paying this" apart from "the
+      household closed this", which are different answers.
+    */
+    getCategories(household.id, { includeArchived: true }),
     getAllTransactions(household.id),
     getOpeningBalance(household.id),
     getLatestClosingBalance(household.id),
@@ -161,9 +168,17 @@ async function Dashboard({ akun }: { akun: string }) {
       accountName: tx.fromAccountId ? (accountNameById.get(tx.fromAccountId) ?? null) : null,
     })),
     latest.month,
-    // Every bill the household has set up, so one that has never been paid is
-    // still visible rather than absent.
-    { known: categories.filter((c) => c.cashflow === 'bills').map((c) => c.name) },
+    {
+      // Every bill the household has set up, so one that has never been paid is
+      // still visible rather than absent.
+      known: categories
+        .filter((c) => c.cashflow === 'bills' && c.archivedAt === null)
+        .map((c) => c.name),
+      // And the ones it has retired, which stop being asked about at all.
+      ended: categories
+        .filter((c) => c.cashflow === 'bills' && c.archivedAt !== null)
+        .map((c) => c.name),
+    },
   )
 
   const receivables = reviewReceivables(transactions)
