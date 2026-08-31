@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { headers } from 'next/headers'
 import { IBM_Plex_Mono, IBM_Plex_Sans } from 'next/font/google'
 import { ProgressiveWebApp } from '@/components/pwa'
+import { SkipLink } from '@/components/skip-link'
 import './globals.css'
 
 /*
@@ -103,13 +104,10 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
   return (
     <html lang="id" className={`${sans.variable} ${mono.variable}`}>
       <body className="min-h-dvh antialiased">
-        {/* Keyboard users reach the content without tabbing the whole nav. */}
-        <a
-          href="#main"
-          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-sm focus:bg-accent focus:px-3 focus:py-2 focus:text-paper"
-        >
-          Lompat ke konten
-        </a>
+        {/* Keyboard users reach the content without tabbing the whole nav.
+            A client component, because several pages can be mounted at once
+            now — see skip-link.tsx. */}
+        <SkipLink />
         {children}
         <ProgressiveWebApp />
       </body>

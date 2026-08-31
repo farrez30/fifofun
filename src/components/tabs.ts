@@ -50,5 +50,7 @@ export const SHEET: readonly Tab[] = [
   { href: '/undangan', label: 'Undang anggota', glyph: UsersThree },
 ] as const
 
+/* `active:` restores the pressed feedback the global tap-highlight removal
+   took away: the finger should see the tab acknowledge it was hit. */
 export const TAB =
-  'flex h-16 flex-1 flex-col items-center justify-center gap-1 transition-colors duration-150'
+  'relative flex h-16 flex-1 flex-col items-center justify-center gap-1 transition-colors duration-150 active:bg-sunken'

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { NavHint } from '@/components/nav-hint'
 import { formatMonthKey } from '@/lib/datetime'
 import { addMonths } from '@/lib/ledger/funds'
 
@@ -27,6 +28,7 @@ export function MonthNav({ period, thisMonth }: { period: string; thisMonth: str
         className="inline-flex h-11 items-center rounded-sm border border-line px-3 text-sm text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
       >
         {formatMonthKey(previous)}
+        <NavHint className="ml-1.5" />
       </Link>
 
       <p aria-current="date" className="text-sm font-medium text-ink">
@@ -39,6 +41,7 @@ export function MonthNav({ period, thisMonth }: { period: string; thisMonth: str
         className="inline-flex h-11 items-center rounded-sm border border-line px-3 text-sm text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
       >
         {formatMonthKey(next)}
+        <NavHint className="ml-1.5" />
       </Link>
 
       {period === thisMonth ? null : (
@@ -47,6 +50,7 @@ export function MonthNav({ period, thisMonth }: { period: string; thisMonth: str
           className="inline-flex h-11 items-center rounded-sm border border-line px-3 text-sm text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
         >
           Bulan ini
+          <NavHint className="ml-1.5" />
         </Link>
       )}
 

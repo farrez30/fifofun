@@ -62,8 +62,12 @@ export const metadata: Metadata = { title: 'Ringkasan' }
 
   So the wins live elsewhere: the data layer caches per-household answers
   (`use cache: private` in lib/queries), Server Actions expire them by tag,
-  and loading.tsx repaints the chrome instantly on navigation. The other
-  twelve pages export the same flag with a pointer to this comment.
+  and the prefetched loading.tsx shells repaint the chrome on navigation.
+  To be precise about what this flag does: `instant` only controls the
+  dev-overlay VALIDATION for blocking navigations — it changes no runtime
+  behaviour. Exporting `false` declares the blocking deliberate so the
+  overlay stays quiet about it. The other pages export the same flag with a
+  pointer to this comment.
 */
 export const instant = false
 
@@ -355,13 +359,14 @@ async function Dashboard({ akun }: { akun: string }) {
             <span className="ml-2 font-normal text-ink-muted">{latest.month}</span>
           </h2>
           {/* The panel judges spending against a budget. Until this link
-              existed, the only way to set one was a database client. */}
-          <a
+              existed, the only way to set one was a database client. A Link,
+              not an <a>: the bare anchor forced a full page load. */}
+          <Link
             href={`/anggaran?bulan=${latest.month}`}
             className="text-sm text-accent underline underline-offset-2"
           >
             Atur anggaran {formatMonthKey(latest.month)}
-          </a>
+          </Link>
         </div>
         <div className="space-y-4">
           <BudgetBullet

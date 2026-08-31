@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { AccountMark } from '@/components/marks'
+import { NavHint } from '@/components/nav-hint'
 import type { AccountKind } from '@/lib/ledger/types'
 
 /**
@@ -44,6 +45,7 @@ export function AccountScope({
             }`}
           >
             Semua akun
+            <NavHint className="ml-1.5" />
           </Link>
         </li>
         {accounts.map((account) => (
@@ -58,6 +60,7 @@ export function AccountScope({
               }`}
             >
               <AccountMark name={account.name} kind={account.kind} />
+              <NavHint className="ml-1.5" />
             </Link>
           </li>
         ))}

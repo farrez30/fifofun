@@ -33,6 +33,15 @@ const nextConfig: NextConfig = {
   */
   cacheComponents: true,
 
+  /*
+    Dev-only. The default bottom-left puts the dev-tools badge exactly on top
+    of the phone's fixed tab bar, hiding the first tabs; bottom-right collides
+    with the same bar, and top-center belongs to the pull-to-refresh pill.
+  */
+  devIndicators: {
+    position: 'top-right',
+  },
+
   experimental: {
     /*
       Holds a failed navigation or Server Action pending instead of throwing, and

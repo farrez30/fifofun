@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { SignedMoney } from '@/components/money'
 import { AccountMark, CategoryMark } from '@/components/marks'
+import { NavHint } from '@/components/nav-hint'
 import { SwipeActionRow, TrayDelete } from '@/components/swipe-action-row'
 import { formatJakarta } from '@/lib/datetime'
 import { signedDirection } from '@/lib/ledger/direction'
@@ -328,6 +329,7 @@ export function TablePager({
           className="inline-flex h-11 items-center rounded-sm border border-line px-3 text-sm text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
         >
           Sebelumnya
+          <NavHint className="ml-1.5" />
         </Link>
       ) : null}
 
@@ -342,6 +344,7 @@ export function TablePager({
           className="inline-flex h-11 items-center rounded-sm border border-line px-3 text-sm text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
         >
           Berikutnya
+          <NavHint className="ml-1.5" />
         </Link>
       ) : null}
     </nav>

@@ -1,5 +1,6 @@
 import { signOut } from '@/app/login/actions'
 import { MobileTabs } from '@/components/mobile-tabs'
+import { NavHint } from '@/components/nav-hint'
 import { ShellFrame } from '@/components/shell-frame'
 import { countUnconfirmed } from '@/lib/queries/household'
 import type { NavHref } from '@/components/nav'
@@ -73,6 +74,7 @@ export function AppShell({ title, email, current, lead, children }: Props) {
         </form>
       }
       tabs={<MobileTabs current={current} email={email} review={review} />}
+      navHint={<NavHint className="ml-1.5" />}
     >
       {children}
     </ShellFrame>
