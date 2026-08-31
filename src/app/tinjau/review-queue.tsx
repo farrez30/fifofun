@@ -185,7 +185,11 @@ function GroupCard({
 
   if (settling) {
     return (
-      <div role="status" aria-busy="true" className="border border-line bg-surface px-4 py-3">
+      <div
+        role="status"
+        aria-busy="true"
+        className="reveal border border-line bg-surface px-4 py-3"
+      >
         <span className="text-sm text-ink-muted">
           Menyimpan {group.count} transaksi dari {label}
         </span>
@@ -450,7 +454,7 @@ function SingleRows({
           if (settled.includes(entry.id)) {
             return (
               <li key={entry.id} className="border-b border-line pb-2 last:border-0">
-                <p role="status" aria-busy="true" className="truncate py-2 text-ink-muted">
+                <p role="status" aria-busy="true" className="reveal truncate py-2 text-ink-muted">
                   Menyimpan {entry.description}
                 </p>
               </li>

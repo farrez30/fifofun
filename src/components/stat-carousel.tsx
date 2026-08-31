@@ -87,7 +87,9 @@ export function StatCarousel({ children }: { children: React.ReactNode }) {
           {Array.from({ length: count }, (_, i) => (
             <span
               key={i}
-              className={`h-1.5 w-1.5 rounded-sm ${i === index ? 'bg-accent' : 'bg-line-strong'}`}
+              className={`h-1.5 w-1.5 rounded-sm transition-colors duration-150 ${
+                i === index ? 'bg-accent' : 'bg-line-strong'
+              }`}
             />
           ))}
         </div>

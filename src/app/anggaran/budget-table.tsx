@@ -87,6 +87,7 @@ export function BudgetTable({ plan }: { plan: BudgetPlanView }) {
           id: line.id,
           name: line.name,
           cashflow: line.cashflow,
+          icon: line.icon,
           hue: line.hue,
           amount: amounts[line.id] ?? 0n,
         }))}
@@ -165,6 +166,7 @@ export function BudgetTable({ plan }: { plan: BudgetPlanView }) {
                     amount={amounts[line.id] ?? 0n}
                     onAmount={setOne}
                     pace={plan.pace}
+                    income={plan.incomeSen === null ? null : BigInt(plan.incomeSen)}
                   />
                 ))}
               </tbody>
@@ -197,6 +199,17 @@ export function BudgetTable({ plan }: { plan: BudgetPlanView }) {
       <p className="text-xs text-ink-muted">
         Begitu satu kategori saja diisi, Ringkasan menilai {label} dengan anggaran ini dan
         kategori yang kosong dihitung tanpa anggaran. Realisasi tidak menghitung uang titipan.
+      </p>
+      {/* The row itself is not editable here, and the moment somebody notices
+          that is while looking at a bill they no longer pay. */}
+      <p className="text-xs text-ink-muted">
+        Barisnya sendiri diatur di{' '}
+        <a href="/pengaturan#kategori" className="text-accent underline underline-offset-2">
+          Pengaturan
+        </a>
+        : tambah kategori baru, ganti namanya, atau arsipkan yang sudah tidak dipakai. Yang
+        diarsipkan hilang dari bulan-bulan berikutnya dan dari daftar tagihan, sementara bulan
+        yang sudah lewat tetap memakai angkanya.
       </p>
     </div>
   )
@@ -231,6 +244,7 @@ function Row({
   amount,
   onAmount,
   pace,
+  income,
 }: {
   line: BudgetLineView
   hasData: boolean
@@ -238,6 +252,8 @@ function Row({
   amount: bigint
   onAmount: (id: string, sen: bigint) => void
   pace: MonthPace | null
+  /** Typical monthly income, for the share this row is taking of it. */
+  income: bigint | null
 }) {
   const actual = judge(line, amount)
 
@@ -281,6 +297,13 @@ function Row({
 
       <td className="whitespace-nowrap px-3 py-2 text-right sm:px-4">
         <BudgetCell line={line} amount={amount} onAmount={onAmount} />
+        {/* What this row is asking of the month's income. A figure on its own
+            cannot say whether it is a lot; a share can. */}
+        {income !== null && income > 0n && amount > 0n ? (
+          <span className="mt-1 block text-xs text-ink-muted">
+            {Math.round(Number((amount * 10_000n) / income) / 100)}% dari pemasukan
+          </span>
+        ) : null}
       </td>
 
       {hasData ? (
@@ -322,7 +345,7 @@ function Row({
                 <span className="relative mt-1 block h-1 w-full bg-sunken">
                   <span
                     data-budget={line.id}
-                    className={`block h-full ${actual.over ? 'bg-warn' : 'bg-accent'}`}
+                    className={`bar-grow block h-full ${actual.over ? 'bg-warn' : 'bg-accent'}`}
                     style={{ width: `max(2px, ${Math.min(100, actual.pct)}%)` }}
                   />
                   {/* Where in the month "today" sits: a bar visibly ahead of
@@ -447,7 +470,7 @@ function Context({
           {actual && actual.pct > 0 ? (
             <span aria-hidden="true" className="relative block h-1 w-full bg-sunken">
               <span
-                className={`block h-full ${actual.over ? 'bg-warn' : 'bg-accent'}`}
+                className={`bar-grow block h-full ${actual.over ? 'bg-warn' : 'bg-accent'}`}
                 style={{ width: `max(2px, ${Math.min(100, actual.pct)}%)` }}
               />
               {pace ? (

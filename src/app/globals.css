@@ -350,6 +350,54 @@
   }
 
   /*
+    Bars that answer while somebody types.
+
+    Every measure in this app is drawn as a length, and a length that jumps to
+    its new value reads as a redraw rather than as a change: the eye has
+    nothing to follow, so the reader has to re-read the number to learn what
+    happened. Two hundred milliseconds is long enough to be followed and short
+    enough that a fast typist never waits for it. Only the dimension that
+    carries meaning is animated, never `all`, so a colour change or a layout
+    reflow is not dragged along with it.
+
+    The global reduced-motion block below zeroes these durations, which is the
+    correct answer there: the bar still lands on the right length, it just
+    stops travelling.
+
+    Width and height rather than a `transform: scale`, which is the usual
+    advice and is usually right: a scale runs on the compositor and touches no
+    layout at all. It is refused here for one reason. Every bar in this app is
+    written as `max(2px, N%)` so that a category which spent almost nothing
+    still draws something a reader can see, and a scaled bar has no floor —
+    the smallest slices would shrink to nothing. Layout cost is bounded
+    anyway: these are a handful of leaf nodes inside absolutely positioned
+    tracks, animating only while somebody types.
+  */
+  .bar-grow {
+    transition: width 200ms ease-out;
+  }
+
+  .bar-rise {
+    transition: height 200ms ease-out;
+  }
+
+  /*
+    Content that was not there a moment ago: an expanded list, a panel that
+    opened. It arrives from slightly above so the eye is told where it came
+    from, the same fade-and-rise `page-enter` uses on a whole page.
+  */
+  @keyframes reveal {
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+  }
+
+  .reveal {
+    animation: reveal 160ms ease-out both;
+  }
+
+  /*
     The pending dot inside a navigation link; toggled by nav-hint.tsx.
 
     A transition with a delay rather than an animation, deliberately: the

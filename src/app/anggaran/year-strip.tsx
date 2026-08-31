@@ -99,14 +99,14 @@ export function YearStrip({ view }: { view: BudgetYearView }) {
             >
               <span
                 aria-hidden="true"
-                className={`absolute inset-y-0 left-px right-px block bg-sunken ${
+                className={`absolute inset-y-0 left-px right-px block bg-sunken transition-[outline-color] duration-150 ${
                   chosen ? 'outline outline-1 outline-line-strong' : ''
                 }`}
               >
                 {month.hasData && month.outPct > 0 ? (
                   <span
                     data-year-out={month.month}
-                    className={`absolute inset-x-0 bottom-0 block ${
+                    className={`bar-rise absolute inset-x-0 bottom-0 block ${
                       month.over ? 'bg-over' : 'bg-accent'
                     }`}
                     style={{ height: `max(2px, ${month.outPct}%)` }}
@@ -115,7 +115,7 @@ export function YearStrip({ view }: { view: BudgetYearView }) {
                 {month.budgetPct !== null ? (
                   <span
                     data-year-budget={month.month}
-                    className="absolute inset-x-0 h-0.5 bg-ink"
+                    className="absolute inset-x-0 h-0.5 bg-ink transition-[bottom] duration-200 ease-out"
                     style={{ bottom: `${month.budgetPct}%` }}
                   />
                 ) : null}

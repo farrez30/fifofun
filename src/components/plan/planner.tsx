@@ -144,7 +144,7 @@ export function Planner({ history, observedIncome, snapshot, currentYear, saved 
 
       <div
         ref={dock}
-        className={`sticky top-0 z-20 -mx-4 bg-paper px-4 sm:-mx-6 sm:px-6 ${
+        className={`sticky top-0 z-20 -mx-4 bg-paper px-4 transition-[padding,border-color] duration-150 sm:-mx-6 sm:px-6 ${
           stuck ? 'border-b border-line pb-2 pt-1' : ''
         }`}
       >

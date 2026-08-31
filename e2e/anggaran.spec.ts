@@ -99,7 +99,9 @@ test.describe('anggaran', () => {
 
   test('draws every category with its own mark', async ({ page }) => {
     await open(page, 'budget-table')
-    const marks = page.locator('[data-mark="category"]')
+    // Scoped to the table: the allocation summary above it now draws the same
+    // mark for every category it lists.
+    const marks = page.locator('form table [data-mark="category"]')
 
     await expect(marks).toHaveCount(5)
     for (const mark of await marks.all()) {

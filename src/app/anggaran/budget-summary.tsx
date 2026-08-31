@@ -1,6 +1,14 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import { CalendarDots } from '@phosphor-icons/react/dist/ssr/CalendarDots'
+import { CaretDown } from '@phosphor-icons/react/dist/ssr/CaretDown'
+import { CaretUp } from '@phosphor-icons/react/dist/ssr/CaretUp'
+import { ChartPieSlice } from '@phosphor-icons/react/dist/ssr/ChartPieSlice'
+import { Clock } from '@phosphor-icons/react/dist/ssr/Clock'
+import { Percent } from '@phosphor-icons/react/dist/ssr/Percent'
+import { PiggyBank } from '@phosphor-icons/react/dist/ssr/PiggyBank'
+import { CategoryMark } from '@/components/marks'
 import { useReservedHeight, useStuck } from '@/components/use-stuck'
 import { categoryHue } from '@/lib/ledger/palette'
 import { formatIdr } from '@/lib/money'
@@ -14,30 +22,34 @@ import type { CashflowType } from '@/lib/ledger/types'
  * themselves, each in the hue it wears everywhere else in the app, so the
  * shape of the month is legible before a single figure is read: what takes
  * the most, how many pots there are, how much of the bar is still empty. The
- * black marker is the household's typical income — a bullet graph's target
- * line — so "does this fit" is a question about a bar crossing a line rather
+ * black marker is the household's typical income, a bullet graph's target
+ * line, so "does this fit" is a question about a bar crossing a line rather
  * than about arithmetic. Everything recomputes from the table's own state on
- * every keystroke.
+ * every keystroke, and the lengths travel to their new values rather than
+ * jumping: a length that jumps is a redraw, a length that moves is an answer.
  *
  * The percentages sit beside every figure because a Rupiah amount alone
  * cannot say whether it is a lot: Rp1,5 juta means one thing against Rp8
- * juta of income and another against Rp30 juta.
+ * juta of income and another against Rp30 juta. Per category they live in the
+ * breakdown below, which is a real list rather than a tooltip, because a
+ * pointer hint is a convenience and never the only way to a number.
  *
  * It rides in a sticky dock, the way the planner's own inputs do, because
  * the table below it is longer than a screen and the whole point of the bar
  * is to watch it move while typing further down. Stuck, it shrinks to a
- * single line; the toggle overrides that in either direction, for a reader
- * who wants it out of the way or wants it open the whole time.
+ * single line; the toggle overrides that in either direction.
  *
  * Deliberately no live region: this updates per keystroke, and announcing
- * every digit would make the page unusable with a reader. The same figures
- * are in the sr-only table below, and every row carries its own percentage.
+ * every digit would make the page unusable with a reader. The breakdown list
+ * carries the same figures and stays in the accessibility tree even while it
+ * is folded away visually.
  */
 
 export interface SummaryLine {
   id: string
   name: string
   cashflow: CashflowType
+  icon: string | null
   hue: number | null
   /** The amount currently in the field, in sen. */
   amount: bigint
@@ -58,6 +70,10 @@ function percentText(value: number): string {
   return `${value >= 10 || value === 0 ? Math.round(value) : value.toFixed(1)}%`
 }
 
+function hueOf(line: SummaryLine): number {
+  return categoryHue({ name: line.name, hue: line.hue })
+}
+
 export function BudgetSummary({ plan, lines }: Props) {
   const [sentinel, stuck] = useStuck<HTMLDivElement>()
   const dock = useRef<HTMLDivElement>(null)
@@ -66,6 +82,7 @@ export function BudgetSummary({ plan, lines }: Props) {
   const compact = collapsed ?? stuck
   const reserved = useReservedHeight(dock, compact)
   const [hovered, setHovered] = useState<string | null>(null)
+  const [openList, setOpenList] = useState(false)
 
   const total = lines.reduce((sum, line) => sum + line.amount, 0n)
   const totalOf = (cashflow: CashflowType) =>
@@ -77,11 +94,16 @@ export function BudgetSummary({ plan, lines }: Props) {
   const left = income !== null && income > total ? income - total : 0n
 
   const segments = lines.filter((line) => line.amount > 0n)
+  // Biggest first in the list: the pot worth arguing about is the big one.
+  const ranked = [...segments].sort((a, b) =>
+    b.amount === a.amount ? 0 : b.amount > a.amount ? 1 : -1,
+  )
   const active = segments.find((line) => line.id === hovered) ?? null
 
   const periodicMonthly = BigInt(plan.periodicMonthlySen)
   const projected = plan.totalProjectedSen === null ? null : BigInt(plan.totalProjectedSen)
-  const projectedPast = projected !== null && total > 0n && projected > total ? projected - total : null
+  const projectedPast =
+    projected !== null && total > 0n && projected > total ? projected - total : null
 
   return (
     <>
@@ -90,10 +112,19 @@ export function BudgetSummary({ plan, lines }: Props) {
 
       <figure
         ref={dock}
-        className={`sticky top-0 z-20 border border-line bg-surface ${compact ? 'p-3' : 'p-4'}`}
+        className={`sticky top-0 z-20 border border-line bg-surface transition-[padding] duration-150 ${
+          compact ? 'p-3' : 'p-4'
+        }`}
       >
         <figcaption className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-sm">
-          <span className="font-medium text-ink">Alokasi bulan ini</span>
+          <span className="inline-flex items-center gap-1.5 font-medium text-ink">
+            <ChartPieSlice
+              aria-hidden="true"
+              weight="regular"
+              className="size-4 shrink-0 text-ink-muted"
+            />
+            Alokasi bulan ini
+          </span>
           <span className="flex items-center gap-3">
             <span className="tnum font-mono text-ink">
               {formatIdr(total)}
@@ -109,8 +140,14 @@ export function BudgetSummary({ plan, lines }: Props) {
             <button
               type="button"
               onClick={() => setCollapsed(!compact)}
-              className="inline-flex min-h-11 items-center rounded-sm px-2 text-xs text-ink-muted transition-colors duration-150 hover:bg-sunken hover:text-ink"
+              aria-expanded={!compact}
+              className="inline-flex min-h-11 items-center gap-1 rounded-sm px-2 text-xs text-ink-muted transition-colors duration-150 hover:bg-sunken hover:text-ink"
             >
+              {compact ? (
+                <CaretDown aria-hidden="true" weight="bold" className="size-3.5 shrink-0" />
+              ) : (
+                <CaretUp aria-hidden="true" weight="bold" className="size-3.5 shrink-0" />
+              )}
               {compact ? 'Perbesar' : 'Kecilkan'}
             </button>
           </span>
@@ -118,13 +155,15 @@ export function BudgetSummary({ plan, lines }: Props) {
 
         {/*
           Hidden from readers: every segment is named with its figure and its
-          share in the table at the bottom, which is the version that works
+          share in the breakdown below, which is the version that works
           without a pointer.
         */}
         <div
           aria-hidden="true"
           onPointerLeave={() => setHovered(null)}
-          className={`relative w-full bg-sunken ${compact ? 'mt-2 h-2' : 'mt-3 h-5'}`}
+          className={`relative w-full bg-sunken transition-[height,margin] duration-150 ${
+            compact ? 'mt-2 h-2' : 'mt-3 h-5'
+          }`}
         >
           <div className="absolute inset-0 flex">
             {segments.map((line) => (
@@ -135,31 +174,31 @@ export function BudgetSummary({ plan, lines }: Props) {
                 title={`${line.name}: ${formatIdr(line.amount)}`}
                 style={{
                   width: `max(2px, ${share(line.amount, ceiling)}%)`,
-                  backgroundColor: `oklch(var(--category-l) var(--category-c) ${categoryHue({
-                    name: line.name,
-                    hue: line.hue,
-                  })})`,
+                  backgroundColor: `oklch(var(--category-l) var(--category-c) ${hueOf(line)})`,
                 }}
-                className={`h-full ${hovered === line.id ? 'brightness-125' : ''}`}
+                className={`bar-grow h-full ${hovered === line.id ? 'brightness-125' : ''}`}
               />
             ))}
           </div>
           {income !== null ? (
             <div
               data-summary-income
-              className="absolute inset-y-0 w-0.5 bg-ink"
+              className="absolute inset-y-0 w-0.5 bg-ink transition-[left] duration-150"
               style={{ left: `${share(income, ceiling)}%` }}
             />
           ) : null}
         </div>
 
         {compact ? (
-          <p className="mt-2 truncate text-xs text-ink-muted">
+          <p className="mt-2 flex items-center gap-1.5 truncate text-xs text-ink-muted">
             {income === null ? (
-              <>{segments.length} kategori terisi</>
+              <>
+                <ChartPieSlice aria-hidden="true" weight="regular" className="size-3.5 shrink-0" />
+                {segments.length} kategori terisi
+              </>
             ) : past > 0n ? (
               <>
-                <span aria-hidden="true" className="mr-1 text-over">
+                <span aria-hidden="true" className="text-over">
                   ▲
                 </span>
                 lewat pemasukan <span className="tnum font-mono text-ink">{formatIdr(past)}</span> (
@@ -167,6 +206,7 @@ export function BudgetSummary({ plan, lines }: Props) {
               </>
             ) : (
               <>
+                <PiggyBank aria-hidden="true" weight="regular" className="size-3.5 shrink-0" />
                 sisa <span className="tnum font-mono text-ink">{formatIdr(left)}</span> (
                 {percentText(share(left, income))}) belum dialokasikan
               </>
@@ -178,15 +218,17 @@ export function BudgetSummary({ plan, lines }: Props) {
             <p className="mt-2 min-h-5 text-xs text-ink-muted">
               {active ? (
                 <>
-                  <span className="font-medium text-ink">{active.name}</span>{' '}
+                  <CategoryMark
+                    name={active.name}
+                    cashflow={active.cashflow}
+                    icon={active.icon}
+                    hue={active.hue}
+                    className="align-middle font-medium text-ink"
+                  />{' '}
                   <span className="tnum font-mono text-ink">{formatIdr(active.amount)}</span>
                   {income !== null ? (
-                    <>
-                      {' '}
-                      · {percentText(share(active.amount, income))} dari pemasukan
-                    </>
-                  ) : null}
-                  {' '}
+                    <> · {percentText(share(active.amount, income))} dari pemasukan</>
+                  ) : null}{' '}
                   · {percentText(share(active.amount, total))} dari alokasi
                 </>
               ) : (
@@ -217,24 +259,96 @@ export function BudgetSummary({ plan, lines }: Props) {
                 {percentText(share(past, income))}) melewati pemasukan biasanya ({plan.incomeText}).
               </p>
             ) : (
-              <p className="mt-2 text-sm text-ink-muted">
+              <p className="mt-2 flex flex-wrap items-baseline gap-x-1 text-sm text-ink-muted">
+                <PiggyBank
+                  aria-hidden="true"
+                  weight="regular"
+                  className="size-4 shrink-0 translate-y-0.5"
+                />
                 Sisa <span className="tnum font-mono text-ink">{formatIdr(left)}</span> (
                 {percentText(share(left, income))}) dari pemasukan biasanya ({plan.incomeText})
                 belum dialokasikan.
               </p>
             )}
 
+            {/*
+              The per-category figures, always in the accessibility tree and
+              folded away visually: a reader gets the whole list either way,
+              and a sighted reader gets a summary that does not push the table
+              off the screen.
+            */}
+            {segments.length > 0 ? (
+              <div className="mt-2 border-t border-line pt-2">
+                <button
+                  type="button"
+                  onClick={() => setOpenList(!openList)}
+                  aria-expanded={openList}
+                  className="inline-flex min-h-11 items-center gap-1.5 text-xs text-ink-muted transition-colors duration-150 hover:text-ink"
+                >
+                  <Percent aria-hidden="true" weight="regular" className="size-3.5 shrink-0" />
+                  Rincian {segments.length} kategori
+                  {openList ? (
+                    <CaretUp aria-hidden="true" weight="bold" className="size-3.5 shrink-0" />
+                  ) : (
+                    <CaretDown aria-hidden="true" weight="bold" className="size-3.5 shrink-0" />
+                  )}
+                </button>
+
+                <ul className={openList ? 'reveal mt-1 space-y-1.5' : 'sr-only'}>
+                  {ranked.map((line) => (
+                    <li key={line.id} className="text-xs">
+                      <span className="flex flex-wrap items-baseline justify-between gap-x-2">
+                        <CategoryMark
+                          name={line.name}
+                          cashflow={line.cashflow}
+                          icon={line.icon}
+                          hue={line.hue}
+                          className="min-w-0 text-ink"
+                        />
+                        <span className="text-ink-muted">
+                          <span className="tnum font-mono text-ink">{formatIdr(line.amount)}</span>
+                          {income !== null ? (
+                            <> · {percentText(share(line.amount, income))} pemasukan</>
+                          ) : null}{' '}
+                          · {percentText(share(line.amount, total))} alokasi
+                        </span>
+                      </span>
+                      <span aria-hidden="true" className="mt-0.5 block h-1 w-full bg-sunken">
+                        <span
+                          className="bar-grow block h-full"
+                          style={{
+                            width: `max(2px, ${share(line.amount, total)}%)`,
+                            backgroundColor: `oklch(var(--category-l) var(--category-c) ${hueOf(
+                              line,
+                            )})`,
+                          }}
+                        />
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
             {plan.pace && plan.totalProjectedText ? (
-              <p data-summary-pace className="mt-2 border-t border-line pt-2 text-sm text-ink-muted">
+              <p
+                data-summary-pace
+                className="mt-2 flex flex-wrap items-baseline gap-x-1 border-t border-line pt-2 text-sm text-ink-muted"
+              >
+                <Clock
+                  aria-hidden="true"
+                  weight="regular"
+                  className="size-4 shrink-0 translate-y-0.5"
+                />
                 Hari ke-{plan.pace.day} dari {plan.pace.days}
-                <span aria-hidden="true" className="mx-1.5 text-ink-faint">
+                <span aria-hidden="true" className="text-ink-faint">
                   ·
                 </span>
                 terpakai{' '}
                 <span className="tnum font-mono text-ink">
                   {formatIdr(BigInt(plan.totalActualSen))}
                 </span>
-                <span aria-hidden="true" className="mx-1.5 text-ink-faint">
+                <span aria-hidden="true" className="text-ink-faint">
                   ·
                 </span>
                 kalau ritmenya begini terus, sekitar{' '}
@@ -242,10 +356,9 @@ export function BudgetSummary({ plan, lines }: Props) {
                 akhir bulan
                 {projectedPast !== null ? (
                   <>
-                    {' '}
                     <span aria-hidden="true" className="text-warn">
                       ▲
-                    </span>{' '}
+                    </span>
                     <span className="text-ink">
                       <span className="sr-only">diperkirakan </span>lewat anggaran{' '}
                       <span className="tnum font-mono">{formatIdr(projectedPast)}</span>
@@ -264,11 +377,16 @@ export function BudgetSummary({ plan, lines }: Props) {
             */}
             {plan.periodic.length > 0 ? (
               <div data-summary-periodic className="mt-2 border-t border-line pt-2 text-sm">
-                <p className="text-ink-muted">
+                <p className="flex flex-wrap items-baseline gap-x-1 text-ink-muted">
+                  <CalendarDots
+                    aria-hidden="true"
+                    weight="regular"
+                    className="size-4 shrink-0 translate-y-0.5"
+                  />
                   Pos yang datang setahun sekali, dihargai per bulan: sisihkan{' '}
                   <span className="tnum font-mono text-ink">{plan.periodicMonthlyText}</span>
                   {income !== null && periodicMonthly > 0n ? (
-                    <> ({percentText(share(periodicMonthly, income))} dari pemasukan)</>
+                    <>({percentText(share(periodicMonthly, income))} dari pemasukan)</>
                   ) : null}{' '}
                   tiap bulan supaya tidak mengagetkan saat jatuh tempo.
                 </p>
@@ -292,40 +410,17 @@ export function BudgetSummary({ plan, lines }: Props) {
                 empty space is read as a missing feature, and the honest
                 answer is that the ledger has not shown a yearly rhythm yet.
               */
-              <p className="mt-2 border-t border-line pt-2 text-xs text-ink-muted">
+              <p className="mt-2 flex flex-wrap items-baseline gap-x-1 border-t border-line pt-2 text-xs text-ink-muted">
+                <CalendarDots
+                  aria-hidden="true"
+                  weight="regular"
+                  className="size-3.5 shrink-0 translate-y-0.5"
+                />
                 Belum ada pos yang polanya tahunan di catatanmu. Begitu satu biaya muncul dua kali
                 dengan jarak beberapa bulan, misalnya pajak kendaraan atau premi asuransi, angka
                 sisihan per bulannya akan muncul di sini.
               </p>
             ) : null}
-
-            {/* Wrapped in a div: a bare sr-only table ignores the one pixel
-                width it is given and would widen the page. */}
-            <div className="sr-only">
-              <table>
-                <caption>Alokasi per kategori</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Kategori</th>
-                    <th scope="col">Anggaran</th>
-                    <th scope="col">Bagian dari pemasukan</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {segments.map((line) => (
-                    <tr key={line.id}>
-                      <th scope="row">{line.name}</th>
-                      <td>{formatIdr(line.amount)}</td>
-                      <td>
-                        {income === null
-                          ? 'pemasukan belum diketahui'
-                          : percentText(share(line.amount, income))}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
           </>
         )}
       </figure>
