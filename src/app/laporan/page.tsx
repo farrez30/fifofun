@@ -173,8 +173,18 @@ async function Report({ params }: { params: Record<string, string | string[] | u
         summary={summarisePeriod(enriched, filter, groupNames)}
         filter={filter}
         raw={params}
-        categories={categories.map((category) => category.name)}
-        accounts={accounts.map((account) => account.name)}
+        /*
+          Deduped, because the picker's vocabulary is names, not rows. The
+          unique index is (household, cashflow, name), so the same name may
+          legally exist on two cashflows — the seed itself ships Dana Darurat
+          twice — and two identical <option>s would collide as React keys
+          while offering nothing: matchesFilter compares names, and the id
+          translation above already resolves one name to every matching row.
+          (The groupNames map above has the same collision and keeps the last
+          row; a summary group is a display grouping, so last-wins is benign.)
+        */
+        categories={[...new Set(categories.map((category) => category.name))]}
+        accounts={[...new Set(accounts.map((account) => account.name))]}
         ledgerSize={ledgerSize}
       />
 

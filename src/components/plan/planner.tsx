@@ -8,35 +8,26 @@ import { childPlansFor, defaultPlan, planFields, type PlanValues } from '@/lib/p
 import type { ActionResult } from '@/lib/actions'
 import type { FinancialSnapshot } from '@/lib/planning/ratios'
 import { formatIdr } from '@/lib/money'
-import dynamic from 'next/dynamic'
 import { AllocationPanel } from './allocation-panel'
+/*
+  Static imports on purpose, after trying dynamic ones — the same reversal
+  cashflow-chart-view.tsx already made, for the same reason. Both panels
+  render unconditionally, so the server ships them painted; the dynamic()
+  wrapper only made hydration swap each painted section for a 384px grey box
+  until its chunk arrived, then swap back — thousands of pixels of layout
+  jumping under a reader mid-scroll, which also corrupted the sticky dock's
+  reserved-height measurements. A split pays where the code waits for a user;
+  these panels do not wait.
+*/
+import { ChildrenPanel } from './children-panel'
 import { GapPanel } from './gap-panel'
+import { GoalsPanel } from './goals-panel'
 import { HouseholdInputs, type HouseholdVariant } from './household-inputs'
 import { PlanIndex, type PlanSection } from './plan-index'
 import { RatioPanel } from './ratio-panel'
 import { Section } from './field'
 import { useReservedHeight, useStuck } from './use-stuck'
 
-/*
-  The two heaviest sections — each drags a chart and its drag machinery along —
-  split into chunks of their own. They sit fourth and sixth on the page, well
-  under the fold, and the first render still server-renders them (ssr stays
-  on), so the placeholders only ever show for the beat a client-side
-  navigation takes to fetch the chunk.
-*/
-const ChildrenPanel = dynamic(
-  () => import('./children-panel').then((mod) => mod.ChildrenPanel),
-  {
-    loading: () => (
-      <div role="status" aria-label="Memuat bagian anak" className="skeleton h-96 border border-line" />
-    ),
-  },
-)
-const GoalsPanel = dynamic(() => import('./goals-panel').then((mod) => mod.GoalsPanel), {
-  loading: () => (
-    <div role="status" aria-label="Memuat bagian tujuan" className="skeleton h-96 border border-line" />
-  ),
-})
 
 /**
  * The simulator.
