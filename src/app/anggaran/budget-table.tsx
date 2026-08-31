@@ -6,6 +6,7 @@ import { CategoryMark } from '@/components/marks'
 import { BUTTON_PRIMARY, BUTTON_QUIET } from '@/components/field-base'
 import { MoneyInput } from '@/components/money-input'
 import { formatMonthKey } from '@/lib/datetime'
+import { formatIdr } from '@/lib/money'
 import { CASHFLOW_LABELS, type CashflowType } from '@/lib/ledger/types'
 import type { BudgetLineView, BudgetPlanView } from '@/lib/ledger/budget-plan'
 import type { MonthPace } from '@/lib/ledger/pace'
@@ -59,13 +60,6 @@ export function BudgetTable({ plan }: { plan: BudgetPlanView }) {
     [],
   )
 
-  // A reduce over a few dozen bigints per keystroke; not worth memoising.
-  const totalBudget = plan.lines.reduce((sum, line) => sum + (amounts[line.id] ?? 0n), 0n)
-  const totalOf = (cashflow: CashflowType) =>
-    plan.lines
-      .filter((line) => line.cashflow === cashflow)
-      .reduce((sum, line) => sum + (amounts[line.id] ?? 0n), 0n)
-
   const groups = (['spending', 'bills'] as CashflowType[])
     .map((cashflow) => ({ cashflow, rows: plan.lines.filter((line) => line.cashflow === cashflow) }))
     .filter((group) => group.rows.length > 0)
@@ -89,9 +83,13 @@ export function BudgetTable({ plan }: { plan: BudgetPlanView }) {
 
       <BudgetSummary
         plan={plan}
-        totalBudget={totalBudget}
-        spendingTotal={totalOf('spending')}
-        billsTotal={totalOf('bills')}
+        lines={plan.lines.map((line) => ({
+          id: line.id,
+          name: line.name,
+          cashflow: line.cashflow,
+          hue: line.hue,
+          amount: amounts[line.id] ?? 0n,
+        }))}
       />
 
       <form action={action} className="space-y-3">
@@ -114,7 +112,10 @@ export function BudgetTable({ plan }: { plan: BudgetPlanView }) {
           Positioned, so the sr-only spans inside the cells are clipped by this
           box rather than escaping it and widening the page.
         */}
-        <div className="relative overflow-x-auto border border-line bg-surface">
+        {/* `scroll-mt` on the fields: the allocation bar above is sticky, and
+            without it a focused input can be scrolled to exactly where the bar
+            covers it. */}
+        <div className="relative overflow-x-auto border border-line bg-surface [&_input]:scroll-mt-32">
           <table className="w-full border-collapse text-sm sm:min-w-[38rem]">
             <caption className="sr-only">Anggaran {label} per kategori</caption>
             <thead>
@@ -211,10 +212,15 @@ export function BudgetTable({ plan }: { plan: BudgetPlanView }) {
 function judge(line: BudgetLineView, amount: bigint) {
   if (line.actualSen === null || line.actual === null) return null
   const spent = BigInt(line.actualSen)
+  const over = amount > 0n && spent > amount
   return {
     text: line.actual.text,
-    pct: amount > 0n ? Number((spent * 100n) / amount) : 0,
-    over: amount > 0n && spent > amount,
+    pct: amount > 0n ? Number((spent * 10_000n) / amount) / 100 : 0,
+    over,
+    // The figure a percentage cannot give: how much money is actually at
+    // stake. 130% of a small budget and 130% of a large one are different
+    // problems, and the row is where that has to be legible.
+    overByText: over ? formatIdr(spent - amount) : null,
   }
 }
 
@@ -300,6 +306,19 @@ function Row({
                 ) : null}
               </span>
               {actual.pct > 0 ? (
+                <span className="mt-0.5 block font-sans text-xs text-ink-muted">
+                  {Math.round(actual.pct)}% dari anggaran
+                  {actual.overByText ? (
+                    <>
+                      <span aria-hidden="true" className="mx-1 text-ink-faint">
+                        ·
+                      </span>
+                      lewat <span className="tnum font-mono">{actual.overByText}</span>
+                    </>
+                  ) : null}
+                </span>
+              ) : null}
+              {actual.pct > 0 ? (
                 <span className="relative mt-1 block h-1 w-full bg-sunken">
                   <span
                     data-budget={line.id}
@@ -350,7 +369,7 @@ function Context({
   hasData: boolean
   hasHistory: boolean
   /** Judged against the typed amount, by the row above. */
-  actual: { text: string; pct: number; over: boolean } | null
+  actual: ReturnType<typeof judge>
   pace: MonthPace | null
 }) {
   return (
@@ -411,6 +430,13 @@ function Context({
             ) : (
               <span className="text-ink-faint">belum ada</span>
             )}
+            {actual && actual.pct > 0 ? (
+              <span className="text-ink-muted">
+                {' '}
+                ({Math.round(actual.pct)}%
+                {actual.overByText ? `, lewat ${actual.overByText}` : ''})
+              </span>
+            ) : null}
           </span>
 
           {/* The same bar the desktop column draws. It is the fastest read of

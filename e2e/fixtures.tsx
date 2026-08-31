@@ -569,6 +569,27 @@ const BUDGET_PLAN_OVER = buildBudgetPlan({
 })
 
 /*
+  A household whose ledger carries a yearly cost: road tax, paid twice, twelve
+  months apart. The summary should price it per month without being told.
+*/
+const BUDGET_PLAN_PERIODIC = buildBudgetPlan({
+  period: '2026-07',
+  previous: '2026-06',
+  categories: BUDGET_CATEGORIES,
+  history: BUDGET_HISTORY,
+  saved: { 'c-belanja': idr('1.300.000,00') },
+  previousSaved: {},
+  income: idr('6.000.000,00'),
+  now: new Date('2026-07-15T05:00:00.000Z'),
+  periodicHistory: [
+    { month: '2025-07', byCategory: { 'c-pajak': idr('1.200.000,00') } },
+    { month: '2026-01', byCategory: { 'c-belanja': idr('1.000.000,00') } },
+    { month: '2026-07', byCategory: { 'c-pajak': idr('1.200.000,00') } },
+  ],
+  periodicNames: { 'c-pajak': 'Pajak Kendaraan', 'c-belanja': 'Belanja' },
+})
+
+/*
   A year with every state the strip distinguishes: months over their budget,
   under it, spending with no budget, and no data at all.
 */
@@ -1666,6 +1687,7 @@ export const FIXTURES = {
   'budget-table': <BudgetTable plan={BUDGET_PLAN} />,
   'budget-table-empty': <BudgetTable plan={BUDGET_PLAN_EMPTY} />,
   'budget-table-overcommitted': <BudgetTable plan={BUDGET_PLAN_OVER} />,
+  'budget-table-periodic': <BudgetTable plan={BUDGET_PLAN_PERIODIC} />,
   'budget-year': <YearStrip view={BUDGET_YEAR} />,
   'transaction-table': (
     <TransactionTable

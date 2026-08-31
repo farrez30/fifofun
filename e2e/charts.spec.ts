@@ -146,12 +146,24 @@ test.describe('ringkasan alokasi anggaran', () => {
   }) => {
     await open(page, 'budget-table')
 
-    // The static default sums the saved budgets, so the fill and the income
-    // marker are both on screen before any hydration.
-    const fill = page.locator('[data-summary-fill]')
-    await expect(fill).toBeVisible()
-    expect(await fill.evaluate((node) => node.getBoundingClientRect().width)).toBeGreaterThan(1)
+    // The static default sums the saved budgets, so the segments and the
+    // income marker are both on screen before any hydration. One segment per
+    // category carrying a figure, each in its own hue.
+    const segments = page.locator('[data-summary-segment]')
+    expect(await segments.count()).toBe(2)
+    for (const segment of await segments.all()) {
+      expect(await segment.evaluate((node) => node.getBoundingClientRect().width)).toBeGreaterThan(1)
+    }
+    const hues = await segments.evaluateAll((nodes) =>
+      nodes.map((node) => getComputedStyle(node).backgroundColor),
+    )
+    expect(new Set(hues).size).toBe(2)
     await expect(page.locator('[data-summary-income]')).toBeVisible()
+
+    // Every figure carries its share, because Rupiah alone cannot say whether
+    // an amount is a lot.
+    const summary = await page.locator('figure').first().innerText()
+    expect(summary).toMatch(/\d+% dari pemasukan/)
 
     // Day 15 of 31 in the fixture clock.
     const paceText = await page.locator('[data-summary-pace]').innerText()
@@ -181,6 +193,24 @@ test.describe('ringkasan alokasi anggaran', () => {
     // Rp7,5 juta allocated against Rp6 juta of typical income.
     expect(text).toContain('melewati pemasukan biasanya')
     expect(text).toContain('Rp1.500.000')
+  })
+
+  test('prices a yearly cost per month from the ledger rhythm alone', async ({ page }) => {
+    await open(page, 'budget-table-periodic')
+    const periodic = await page.locator('[data-summary-periodic]').innerText()
+
+    // Rp1.200.000 of road tax, twelve months apart, is Rp100.000 a month.
+    expect(periodic).toContain('Pajak Kendaraan')
+    expect(periodic).toContain('12 bulan')
+    expect(periodic).toContain('Rp100.000')
+  })
+
+  test('says a household simply has no yearly pattern yet', async ({ page }) => {
+    await open(page, 'budget-table')
+    const summary = await page.locator('figure').first().innerText()
+
+    expect(await page.locator('[data-summary-periodic]').count()).toBe(0)
+    expect(summary).toContain('Belum ada pos yang polanya tahunan')
   })
 })
 
@@ -1441,6 +1471,7 @@ test.describe('lebar halaman', () => {
       'transaksi-split',
       'budget-table',
       'budget-table-overcommitted',
+      'budget-table-periodic',
       'budget-year',
     ]) {
       await open(page, fixture)

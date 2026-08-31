@@ -98,8 +98,21 @@ async function Budgets({ params }: { params: Record<string, string | string[] | 
     and here that is the id. Keying on the name would merge a spending category
     and a bills category that happen to share one.
   */
-  const history = rollUpByMonthAndCategory(
-    transactions.map((tx) => ({ ...tx, categoryName: tx.categoryId })),
+  const byId = transactions.map((tx) => ({ ...tx, categoryName: tx.categoryId }))
+  const history = rollUpByMonthAndCategory(byId)
+
+  /*
+    A wider net for the costs that arrive once a year. Road tax, an insurance
+    premium or a pilgrimage instalment are rarely filed as spending or bills —
+    they sit in a sinking fund or a goal — but they are exactly the costs a
+    monthly budget hides, so the pattern is read across the cashflows money
+    actually leaves through.
+  */
+  const periodicHistory = rollUpByMonthAndCategory(byId, {
+    cashflows: ['spending', 'bills', 'sinking_fund', 'financial_goal', 'debt_payment'],
+  })
+  const periodicNames = Object.fromEntries(
+    categories.map((category) => [category.id, category.name]),
   )
 
   const plan = buildBudgetPlan({
@@ -111,6 +124,8 @@ async function Budgets({ params }: { params: Record<string, string | string[] | 
     previousSaved: Object.fromEntries(previousSaved.map((row) => [row.categoryId, row.amount])),
     income: income > 0n ? income : null,
     now,
+    periodicHistory,
+    periodicNames,
   })
 
   const year = buildBudgetYear({ periods: yearPeriods, history, budgets: yearBudgets })

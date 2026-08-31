@@ -35,7 +35,7 @@ test.describe('anggaran', () => {
 
   test('marks a figure that is spending rather than a budget', async ({ page }) => {
     await open(page, 'budget-table')
-    const jajan = page.locator('tr', { hasText: 'Jajan' })
+    const jajan = page.locator('form table tr', { hasText: 'Jajan' })
 
     // No budget was set for Jajan last month, so what it cost stands in, and
     // the difference is said out loud rather than only drawn.
@@ -48,7 +48,7 @@ test.describe('anggaran', () => {
 
   test('marks a category that went over, and draws how far', async ({ page }) => {
     await open(page, 'budget-table')
-    const belanja = page.locator('tr', { hasText: 'Belanja' })
+    const belanja = page.locator('form table tr', { hasText: 'Belanja' })
 
     await expect(belanja).toContainText('▲')
     const spoken = await belanja.locator('.sr-only').allTextContents()
@@ -64,7 +64,7 @@ test.describe('anggaran', () => {
     page,
   }) => {
     await open(page, 'budget-table')
-    const other = page.locator('tr', { hasText: 'Other spending' })
+    const other = page.locator('form table tr', { hasText: 'Other spending' })
     await expect(other).toContainText('belum pernah muncul')
   })
 

@@ -1,5 +1,6 @@
 import { proposeBudget } from './budget'
 import { monthPace, projectMonthEnd, type MonthPace } from './pace'
+import { findPeriodicCosts } from './periodic'
 import { formatIdr } from '@/lib/money'
 import type { MonthCategoryTotals } from './categories'
 import type { CashflowType } from './types'
@@ -40,6 +41,14 @@ export interface BudgetPlanInput {
   income: bigint | null
   /** The render's clock; explicit so fixtures and tests stay deterministic. */
   now: Date
+  /**
+   * A wider rollup for spotting yearly costs, and names for the categories in
+   * it. Road tax and insurance premiums are often filed outside the two
+   * cashflows a budget covers, so the pattern is read from more of the ledger
+   * than the table lists. Defaults to the budget's own history.
+   */
+  periodicHistory?: MonthCategoryTotals[]
+  periodicNames?: Record<string, string>
 }
 
 export interface BudgetLineView {
@@ -91,6 +100,19 @@ export interface BudgetPlanView {
   /** Sum of the per-line projections; current month only, else nulls. */
   totalProjectedSen: string | null
   totalProjectedText: string | null
+  /**
+   * Costs the ledger says arrive yearly rather than monthly, and what each is
+   * worth set aside per month. Empty for a household with no such pattern.
+   */
+  periodic: {
+    name: string
+    gapMonths: number
+    typicalText: string
+    monthlyText: string
+  }[]
+  /** What all of them together ask for each month. */
+  periodicMonthlySen: string
+  periodicMonthlyText: string
 }
 
 export interface BudgetDiff {
@@ -144,6 +166,8 @@ export function buildBudgetPlan({
   previousSaved,
   income,
   now,
+  periodicHistory,
+  periodicNames,
 }: BudgetPlanInput): BudgetPlanView {
   const pace = monthPace(period, now)
   const before = history.filter((month) => month.month < period)
@@ -210,6 +234,21 @@ export function buildBudgetPlan({
     }
   })
 
+  /*
+    The yearly costs, named. Read from the whole history rather than the
+    months before this one: a rhythm is a property of the household, not of
+    the month being edited.
+  */
+  const nameById = new Map(
+    periodicNames
+      ? Object.entries(periodicNames)
+      : categories.map((category) => [category.id, category.name] as const),
+  )
+  const periodicCosts = findPeriodicCosts(periodicHistory ?? history).filter((cost) =>
+    nameById.has(cost.categoryId),
+  )
+  const periodicMonthly = periodicCosts.reduce((sum, cost) => sum + cost.monthly, 0n)
+
   const budgeted = lines.filter((line) => line.amount !== '').length
   const total = lines.reduce((sum, line) => sum + BigInt(line.amount || '0'), 0n)
   const totalActual = lines.reduce((sum, line) => sum + BigInt(line.actualSen ?? '0'), 0n)
@@ -233,5 +272,13 @@ export function buildBudgetPlan({
     totalActualSen: totalActual.toString(),
     totalProjectedSen: totalProjected === null ? null : totalProjected.toString(),
     totalProjectedText: totalProjected === null ? null : formatIdr(totalProjected),
+    periodic: periodicCosts.map((cost) => ({
+      name: nameById.get(cost.categoryId) ?? cost.categoryId,
+      gapMonths: cost.gapMonths,
+      typicalText: formatIdr(cost.typical),
+      monthlyText: formatIdr(cost.monthly),
+    })),
+    periodicMonthlySen: periodicMonthly.toString(),
+    periodicMonthlyText: formatIdr(periodicMonthly),
   }
 }
