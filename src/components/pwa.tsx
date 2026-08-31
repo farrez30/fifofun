@@ -20,6 +20,31 @@ export function ProgressiveWebApp() {
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return
 
+    /*
+      Production only, and in development the opposite: unregister and empty
+      the caches. The worker serves /_next/static cache-first on the promise
+      that those names are content-hashed — true of a build, false of `next
+      dev`, where Turbopack names a chunk by its module path and rewrites the
+      CONTENT in place. A dev client that ever cached the stylesheet then kept
+      it forever: new markup, old CSS, and the dashboard rendered as a narrow
+      column because the deck's containment utilities were not in the file it
+      was being served. The cleanup heals any client that was poisoned before
+      this guard existed; it needs one reload to let go, which dev can afford.
+    */
+    if (process.env.NODE_ENV !== 'production') {
+      navigator.serviceWorker
+        .getRegistrations()
+        .then((registrations) => Promise.all(registrations.map((r) => r.unregister())))
+        .catch(() => {})
+      if ('caches' in window) {
+        caches
+          .keys()
+          .then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
+          .catch(() => {})
+      }
+      return
+    }
+
     navigator.serviceWorker
       .register('/sw.js', { scope: '/' })
       .then(() => setRegistered(true))

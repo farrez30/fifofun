@@ -23,10 +23,16 @@ interface Props {
   account: React.ReactNode
   /** The phone's bottom bar, interactive or static. */
   tabs: React.ReactNode
+  /**
+   * The pending dot each nav link renders, or nothing. A slot so the loading
+   * shell can leave it out: `ShellFallback` refuses hydration on principle,
+   * and a hint on a shell that is itself the loading state says nothing.
+   */
+  navHint?: React.ReactNode
   children: React.ReactNode
 }
 
-export function ShellFrame({ title, current, lead, account, tabs, children }: Props) {
+export function ShellFrame({ title, current, lead, account, tabs, navHint, children }: Props) {
   /* Below `sm` the heading would repeat the label the lit tab already shows,
      500px apart. It stays in the markup for the reader and the outline, and
      stays visible on any page that is not one of the tabs. */
@@ -37,8 +43,16 @@ export function ShellFrame({ title, current, lead, account, tabs, children }: Pr
       The bottom padding clears the fixed bar. Without it the last row of every
       page sits underneath the tab bar, which is invisible until it is the row
       you needed.
+
+      `overflow-guard` (globals.css) is the frame's guarantee that no child
+      can widen the document. One overflowing element on a phone does not look
+      like a bug in that element: the browser zooms out to fit, and the whole
+      app reads as a narrow column with dead space beside it. The fixture
+      suite measures components in isolation, so a width leak that only
+      appears on the composed page — or only in an engine the suite does not
+      run — gets caught here by construction instead.
     */
-    <div className="mx-auto max-w-5xl px-4 pb-[calc(4.5rem+var(--spacing-safe-b))] pt-8 sm:px-6 sm:pb-8">
+    <div className="overflow-guard mx-auto max-w-5xl px-4 pb-[calc(4.5rem+var(--spacing-safe-b))] pt-8 sm:px-6 sm:pb-8">
       <header className="mb-8 border-b border-line pb-5">
         {/* The account row is the tab bar's sheet on a phone, so it is not
             repeated here. */}
@@ -68,6 +82,7 @@ export function ShellFrame({ title, current, lead, account, tabs, children }: Pr
                     }`}
                   >
                     {item.label}
+                    {navHint}
                   </Link>
                 </li>
               )
@@ -106,7 +121,8 @@ export function ShellFrame({ title, current, lead, account, tabs, children }: Pr
         push and a pair of keyframes, not a rewrite.
 
       */}
-      <main id="main" className="page-enter">
+      {/* tabIndex so the skip link can focus it programmatically. */}
+      <main id="main" tabIndex={-1} className="page-enter outline-none">
         {children}
       </main>
 
@@ -118,11 +134,13 @@ export function ShellFrame({ title, current, lead, account, tabs, children }: Pr
           <li className="hidden sm:block">
             <Link href="/pengaturan" className="hover:text-ink">
               Pengaturan
+              {navHint}
             </Link>
           </li>
           <li className="hidden sm:block">
             <Link href="/undangan" className="hover:text-ink">
               Undang anggota
+              {navHint}
             </Link>
           </li>
           <li>

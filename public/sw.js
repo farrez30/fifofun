@@ -13,7 +13,7 @@
   the network is gone.
 */
 
-const VERSION = 'v1'
+const VERSION = 'v2'
 const SHELL = `fifofun-shell-${VERSION}`
 const ASSETS = `fifofun-assets-${VERSION}`
 
@@ -21,11 +21,26 @@ const OFFLINE_URL = '/offline'
 
 const PRECACHE = [OFFLINE_URL, '/icon.svg', '/icon-192.png', '/icon-512.png']
 
+/*
+  The cache-first rule below is only sound where /_next/static names carry a
+  content hash — a production build. `next dev` names a chunk by its module
+  PATH and rewrites the content in place, so a development client that ever
+  cached the stylesheet was then served that snapshot forever: new markup,
+  old CSS, and the dashboard collapsing into a narrow column because the
+  deck's containment utilities were missing from the file. The worker script
+  itself is the one thing a poisoned client always fetches fresh (it ships
+  with no-cache), so the cure has to live here: on a development host this
+  version empties every cache and unregisters itself. VERSION bumped to v2 so
+  the byte-diff reaches every client that installed v1.
+*/
+const DEV_HOST =
+  self.location.hostname === 'localhost' ||
+  self.location.hostname === '127.0.0.1' ||
+  /^192\.168\.|^10\.|^172\.(1[6-9]|2\d|3[01])\./.test(self.location.hostname)
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches
-      .open(SHELL)
-      .then((cache) => cache.addAll(PRECACHE))
+    (DEV_HOST ? Promise.resolve() : caches.open(SHELL).then((cache) => cache.addAll(PRECACHE)))
       // Take over as soon as the new worker is ready rather than waiting for
       // every tab to close, which in an installed app can be never.
       .then(() => self.skipWaiting()),
@@ -39,10 +54,11 @@ self.addEventListener('activate', (event) => {
       .then((keys) =>
         Promise.all(
           keys
-            .filter((key) => key.startsWith('fifofun-') && !key.endsWith(VERSION))
+            .filter((key) => key.startsWith('fifofun-') && (DEV_HOST || !key.endsWith(VERSION)))
             .map((key) => caches.delete(key)),
         ),
       )
+      .then(() => (DEV_HOST ? self.registration.unregister() : undefined))
       .then(() => self.clients.claim()),
   )
 })
@@ -50,6 +66,8 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event
   if (request.method !== 'GET') return
+  // A development server serves everything mutable; touch nothing.
+  if (DEV_HOST) return
 
   const url = new URL(request.url)
   if (url.origin !== self.location.origin) return

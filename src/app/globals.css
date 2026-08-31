@@ -203,8 +203,17 @@
     A modal dialog makes the page behind it inert, which stops it being clicked
     or tabbed into but not scrolled. Scrolling a page you cannot touch, behind a
     sheet, reads as the sheet being broken.
+
+    An attribute React owns, and deliberately not `body:has(dialog[open])`
+    any more. Under Cache Components a navigation keeps the departing page
+    mounted in a hidden Activity, and its dialog kept matching the `:has()`
+    from inside that hidden subtree — every page reached through the sheet
+    arrived with its scroll already locked, until a hard refresh. The
+    framework's own guidance (preserving-ui-state) is exactly this swap: a
+    selector that watches the whole document couples unrelated pages; a
+    `data-*` attribute the sheet sets and clears cannot outlive it.
   */
-  body:has(dialog[open]) {
+  html[data-sheet-open] body {
     overflow: hidden;
   }
 
@@ -325,6 +334,44 @@
 }
 
 @layer components {
+  /*
+    The shell's width guarantee; carried by the root div in shell-frame.tsx.
+
+    A plain rule rather than Tailwind's `overflow-x-clip`, after watching the
+    utility fail to appear in the generated stylesheet while the class sat in
+    the markup — a guard that may or may not exist is not a guard. One
+    overflowing child on a phone does not look like a bug in that child: the
+    browser shrinks the page to fit and the whole app reads as a narrow
+    column beside dead space. `clip` rather than `hidden`, so this never
+    becomes a programmatic scroll container.
+  */
+  .overflow-guard {
+    overflow-x: clip;
+  }
+
+  /*
+    The pending dot inside a navigation link; toggled by nav-hint.tsx.
+
+    A transition with a delay rather than an animation, deliberately: the
+    100ms delay is the debounce that keeps fast navigations silent, and the
+    global reduced-motion block below zeroes animation and transition
+    DURATIONS but not delays — so this keeps its debounce for everyone and
+    merely loses the fade for readers who asked for calm.
+  */
+  .nav-hint {
+    display: inline-block;
+    width: 0.25rem;
+    height: 0.25rem;
+    border-radius: 9999px;
+    background-color: var(--color-accent);
+    opacity: 0;
+    transition: opacity 150ms ease-out 100ms;
+  }
+
+  .nav-hint-pending {
+    opacity: 1;
+  }
+
   /*
     The loading skeleton. Its absence is one of the clearest signs a page was
     generated rather than designed, so it is a primitive here rather than an
