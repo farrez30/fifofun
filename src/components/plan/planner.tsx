@@ -26,7 +26,7 @@ import { HouseholdInputs, type HouseholdVariant } from './household-inputs'
 import { PlanIndex, type PlanSection } from './plan-index'
 import { RatioPanel } from './ratio-panel'
 import { Section } from './field'
-import { useReservedHeight, useStuck } from './use-stuck'
+import { useReservedHeight, useStuck } from '@/components/use-stuck'
 
 
 /**

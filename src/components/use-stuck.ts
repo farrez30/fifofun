@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react'
+import { useLayoutEffect, useRef, useState, type RefObject } from 'react'
 
 /**
  * Whether a sticky element has left its place in the page.
@@ -16,9 +16,27 @@ export function useStuck<T extends HTMLElement>(): [RefObject<T | null>, boolean
   const sentinel = useRef<T>(null)
   const [stuck, setStuck] = useState(false)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const node = sentinel.current
-    if (!node || typeof IntersectionObserver === 'undefined') return
+    if (!node) return
+
+    /*
+      Measured once, before the observer is asked anything.
+
+      An IntersectionObserver only speaks when the intersection CHANGES, and
+      it starts from whatever the page already looks like. Mount the component
+      onto a page that is already scrolled past the sentinel — a hot reload, a
+      refresh that restores the scroll position, a back navigation — and the
+      sentinel is already far above the viewport: nothing changes, so nothing
+      is reported, and `stuck` sits at its initial `false` no matter how much
+      further the reader scrolls. The dock then stays at full card size glued
+      to the top of the screen until they scroll all the way back up. One
+      direct read at mount removes that whole class of failure.
+    */
+    const rect = node.getBoundingClientRect()
+    if (rect.width !== 0 || rect.height !== 0) setStuck(rect.top < 0)
+
+    if (typeof IntersectionObserver === 'undefined') return
 
     const observer = new IntersectionObserver(
       ([entry]) => {
