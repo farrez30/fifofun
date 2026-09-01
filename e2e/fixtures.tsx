@@ -15,12 +15,14 @@ import { BudgetBullet } from '@/components/chart/budget-bullet'
 import { CrunchTimeline } from '@/components/chart/crunch-timeline'
 import { FoldedCategories, Sankey } from '@/components/chart/sankey'
 import { BalanceTrend } from '@/components/chart/balance-trend'
+import { BalanceSwitch } from '@/components/chart/balance-switch'
 import { CategorySparks } from '@/components/chart/category-sparks'
 import { Waterfall } from '@/components/chart/waterfall'
 import { FundsPanel } from '@/app/dana/funds-panel'
 import { reviewBudget } from '@/lib/ledger/budget'
 import { buildCategoryTrends } from '@/lib/ledger/category-trend'
 import { buildFlow } from '@/lib/ledger/flow'
+import { restateBalances } from '@/lib/ledger/restate'
 import { reviewFunds } from '@/lib/ledger/funds'
 import type { MonthlySeries, MonthlyStatement } from '@/lib/ledger/monthly'
 import { parseIdAmount as idr } from '@/lib/money'
@@ -349,6 +351,48 @@ const BALANCES: MonthlySeries[] = (
   month,
   statement: { ...statement(0n, 0n), sisaUang: idr(closing) },
 }))
+
+/**
+ * A wallet topped up for months and only reconciled at the end, which is what
+ * the balance adjustments in the real ledger are: Rp1,4jt of GoPay payments
+ * that no statement ever saw, booked in one go in March.
+ */
+const ADJUSTED: LedgerEntry[] = [
+  ['2025-11', '400.000,00'],
+  ['2025-12', '600.000,00'],
+  ['2026-01', '200.000,00'],
+  ['2026-02', '200.000,00'],
+].map(([month, amount], index) => ({
+  id: `topup-${index}`,
+  occurredAt: new Date(`${month}-10T05:00:00.000Z`),
+  description: 'Top up GoPay',
+  amount: idr(amount),
+  cashflow: 'transfer' as CashflowType,
+  categoryId: null,
+  fromAccountId: 'bank',
+  toAccountId: 'gopay',
+  source: 'manual' as const,
+}))
+
+ADJUSTED.push({
+  id: 'adjust-gopay',
+  occurredAt: new Date('2026-03-23T05:00:00.000Z'),
+  description: 'Penyesuaian saldo GoPay',
+  amount: idr('1.400.000,00'),
+  cashflow: 'spending',
+  categoryId: 'penyesuaian',
+  fromAccountId: 'gopay',
+  toAccountId: null,
+  source: 'manual',
+})
+
+const RESTATED = restateBalances(
+  BALANCES,
+  ADJUSTED.map((entry) => ({
+    ...entry,
+    categoryName: entry.id === 'adjust-gopay' ? 'Penyesuaian Spending' : null,
+  })),
+)
 
 /**
  * Twenty three months, the length of the household's real import.
@@ -1481,6 +1525,19 @@ export const FIXTURES = {
   waterfall: <Waterfall statement={FEBRUARY} caption="Sisa uang Februari" />,
   'balance-trend': <BalanceTrend series={BALANCES} caption="Saldo di akhir tiap bulan" />,
   'balance-trend-long': <BalanceTrend series={LONG_RUN} caption="Saldo dua tahun" />,
+  // The same months with the March correction spread back over the top-ups it
+  // paid for. Rendered without hydration, so what is measured here is the
+  // recorded view the switch opens on.
+  'balance-restated': (
+    <BalanceSwitch
+      recorded={<BalanceTrend series={BALANCES} caption="Saldo di akhir tiap bulan" />}
+      restated={<BalanceTrend series={RESTATED.series} caption="Saldo di akhir tiap bulan" />}
+      note="Penyesuaian saldo Rp1,4jt dibukukan sekaligus di Mar '26."
+    />
+  ),
+  'balance-trend-restated': (
+    <BalanceTrend series={RESTATED.series} caption="Saldo di akhir tiap bulan" />
+  ),
   funds: (
     <FundsPanel
       review={FUNDS}

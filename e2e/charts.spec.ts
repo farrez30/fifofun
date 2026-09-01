@@ -642,6 +642,57 @@ test.describe('tren saldo', () => {
     const text = await page.locator('figure').innerText()
     expect(text).toContain('bukan kekayaan bersih')
   })
+
+  test('opens on what was recorded, and says what the other reading is', async ({ page }) => {
+    await open(page, 'balance-restated')
+
+    // The recorded line is the default and the only one on the page: a
+    // restatement is offered, never substituted.
+    await expect(page.locator('[data-balance-switch] [role="radio"]')).toHaveCount(2)
+    await expect(page.locator('[role="radio"][aria-checked="true"]')).toHaveText(
+      'Seperti tercatat',
+    )
+    await expect(page.locator('figure')).toHaveCount(1)
+    await expect(page.locator('[data-balance-switch]')).toBeVisible()
+    // What is being offered is named before it is drawn.
+    await expect(page.getByText('Penyesuaian saldo')).toBeVisible()
+  })
+
+  test('spreads the correction back without moving where the line ends', async ({ page }) => {
+    const dotsOf = async (fixture: string) => {
+      await open(page, fixture)
+      return page.$$eval('[data-point]', (nodes) =>
+        Object.fromEntries(
+          nodes.map((node) => [
+            node.getAttribute('data-point') ?? '',
+            node.getBoundingClientRect().top,
+          ]),
+        ),
+      )
+    }
+
+    const recorded = await dotsOf('balance-trend')
+    const restated = await dotsOf('balance-trend-restated')
+
+    /*
+      Screen coordinates run downwards, so a month carrying part of the
+      correction sits lower on the restated line. March booked it and is
+      therefore identical in both — the destination never moves, only the path
+      to it. The two charts crop their axis to their own range, so what is
+      compared is the shape: the drop into March has to be shallower once the
+      money is spread over the months it really left in.
+    */
+    const fall = (dots: Record<string, number>) => dots['2026-03'] - dots['2026-02']
+    expect(fall(restated)).toBeLessThan(fall(recorded))
+    expect(Object.keys(restated)).toEqual(Object.keys(recorded))
+
+    // And the headline changes with it: the low is no longer the month the
+    // correction was booked in, which is the whole reason for offering this.
+    await open(page, 'balance-trend')
+    await expect(page.locator('figure')).toContainText("Terendah Rp2,5jt di Mar '26")
+    await open(page, 'balance-trend-restated')
+    await expect(page.locator('figure')).toContainText("Terendah Rp2,2jt di Jan '26")
+  })
 })
 
 test.describe('kategori sepanjang bulan', () => {
@@ -1473,6 +1524,7 @@ test.describe('lebar halaman', () => {
       'budget-table-overcommitted',
       'budget-table-periodic',
       'budget-year',
+      'balance-restated',
     ]) {
       await open(page, fixture)
 

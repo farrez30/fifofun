@@ -11,10 +11,12 @@ import { CashflowChart } from '@/components/cashflow-chart'
 import { BudgetBullet } from '@/components/chart/budget-bullet'
 import { FoldedCategories, Sankey } from '@/components/chart/sankey'
 import { BalanceTrend } from '@/components/chart/balance-trend'
+import { BalanceSwitch } from '@/components/chart/balance-switch'
 import { CategorySparks } from '@/components/chart/category-sparks'
 import { Waterfall } from '@/components/chart/waterfall'
 import { BillsPanel } from '@/components/bills-panel'
 import { Money, Stat } from '@/components/money'
+import { formatIdrCompact } from '@/lib/money'
 import { ReceivablesPanel } from '@/components/receivables-panel'
 import { formatJakarta, formatMonthKey } from '@/lib/datetime'
 import { reviewBills } from '@/lib/ledger/bills'
@@ -25,6 +27,7 @@ import { asMonthlySeries, computeAccountSeries } from '@/lib/ledger/account-seri
 import { buildCategoryTrends } from '@/lib/ledger/category-trend'
 import { categoryHue, categoryIcon } from '@/lib/ledger/palette'
 import { rollUpByMonthAndCategory } from '@/lib/ledger/categories'
+import { restateBalances } from '@/lib/ledger/restate'
 import { buildFlow } from '@/lib/ledger/flow'
 import {
   computeAccountMovements,
@@ -195,6 +198,21 @@ async function Dashboard({ akun }: { akun: string }) {
   const scoped = accounts.find((account) => account.id === akun) ?? null
   const scopedPoints = scoped ? computeAccountSeries(transactions, scoped) : []
   const shownSeries = scoped ? asMonthlySeries(scopedPoints) : series
+  const balanceCaption = scoped
+    ? `Saldo ${scoped.name} di akhir tiap bulan`
+    : 'Saldo di akhir tiap bulan'
+
+  /*
+    The same line with the balance adjustments spread back over the months
+    they really belong to, offered beside the recorded one rather than instead
+    of it. Nothing downstream sees this: budgets, "biasanya" and Rencana all
+    keep reading the ledger as it was written, because those numbers are
+    compared against figures the household can check.
+  */
+  const restated = restateBalances(shownSeries, transactions, scoped?.id ?? null)
+  const restatementNote = `Penyesuaian saldo ${formatIdrCompact(restated.total)} dibukukan sekaligus di ${restated.bookedIn
+    .map((month) => formatMonthKey(month, 'compact'))
+    .join(' dan ')}.`
   const scopedEntries = scoped
     ? transactions.filter(
         (row) => row.fromAccountId === scoped.id || row.toAccountId === scoped.id,
@@ -456,12 +474,16 @@ async function Dashboard({ akun }: { akun: string }) {
           />
           {/* The flows above, the level here. A month can look reasonable on its
               own while being the fourth in a row that ended lower. */}
-          <BalanceTrend
-            series={shownSeries}
-            caption={
-              scoped ? `Saldo ${scoped.name} di akhir tiap bulan` : 'Saldo di akhir tiap bulan'
-            }
-          />
+          {restated.total > 0n ? (
+            <BalanceSwitch
+              recorded={<BalanceTrend series={shownSeries} caption={balanceCaption} />}
+              restated={<BalanceTrend series={restated.series} caption={balanceCaption} />}
+              note={restatementNote}
+              dipped={restated.series.some((month) => month.statement.sisaUang < 0n)}
+            />
+          ) : (
+            <BalanceTrend series={shownSeries} caption={balanceCaption} />
+          )}
           {scoped && stalled.some((account) => account.accountId === scoped.id) ? (
             <p className="text-xs text-ink-muted">
               Akun ini hampir tidak pernah mengeluarkan uang di catatan, jadi garisnya kemungkinan
