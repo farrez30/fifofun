@@ -120,12 +120,15 @@ export async function applyCategory(
 
   // The category has to belong to this household, and its cashflow decides the
   // transaction's cashflow. Trusting the form for that would let a request move
-  // spending into income.
+  // spending into income. Archived rows are refused the same way the entry and
+  // edit forms refuse them: retired means retired everywhere, not everywhere
+  // except here.
   const { data: category } = await supabase
     .from('categories')
     .select('id, name, cashflow')
     .eq('household_id', householdId)
     .eq('id', categoryId)
+    .is('archived_at', null)
     .maybeSingle()
 
   if (!category) return fail('Kategori itu tidak ada di rumah tangga ini.')
@@ -274,6 +277,7 @@ export async function categoriseOne(
     .select('id, name, cashflow')
     .eq('household_id', householdId)
     .eq('id', parsed.data.categoryId)
+    .is('archived_at', null)
     .maybeSingle()
   if (!category) return fail('Kategori itu tidak ada di rumah tangga ini.')
 

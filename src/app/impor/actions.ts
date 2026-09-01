@@ -159,10 +159,16 @@ export async function importStatement(
     .eq('household_id', household.id)
     .is('archived_at', null)
 
+  // Live categories only. A rule or a name lookup that still points at an
+  // archived category would quietly keep filling a pos the household retired;
+  // filtered here, the rule simply stops matching and the row parks in the
+  // kind's default with the review flag on, which is where an orphaned habit
+  // belongs.
   const { data: categories } = await supabase
     .from('categories')
     .select('id, name, cashflow')
     .eq('household_id', household.id)
+    .is('archived_at', null)
 
   // What the household has already taught the app. Without this, the line shown
   // after teaching a rule, that the next import will file the pattern by itself,
@@ -173,16 +179,22 @@ export async function importStatement(
     .eq('household_id', household.id)
     .eq('auto_apply', true)
 
-  const rules: Rule[] = (ruleRows ?? []).map((row) => ({
-    id: row.id as string,
-    priority: row.priority as number,
-    matchType: row.match_type as Rule['matchType'],
-    pattern: row.pattern as string,
-    cashflow: row.cashflow as Rule['cashflow'],
-    categoryId: (row.category_id as string | null) ?? null,
-    autoApply: true,
-    hitCount: (row.hit_count as number) ?? 0,
-  }))
+  // A rule that targets a retired category is dropped for this run rather
+  // than allowed to file rows into the archive; deleting it stays the
+  // household's call, from the rules list.
+  const liveCategoryIds = new Set((categories ?? []).map((row) => row.id as string))
+  const rules: Rule[] = (ruleRows ?? [])
+    .filter((row) => row.category_id === null || liveCategoryIds.has(row.category_id as string))
+    .map((row) => ({
+      id: row.id as string,
+      priority: row.priority as number,
+      matchType: row.match_type as Rule['matchType'],
+      pattern: row.pattern as string,
+      cashflow: row.cashflow as Rule['cashflow'],
+      categoryId: (row.category_id as string | null) ?? null,
+      autoApply: true,
+      hitCount: (row.hit_count as number) ?? 0,
+    }))
 
   /*
     Accounts are found by their import key, not by their name. The name is a

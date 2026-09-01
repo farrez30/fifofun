@@ -115,6 +115,23 @@ describe('applyCategory', () => {
     expect(result.message).toBe('Tidak ada transaksi yang cocok dengan pola itu.')
   })
 
+  it('never offers to write into an archived category', async () => {
+    stub.queue('households', { data: HOUSEHOLD })
+    // The stub answers whatever is queued; what is being pinned here is the
+    // question the action asks. Retired means retired everywhere: the entry
+    // and edit forms filter archived rows, and this lookup has to as well or
+    // the queue stays the one door back into the archive.
+    stub.queue('categories', { data: null })
+
+    const result = await applyCategory(null, applyForm(CATEGORY))
+
+    expect(result.ok).toBe(false)
+    const lookup = stub.callsOn('categories')[0]
+    const at = lookup.chain.indexOf('is')
+    expect(at).toBeGreaterThan(-1)
+    expect(lookup.args[at]).toEqual(['archived_at', null])
+  })
+
   it('refuses a category from another household', async () => {
     stub.queue('households', { data: HOUSEHOLD })
     stub.queue('categories', { data: null })
@@ -174,6 +191,22 @@ describe('categoriseOne', () => {
       cashflow: 'spending',
       needs_review: false,
     })
+  })
+
+  it('asks for a live category, not an archived one', async () => {
+    stub.queue('households', { data: HOUSEHOLD })
+    stub.queue('categories', { data: null })
+
+    const data = new FormData()
+    data.append('transactionId', TRANSACTION)
+    data.append('categoryId', CATEGORY)
+    const result = await categoriseOne(null, data)
+
+    expect(result.ok).toBe(false)
+    const lookup = stub.callsOn('categories')[0]
+    const at = lookup.chain.indexOf('is')
+    expect(at).toBeGreaterThan(-1)
+    expect(lookup.args[at]).toEqual(['archived_at', null])
   })
 
   it('refuses when the session is gone', async () => {
