@@ -148,6 +148,15 @@ export const categories = pgTable(
     plannedShareBp: integer('planned_share_bp'),
     icon: text('icon'),
     color: text('color'),
+    /**
+     * One sentence saying what belongs here, shown under every category picker.
+     *
+     * The names are too short to carry their own rules: nothing in "Jajan"
+     * says whether a warm meal from a minimarket counts. The household's
+     * tie-break lives here instead of in each member's head, so two people
+     * filing the same receipt land on the same row.
+     */
+    description: text('description'),
     sortOrder: integer('sort_order').notNull().default(0),
     archivedAt: timestamp('archived_at', { withTimezone: true }),
   },

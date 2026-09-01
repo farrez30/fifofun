@@ -60,6 +60,8 @@ const categorySchema = z.object({
   hue: hueField,
   /** The group this rolls up into. Empty means it is one, or belongs to none. */
   parentId: z.uuid().or(z.literal('')),
+  /** One sentence saying what belongs here; empty removes it. */
+  description: z.string().trim().max(160, 'Kamusnya cukup satu kalimat, maksimal 160 huruf.'),
 })
 
 /**
@@ -389,6 +391,7 @@ export async function createCategory(
       parent_id: values.parentId || null,
       icon: values.icon || null,
       color: values.hue === null ? null : String(values.hue),
+      description: values.description || null,
       sort_order: rows.length + 1,
     })
     .select('id')
@@ -480,6 +483,7 @@ export async function updateCategory(
       parent_id: values.parentId || null,
       icon: values.icon || null,
       color: values.hue === null ? null : String(values.hue),
+      description: values.description || null,
     })
     .eq('id', current.id)
     .eq('household_id', ctx.householdId)
@@ -598,6 +602,7 @@ function readCategory(formData: FormData) {
     icon: formData.get('icon') ?? '',
     hue: formData.get('hue') ?? '',
     parentId: formData.get('parentId') ?? '',
+    description: formData.get('description') ?? '',
   }
 }
 

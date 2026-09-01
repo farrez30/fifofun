@@ -46,7 +46,7 @@ export function CategoryForm({ category, cashflow, siblings }: Props) {
     null,
   )
 
-  const ids = { name: useId(), cashflow: useId(), hue: useId(), parent: useId() }
+  const ids = { name: useId(), cashflow: useId(), hue: useId(), parent: useId(), description: useId() }
 
   const [name, setName] = useState(category?.name ?? '')
   const [flow, setFlow] = useState<CashflowType>(category?.cashflow ?? cashflow ?? 'spending')
@@ -127,6 +127,22 @@ export function CategoryForm({ category, cashflow, siblings }: Props) {
             </p>
           ) : null}
         </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <FieldLabel htmlFor={ids.description}>Kamus</FieldLabel>
+        <input
+          id={ids.description}
+          name="description"
+          defaultValue={category?.description ?? ''}
+          maxLength={160}
+          placeholder="Satu kalimat: apa yang masuk ke sini"
+          className={CONTROL}
+        />
+        <p className="text-xs text-ink-muted">
+          Kalimat ini muncul di bawah pilihan kategori saat mencatat dan meninjau. Tulis aturan
+          batasnya, bukan mengulang namanya: kapan sesuatu masuk ke sini, bukan ke pos sebelah.
+        </p>
       </div>
 
       <div className="space-y-1.5">

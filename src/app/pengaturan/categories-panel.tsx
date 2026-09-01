@@ -27,6 +27,8 @@ export interface CategoryView {
   icon: string
   /** Degrees as text, or empty for the hue derived from the name. */
   hue: string
+  /** One sentence saying what belongs here, or empty for none. */
+  description: string
   archived: boolean
   usage: number
 }
@@ -246,6 +248,10 @@ function Card({
         </span>
       </div>
 
+      {category.description ? (
+        <p className="mt-1 text-xs text-ink-muted">{category.description}</p>
+      ) : null}
+
       {isLookedUpByName(category.name) || isGroup ? (
         <p className="mt-1 text-xs text-ink-faint">
           {[
@@ -324,6 +330,11 @@ function Row({
           ) : null}
           {isGroup ? (
             <span className="ml-2 text-xs text-ink-faint">kelompok, tidak menampung transaksi</span>
+          ) : null}
+          {category.description ? (
+            <span className="mt-0.5 block text-xs font-normal text-ink-muted">
+              {category.description}
+            </span>
           ) : null}
         </th>
         <td className="tnum whitespace-nowrap px-4 py-2.5 text-right font-mono text-ink-muted">

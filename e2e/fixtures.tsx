@@ -682,11 +682,17 @@ const TABLE_CATEGORIES = [
   { id: 'cat-wifi', name: 'Wifi', cashflow: 'bills' as const, icon: 'WifiHigh', hue: 210 },
 ]
 
+/*
+  One option carries its kamus sentence and the others do not, so the edit form
+  fixture draws both cases: the sentence for the category the row sits in, and
+  silence for a category nobody has written one for.
+*/
 const SPLIT_OPTIONS = TABLE_CATEGORIES.map(({ id, name, cashflow }) => ({
   id,
   name,
   cashflow,
   parentId: null,
+  description: id === 'cat-belanja' ? 'Barang yang dibeli, menurut jenis barangnya.' : null,
 }))
 
 function tableRow(
@@ -812,17 +818,18 @@ const SETTINGS_ACCOUNTS: AccountView[] = [
 ]
 
 const SETTINGS_CATEGORIES: CategoryView[] = [
-  { id: 'cat-gaji', name: 'Gaji', cashflow: 'income', parentId: '', icon: 'Briefcase', hue: '0', archived: false, usage: 24 },
+  { id: 'cat-gaji', name: 'Gaji', cashflow: 'income', parentId: '', icon: 'Briefcase', hue: '0', description: 'Gaji rutin dari pekerjaan utama.', archived: false, usage: 24 },
   // A group and the two things inside it, so the indent and the "kelompok"
   // note are both drawn.
-  { id: 'cat-makan-group', name: 'Makan & Minum', cashflow: 'spending', parentId: '', icon: 'ForkKnife', hue: '137', archived: false, usage: 0 },
-  { id: 'cat-makan', name: 'Makan/minum', cashflow: 'spending', parentId: 'cat-makan-group', icon: 'ForkKnife', hue: '137', archived: false, usage: 612 },
-  // Nothing filed under it yet, so its cashflow is still free to move.
-  { id: 'cat-kopi', name: 'Kopi', cashflow: 'spending', parentId: 'cat-makan-group', icon: '', hue: '', archived: false, usage: 0 },
-  { id: 'cat-wifi', name: 'Wifi', cashflow: 'bills', parentId: '', icon: 'WifiHigh', hue: '210', archived: false, usage: 12 },
-  { id: 'cat-tabungan', name: 'Tabungan', cashflow: 'invest_savings', parentId: '', icon: 'PiggyBank', hue: '300', archived: false, usage: 9 },
-  { id: 'cat-tabungan-keluar', name: 'Tabungan', cashflow: 'from_asset', parentId: '', icon: 'PiggyBank', hue: '300', archived: false, usage: 2 },
-  { id: 'cat-lama', name: 'Langganan lama', cashflow: 'bills', parentId: '', icon: 'Receipt', hue: '', archived: true, usage: 5 },
+  { id: 'cat-makan-group', name: 'Makan & Minum', cashflow: 'spending', parentId: '', icon: 'ForkKnife', hue: '137', description: 'Semua yang masuk mulut.', archived: false, usage: 0 },
+  { id: 'cat-makan', name: 'Makan/minum', cashflow: 'spending', parentId: 'cat-makan-group', icon: 'ForkKnife', hue: '137', description: 'Makanan yang mengenyangkan sebagai makan utama.', archived: false, usage: 612 },
+  // Nothing filed under it yet, so its cashflow is still free to move. Also
+  // the row with no kamus, so the blank case is drawn.
+  { id: 'cat-kopi', name: 'Kopi', cashflow: 'spending', parentId: 'cat-makan-group', icon: '', hue: '', description: '', archived: false, usage: 0 },
+  { id: 'cat-wifi', name: 'Wifi', cashflow: 'bills', parentId: '', icon: 'WifiHigh', hue: '210', description: 'Internet rumah.', archived: false, usage: 12 },
+  { id: 'cat-tabungan', name: 'Tabungan', cashflow: 'invest_savings', parentId: '', icon: 'PiggyBank', hue: '300', description: 'Menyisihkan uang ke tabungan umum.', archived: false, usage: 9 },
+  { id: 'cat-tabungan-keluar', name: 'Tabungan', cashflow: 'from_asset', parentId: '', icon: 'PiggyBank', hue: '300', description: 'Mengambil kembali uang dari tabungan umum.', archived: false, usage: 2 },
+  { id: 'cat-lama', name: 'Langganan lama', cashflow: 'bills', parentId: '', icon: 'Receipt', hue: '', description: '', archived: true, usage: 5 },
 ]
 
 /*
@@ -869,7 +876,7 @@ const LIFESTYLE = templateProfile('seimbang')
 const MARKED_CATEGORIES: { name: string; cashflow: CashflowType }[] = [
   { name: 'Makan/minum', cashflow: 'spending' },
   { name: 'Belanja', cashflow: 'spending' },
-  { name: 'Wifi', cashflow: 'bills' },
+  { name: 'Listrik', cashflow: 'bills' },
   { name: 'Gaji', cashflow: 'income' },
   { name: 'Dana Menikah', cashflow: 'financial_goal' },
 ]

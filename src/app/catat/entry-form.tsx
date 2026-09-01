@@ -28,6 +28,8 @@ export interface CategoryOption {
   id: string
   name: string
   cashflow: CashflowType
+  /** One sentence saying what belongs here, read out under the picker. */
+  description?: string | null
 }
 
 interface Props {
@@ -48,6 +50,7 @@ export function EntryForm({ accounts, categories, defaults, entryKey }: Props) {
   const [direction, setDirection] = useState<Direction>('out')
   const [amount, setAmount] = useState(0n)
   const [clientId, setClientId] = useState(entryKey)
+  const [categoryId, setCategoryId] = useState('')
 
   const [result, action] = useActionState<ActionResult | null, FormData>(
     async (previous, formData) => {
@@ -64,6 +67,7 @@ export function EntryForm({ accounts, categories, defaults, entryKey }: Props) {
   )
 
   const allowed = categories.filter((category) => directionOf(category.cashflow) === direction)
+  const chosen = allowed.find((category) => category.id === categoryId)
   const byCashflow = new Map<CashflowType, CategoryOption[]>()
   for (const category of allowed) {
     byCashflow.set(category.cashflow, [...(byCashflow.get(category.cashflow) ?? []), category])
@@ -145,6 +149,7 @@ export function EntryForm({ accounts, categories, defaults, entryKey }: Props) {
           name="categoryId"
           required
           defaultValue=""
+          onChange={(event) => setCategoryId(event.target.value)}
           className="mt-1.5 h-11 w-full border border-line bg-paper px-2 text-base text-ink sm:text-sm"
         >
           <option value="" disabled>
@@ -162,6 +167,14 @@ export function EntryForm({ accounts, categories, defaults, entryKey }: Props) {
             </optgroup>
           ))}
         </select>
+        {/* The name is a label; the sentence is the rule. Read out for the
+            chosen category so the tie-break is beside the decision, not in a
+            settings page nobody has open while typing. */}
+        {chosen?.description ? (
+          <span data-kamus className="mt-1.5 block text-xs text-ink-muted">
+            {chosen.description}
+          </span>
+        ) : null}
       </label>
 
       <MoneyInput name="amount" label="Nominal" value={amount} onChange={setAmount} />

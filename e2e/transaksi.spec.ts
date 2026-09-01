@@ -82,6 +82,16 @@ test.describe('ubah transaksi', () => {
     expect(await page.locator('input[name="accountId"]').count()).toBe(2)
   })
 
+  test('reads the kamus of the category the row sits in', async ({ page }) => {
+    await open(page, 'transaksi-edit-manual')
+
+    // The sentence is on screen before anything is touched, so whoever is
+    // deciding whether to move the row starts from the rule for where it is.
+    await expect(page.locator('[data-kamus]')).toHaveText(
+      'Barang yang dibeli, menurut jenis barangnya.',
+    )
+  })
+
   test('carries whether the row is money held for somebody else', async ({ page }) => {
     await open(page, 'transaksi-edit-manual')
     await expect(page.locator('input[name="passThrough"]')).toHaveValue('0')

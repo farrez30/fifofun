@@ -63,6 +63,7 @@ async function Settings() {
     parentId: category.parentId ?? '',
     icon: category.icon ?? '',
     hue: category.hue === null ? '' : String(category.hue),
+    description: category.description ?? '',
     archived: category.archivedAt !== null,
     usage: usage.categories[category.id] ?? 0,
   }))

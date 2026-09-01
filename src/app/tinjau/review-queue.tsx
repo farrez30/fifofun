@@ -45,6 +45,8 @@ export interface CategoryOption {
   cashflow: CashflowType
   /** The group it is listed under, or null when it is listed by cashflow. */
   parentId: string | null
+  /** One sentence saying what belongs here, read out under the picker. */
+  description?: string | null
 }
 
 export interface AccountOption {
@@ -357,6 +359,11 @@ function CategorySelect({
 }) {
   const empty = categories.length === 0
   const grouped = optionGroups(categories)
+  // The name is a label; the sentence under it is the household's tie-break
+  // rule, read out for whichever category is currently chosen so the rule sits
+  // beside the decision instead of in a settings page nobody has open.
+  const [chosenId, setChosenId] = useState('')
+  const chosen = categories.find((category) => category.id === chosenId)
 
   return (
     <label className="block">
@@ -375,6 +382,7 @@ function CategorySelect({
         disabled={empty}
         defaultValue=""
         aria-label={compactLabel ? label : undefined}
+        onChange={(event) => setChosenId(event.target.value)}
         className="mt-1 h-11 w-full border border-line bg-paper px-2 text-base text-ink disabled:opacity-60 sm:text-sm"
       >
         <option value="" disabled>
@@ -390,6 +398,11 @@ function CategorySelect({
           </optgroup>
         ))}
       </select>
+      {chosen?.description ? (
+        <span data-kamus className="mt-1 block text-xs text-ink-muted">
+          {chosen.description}
+        </span>
+      ) : null}
       {empty ? (
         <span className="mt-1 block text-xs text-ink-muted">
           Buat kategorinya di{' '}

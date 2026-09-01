@@ -59,6 +59,7 @@ export default async function TransactionPage({
     name: category.name,
     cashflow: category.cashflow,
     parentId: category.parentId,
+    description: category.description,
   }))
 
   const entry: EntryView = {

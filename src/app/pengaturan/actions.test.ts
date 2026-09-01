@@ -70,6 +70,7 @@ const CATEGORY_FIELDS = {
   cashflow: 'invest_savings',
   icon: 'PiggyBank',
   hue: '120',
+  description: 'Menyisihkan uang ke tabungan umum.',
 }
 
 beforeEach(() => {
@@ -266,6 +267,30 @@ describe('createCategory', () => {
     expect(payload.color).toBe('120')
     expect(payload.icon).toBe('PiggyBank')
     expect(payload.sort_order).toBe(5)
+    expect(payload.description).toBe('Menyisihkan uang ke tabungan umum.')
+  })
+
+  it('stores a blank kamus as null rather than an empty string', async () => {
+    household()
+    stub.queue('categories', { data: CATEGORIES }, { data: [{ id: '00000000-0000-4000-8000-0000000000c5' }] })
+
+    const result = await createCategory(
+      null,
+      form({ ...CATEGORY_FIELDS, name: 'Kopi', cashflow: 'spending', description: '   ' }),
+    )
+
+    expect(result.ok).toBe(true)
+    const payload = stub.callsOn('categories')[1].payload as Record<string, unknown>
+    expect(payload.description).toBeNull()
+  })
+
+  it('refuses a kamus longer than one sentence has any business being', async () => {
+    const result = await createCategory(
+      null,
+      form({ ...CATEGORY_FIELDS, description: 'x'.repeat(161) }),
+    )
+    expect(result.ok).toBe(false)
+    expect(stub.calls).toHaveLength(0)
   })
 
   it('allows the same name under a different cashflow', async () => {

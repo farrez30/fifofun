@@ -27,6 +27,8 @@ export interface CategoryOption {
   cashflow: CashflowType
   /** The group it is listed under, or null when it is listed by cashflow. */
   parentId: string | null
+  /** One sentence saying what belongs here, read out under the picker. */
+  description?: string | null
 }
 
 export interface EntryView {
@@ -63,8 +65,13 @@ export function EditEntryForm({
 
   const [amount, setAmount] = useState(() => BigInt(entry.amount || '0'))
   const [passThrough, setPassThrough] = useState(entry.isPassThrough)
+  // Starts on the row's current category, so its sentence is on screen before
+  // anything is touched: the reader deciding whether to move the row gets the
+  // rule for where it sits now.
+  const [categoryId, setCategoryId] = useState(entry.categoryId)
 
   const grouped = optionGroups(categories)
+  const chosen = categories.find((category) => category.id === categoryId)
 
   return (
     <form action={action} className="space-y-4 border border-line bg-surface p-4">
@@ -81,6 +88,7 @@ export function EditEntryForm({
             defaultValue={entry.categoryId}
             disabled={!entry.editable.category}
             required={entry.editable.category}
+            onChange={(event) => setCategoryId(event.target.value)}
             className={`${CONTROL} disabled:opacity-60`}
           >
             {entry.editable.category ? (
@@ -100,6 +108,11 @@ export function EditEntryForm({
               </optgroup>
             ))}
           </select>
+          {chosen?.description && entry.editable.category ? (
+            <p data-kamus className="text-xs text-ink-muted">
+              {chosen.description}
+            </p>
+          ) : null}
           {entry.editable.category ? null : (
             <p className="text-xs text-ink-muted">
               Perpindahan antar akun tidak punya kategori: yang dicatat adalah akun asal dan akun

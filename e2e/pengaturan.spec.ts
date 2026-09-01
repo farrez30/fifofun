@@ -107,6 +107,17 @@ test.describe('kategori', () => {
     expect(await page.getByRole('rowheader', { name: /Tabungan/ }).count()).toBe(2)
   })
 
+  test('reads each category kamus out beside its name', async ({ page }) => {
+    await open(page, 'settings-categories')
+
+    await expect(page.getByRole('rowheader', { name: /Makan\/minum/ })).toContainText(
+      'Makanan yang mengenyangkan sebagai makan utama.',
+    )
+    // A category nobody wrote a sentence for shows nothing extra: silence,
+    // not a placeholder asking for content.
+    await expect(page.getByRole('rowheader', { name: /^Kopi/ })).toHaveText(/^\s*Kopi\s*$/)
+  })
+
   test('marks the names the importer looks for literally', async ({ page }) => {
     await open(page, 'settings-categories')
     // Makan/minum used to be one of these, back when every QRIS payment was
@@ -153,6 +164,16 @@ test.describe('formulir kategori', () => {
 
     await expect(select).toBeEnabled()
     await expect(page.getByText('arahnya terkunci')).toHaveCount(0)
+  })
+
+  test('offers one line of kamus, and no more than that', async ({ page }) => {
+    await open(page, 'settings-category-form')
+
+    const kamus = page.locator('input[name="description"]')
+    await expect(kamus).toBeVisible()
+    // One sentence is the format. A textarea would invite paragraphs, and a
+    // paragraph under every picker is a manual, not a tie-break.
+    await expect(kamus).toHaveAttribute('maxlength', '160')
   })
 
   test('previews the mark the rest of the app will draw', async ({ page }) => {

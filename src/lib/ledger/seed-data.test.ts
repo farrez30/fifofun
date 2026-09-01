@@ -50,6 +50,22 @@ describe('seed categories', () => {
     expect(orphans.map((c) => `${c.name} -> ${c.parent}`)).toEqual([])
   })
 
+  it('gives every category its one-line kamus', () => {
+    const silent = SEED_CATEGORIES.filter((c) => !c.description?.trim())
+    // The sentence under the picker is the household's tie-break rule. A
+    // category without one puts the ambiguity back where it came from.
+    expect(silent.map((c) => c.name)).toEqual([])
+  })
+
+  it('no longer offers a shop or channel as a category', () => {
+    // Retired by migration 0010: shops and channels posing as intentions, and
+    // pairs no budget would treat differently. Seeding one again would undo
+    // the archive for every new household.
+    for (const name of ['Warung', 'Kopi & Snack', 'Belanja Online', 'Kosan', 'Wifi']) {
+      expect(byName.has(name), `${name} crept back into the seed`).toBe(false)
+    }
+  })
+
   it('keeps groups one level deep', () => {
     const children = new Set(SEED_CATEGORIES.filter((c) => c.parent).map((c) => c.name))
     const parents = new Set(SEED_CATEGORIES.map((c) => c.parent).filter(Boolean))

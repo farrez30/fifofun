@@ -19,84 +19,95 @@ export interface SeedCategory {
   cashflow: CashflowType
   /** The group this belongs to, by name. Groups themselves have none. */
   parent?: string
+  /**
+   * One sentence saying what belongs here, shown under the category pickers.
+   *
+   * The names cannot carry their own rules: nothing in "Jajan" says whether a
+   * warm meal from a minimarket counts. The sentence holds the household's
+   * tie-break, so two people filing the same receipt land on the same row.
+   * The convention throughout: a category names an intention, never a shop or
+   * a channel, because the channel is already in the description of every row.
+   */
+  description?: string
 }
 
 export const SEED_CATEGORIES: SeedCategory[] = [
-  { name: 'Gaji', cashflow: 'income' },
-  { name: 'Freelance', cashflow: 'income' },
-  { name: 'Business', cashflow: 'income' },
-  { name: 'Pinjaman', cashflow: 'income' },
+  { name: 'Gaji', cashflow: 'income', description: 'Gaji rutin dari pekerjaan utama.' },
+  { name: 'Freelance', cashflow: 'income', description: 'Bayaran proyek atau kerja lepas di luar gaji utama.' },
+  { name: 'Business', cashflow: 'income', description: 'Hasil usaha sendiri, bukan gaji.' },
+  { name: 'Pinjaman', cashflow: 'income', description: 'Uang pinjaman yang diterima. Bukan penghasilan: suatu saat dikembalikan.' },
   // Selling something second-hand is not earnings and not a refund; the
   // statements are full of it (VR headset, iPad, keyboards).
-  { name: 'Jual Barang', cashflow: 'income' },
+  { name: 'Jual Barang', cashflow: 'income', description: 'Hasil menjual barang bekas milik sendiri: iPad, keyboard, dan sejenisnya.' },
   // Money arriving from the same people money also goes out to. Naming it
   // stops it being read as earnings.
-  { name: 'Transfer Keluarga', cashflow: 'income' },
-  { name: 'Penyesuaian Income', cashflow: 'income' },
-  { name: 'Other Income', cashflow: 'income' },
+  { name: 'Transfer Keluarga', cashflow: 'income', description: 'Kiriman dari keluarga. Bukan penghasilan kerja.' },
+  { name: 'Penyesuaian Income', cashflow: 'income', description: 'Koreksi saat saldo nyata lebih besar daripada catatan. Diisi form penyesuaian saldo, bukan dicatat sendiri.' },
+  { name: 'Other Income', cashflow: 'income', description: 'Pemasukan yang belum jelas posnya. Parkir sementara; rapikan lewat Tinjau.' },
 
   /*
     Spending, grouped.
 
     The question people ask is two questions at once: how much goes on eating,
-    and how much of that is coffee. A flat list answers only the second, and
+    and how much of that is snacking. A flat list answers only the second, and
     answering the first by adding rows up by eye is what a report is for.
+
+    Fewer rows than the list used to hold, on purpose. Every name that was a
+    shop or a channel rather than an intention (Warung, Belanja Online), and
+    every pair that no budget would ever treat differently (Kopi & Snack next
+    to Jajan, Kosan next to Kos & Sewa), made the picker a quiz with several
+    right answers. The retired names are archived for existing households by
+    migration 0010, so their history keeps its labels; they are simply never
+    seeded again.
   */
-  { name: 'Makan & Minum', cashflow: 'spending' },
-  { name: 'Makan/minum', cashflow: 'spending', parent: 'Makan & Minum' },
-  { name: 'Kopi & Snack', cashflow: 'spending', parent: 'Makan & Minum' },
-  { name: 'Warung', cashflow: 'spending', parent: 'Makan & Minum' },
-  { name: 'Jajan', cashflow: 'spending', parent: 'Makan & Minum' },
+  { name: 'Makan & Minum', cashflow: 'spending', description: 'Semua yang masuk mulut: makan utama dan camilan.' },
+  { name: 'Makan/minum', cashflow: 'spending', parent: 'Makan & Minum', description: 'Makanan yang mengenyangkan sebagai makan utama: sarapan, makan siang, makan malam.' },
+  { name: 'Jajan', cashflow: 'spending', parent: 'Makan & Minum', description: 'Camilan dan minuman ringan: kopi, boba, snack, gorengan. Bukan makan utama.' },
 
-  { name: 'Belanja', cashflow: 'spending' },
-  { name: 'Belanja Harian', cashflow: 'spending', parent: 'Belanja' },
-  { name: 'Belanja Online', cashflow: 'spending', parent: 'Belanja' },
-  { name: 'Pakaian', cashflow: 'spending', parent: 'Belanja' },
-  { name: 'Elektronik & Gadget', cashflow: 'spending', parent: 'Belanja' },
+  { name: 'Belanja', cashflow: 'spending', description: 'Barang yang dibeli, menurut jenis barangnya, bukan tempat belinya.' },
+  { name: 'Belanja Harian', cashflow: 'spending', parent: 'Belanja', description: 'Kebutuhan rumah dari minimarket atau pasar: sabun, galon, tisu, printilan dapur.' },
+  { name: 'Pakaian', cashflow: 'spending', parent: 'Belanja', description: 'Baju, celana, sepatu, tas, dan aksesori penampilan, di mana pun belinya.' },
+  { name: 'Elektronik & Gadget', cashflow: 'spending', parent: 'Belanja', description: 'Perangkat elektronik dan aksesorinya: HP, charger, headset, komponen PC.' },
 
-  { name: 'Rumah', cashflow: 'spending' },
-  { name: 'Kos & Sewa', cashflow: 'spending', parent: 'Rumah' },
-  { name: 'Laundry', cashflow: 'spending', parent: 'Rumah' },
-  { name: 'Perabot & Perkakas', cashflow: 'spending', parent: 'Rumah' },
-  { name: 'Kosan', cashflow: 'spending', parent: 'Rumah' },
+  { name: 'Rumah', cashflow: 'spending', description: 'Biaya tempat tinggal dan isinya.' },
+  { name: 'Kos & Sewa', cashflow: 'spending', parent: 'Rumah', description: 'Sewa tempat tinggal: kos, kontrakan, apartemen.' },
+  { name: 'Laundry', cashflow: 'spending', parent: 'Rumah', description: 'Cuci dan setrika pakaian.' },
+  { name: 'Perabot & Perkakas', cashflow: 'spending', parent: 'Rumah', description: 'Isi rumah: perabot, alat masak, alat kebersihan, perkakas.' },
 
-  { name: 'Transport', cashflow: 'spending' },
-  { name: 'Bensin', cashflow: 'spending', parent: 'Transport' },
-  { name: 'Ojek & Taksi Online', cashflow: 'spending', parent: 'Transport' },
-  { name: 'Kereta & Bus', cashflow: 'spending', parent: 'Transport' },
-  { name: 'Parkir & Tol', cashflow: 'spending', parent: 'Transport' },
-  { name: 'Servis Kendaraan', cashflow: 'spending', parent: 'Transport' },
-  { name: 'Kendaraan', cashflow: 'spending', parent: 'Transport' },
+  { name: 'Transport', cashflow: 'spending', description: 'Biaya berpindah tempat dan kendaraannya.' },
+  { name: 'Bensin', cashflow: 'spending', parent: 'Transport', description: 'Bahan bakar kendaraan sendiri.' },
+  { name: 'Ojek & Taksi Online', cashflow: 'spending', parent: 'Transport', description: 'Gojek, Grab, taksi, dan sejenisnya.' },
+  { name: 'Kereta & Bus', cashflow: 'spending', parent: 'Transport', description: 'Transportasi umum: KRL, MRT, bus, kereta antarkota.' },
+  { name: 'Parkir & Tol', cashflow: 'spending', parent: 'Transport', description: 'Parkir, tol, dan top-up e-money jalan.' },
+  { name: 'Servis Kendaraan', cashflow: 'spending', parent: 'Transport', description: 'Perawatan dan perlengkapan kendaraan: servis, oli, ban, sparepart, helm.' },
 
-  { name: 'Kesehatan', cashflow: 'spending' },
-  { name: 'Klinik & Dokter', cashflow: 'spending', parent: 'Kesehatan' },
-  { name: 'Obat & Apotek', cashflow: 'spending', parent: 'Kesehatan' },
+  { name: 'Kesehatan', cashflow: 'spending', description: 'Biaya berobat dan menjaga kesehatan.' },
+  { name: 'Klinik & Dokter', cashflow: 'spending', parent: 'Kesehatan', description: 'Periksa ke klinik, dokter, atau rumah sakit.' },
+  { name: 'Obat & Apotek', cashflow: 'spending', parent: 'Kesehatan', description: 'Obat, vitamin, dan alat kesehatan dari apotek.' },
 
-  { name: 'Perawatan Diri', cashflow: 'spending' },
-  { name: 'Barbershop & Salon', cashflow: 'spending', parent: 'Perawatan Diri' },
-  { name: 'Skin & Body Care', cashflow: 'spending', parent: 'Perawatan Diri' },
+  { name: 'Perawatan Diri', cashflow: 'spending', description: 'Merawat penampilan dan tubuh.' },
+  { name: 'Barbershop & Salon', cashflow: 'spending', parent: 'Perawatan Diri', description: 'Potong rambut dan perawatan di salon.' },
+  { name: 'Skin & Body Care', cashflow: 'spending', parent: 'Perawatan Diri', description: 'Skincare, sabun muka, parfum, dan perawatan tubuh, di mana pun belinya.' },
 
-  { name: 'Hiburan', cashflow: 'spending' },
-  { name: 'Bioskop & Tontonan', cashflow: 'spending', parent: 'Hiburan' },
-  { name: 'Game', cashflow: 'spending', parent: 'Hiburan' },
-  { name: 'Jalan-jalan', cashflow: 'spending', parent: 'Hiburan' },
-  { name: 'Olahraga & Gym', cashflow: 'spending', parent: 'Hiburan' },
+  { name: 'Hiburan', cashflow: 'spending', description: 'Bersenang-senang.' },
+  { name: 'Bioskop & Tontonan', cashflow: 'spending', parent: 'Hiburan', description: 'Tiket bioskop dan tontonan berbayar sekali beli.' },
+  { name: 'Game', cashflow: 'spending', parent: 'Hiburan', description: 'Game, top-up dalam game, dan perlengkapannya.' },
+  { name: 'Jalan-jalan', cashflow: 'spending', parent: 'Hiburan', description: 'Liburan dan piknik: tiket masuk, penginapan, oleh-oleh.' },
+  { name: 'Olahraga & Gym', cashflow: 'spending', parent: 'Hiburan', description: 'Sewa lapangan, gym, dan perlengkapan olahraga.' },
 
-  { name: 'Sosial', cashflow: 'spending' },
-  { name: 'Keluarga', cashflow: 'spending', parent: 'Sosial' },
-  { name: 'Sedekah', cashflow: 'spending', parent: 'Sosial' },
-  { name: 'Hadiah', cashflow: 'spending', parent: 'Sosial' },
-  { name: 'Dating', cashflow: 'spending', parent: 'Sosial' },
+  { name: 'Sosial', cashflow: 'spending', description: 'Uang yang keluar untuk orang lain.' },
+  { name: 'Keluarga', cashflow: 'spending', parent: 'Sosial', description: 'Pengeluaran untuk keluarga: kiriman, kebutuhan orang tua.' },
+  { name: 'Sedekah', cashflow: 'spending', parent: 'Sosial', description: 'Sedekah, zakat, infak, dan donasi.' },
+  { name: 'Hadiah', cashflow: 'spending', parent: 'Sosial', description: 'Kado dan amplop untuk orang lain: nikahan, ulang tahun.' },
+  { name: 'Dating', cashflow: 'spending', parent: 'Sosial', description: 'Seluruh acara berdua dihitung satu paket: tiket, makan, parkir selama kencan.' },
 
-  { name: 'Edukasi', cashflow: 'spending' },
-  { name: 'Internet', cashflow: 'spending' },
-  { name: 'Biaya Bank', cashflow: 'spending' },
-  { name: 'Other spending', cashflow: 'spending' },
-  { name: 'Penyesuaian Spending', cashflow: 'spending' },
+  { name: 'Edukasi', cashflow: 'spending', description: 'Kursus, buku, dan biaya belajar.' },
+  { name: 'Biaya Bank', cashflow: 'spending', description: 'Biaya admin, transfer antarbank, dan potongan bank lainnya.' },
+  { name: 'Other spending', cashflow: 'spending', description: 'Pengeluaran yang belum jelas posnya. Parkir sementara; rapikan lewat Tinjau.' },
+  { name: 'Penyesuaian Spending', cashflow: 'spending', description: 'Koreksi saat saldo nyata lebih kecil daripada catatan. Diisi form penyesuaian saldo.' },
 
   /*
-    The eleven recurring bills from the Setup sheet, verbatim apart from the
-    last one, where the spreadsheet cell holds a note to self rather than a name.
+    The recurring bills from the Setup sheet.
 
     These were missing entirely until now, and their absence was not a cosmetic
     one: with no category of cashflow `bills` to file anything under, the
@@ -108,28 +119,23 @@ export const SEED_CATEGORIES: SeedCategory[] = [
     costs but never how much subscriptions cost, which is the question somebody
     cancelling things is actually asking.
   */
-  { name: 'Tagihan', cashflow: 'bills' },
-  { name: 'Listrik', cashflow: 'bills', parent: 'Tagihan' },
-  { name: 'Internet & TV', cashflow: 'bills', parent: 'Tagihan' },
-  { name: 'Wifi', cashflow: 'bills', parent: 'Tagihan' },
-  { name: 'Pulsa & Data', cashflow: 'bills', parent: 'Tagihan' },
-  { name: 'Air', cashflow: 'bills', parent: 'Tagihan' },
-  { name: 'Bayar Kontrakan', cashflow: 'bills', parent: 'Tagihan' },
-  { name: 'Aeropolis Gym & Pool', cashflow: 'bills', parent: 'Tagihan' },
-  { name: 'Langganan Parkee', cashflow: 'bills', parent: 'Tagihan' },
+  { name: 'Tagihan', cashflow: 'bills', description: 'Tagihan rutin rumah tangga.' },
+  { name: 'Listrik', cashflow: 'bills', parent: 'Tagihan', description: 'Token dan tagihan listrik.' },
+  { name: 'Internet & TV', cashflow: 'bills', parent: 'Tagihan', description: 'Internet rumah dan TV kabel.' },
+  { name: 'Pulsa & Data', cashflow: 'bills', parent: 'Tagihan', description: 'Pulsa dan paket data HP.' },
   // Where a biller payment lands before anyone has said which bill it was. The
   // group itself cannot hold it: a group with children never takes rows.
-  { name: 'Tagihan Lain', cashflow: 'bills', parent: 'Tagihan' },
+  { name: 'Tagihan Lain', cashflow: 'bills', parent: 'Tagihan', description: 'Tagihan yang belum jelas jenisnya. Parkir sementara dari impor.' },
 
-  { name: 'Langganan Digital', cashflow: 'bills' },
-  { name: 'Langganan Youtube', cashflow: 'bills', parent: 'Langganan Digital' },
-  { name: 'Langganan Spotify', cashflow: 'bills', parent: 'Langganan Digital' },
-  { name: 'Langganan MileageTrk', cashflow: 'bills', parent: 'Langganan Digital' },
-  { name: 'Langganan Groupy', cashflow: 'bills', parent: 'Langganan Digital' },
-  { name: 'Langganan Gdrive', cashflow: 'bills', parent: 'Langganan Digital' },
-  { name: 'Langganan DanceFitMe', cashflow: 'bills', parent: 'Langganan Digital' },
-  { name: 'Google Workspace', cashflow: 'bills', parent: 'Langganan Digital' },
-  { name: 'Langganan AI', cashflow: 'bills', parent: 'Langganan Digital' },
+  { name: 'Langganan Digital', cashflow: 'bills', description: 'Langganan aplikasi dan layanan digital.' },
+  { name: 'Langganan Youtube', cashflow: 'bills', parent: 'Langganan Digital', description: 'YouTube Premium.' },
+  { name: 'Langganan Spotify', cashflow: 'bills', parent: 'Langganan Digital', description: 'Spotify.' },
+  { name: 'Langganan MileageTrk', cashflow: 'bills', parent: 'Langganan Digital', description: 'Aplikasi pencatat kilometer.' },
+  { name: 'Langganan Groupy', cashflow: 'bills', parent: 'Langganan Digital', description: 'Langganan Groupy.' },
+  { name: 'Langganan Gdrive', cashflow: 'bills', parent: 'Langganan Digital', description: 'Penyimpanan Google Drive.' },
+  { name: 'Langganan DanceFitMe', cashflow: 'bills', parent: 'Langganan Digital', description: 'Aplikasi olahraga DanceFitMe.' },
+  { name: 'Google Workspace', cashflow: 'bills', parent: 'Langganan Digital', description: 'Email dan domain Google Workspace.' },
+  { name: 'Langganan AI', cashflow: 'bills', parent: 'Langganan Digital', description: 'Langganan layanan AI: Claude, ChatGPT, dan sejenisnya.' },
 
   /*
     Paying somebody back.
@@ -139,19 +145,19 @@ export const SEED_CATEGORIES: SeedCategory[] = [
     it. The monthly statement has carried a `debtPayment` line all along with
     nothing to put in it.
   */
-  { name: 'Cicilan & Utang', cashflow: 'debt_payment' },
-  { name: 'Cicilan Motor (Ibu)', cashflow: 'debt_payment', parent: 'Cicilan & Utang' },
-  { name: 'Bayar Utang', cashflow: 'debt_payment', parent: 'Cicilan & Utang' },
+  { name: 'Cicilan & Utang', cashflow: 'debt_payment', description: 'Membayar utang dan cicilan.' },
+  { name: 'Cicilan Motor (Ibu)', cashflow: 'debt_payment', parent: 'Cicilan & Utang', description: 'Cicilan motor kepada Ibu.' },
+  { name: 'Bayar Utang', cashflow: 'debt_payment', parent: 'Cicilan & Utang', description: 'Melunasi pinjaman atau utang lain.' },
 
-  { name: 'Tabungan', cashflow: 'invest_savings' },
-  { name: 'Dana Darurat', cashflow: 'invest_savings' },
-  { name: 'Reksadana', cashflow: 'invest_savings' },
+  { name: 'Tabungan', cashflow: 'invest_savings', description: 'Menyisihkan uang ke tabungan umum.' },
+  { name: 'Dana Darurat', cashflow: 'invest_savings', description: 'Menyisihkan uang untuk dana darurat.' },
+  { name: 'Reksadana', cashflow: 'invest_savings', description: 'Setoran ke reksadana.' },
 
-  { name: 'Pajak Kendaraan', cashflow: 'sinking_fund' },
+  { name: 'Pajak Kendaraan', cashflow: 'sinking_fund', description: 'Menabung untuk pajak kendaraan tahunan.' },
 
-  { name: 'Dana Menikah', cashflow: 'financial_goal' },
-  { name: 'Dana Rumah', cashflow: 'financial_goal' },
-  { name: 'Dana Mobil', cashflow: 'financial_goal' },
+  { name: 'Dana Menikah', cashflow: 'financial_goal', description: 'Menabung untuk biaya menikah.' },
+  { name: 'Dana Rumah', cashflow: 'financial_goal', description: 'Menabung untuk DP dan biaya rumah.' },
+  { name: 'Dana Mobil', cashflow: 'financial_goal', description: 'Menabung untuk membeli mobil.' },
 
   /*
     The other direction of every pot above.
@@ -161,19 +167,19 @@ export const SEED_CATEGORIES: SeedCategory[] = [
     in. Same arrangement as the Piutang pair below: both sides of a movement
     need a name before either side can be measured.
   */
-  { name: 'Tabungan', cashflow: 'from_asset' },
-  { name: 'Dana Darurat', cashflow: 'from_asset' },
-  { name: 'Reksadana', cashflow: 'from_asset' },
-  { name: 'Pajak Kendaraan', cashflow: 'from_asset' },
-  { name: 'Dana Menikah', cashflow: 'from_asset' },
-  { name: 'Dana Rumah', cashflow: 'from_asset' },
-  { name: 'Dana Mobil', cashflow: 'from_asset' },
+  { name: 'Tabungan', cashflow: 'from_asset', description: 'Mengambil kembali uang dari tabungan umum.' },
+  { name: 'Dana Darurat', cashflow: 'from_asset', description: 'Memakai dana darurat.' },
+  { name: 'Reksadana', cashflow: 'from_asset', description: 'Mencairkan reksadana.' },
+  { name: 'Pajak Kendaraan', cashflow: 'from_asset', description: 'Memakai tabungan pajak saat pajaknya dibayar.' },
+  { name: 'Dana Menikah', cashflow: 'from_asset', description: 'Memakai tabungan menikah.' },
+  { name: 'Dana Rumah', cashflow: 'from_asset', description: 'Memakai tabungan rumah.' },
+  { name: 'Dana Mobil', cashflow: 'from_asset', description: 'Memakai tabungan mobil.' },
 
-  { name: 'Antar Account', cashflow: 'transfer' },
+  { name: 'Antar Account', cashflow: 'transfer', description: 'Pindah uang antar akun sendiri. Tidak menambah atau mengurangi uangmu.' },
   // Two sides of the same arrangement. The spreadsheet files a settlement under
   // the name of the debt it settles, so the pair has to exist under both.
-  { name: 'Piutang', cashflow: 'receivable_new' },
-  { name: 'Piutang', cashflow: 'receivable_settled' },
+  { name: 'Piutang', cashflow: 'receivable_new', description: 'Uang yang kamu talangi dan masih ditagih ke orang lain.' },
+  { name: 'Piutang', cashflow: 'receivable_settled', description: 'Talangan yang sudah dikembalikan kepadamu.' },
 ]
 
 export interface SeedAccount {
@@ -225,16 +231,14 @@ export const SEED_RULES: SeedRule[] = [
   { pattern: 'spbu', matchType: 'contains', category: 'Bensin', cashflow: 'spending', priority: 20 },
   { pattern: 'pertamina', matchType: 'contains', category: 'Bensin', cashflow: 'spending', priority: 20 },
 
-  // Prepaid electricity at the old flat, numbered ahead of the gym on the same
-  // estate because the two share a word.
+  // Prepaid electricity at the old flat. The gym on the same estate used to
+  // have its own rule and category; both retired with the flat itself.
   { pattern: 'aeropolis token', matchType: 'contains', category: 'Listrik', cashflow: 'bills', priority: 10 },
-  { pattern: 'aeropolis gym', matchType: 'contains', category: 'Aeropolis Gym & Pool', cashflow: 'bills', priority: 15 },
   { pattern: 'pln iconpay', matchType: 'contains', category: 'Listrik', cashflow: 'bills', priority: 20 },
   { pattern: 'token listrik', matchType: 'contains', category: 'Listrik', cashflow: 'bills', priority: 20 },
   { pattern: 'biznet', matchType: 'contains', category: 'Internet & TV', cashflow: 'bills', priority: 20 },
   { pattern: 'indihome', matchType: 'contains', category: 'Internet & TV', cashflow: 'bills', priority: 20 },
   { pattern: 'telkom', matchType: 'contains', category: 'Internet & TV', cashflow: 'bills', priority: 25 },
-  { pattern: 'pdam', matchType: 'contains', category: 'Air', cashflow: 'bills', priority: 20 },
 
   { pattern: 'youtube', matchType: 'contains', category: 'Langganan Youtube', cashflow: 'bills', priority: 20 },
   { pattern: 'spotify', matchType: 'contains', category: 'Langganan Spotify', cashflow: 'bills', priority: 20 },
@@ -250,10 +254,10 @@ export const SEED_RULES: SeedRule[] = [
   { pattern: 'superindo', matchType: 'contains', category: 'Belanja Harian', cashflow: 'spending', priority: 20 },
   { pattern: 'lawson', matchType: 'contains', category: 'Belanja Harian', cashflow: 'spending', priority: 20 },
   { pattern: 'lwsn', matchType: 'contains', category: 'Belanja Harian', cashflow: 'spending', priority: 20 },
-  // One honest pot. The bank line names the marketplace and never the item, so
-  // splitting these further would be invention rather than bookkeeping.
-  { pattern: 'tokopedia', matchType: 'contains', category: 'Belanja Online', cashflow: 'spending', priority: 30 },
-  { pattern: 'shopee indonesia', matchType: 'contains', category: 'Belanja Online', cashflow: 'spending', priority: 30 },
+  // No marketplace rule on purpose. The bank line names the marketplace and
+  // never the item, and a channel is not a category: parked in Other spending
+  // by the kind default below, the row waits in Tinjau for somebody to say
+  // what was actually bought.
 
   { pattern: 'laundry', matchType: 'contains', category: 'Laundry', cashflow: 'spending', priority: 20 },
 
@@ -321,7 +325,7 @@ export const DEFAULT_CATEGORY_BY_KIND: Record<string, string> = {
   'transfer-in': 'Penyesuaian Income',
   'transfer-out': 'Other spending',
   'qris-payment': 'Other spending',
-  'ecommerce-card': 'Belanja Online',
+  'ecommerce-card': 'Other spending',
   'biller-payment': 'Tagihan Lain',
   'bank-fee': 'Biaya Bank',
   'wallet-topup': 'Antar Account',

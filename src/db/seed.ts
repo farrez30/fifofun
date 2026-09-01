@@ -198,6 +198,7 @@ async function main(): Promise<void> {
         parentId,
         icon: look?.icon ?? null,
         color: look === undefined ? null : String(look.hue),
+        description: seed.description ?? null,
       })
       .onConflictDoNothing()
       .returning()
@@ -224,13 +225,16 @@ async function main(): Promise<void> {
     // the whole point of running the seed again after this migration; a parent
     // somebody moved by hand is left where they put it.
     const needsLook = look && (existing.icon === null || existing.color === null)
-    if (needsLook || (parentId && existing.parentId === null)) {
+    const needsDescription = seed.description !== undefined && existing.description === null
+    if (needsLook || needsDescription || (parentId && existing.parentId === null)) {
       await db
         .update(schema.categories)
         .set({
           icon: existing.icon ?? look?.icon ?? null,
           color: existing.color ?? (look === undefined ? null : String(look.hue)),
           parentId: existing.parentId ?? parentId,
+          // A sentence somebody rewrote stays theirs; only a blank is filled.
+          description: existing.description ?? seed.description ?? null,
         })
         .where(eq(schema.categories.id, existing.id))
     }

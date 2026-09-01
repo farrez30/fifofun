@@ -70,6 +70,8 @@ export interface CategoryRow {
   icon: string | null
   /** Stored hue 0 to 359, or null to fall back to the palette. */
   hue: number | null
+  /** One sentence saying what belongs here, shown under every picker. */
+  description: string | null
   sortOrder: number
   archivedAt: Date | null
 }
@@ -153,7 +155,7 @@ export async function getCategories(
   let query = supabase
     .from('categories')
     .select(
-      'id, name, cashflow, parent_id, opening_balance, target_amount, target_month, planned_monthly, planned_share_bp, icon, color, sort_order, archived_at',
+      'id, name, cashflow, parent_id, opening_balance, target_amount, target_month, planned_monthly, planned_share_bp, icon, color, description, sort_order, archived_at',
     )
     .eq('household_id', householdId)
     // Ordered by the household's own arrangement, with the name as the
@@ -181,6 +183,7 @@ export async function getCategories(
     plannedShareBp: (row.planned_share_bp as number | null) ?? null,
     icon: (row.icon as string | null) ?? null,
     hue: parseHue(row.color),
+    description: (row.description as string | null) ?? null,
     sortOrder: (row.sort_order as number) ?? 0,
     archivedAt: row.archived_at ? new Date(row.archived_at as string) : null,
   }))
