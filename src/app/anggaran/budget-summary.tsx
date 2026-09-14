@@ -116,7 +116,7 @@ export function BudgetSummary({ plan, lines }: Props) {
           compact ? 'p-3' : 'p-4'
         }`}
       >
-        <figcaption className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-sm">
+        <figcaption className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-subhead">
           <span className="inline-flex items-center gap-1.5 font-medium text-ink">
             <ChartPieSlice
               aria-hidden="true"
@@ -141,7 +141,7 @@ export function BudgetSummary({ plan, lines }: Props) {
               type="button"
               onClick={() => setCollapsed(!compact)}
               aria-expanded={!compact}
-              className="inline-flex min-h-11 items-center gap-1 rounded-sm px-2 text-xs text-ink-muted transition-colors duration-150 hover:bg-sunken hover:text-ink"
+              className="inline-flex min-h-11 items-center gap-1 rounded-sm px-2 text-footnote text-ink-muted transition-colors duration-150 hover:bg-sunken hover:text-ink"
             >
               {compact ? (
                 <CaretDown aria-hidden="true" weight="bold" className="size-3.5 shrink-0" />
@@ -190,7 +190,7 @@ export function BudgetSummary({ plan, lines }: Props) {
         </div>
 
         {compact ? (
-          <p className="mt-2 flex items-center gap-1.5 truncate text-xs text-ink-muted">
+          <p className="mt-2 flex items-center gap-1.5 truncate text-footnote text-ink-muted">
             {income === null ? (
               <>
                 <ChartPieSlice aria-hidden="true" weight="regular" className="size-3.5 shrink-0" />
@@ -215,7 +215,7 @@ export function BudgetSummary({ plan, lines }: Props) {
         ) : (
           <>
             {/* What the pointer is on, or the split when it is on nothing. */}
-            <p className="mt-2 min-h-5 text-xs text-ink-muted">
+            <p className="mt-2 min-h-5 text-footnote text-ink-muted">
               {active ? (
                 <>
                   <CategoryMark
@@ -246,12 +246,12 @@ export function BudgetSummary({ plan, lines }: Props) {
             </p>
 
             {income === null ? (
-              <p className="mt-2 text-sm text-ink-muted">
+              <p className="mt-2 text-subhead text-ink-muted">
                 Pemasukan biasanya belum bisa dihitung, jadi garis pembandingnya belum ada.
                 Angkanya muncul setelah ada bulan dengan pemasukan tercatat.
               </p>
             ) : past > 0n ? (
-              <p className="mt-2 border border-over/40 bg-over-wash px-3 py-2 text-sm text-ink">
+              <p className="mt-2 border border-over/40 bg-over-wash px-3 py-2 text-subhead text-ink">
                 <span aria-hidden="true" className="mr-1 text-over">
                   ▲
                 </span>
@@ -259,7 +259,7 @@ export function BudgetSummary({ plan, lines }: Props) {
                 {percentText(share(past, income))}) melewati pemasukan biasanya ({plan.incomeText}).
               </p>
             ) : (
-              <p className="mt-2 flex flex-wrap items-baseline gap-x-1 text-sm text-ink-muted">
+              <p className="mt-2 flex flex-wrap items-baseline gap-x-1 text-subhead text-ink-muted">
                 <PiggyBank
                   aria-hidden="true"
                   weight="regular"
@@ -283,7 +283,7 @@ export function BudgetSummary({ plan, lines }: Props) {
                   type="button"
                   onClick={() => setOpenList(!openList)}
                   aria-expanded={openList}
-                  className="inline-flex min-h-11 items-center gap-1.5 text-xs text-ink-muted transition-colors duration-150 hover:text-ink"
+                  className="inline-flex min-h-11 items-center gap-1.5 text-footnote text-ink-muted transition-colors duration-150 hover:text-ink"
                 >
                   <Percent aria-hidden="true" weight="regular" className="size-3.5 shrink-0" />
                   Rincian {segments.length} kategori
@@ -296,7 +296,7 @@ export function BudgetSummary({ plan, lines }: Props) {
 
                 <ul className={openList ? 'reveal mt-1 space-y-1.5' : 'sr-only'}>
                   {ranked.map((line) => (
-                    <li key={line.id} className="text-xs">
+                    <li key={line.id} className="text-footnote">
                       <span className="flex flex-wrap items-baseline justify-between gap-x-2">
                         <CategoryMark
                           name={line.name}
@@ -333,7 +333,7 @@ export function BudgetSummary({ plan, lines }: Props) {
             {plan.pace && plan.totalProjectedText ? (
               <p
                 data-summary-pace
-                className="mt-2 flex flex-wrap items-baseline gap-x-1 border-t border-line pt-2 text-sm text-ink-muted"
+                className="mt-2 flex flex-wrap items-baseline gap-x-1 border-t border-line pt-2 text-subhead text-ink-muted"
               >
                 <Clock
                   aria-hidden="true"
@@ -376,7 +376,7 @@ export function BudgetSummary({ plan, lines }: Props) {
               month without being asked to say so.
             */}
             {plan.periodic.length > 0 ? (
-              <div data-summary-periodic className="mt-2 border-t border-line pt-2 text-sm">
+              <div data-summary-periodic className="mt-2 border-t border-line pt-2 text-subhead">
                 <p className="flex flex-wrap items-baseline gap-x-1 text-ink-muted">
                   <CalendarDots
                     aria-hidden="true"
@@ -390,7 +390,7 @@ export function BudgetSummary({ plan, lines }: Props) {
                   ) : null}{' '}
                   tiap bulan supaya tidak mengagetkan saat jatuh tempo.
                 </p>
-                <ul className="mt-1 space-y-0.5 text-xs text-ink-muted">
+                <ul className="mt-1 space-y-0.5 text-footnote text-ink-muted">
                   {plan.periodic.map((cost) => (
                     <li key={cost.name}>
                       {cost.name} <span className="tnum font-mono">{cost.typicalText}</span> tiap{' '}
@@ -410,7 +410,7 @@ export function BudgetSummary({ plan, lines }: Props) {
                 empty space is read as a missing feature, and the honest
                 answer is that the ledger has not shown a yearly rhythm yet.
               */
-              <p className="mt-2 flex flex-wrap items-baseline gap-x-1 border-t border-line pt-2 text-xs text-ink-muted">
+              <p className="mt-2 flex flex-wrap items-baseline gap-x-1 border-t border-line pt-2 text-footnote text-ink-muted">
                 <CalendarDots
                   aria-hidden="true"
                   weight="regular"

@@ -260,7 +260,7 @@ function TrayDeleteButton({ description }: { description: string }) {
       type="submit"
       disabled={pending}
       aria-label={`Hapus ${description}`}
-      className="flex h-full min-w-20 items-center justify-center border-l border-over/40 bg-over-wash px-4 text-sm font-medium text-ink disabled:opacity-50"
+      className="flex h-full min-w-20 items-center justify-center border-l border-over/40 bg-over-wash px-4 text-subhead font-medium text-ink disabled:opacity-50"
     >
       {pending ? 'Menghapus' : 'Hapus'}
     </button>

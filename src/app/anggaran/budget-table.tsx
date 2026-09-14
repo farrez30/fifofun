@@ -68,14 +68,14 @@ export function BudgetTable({ plan }: { plan: BudgetPlanView }) {
 
   return (
     <div className="space-y-3">
-      <p className="text-sm font-medium text-ink">
+      <p className="text-subhead font-medium text-ink">
         {plan.budgeted > 0
           ? `${plan.budgeted} kategori dianggarkan untuk ${label}, total ${plan.total}.`
           : `Belum ada anggaran untuk ${label}.`}
       </p>
 
       {!plan.hasHistory ? (
-        <p className="text-sm text-ink-muted">
+        <p className="text-subhead text-ink-muted">
           Belum ada bulan sebelumnya untuk dijadikan patokan, jadi kolom Biasanya masih kosong.
           Angkanya akan terisi sendiri setelah satu bulan berjalan.
         </p>
@@ -117,10 +117,10 @@ export function BudgetTable({ plan }: { plan: BudgetPlanView }) {
             without it a focused input can be scrolled to exactly where the bar
             covers it. */}
         <div className="relative overflow-x-auto squircle rounded-md bg-surface shadow-xs [&_input]:scroll-mt-32">
-          <table className="w-full border-collapse text-sm sm:min-w-[38rem]">
+          <table className="w-full border-collapse text-subhead sm:min-w-[38rem]">
             <caption className="sr-only">Anggaran {label} per kategori</caption>
             <thead>
-              <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-faint">
+              <tr className="border-b border-line text-left text-caption1 uppercase tracking-wide text-ink-faint">
                 <th scope="col" className="px-3 py-2 font-medium sm:px-4">
                   Kategori
                 </th>
@@ -152,7 +152,7 @@ export function BudgetTable({ plan }: { plan: BudgetPlanView }) {
                   <th
                     scope="colgroup"
                     colSpan={columns}
-                    className="px-4 py-1.5 text-left text-xs font-medium text-ink-muted"
+                    className="px-4 py-1.5 text-left text-footnote font-medium text-ink-muted"
                   >
                     {CASHFLOW_LABELS[group.cashflow]}
                   </th>
@@ -176,13 +176,13 @@ export function BudgetTable({ plan }: { plan: BudgetPlanView }) {
 
         <div className="flex flex-wrap items-center gap-3">
           <Submit label={`Simpan anggaran ${label}`} />
-          <p className="text-xs text-ink-muted">
+          <p className="text-footnote text-ink-muted">
             Kosongkan angkanya untuk menghapus anggaran kategori itu.
           </p>
         </div>
 
         {result ? (
-          <p role="status" className={`text-sm ${result.ok ? 'text-under' : 'text-over'}`}>
+          <p role="status" className={`text-subhead ${result.ok ? 'text-under' : 'text-over'}`}>
             {result.message}
             {result.detail ? <span className="text-ink-muted"> {result.detail}</span> : null}
           </p>
@@ -191,18 +191,18 @@ export function BudgetTable({ plan }: { plan: BudgetPlanView }) {
 
       {plan.canCopy ? <CopyForm period={plan.period} from={plan.previous} /> : null}
 
-      <p className="text-xs text-ink-muted">
+      <p className="text-footnote text-ink-muted">
         Biasanya adalah median enam bulan sebelum {label}, bukan angka yang kamu tetapkan. Bulan
         lalu memakai anggaran {formatMonthKey(plan.previous)} kalau ada; yang ditandai ◆ adalah
         realisasinya.
       </p>
-      <p className="text-xs text-ink-muted">
+      <p className="text-footnote text-ink-muted">
         Begitu satu kategori saja diisi, Ringkasan menilai {label} dengan anggaran ini dan
         kategori yang kosong dihitung tanpa anggaran. Realisasi tidak menghitung uang titipan.
       </p>
       {/* The row itself is not editable here, and the moment somebody notices
           that is while looking at a bill they no longer pay. */}
-      <p className="text-xs text-ink-muted">
+      <p className="text-footnote text-ink-muted">
         Barisnya sendiri diatur di{' '}
         <a href="/pengaturan#kategori" className="text-accent underline underline-offset-2">
           Pengaturan
@@ -300,7 +300,7 @@ function Row({
         {/* What this row is asking of the month's income. A figure on its own
             cannot say whether it is a lot; a share can. */}
         {income !== null && income > 0n && amount > 0n ? (
-          <span className="mt-1 block text-xs text-ink-muted">
+          <span className="mt-1 block text-caption1 text-ink-muted">
             {Math.round(Number((amount * 10_000n) / income) / 100)}% dari pemasukan
           </span>
         ) : null}
@@ -329,7 +329,7 @@ function Row({
                 ) : null}
               </span>
               {actual.pct > 0 ? (
-                <span className="mt-0.5 block font-sans text-xs text-ink-muted">
+                <span className="mt-0.5 block font-sans text-footnote text-ink-muted">
                   {Math.round(actual.pct)}% dari anggaran
                   {actual.overByText ? (
                     <>
@@ -396,7 +396,7 @@ function Context({
   pace: MonthPace | null
 }) {
   return (
-    <span className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs text-ink-muted sm:hidden">
+    <span className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-caption1 text-ink-muted sm:hidden">
       <span>
         biasanya{' '}
         {line.usual ? (
@@ -525,7 +525,7 @@ function CopyForm({ period, from }: { period: string; from: string }) {
         label={`Salin anggaran ${formatMonthKey(from)} ke kategori yang masih kosong`}
       />
       {result ? (
-        <p role="status" className={`text-sm ${result.ok ? 'text-under' : 'text-over'}`}>
+        <p role="status" className={`text-subhead ${result.ok ? 'text-under' : 'text-over'}`}>
           {result.message}
           {result.detail ? <span className="text-ink-muted"> {result.detail}</span> : null}
         </p>

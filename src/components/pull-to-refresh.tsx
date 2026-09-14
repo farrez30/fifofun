@@ -191,7 +191,7 @@ export function PullToRefresh() {
           been on the platform it is borrowed from. It floats over content that
           is moving underneath it, which is the only condition under which a
           material is worth its cost. */}
-      <span className="material material-thin rounded-full border px-3 py-1.5 text-xs text-ink-muted shadow-md">
+      <span className="material material-thin rounded-full border px-3 py-1.5 text-footnote text-ink-muted shadow-md">
         {/* A word, not a bare spinner. The rest of this application says what
             is happening rather than only that something is. */}
         {busy ? 'Memuat ulang' : ready ? 'Lepas untuk memuat ulang' : 'Tarik untuk memuat ulang'}

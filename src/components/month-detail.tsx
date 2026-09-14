@@ -23,11 +23,11 @@ export function MonthDetailPanel({ detail }: { detail: MonthDetail }) {
       data-month-detail={detail.month}
       className="mt-4 border-t border-line pt-4"
     >
-      <h3 id={headingId} className="text-sm font-medium text-ink">
+      <h3 id={headingId} className="text-subhead font-medium text-ink">
         Rincian {detail.label}
         <span className="ml-2 font-normal text-ink-muted">{detail.count} transaksi</span>
       </h3>
-      <p className="mt-1 text-sm text-ink">{detail.verdict}</p>
+      <p className="mt-1 text-subhead text-ink">{detail.verdict}</p>
 
       {detail.byCategory.length === 0 ? null : (
         <>
@@ -55,9 +55,9 @@ export function MonthDetailPanel({ detail }: { detail: MonthDetail }) {
                     className="min-w-0 flex-1"
                     tile
                   />
-                  <span className="tnum shrink-0 font-mono text-sm text-ink">{line.total}</span>
+                  <span className="tnum shrink-0 font-mono text-subhead text-ink">{line.total}</span>
                 </div>
-                <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-muted">
+                <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-footnote text-ink-muted">
                   <CashflowChip cashflow={line.cashflow} />
                   <span className="tnum">{line.count} transaksi</span>
                   <span aria-hidden="true" className="text-ink-faint">
@@ -81,10 +81,10 @@ export function MonthDetailPanel({ detail }: { detail: MonthDetail }) {
             aria-label={`Tabel per kategori ${detail.label}, bisa digeser ke samping`}
             className="relative mt-3 hidden overflow-x-auto squircle rounded-md bg-surface shadow-xs sm:block"
           >
-            <table className="w-full min-w-[30rem] text-sm">
+            <table className="w-full min-w-[30rem] text-subhead">
               <caption className="sr-only">Per kategori, {detail.label}</caption>
               <thead>
-                <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-faint">
+                <tr className="border-b border-line text-left text-caption1 uppercase tracking-wide text-ink-faint">
                   <th scope="col" className="px-4 py-2.5 font-medium">
                     Kategori
                   </th>
@@ -139,7 +139,7 @@ export function MonthDetailPanel({ detail }: { detail: MonthDetail }) {
             </table>
           </div>
 
-          <h4 className="mt-4 text-xs font-medium uppercase tracking-wide text-ink-faint">
+          <h4 className="mt-4 text-footnote text-ink-faint">
             {detail.count > detail.top.length
               ? `${detail.top.length} transaksi terbesar dari ${detail.count}`
               : `Semua ${detail.count} transaksi`}
@@ -152,11 +152,11 @@ export function MonthDetailPanel({ detail }: { detail: MonthDetail }) {
             {detail.top.map((row, index) => (
               <li key={`${row.date}-${index}`} className="px-3 py-2.5">
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className="min-w-0 flex-1 truncate text-sm text-ink">{row.description}</span>
+                  <span className="min-w-0 flex-1 truncate text-subhead text-ink">{row.description}</span>
                   {/* The same shape SignedMoney draws, in strings: a glyph, a
                       word nobody sees, and the figure. */}
                   <span
-                    className={`tnum shrink-0 font-mono text-sm ${
+                    className={`tnum shrink-0 font-mono text-subhead ${
                       row.direction === 'in'
                         ? 'text-under'
                         : row.direction === 'out'
@@ -173,7 +173,7 @@ export function MonthDetailPanel({ detail }: { detail: MonthDetail }) {
                     {row.amount}
                   </span>
                 </div>
-                <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-muted">
+                <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-footnote text-ink-muted">
                   <span className="tnum">{row.date}</span>
                   <span aria-hidden="true" className="text-ink-faint">
                     ·
@@ -190,10 +190,10 @@ export function MonthDetailPanel({ detail }: { detail: MonthDetail }) {
             aria-label={`Tabel transaksi terbesar ${detail.label}, bisa digeser ke samping`}
             className="relative mt-2 hidden overflow-x-auto squircle rounded-md bg-surface shadow-xs sm:block"
           >
-            <table className="w-full min-w-[30rem] text-sm">
+            <table className="w-full min-w-[30rem] text-subhead">
               <caption className="sr-only">Transaksi terbesar, {detail.label}</caption>
               <thead>
-                <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-faint">
+                <tr className="border-b border-line text-left text-caption1 uppercase tracking-wide text-ink-faint">
                   <th scope="col" className="px-4 py-2.5 font-medium">
                     Tanggal
                   </th>
@@ -243,14 +243,14 @@ export function MonthDetailPanel({ detail }: { detail: MonthDetail }) {
             </table>
           </div>
 
-          <p className="mt-3 text-xs text-ink-muted">
+          <p className="mt-3 text-footnote text-ink-muted">
             Porsi dihitung terhadap arah kategorinya sendiri: kategori pengeluaran dibandingkan
             dengan total keluar, kategori pemasukan dengan total masuk.
           </p>
         </>
       )}
 
-      <p className="mt-1 text-xs text-ink-faint">
+      <p className="mt-1 text-footnote text-ink-faint">
         Perpindahan antar akun dan uang titipan tidak ikut dihitung.{' '}
         <a href={detail.href} className="text-accent underline underline-offset-2">
           Semua transaksi {detail.label} di Laporan

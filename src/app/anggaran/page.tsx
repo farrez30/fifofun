@@ -80,8 +80,8 @@ async function Budgets({ params }: { params: Record<string, string | string[] | 
   if (budgetable.length === 0) {
     return (
       <div className="squircle rounded-md bg-surface shadow-xs p-6">
-        <p className="text-sm font-medium text-ink">Belum ada kategori Spending atau Bills.</p>
-        <p className="mt-2 text-sm text-ink-muted">
+        <p className="text-subhead font-medium text-ink">Belum ada kategori Spending atau Bills.</p>
+        <p className="mt-2 text-subhead text-ink-muted">
           Anggaran ditetapkan per kategori pengeluaran.{' '}
           <a href="/pengaturan#kategori" className="text-accent underline underline-offset-2">
             Buat dulu satu di Pengaturan

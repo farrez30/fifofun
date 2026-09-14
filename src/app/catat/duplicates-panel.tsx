@@ -22,7 +22,7 @@ function Result({ result }: { result: ActionResult | null }) {
     <p
       role="status"
       aria-live="polite"
-      className={`mt-2 border px-3 py-2 text-sm text-ink ${
+      className={`mt-2 border px-3 py-2 text-subhead text-ink ${
         result.ok ? 'border-under/40 bg-under-wash' : 'border-over/40 bg-over-wash'
       }`}
     >
@@ -49,8 +49,8 @@ function Action({
       aria-label={ariaLabel}
       className={
         primary
-          ? 'h-11 rounded-sm bg-accent px-4 text-sm font-medium text-paper transition-colors duration-150 hover:bg-accent-strong disabled:opacity-50'
-          : 'h-11 border border-line-strong px-3 text-sm text-ink transition-colors duration-150 hover:bg-sunken disabled:opacity-50'
+          ? 'h-11 rounded-sm bg-accent px-4 text-subhead font-medium text-paper transition-colors duration-150 hover:bg-accent-strong disabled:opacity-50'
+          : 'h-11 border border-line-strong px-3 text-subhead text-ink transition-colors duration-150 hover:bg-sunken disabled:opacity-50'
       }
     >
       {pending ? 'Menyimpan' : label}
@@ -70,13 +70,13 @@ export function DuplicatesPanel({ pairs }: { pairs: DuplicateView[] }) {
       aria-labelledby="kemungkinan-ganda-judul"
       className="border border-warn/40 bg-warn-wash p-4"
     >
-      <h2 id="kemungkinan-ganda-judul" className="text-sm font-medium text-ink">
+      <h2 id="kemungkinan-ganda-judul" className="text-subhead font-medium text-ink">
         <span aria-hidden="true" className="mr-1.5 text-warn">
           ◆
         </span>
         {pairs.length} catatan manual kemungkinan sama dengan baris dari bank
       </h2>
-      <p className="mt-1 text-sm text-ink-muted">
+      <p className="mt-1 text-subhead text-ink-muted">
         Nominal dan akunnya sama, selisih waktunya di bawah tiga hari. Sampai kamu memutuskan,
         keduanya tetap terhitung.
       </p>
@@ -105,18 +105,18 @@ export function DuplicatesPanel({ pairs }: { pairs: DuplicateView[] }) {
               ).map(([label, row]) => (
                 <li key={label} className="p-3">
                   <div className="flex items-baseline justify-between gap-3">
-                    <p className="shrink-0 text-xs font-medium uppercase tracking-wide text-ink-faint">
+                    <p className="shrink-0 text-footnote text-ink-faint">
                       {label}
                     </p>
-                    <p className="tnum shrink-0 font-mono text-sm text-ink">{row.amount}</p>
+                    <p className="tnum shrink-0 font-mono text-subhead text-ink">{row.amount}</p>
                   </div>
-                  <p className="mt-1 text-sm text-ink">
+                  <p className="mt-1 text-subhead text-ink">
                     {row.description}
                     {row.note ? (
-                      <span className="block text-xs text-ink-muted">{row.note}</span>
+                      <span className="block text-footnote text-ink-muted">{row.note}</span>
                     ) : null}
                   </p>
-                  <p className="mt-0.5 flex flex-wrap items-baseline gap-x-2 text-xs text-ink-muted">
+                  <p className="mt-0.5 flex flex-wrap items-baseline gap-x-2 text-footnote text-ink-muted">
                     <span className="tnum">{row.when}</span>
                     <span aria-hidden="true" className="text-ink-faint">
                       ·
@@ -138,12 +138,12 @@ export function DuplicatesPanel({ pairs }: { pairs: DuplicateView[] }) {
               aria-label={`Catatan manual dan baris bank untuk ${pair.manual.description}`}
             >
 
-              <table className="w-full text-sm">
+              <table className="w-full text-subhead">
                 <caption className="sr-only">
                   Catatan manual dan baris bank yang diduga sama
                 </caption>
                 <thead>
-                  <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-faint">
+                  <tr className="border-b border-line text-left text-caption1 uppercase tracking-wide text-ink-faint">
                     <th scope="col" className="px-4 py-2.5 font-medium">
                       Sumber
                     </th>
@@ -178,7 +178,7 @@ export function DuplicatesPanel({ pairs }: { pairs: DuplicateView[] }) {
                       <td className="px-4 py-2.5 text-ink">
                         {row.description}
                         {row.note ? (
-                          <span className="block text-xs text-ink-muted">{row.note}</span>
+                          <span className="block text-footnote text-ink-muted">{row.note}</span>
                         ) : null}
                       </td>
                       <td className="whitespace-nowrap px-4 py-2.5 text-ink-muted">
@@ -195,7 +195,7 @@ export function DuplicatesPanel({ pairs }: { pairs: DuplicateView[] }) {
             </div>
 
             <div className="flex flex-wrap items-center gap-2 border-t border-line p-3">
-              <span className="mr-auto text-xs text-ink-muted">Selisih waktu {pair.drift}</span>
+              <span className="mr-auto text-footnote text-ink-muted">Selisih waktu {pair.drift}</span>
               <form action={merge}>
                 <input type="hidden" name="manualId" value={pair.manualId} />
                 <input type="hidden" name="importedId" value={pair.importedId} />
@@ -218,7 +218,7 @@ export function DuplicatesPanel({ pairs }: { pairs: DuplicateView[] }) {
         ))}
       </ul>
 
-      <p className="mt-3 text-xs text-ink-muted">
+      <p className="mt-3 text-footnote text-ink-muted">
         Gabungkan memakai baris dari bank dan memindahkan kategori serta catatan manualnya ke sana.
         Bukan yang sama menyimpan keduanya sebagai dua transaksi berbeda.
       </p>

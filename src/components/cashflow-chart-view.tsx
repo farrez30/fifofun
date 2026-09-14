@@ -190,7 +190,7 @@ export function CashflowChartView({
   return (
     <figure className="squircle rounded-md bg-surface shadow-xs p-4">
       <figcaption className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <span className="text-sm font-medium text-ink">{caption}</span>
+        <span className="text-subhead font-medium text-ink">{caption}</span>
 
         <div role="radiogroup" aria-label="Cara membaca grafik" className={SEGMENTED}>
           {MODES.map((option) => (
@@ -213,21 +213,21 @@ export function CashflowChartView({
       {active ? (
         <dl className="mb-3 flex flex-wrap items-baseline gap-x-6 gap-y-1 border-b border-line pb-3">
           <div className="flex items-baseline gap-2">
-            <dt className="text-xs uppercase tracking-wide text-ink-faint">Bulan</dt>
-            <dd className="tnum font-mono text-sm font-medium text-ink">{active.month}</dd>
+            <dt className="text-footnote text-ink-faint">Bulan</dt>
+            <dd className="tnum font-mono text-subhead font-medium text-ink">{active.month}</dd>
           </div>
           <div className="flex items-baseline gap-2">
-            <dt className="text-xs uppercase tracking-wide text-ink-faint">Masuk</dt>
-            <dd className="tnum font-mono text-sm text-under">{active.income.text}</dd>
+            <dt className="text-footnote text-ink-faint">Masuk</dt>
+            <dd className="tnum font-mono text-subhead text-under">{active.income.text}</dd>
           </div>
           <div className="flex items-baseline gap-2">
-            <dt className="text-xs uppercase tracking-wide text-ink-faint">Keluar</dt>
-            <dd className="tnum font-mono text-sm text-ink">{active.spending.text}</dd>
+            <dt className="text-footnote text-ink-faint">Keluar</dt>
+            <dd className="tnum font-mono text-subhead text-ink">{active.spending.text}</dd>
           </div>
           <div className="flex items-baseline gap-2">
-            <dt className="text-xs uppercase tracking-wide text-ink-faint">Selisih</dt>
+            <dt className="text-footnote text-ink-faint">Selisih</dt>
             <dd
-              className={`tnum font-mono text-sm font-medium ${
+              className={`tnum font-mono text-subhead font-medium ${
                 active.netNegative ? 'text-over' : 'text-under'
               }`}
             >
@@ -365,7 +365,7 @@ export function CashflowChartView({
         </div>
       </div>
 
-      <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-muted">
+      <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-footnote text-ink-muted">
         {mode === 'side' ? (
           <>
             <Key className="bg-under" label="Masuk" />
@@ -384,7 +384,7 @@ export function CashflowChartView({
         )}
       </p>
 
-      <p className="mt-1 text-xs text-ink-faint">
+      <p className="mt-1 text-footnote text-ink-faint">
         {details.length > 0
           ? 'Arahkan kursor untuk membaca angkanya. Klik atau tekan Enter pada sebuah bulan untuk menyematkan rinciannya di bawah grafik.'
           : 'Arahkan kursor atau pakai tombol panah untuk membaca bulan tertentu.'}

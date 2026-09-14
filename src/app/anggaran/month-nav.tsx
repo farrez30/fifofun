@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { NavHint } from '@/components/nav-hint'
 import { formatMonthKey } from '@/lib/datetime'
 import { addMonths } from '@/lib/ledger/funds'
-import { BUTTON_QUIET } from '@/components/field-base'
+import { BUTTON_QUIET, CONTROL } from '@/components/field-base'
 
 /**
  * Which month is being budgeted.
@@ -32,7 +32,7 @@ export function MonthNav({ period, thisMonth }: { period: string; thisMonth: str
         <NavHint className="ml-1.5" />
       </Link>
 
-      <p aria-current="date" className="text-sm font-medium text-ink">
+      <p aria-current="date" className="text-subhead font-medium text-ink">
         {formatMonthKey(period)}
       </p>
 
@@ -56,7 +56,7 @@ export function MonthNav({ period, thisMonth }: { period: string; thisMonth: str
       )}
 
       <form action="/anggaran" method="get" className="flex items-center gap-2">
-        <label htmlFor="bulan" className="text-xs text-ink-muted">
+        <label htmlFor="bulan" className="text-footnote text-ink-muted">
           Buka bulan
         </label>
         <input
@@ -64,7 +64,7 @@ export function MonthNav({ period, thisMonth }: { period: string; thisMonth: str
           type="month"
           name="bulan"
           defaultValue={period}
-          className="h-11 rounded-sm border border-line bg-surface px-2 text-base text-ink sm:text-sm"
+          className={CONTROL}
         />
         <button
           type="submit"

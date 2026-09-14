@@ -206,7 +206,7 @@ async function Report({ params }: { params: Record<string, string | string[] | u
       />
 
       <section aria-labelledby="daftar">
-        <h2 id="daftar" className="mb-3 text-sm font-medium text-ink">
+        <h2 id="daftar" className="mb-3 text-subhead font-medium text-ink">
           Daftar transaksi
         </h2>
         <TransactionTable
@@ -217,7 +217,7 @@ async function Report({ params }: { params: Record<string, string | string[] | u
           emptyText="Tidak ada transaksi yang cocok dengan saringan ini."
         />
         <TablePager page={page} pages={pages} hrefFor={(next) => pageHref(plain, next)} />
-        <p className="mt-2 text-xs text-ink-muted">
+        <p className="mt-2 text-footnote text-ink-muted">
           Klik keterangannya untuk mengubah kategori, catatan, atau memisahkannya jadi beberapa
           kategori.
         </p>

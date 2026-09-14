@@ -266,7 +266,7 @@ async function Dashboard({ akun }: { akun: string }) {
   return (
     <div className="space-y-10">
       <section aria-labelledby="ringkasan-bulan">
-        <h2 id="ringkasan-bulan" className="mb-3 text-sm font-medium text-ink">
+        <h2 id="ringkasan-bulan" className="mb-3 text-subhead font-medium text-ink">
           Bulan terakhir tercatat
           <span className="ml-2 font-normal text-ink-muted">{latest.month}</span>
         </h2>
@@ -323,14 +323,14 @@ async function Dashboard({ akun }: { akun: string }) {
           aria-labelledby="perlu-perhatian"
           className="border border-warn/40 bg-warn-wash p-4"
         >
-          <h2 id="perlu-perhatian" className="text-sm font-medium text-ink">
+          <h2 id="perlu-perhatian" className="text-subhead font-medium text-ink">
             <span aria-hidden="true" className="mr-1.5 text-warn">
               ▲
             </span>
             Perlu perhatian
           </h2>
 
-          <div className="mt-3 space-y-3 text-sm">
+          <div className="mt-3 space-y-3 text-subhead">
             {overdrawn.length > 0 ? (
               <div>
                 <p className="text-ink">
@@ -363,7 +363,7 @@ async function Dashboard({ akun }: { akun: string }) {
       ) : null}
 
       <section aria-labelledby="perjalanan">
-        <h2 id="perjalanan" className="mb-3 text-sm font-medium text-ink">
+        <h2 id="perjalanan" className="mb-3 text-subhead font-medium text-ink">
           Dari saldo awal ke sisa uang
           <span className="ml-2 font-normal text-ink-muted">{latest.month}</span>
         </h2>
@@ -374,7 +374,7 @@ async function Dashboard({ akun }: { akun: string }) {
       </section>
 
       <section aria-labelledby="saldo">
-        <h2 id="saldo" className="mb-3 text-sm font-medium text-ink">
+        <h2 id="saldo" className="mb-3 text-subhead font-medium text-ink">
           Uangnya ada di mana
         </h2>
         <Balances
@@ -390,7 +390,7 @@ async function Dashboard({ akun }: { akun: string }) {
 
       <section aria-labelledby="anggaran">
         <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-          <h2 id="anggaran" className="text-sm font-medium text-ink">
+          <h2 id="anggaran" className="text-subhead font-medium text-ink">
             Anggaran dan realisasi
             <span className="ml-2 font-normal text-ink-muted">{latest.month}</span>
           </h2>
@@ -399,7 +399,7 @@ async function Dashboard({ akun }: { akun: string }) {
               not an <a>: the bare anchor forced a full page load. */}
           <Link
             href={`/anggaran?bulan=${latest.month}`}
-            className="text-sm text-accent underline underline-offset-2"
+            className="text-subhead text-accent underline underline-offset-2"
           >
             Atur anggaran {formatMonthKey(latest.month)}
           </Link>
@@ -421,7 +421,7 @@ async function Dashboard({ akun }: { akun: string }) {
       </section>
 
       <section aria-labelledby="tagihan">
-        <h2 id="tagihan" className="mb-3 text-sm font-medium text-ink">
+        <h2 id="tagihan" className="mb-3 text-subhead font-medium text-ink">
           Tagihan rutin
           <span className="ml-2 font-normal text-ink-muted">{latest.month}</span>
         </h2>
@@ -430,7 +430,7 @@ async function Dashboard({ akun }: { akun: string }) {
 
       {receivables.receivables.length > 0 ? (
         <section aria-labelledby="piutang">
-          <h2 id="piutang" className="mb-3 text-sm font-medium text-ink">
+          <h2 id="piutang" className="mb-3 text-subhead font-medium text-ink">
             Piutang
           </h2>
           <ReceivablesPanel review={receivables} />
@@ -438,7 +438,7 @@ async function Dashboard({ akun }: { akun: string }) {
       ) : null}
 
       <section aria-labelledby="aliran">
-        <h2 id="aliran" className="mb-3 text-sm font-medium text-ink">
+        <h2 id="aliran" className="mb-3 text-subhead font-medium text-ink">
           Ke mana uangnya pergi
           <span className="ml-2 font-normal text-ink-muted">{latest.month}</span>
         </h2>
@@ -448,14 +448,14 @@ async function Dashboard({ akun }: { akun: string }) {
           caption={`Aliran uang ${latest.month}`}
           note={<FoldedCategories folded={flow.folded} into={flow.foldedInto} />}
         />
-        <p className="mt-2 text-xs text-ink-muted">
+        <p className="mt-2 text-footnote text-ink-muted">
           Setiap kategori yang terpakai bulan ini punya pitanya sendiri, dengan warna yang sama
           seperti di rincian bulan dan di antrean tinjau.
         </p>
       </section>
 
       <section aria-labelledby="tren">
-        <h2 id="tren" className="mb-3 text-sm font-medium text-ink">
+        <h2 id="tren" className="mb-3 text-subhead font-medium text-ink">
           Tren {shownSeries.length} bulan
           <span className="ml-2 font-normal text-ink-muted">{scoped?.name ?? 'Semua akun'}</span>
         </h2>
@@ -488,7 +488,7 @@ async function Dashboard({ akun }: { akun: string }) {
             <BalanceTrend series={shownSeries} caption={balanceCaption} />
           )}
           {scoped && stalled.some((account) => account.accountId === scoped.id) ? (
-            <p className="text-xs text-ink-muted">
+            <p className="text-footnote text-ink-muted">
               Akun ini hampir tidak pernah mengeluarkan uang di catatan, jadi garisnya kemungkinan
               besar lebih tinggi daripada saldo sebenarnya.
             </p>
@@ -497,7 +497,7 @@ async function Dashboard({ akun }: { akun: string }) {
       </section>
 
       <section aria-labelledby="transaksi">
-        <h2 id="transaksi" className="mb-3 text-sm font-medium text-ink">
+        <h2 id="transaksi" className="mb-3 text-subhead font-medium text-ink">
           Transaksi terakhir
         </h2>
         <TransactionTable
@@ -507,7 +507,7 @@ async function Dashboard({ akun }: { akun: string }) {
           caption="Dua puluh transaksi terakhir"
           emptyText="Belum ada transaksi tercatat."
         />
-        <p className="mt-2 text-xs text-ink-muted">
+        <p className="mt-2 text-footnote text-ink-muted">
           Klik keterangannya untuk mengubahnya. Semua transaksi ada di Laporan.
         </p>
       </section>

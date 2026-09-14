@@ -47,7 +47,7 @@ export function CashflowChart({
 }: Props) {
   if (series.length === 0) {
     return (
-      <p className="squircle rounded-md bg-surface shadow-xs p-6 text-sm text-ink-muted">
+      <p className="squircle rounded-md bg-surface shadow-xs p-6 text-subhead text-ink-muted">
         Belum ada transaksi untuk digambar.
       </p>
     )

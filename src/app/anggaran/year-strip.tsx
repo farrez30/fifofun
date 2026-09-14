@@ -31,8 +31,8 @@ export function YearStrip({ view }: { view: BudgetYearView }) {
   if (!view.hasAny) {
     return (
       <figure className="squircle rounded-md bg-surface shadow-xs p-6">
-        <figcaption className="text-sm font-medium text-ink">Setahun ke belakang</figcaption>
-        <p className="mt-2 text-sm text-ink-muted">
+        <figcaption className="text-subhead font-medium text-ink">Setahun ke belakang</figcaption>
+        <p className="mt-2 text-subhead text-ink-muted">
           Belum ada pengeluaran maupun anggaran di dua belas bulan ini, jadi belum ada yang bisa
           digambar. Strip ini terisi sendiri begitu bulan-bulannya punya catatan.
         </p>
@@ -63,7 +63,7 @@ export function YearStrip({ view }: { view: BudgetYearView }) {
 
   return (
     <figure className="squircle rounded-md bg-surface shadow-xs p-4">
-      <figcaption className="text-sm font-medium text-ink">Setahun ke belakang</figcaption>
+      <figcaption className="text-subhead font-medium text-ink">Setahun ke belakang</figcaption>
 
       <Readout month={selected ?? null} />
 
@@ -125,7 +125,7 @@ export function YearStrip({ view }: { view: BudgetYearView }) {
         })}
       </div>
 
-      <p className="mt-2 text-xs text-ink-muted">
+      <p className="mt-2 text-footnote text-ink-muted">
         Garis hitamnya total anggaran bulan itu; bar yang melewatinya berarti bulannya jebol.
         Kolom kosong berarti belum ada catatan, bukan nol.
       </p>
@@ -174,7 +174,7 @@ function Readout({ month }: { month: YearMonthView | null }) {
   if (!month) return null
 
   return (
-    <p className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm">
+    <p className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-subhead">
       <span className="font-medium text-ink">{month.label}</span>
       {month.hasData ? (
         <span className="text-ink-muted">

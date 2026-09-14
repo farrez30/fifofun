@@ -78,7 +78,7 @@ async function Entry() {
         />
 
         <section aria-labelledby="catatan-terakhir">
-          <h2 id="catatan-terakhir" className="mb-3 text-sm font-medium text-ink">
+          <h2 id="catatan-terakhir" className="mb-3 text-subhead font-medium text-ink">
             Sepuluh catatan manual terakhir
           </h2>
           <RecentEntries rows={rows} />
@@ -87,16 +87,16 @@ async function Entry() {
 
       <aside className="space-y-5 lg:border-l lg:border-line lg:pl-6">
         <div>
-          <h2 className="text-sm font-medium text-ink">Kenapa halaman ini ada</h2>
-          <p className="mt-1 text-sm text-ink-muted">
+          <h2 className="text-subhead font-medium text-ink">Kenapa halaman ini ada</h2>
+          <p className="mt-1 text-subhead text-ink-muted">
             E-Statement Mandiri hanya melihat rekening Mandiri. Belanja tunai dan belanja dari
             e-wallet tidak pernah muncul di sana, jadi harus diketik.
           </p>
         </div>
 
         <div className="border-t border-line pt-4">
-          <h2 className="text-sm font-medium text-ink">Kalau ternyata lewat bank juga</h2>
-          <p className="mt-1 text-sm text-ink-muted">
+          <h2 className="text-subhead font-medium text-ink">Kalau ternyata lewat bank juga</h2>
+          <p className="mt-1 text-subhead text-ink-muted">
             Saat statement berikutnya diimpor, catatan yang nominal dan akunnya sama akan
             dipasangkan dengan baris banknya. Kamu yang memutuskan di halaman Tinjau, dan tidak ada
             yang terhitung dua kali sebelum itu diputuskan.

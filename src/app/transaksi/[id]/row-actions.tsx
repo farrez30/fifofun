@@ -25,8 +25,8 @@ export function DeleteEntryButton({ id }: { id: string }) {
 
   return (
     <details className="squircle rounded-md bg-surface shadow-xs p-4">
-      <summary className="cursor-pointer text-sm text-ink-muted">Hapus transaksi</summary>
-      <p className="mt-2 text-xs text-ink-muted">
+      <summary className="cursor-pointer text-subhead text-ink-muted">Hapus transaksi</summary>
+      <p className="mt-2 text-footnote text-ink-muted">
         Menghapus hanya menyembunyikan barisnya dari semua hitungan. Datanya tetap ada, dan baris
         dari e-Statement memang tidak bisa dihapus sama sekali.
       </p>
@@ -36,7 +36,7 @@ export function DeleteEntryButton({ id }: { id: string }) {
         <input type="hidden" name="transactionId" value={id} />
         <Submit label="Ya, hapus" pendingLabel="Menghapus" />
         {result ? (
-          <p role="status" className={`text-sm ${result.ok ? 'text-under' : 'text-over'}`}>
+          <p role="status" className={`text-subhead ${result.ok ? 'text-under' : 'text-over'}`}>
             {result.message}
             {result.detail ? <span className="text-ink-muted"> {result.detail}</span> : null}
           </p>
@@ -54,7 +54,7 @@ export function RestoreEntryButton({ id }: { id: string }) {
       <input type="hidden" name="id" value={id} />
       <Submit label="Kembalikan transaksi ini" pendingLabel="Mengembalikan" />
       {result ? (
-        <p role="status" className={`text-sm ${result.ok ? 'text-under' : 'text-over'}`}>
+        <p role="status" className={`text-subhead ${result.ok ? 'text-under' : 'text-over'}`}>
           {result.message}
           {result.detail ? <span className="text-ink-muted"> {result.detail}</span> : null}
         </p>
@@ -71,7 +71,7 @@ export function UnsplitButton({ id }: { id: string }) {
       <input type="hidden" name="id" value={id} />
       <Submit label="Gabungkan kembali" pendingLabel="Menggabungkan" />
       {result ? (
-        <p role="status" className={`text-sm ${result.ok ? 'text-under' : 'text-over'}`}>
+        <p role="status" className={`text-subhead ${result.ok ? 'text-under' : 'text-over'}`}>
           {result.message}
           {result.detail ? <span className="text-ink-muted"> {result.detail}</span> : null}
         </p>

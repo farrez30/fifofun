@@ -2,6 +2,7 @@ import { formatJakarta } from '@/lib/datetime'
 import type { CategoryTotal, PeriodFilter, PeriodSummary } from '@/lib/ledger/period'
 import { CASHFLOW_LABELS, CASHFLOW_TYPES } from '@/lib/ledger/types'
 import { formatIdr } from '@/lib/money'
+import { CONTROL } from '@/components/field-base'
 
 /**
  * The filter form and its answer.
@@ -67,10 +68,7 @@ function value(raw: Props['raw'], key: string): string {
   other form in the app stood at 44. Six controls is also the densest form here,
   so it is the worst place to be the exception.
 */
-const FIELD =
-  'mt-1 h-11 w-full rounded-sm border border-line bg-paper px-2.5 text-base text-ink focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent sm:text-sm'
-
-const LABEL = 'block text-xs font-medium uppercase tracking-wide text-ink-faint'
+const LABEL = 'block text-subhead font-medium text-ink'
 
 /** One row of the report: a name, a share, a figure, and a bar for the share. */
 function Line({
@@ -87,15 +85,15 @@ function Line({
   return (
     <>
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <span className="text-sm text-ink">
+        <span className="text-subhead text-ink">
           {name}
-          <span className="ml-2 text-xs text-ink-faint">{note}</span>
+          <span className="ml-2 text-footnote text-ink-faint">{note}</span>
         </span>
         <span className="flex items-baseline gap-3">
-          <span className="tnum text-xs text-ink-faint">
+          <span className="tnum text-footnote text-ink-faint">
             {share.toFixed(1).replace('.', ',')}%
           </span>
-          <span className="tnum font-mono text-sm text-ink">{formatIdr(total)}</span>
+          <span className="tnum font-mono text-subhead text-ink">{formatIdr(total)}</span>
         </span>
       </div>
 
@@ -118,14 +116,14 @@ function Merchants({ line }: { line: CategoryTotal }) {
 
   return (
     <details className="mt-1">
-      <summary className="flex min-h-11 cursor-pointer list-none items-center text-xs text-ink-muted underline underline-offset-2 marker:content-none">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center text-footnote text-ink-muted underline underline-offset-2 marker:content-none">
         Ke mana perginya
       </summary>
       <ul className="mt-1.5 space-y-1">
         {line.merchants.map((merchant) => (
           <li
             key={merchant.label}
-            className="flex flex-wrap items-baseline justify-between gap-x-3 text-xs"
+            className="flex flex-wrap items-baseline justify-between gap-x-3 text-footnote"
           >
             <span className="text-ink-muted">
               {merchant.label}
@@ -150,7 +148,7 @@ export function PeriodReport({ summary, raw, categories, accounts, ledgerSize }:
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <label>
             <span className={LABEL}>Dari tanggal</span>
-            <input type="date" name="dari" defaultValue={value(raw, 'dari')} className={FIELD} />
+            <input type="date" name="dari" defaultValue={value(raw, 'dari')} className={CONTROL} />
           </label>
 
           <label>
@@ -159,13 +157,13 @@ export function PeriodReport({ summary, raw, categories, accounts, ledgerSize }:
               type="date"
               name="sampai"
               defaultValue={value(raw, 'sampai')}
-              className={FIELD}
+              className={CONTROL}
             />
           </label>
 
           <label>
             <span className={LABEL}>Cashflow</span>
-            <select name="cashflow" defaultValue={value(raw, 'cashflow')} className={FIELD}>
+            <select name="cashflow" defaultValue={value(raw, 'cashflow')} className={CONTROL}>
               <option value="">Semua</option>
               {CASHFLOW_TYPES.map((cashflow) => (
                 <option key={cashflow} value={cashflow}>
@@ -177,7 +175,7 @@ export function PeriodReport({ summary, raw, categories, accounts, ledgerSize }:
 
           <label>
             <span className={LABEL}>Kategori</span>
-            <select name="kategori" defaultValue={value(raw, 'kategori')} className={FIELD}>
+            <select name="kategori" defaultValue={value(raw, 'kategori')} className={CONTROL}>
               <option value="">Semua</option>
               {groupedCategories(categories).map((group) => (
                 <optgroup key={group.label} label={group.label}>
@@ -193,7 +191,7 @@ export function PeriodReport({ summary, raw, categories, accounts, ledgerSize }:
 
           <label>
             <span className={LABEL}>Akun</span>
-            <select name="akun" defaultValue={value(raw, 'akun')} className={FIELD}>
+            <select name="akun" defaultValue={value(raw, 'akun')} className={CONTROL}>
               <option value="">Semua</option>
               {accounts.map((account) => (
                 <option key={account} value={account}>
@@ -211,7 +209,7 @@ export function PeriodReport({ summary, raw, categories, accounts, ledgerSize }:
               maxLength={100}
               defaultValue={value(raw, 'cari')}
               placeholder="misalnya indomaret"
-              className={FIELD}
+              className={CONTROL}
             />
           </label>
         </div>
@@ -219,7 +217,7 @@ export function PeriodReport({ summary, raw, categories, accounts, ledgerSize }:
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <button
             type="submit"
-            className="h-11 rounded-sm bg-accent px-4 text-sm font-medium text-paper transition-colors duration-150 hover:bg-accent-strong"
+            className="h-11 rounded-sm bg-accent px-4 text-subhead font-medium text-paper transition-colors duration-150 hover:bg-accent-strong"
           >
             Terapkan
           </button>
@@ -231,13 +229,13 @@ export function PeriodReport({ summary, raw, categories, accounts, ledgerSize }:
                finger needs. */
             <a
               href="/laporan"
-              className="inline-flex min-h-11 items-center rounded-sm px-2 text-sm text-ink-muted underline underline-offset-2"
+              className="inline-flex min-h-11 items-center rounded-sm px-2 text-subhead text-ink-muted underline underline-offset-2"
             >
               Bersihkan
             </a>
           ) : null}
 
-          <label className="ml-auto flex items-center gap-2 text-xs text-ink-muted">
+          <label className="ml-auto flex items-center gap-2 text-footnote text-ink-muted">
             <input
               type="checkbox"
               name="titipan"
@@ -251,18 +249,18 @@ export function PeriodReport({ summary, raw, categories, accounts, ledgerSize }:
       </form>
 
       <div className="squircle rounded-md bg-surface shadow-xs p-4">
-        <p className="text-sm font-medium text-ink">
+        <p className="text-subhead font-medium text-ink">
           {summary.matched === 0
             ? 'Tidak ada transaksi yang cocok dengan pilihan ini.'
             : `${summary.matched} transaksi dari ${ledgerSize} tercatat.`}
         </p>
 
         {summary.span ? (
-          <p className="mt-1 text-sm text-ink-muted">
+          <p className="mt-1 text-subhead text-ink-muted">
             {formatJakarta(summary.span.from, 'date')} sampai {formatJakarta(summary.span.to, 'date')}.
           </p>
         ) : (
-          <p className="mt-1 text-sm text-ink-muted">
+          <p className="mt-1 text-subhead text-ink-muted">
             Coba lebarkan rentang tanggalnya, atau kosongkan salah satu pilihan.
           </p>
         )}
@@ -270,17 +268,17 @@ export function PeriodReport({ summary, raw, categories, accounts, ledgerSize }:
         {summary.matched > 0 ? (
           <dl className="mt-4 grid gap-3 sm:grid-cols-3">
             <div className="squircle rounded-md bg-sunken p-3">
-              <dt className="text-xs font-medium uppercase tracking-wide text-ink-faint">Masuk</dt>
-              <dd className="tnum mt-1 font-mono text-lg text-under">{formatIdr(summary.inflow)}</dd>
+              <dt className="text-footnote text-ink-faint">Masuk</dt>
+              <dd className="tnum mt-1 font-mono text-title3 tracking-title3 text-under">{formatIdr(summary.inflow)}</dd>
             </div>
             <div className="squircle rounded-md bg-sunken p-3">
-              <dt className="text-xs font-medium uppercase tracking-wide text-ink-faint">Keluar</dt>
-              <dd className="tnum mt-1 font-mono text-lg text-ink">{formatIdr(summary.outflow)}</dd>
+              <dt className="text-footnote text-ink-faint">Keluar</dt>
+              <dd className="tnum mt-1 font-mono text-title3 tracking-title3 text-ink">{formatIdr(summary.outflow)}</dd>
             </div>
             <div className="squircle rounded-md bg-sunken p-3">
-              <dt className="text-xs font-medium uppercase tracking-wide text-ink-faint">Selisih</dt>
+              <dt className="text-footnote text-ink-faint">Selisih</dt>
               <dd
-                className={`tnum mt-1 font-mono text-lg ${summary.net < 0n ? 'text-over' : 'text-under'}`}
+                className={`tnum mt-1 font-mono text-title3 tracking-title3 ${summary.net < 0n ? 'text-over' : 'text-under'}`}
               >
                 {summary.net < 0n ? '−' : ''}
                 {formatIdr(summary.net < 0n ? -summary.net : summary.net)}
@@ -289,7 +287,7 @@ export function PeriodReport({ summary, raw, categories, accounts, ledgerSize }:
           </dl>
         ) : null}
 
-        <p className="mt-3 text-xs text-ink-muted">
+        <p className="mt-3 text-footnote text-ink-muted">
           Perpindahan antar akunmu sendiri tidak dihitung sebagai masuk maupun keluar, supaya satu
           kali top-up tidak terbaca dua kali.
         </p>
@@ -297,16 +295,16 @@ export function PeriodReport({ summary, raw, categories, accounts, ledgerSize }:
 
       {summary.byCashflow.length > 0 ? (
         <section aria-labelledby="per-cashflow">
-          <h2 id="per-cashflow" className="mb-3 text-sm font-medium text-ink">
+          <h2 id="per-cashflow" className="mb-3 text-subhead font-medium text-ink">
             Per cashflow
           </h2>
           <ul className="rows-inset squircle rounded-md bg-surface shadow-xs">
             {summary.byCashflow.map((line) => (
               <li key={line.cashflow} className="flex items-baseline justify-between gap-3 p-3">
-                <span className="text-sm text-ink">{line.label}</span>
+                <span className="text-subhead text-ink">{line.label}</span>
                 <span className="flex items-baseline gap-3">
-                  <span className="text-xs text-ink-faint">{line.count} transaksi</span>
-                  <span className="tnum font-mono text-sm text-ink">{formatIdr(line.total)}</span>
+                  <span className="text-footnote text-ink-faint">{line.count} transaksi</span>
+                  <span className="tnum font-mono text-subhead text-ink">{formatIdr(line.total)}</span>
                 </span>
               </li>
             ))}
@@ -316,7 +314,7 @@ export function PeriodReport({ summary, raw, categories, accounts, ledgerSize }:
 
       {summary.byGroup.length > 0 ? (
         <section aria-labelledby="per-kategori">
-          <h2 id="per-kategori" className="mb-3 text-sm font-medium text-ink">
+          <h2 id="per-kategori" className="mb-3 text-subhead font-medium text-ink">
             Per kategori
           </h2>
           <ul className="rows-inset squircle rounded-md bg-surface shadow-xs">
@@ -337,7 +335,7 @@ export function PeriodReport({ summary, raw, categories, accounts, ledgerSize }:
                         text in it: a disclosure the size of its own label is
                         the smallest thing on the page and the one most often
                         reached for on a phone. */}
-                    <summary className="flex min-h-11 cursor-pointer list-none items-center text-xs text-accent underline underline-offset-2 marker:content-none">
+                    <summary className="flex min-h-11 cursor-pointer list-none items-center text-footnote text-accent underline underline-offset-2 marker:content-none">
                       {group.categories.length} pos di dalamnya
                     </summary>
                     <ul className="mt-2 space-y-2 border-l border-line pl-3">
@@ -360,7 +358,7 @@ export function PeriodReport({ summary, raw, categories, accounts, ledgerSize }:
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-xs text-ink-muted">
+          <p className="mt-2 text-footnote text-ink-muted">
             Persentasenya dihitung terhadap arah kategori itu sendiri: kategori pengeluaran
             dibandingkan dengan total keluar, kategori pemasukan dengan total masuk.
           </p>

@@ -69,7 +69,7 @@ export function SplitForm({
 
   return (
     <form action={action} className="space-y-3 squircle rounded-md bg-surface shadow-xs p-4">
-      <h2 className="text-sm font-medium text-ink">Pisah jadi beberapa kategori</h2>
+      <h2 className="text-subhead font-medium text-ink">Pisah jadi beberapa kategori</h2>
       <input type="hidden" name="id" value={id} />
 
       <ol className="space-y-3">
@@ -119,7 +119,7 @@ export function SplitForm({
               type="button"
               onClick={() => setParts((current) => current.filter((_, at) => at !== index))}
               disabled={parts.length <= SPLIT_MIN}
-              className="h-10 rounded-sm border border-line px-2.5 text-xs text-ink-muted transition-colors duration-150 hover:border-line-strong hover:text-ink disabled:opacity-30"
+              className="h-10 rounded-sm border border-line px-2.5 text-footnote text-ink-muted transition-colors duration-150 hover:border-line-strong hover:text-ink disabled:opacity-30"
             >
               Hapus bagian
             </button>
@@ -132,12 +132,12 @@ export function SplitForm({
           type="button"
           onClick={() => setParts((current) => [...current, EMPTY])}
           disabled={parts.length >= SPLIT_MAX}
-          className="h-10 rounded-sm border border-line px-2.5 text-xs text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken disabled:opacity-30"
+          className="h-10 rounded-sm border border-line px-2.5 text-footnote text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken disabled:opacity-30"
         >
           Tambah bagian
         </button>
 
-        <p role="status" className="text-sm text-ink-muted">
+        <p role="status" className="text-subhead text-ink-muted">
           {status}
         </p>
       </div>
@@ -145,14 +145,14 @@ export function SplitForm({
       <div className="flex flex-wrap items-center gap-3">
         <Submit disabled={blocker !== null} />
         {result ? (
-          <p role="status" className={`text-sm ${result.ok ? 'text-under' : 'text-over'}`}>
+          <p role="status" className={`text-subhead ${result.ok ? 'text-under' : 'text-over'}`}>
             {result.message}
             {result.detail ? <span className="text-ink-muted"> {result.detail}</span> : null}
           </p>
         ) : null}
       </div>
 
-      <p className="text-xs text-ink-muted">
+      <p className="text-footnote text-ink-muted">
         Bagian-bagiannya harus berjumlah persis {formatIdr(total)}, karena saldo dan rekonsiliasi
         dihitung dari angka itu. Transaksi aslinya disembunyikan, bukan dihapus, dan bisa
         digabungkan lagi kapan saja.

@@ -37,11 +37,11 @@ export function EntrySummary({
 
       <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <DirectionMark direction={directionOf(row.cashflow)} className="translate-y-0.5" />
-        <span className="text-base text-ink">{row.description}</span>
+        <span className="text-body text-ink">{row.description}</span>
         <SignedMoney sen={row.amount} direction={signedDirection(row.cashflow)} />
       </p>
 
-      <dl className="mt-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+      <dl className="mt-3 grid gap-x-6 gap-y-2 text-subhead sm:grid-cols-2">
         <Pair label="Waktu">{formatJakarta(row.occurredAt, 'datetime')}</Pair>
         <Pair label="Akun">
           {from && to ? (
@@ -80,7 +80,7 @@ export function EntrySummary({
       </dl>
 
       {isBankFact(row.source) ? (
-        <p className="mt-3 text-xs text-ink-muted">
+        <p className="mt-3 text-footnote text-ink-muted">
           Nominal, tanggal, dan akun baris ini adalah fakta dari bank. Rekonsiliasi saldo
           bergantung padanya, jadi ketiganya tidak bisa diubah atau dihapus di sini. Kalau satu
           struk berisi beberapa kategori, pisahkan saja: jumlahnya tetap utuh.
@@ -93,7 +93,7 @@ export function EntrySummary({
 function Pair({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <dt className="text-xs uppercase tracking-wide text-ink-faint">{label}</dt>
+      <dt className="text-footnote text-ink-faint">{label}</dt>
       <dd className="text-ink">{children}</dd>
     </div>
   )
