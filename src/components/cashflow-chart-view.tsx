@@ -10,6 +10,7 @@ import { useRef, useState, type KeyboardEvent } from 'react'
   this code does not wait.
 */
 import { MonthDetailPanel } from '@/components/month-detail'
+import { SEGMENT, SEGMENT_ON, SEGMENTED } from '@/components/field-base'
 import type { MonthDetail } from '@/lib/ledger/month-detail'
 
 /**
@@ -191,7 +192,7 @@ export function CashflowChartView({
       <figcaption className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <span className="text-sm font-medium text-ink">{caption}</span>
 
-        <div role="radiogroup" aria-label="Cara membaca grafik" className="flex border border-line">
+        <div role="radiogroup" aria-label="Cara membaca grafik" className={SEGMENTED}>
           {MODES.map((option) => (
             <button
               key={option.id}
@@ -200,11 +201,7 @@ export function CashflowChartView({
               aria-checked={mode === option.id}
               title={option.hint}
               onClick={() => setMode(option.id)}
-              className={`px-2.5 py-1 text-xs transition-colors duration-150 ${
-                mode === option.id
-                  ? 'bg-accent text-paper'
-                  : 'bg-surface text-ink-muted hover:text-ink'
-              }`}
+              className={`${SEGMENT} ${mode === option.id ? SEGMENT_ON : ''}`}
             >
               {option.label}
             </button>

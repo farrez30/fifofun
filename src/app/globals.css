@@ -542,6 +542,26 @@
   }
 
   /*
+    The glyph riding a category tile (`CategoryMark`'s `tile` variant):
+    white on the mid-tone 55% swatch light mode draws, black on the pale 72%
+    swatch dark mode draws instead. Mirrors the `--category-l` block above
+    exactly, because it answers to the same lightness switch.
+  */
+  .category-tile {
+    color: white;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) .category-tile {
+      color: black;
+    }
+  }
+
+  :root[data-theme='dark'] .category-tile {
+    color: black;
+  }
+
+  /*
     Wide gamut, behind a gamut query rather than `@supports`.
 
     `@supports (color: color(display-p3 1 1 1))` is true in headless Chromium,

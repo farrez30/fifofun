@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { CaretRight } from '@phosphor-icons/react/dist/ssr/CaretRight'
 import { SignedMoney } from '@/components/money'
 import { AccountMark, CategoryMark } from '@/components/marks'
 import { NavHint } from '@/components/nav-hint'
@@ -121,38 +122,46 @@ export function TransactionTable({ rows, accounts, categories, caption, emptyTex
                     target, and it was the only way into a transaction. */}
                 <Link
                   href={`/transaksi/${row.id}`}
-                  className="block min-h-14 px-3 py-2.5 transition-colors duration-150 hover:bg-sunken"
+                  className="flex min-h-14 items-center gap-2 px-3 py-2.5 transition-colors duration-150 hover:bg-sunken"
                 >
-                  <div className="flex items-baseline justify-between gap-3">
-                    <span className="min-w-0 flex-1 truncate text-sm text-ink">
-                      {row.description}
-                    </span>
-                    <SignedMoney
-                      sen={row.amount}
-                      direction={signedDirection(row.cashflow)}
-                      className="shrink-0 text-sm"
-                    />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="min-w-0 flex-1 truncate text-sm text-ink">
+                        {row.description}
+                      </span>
+                      <SignedMoney
+                        sen={row.amount}
+                        direction={signedDirection(row.cashflow)}
+                        className="shrink-0 text-sm"
+                      />
+                    </div>
+
+                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-muted">
+                      <span className="tnum">{formatJakarta(row.occurredAt, 'date')}</span>
+                      <span aria-hidden="true" className="text-ink-faint">
+                        ·
+                      </span>
+                      <CategoryMark
+                        name={category.name}
+                        cashflow={row.cashflow}
+                        icon={category.icon}
+                        hue={category.hue}
+                        className="min-w-0"
+                      />
+                      <span aria-hidden="true" className="text-ink-faint">
+                        ·
+                      </span>
+                      <Accounts row={row} accountById={accountById} />
+                    </div>
+
+                    <RowTags row={row} className="mt-1.5 flex flex-wrap gap-1.5" />
                   </div>
 
-                  <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-muted">
-                    <span className="tnum">{formatJakarta(row.occurredAt, 'date')}</span>
-                    <span aria-hidden="true" className="text-ink-faint">
-                      ·
-                    </span>
-                    <CategoryMark
-                      name={category.name}
-                      cashflow={row.cashflow}
-                      icon={category.icon}
-                      hue={category.hue}
-                      className="min-w-0"
-                    />
-                    <span aria-hidden="true" className="text-ink-faint">
-                      ·
-                    </span>
-                    <Accounts row={row} accountById={accountById} />
-                  </div>
-
-                  <RowTags row={row} className="mt-1.5 flex flex-wrap gap-1.5" />
+                  {/* HIG: a chevron only on a row that is genuinely `<a href>`
+                      the whole way. The tray behind it (Ubah/Hapus) is a
+                      separate reveal, not this link, so the affordance still
+                      tells the truth about what a tap on the card itself does. */}
+                  <CaretRight aria-hidden="true" className="size-4 shrink-0 text-ink-faint" />
                 </Link>
               </SwipeActionRow>
             </li>

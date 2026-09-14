@@ -79,6 +79,26 @@ export const BUTTON_QUIET = `${BUTTON_BASE} bg-fill-secondary px-4 text-ink hove
     something. No box, so it never competes with the three above. */
 export const BUTTON_PLAIN = `${BUTTON_BASE} px-2 text-accent hover:bg-fill-quaternary`
 
+/*
+  The segmented control, which had three near-identical hand-rolled copies
+  before this: a flat row of buttons in a hairline box, the active one filled
+  solid with the accent. That reads as a row of tabs, not as Apple's
+  segmented control, whose selection is a neutral pill riding a gray track
+  rather than a colour change — the same reason `BUTTON_TINTED` exists
+  instead of tinting every button that can be pressed.
+
+  The track carries the padding and the outer radius; each segment is its own
+  button so keyboard focus and `role="radio"` land on the thing a reader
+  actually presses, and `h-11` on the segment itself (not just the track) is
+  what keeps it a real target at the phone floor `e2e/mobile.spec.ts` checks
+  — a track tall enough to contain a shorter button does not make that
+  button tappable.
+*/
+export const SEGMENTED = 'inline-flex gap-0.5 rounded-lg bg-fill-tertiary p-0.5'
+export const SEGMENT =
+  'inline-flex h-11 items-center justify-center rounded-[7px] px-3 text-footnote font-medium text-ink-muted transition-colors duration-150 sm:h-9'
+export const SEGMENT_ON = 'bg-surface text-ink shadow-xs'
+
 interface LabelProps {
   htmlFor: string
   children: ReactNode

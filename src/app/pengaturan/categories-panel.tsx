@@ -234,13 +234,14 @@ function Card({
     /* The indent is the tier: a category that rolls up into another sits
        under it here the same way it does in the table. */
     <li className={`py-3 pr-3 ${category.parentId ? 'pl-7' : 'pl-3'}`}>
-      <div className="flex items-baseline justify-between gap-3">
+      <div className="flex items-center justify-between gap-3">
         <span className="min-w-0 flex-1 text-sm text-ink">
           <CategoryMark
             name={category.name}
             cashflow={category.cashflow}
             icon={category.icon || null}
             hue={category.hue === '' ? null : Number(category.hue)}
+            tile
           />
         </span>
         <span className="tnum shrink-0 font-mono text-xs text-ink-muted">

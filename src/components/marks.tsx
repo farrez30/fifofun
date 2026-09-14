@@ -253,15 +253,41 @@ export function CategoryMark({
   icon,
   hue,
   className = '',
+  tile = false,
 }: {
   name: string
   cashflow: CashflowType
   icon: string | null
   hue: number | null
   className?: string
+  /**
+   * The iOS Settings idiom: one 28px squircle, tinted by the category's hue,
+   * with the glyph in white or black riding on top rather than sitting beside
+   * a separate swatch. Meant for a list row; a table cell stays the swatch,
+   * where a 28px tile would fight the row height every other column keeps.
+   */
+  tile?: boolean
 }) {
   const iconName = categoryIcon({ cashflow, icon }) as IconName
   const Glyph = ICONS[iconName] ?? ICONS[categoryIcon({ cashflow, icon: null }) as IconName]
+  const resolvedHue = categoryHue({ name, hue })
+  const background = `oklch(var(--category-l) var(--category-c) ${resolvedHue})`
+
+  if (tile) {
+    return (
+      <span data-mark="category" className={`inline-flex items-center gap-2 ${className}`}>
+        <span
+          aria-hidden="true"
+          data-hue={resolvedHue}
+          className="category-tile flex size-7 shrink-0 items-center justify-center rounded-[7px]"
+          style={{ backgroundColor: background }}
+        >
+          <Glyph aria-hidden="true" weight="fill" className="size-4" />
+        </span>
+        <span className="min-w-0 truncate">{name}</span>
+      </span>
+    )
+  }
 
   return (
     // No colour of its own: a mark is dropped into a table cell, a chip and a
@@ -270,11 +296,9 @@ export function CategoryMark({
     <span data-mark="category" className={`inline-flex items-center gap-1.5 ${className}`}>
       <span
         aria-hidden="true"
-        data-hue={categoryHue({ name, hue })}
+        data-hue={resolvedHue}
         className="size-2.5 shrink-0 rounded-xs border border-line"
-        style={{
-          backgroundColor: `oklch(var(--category-l) var(--category-c) ${categoryHue({ name, hue })})`,
-        }}
+        style={{ backgroundColor: background }}
       />
       <Glyph aria-hidden="true" weight="regular" className="size-4 shrink-0 opacity-70" />
       <span className="min-w-0 truncate">{name}</span>

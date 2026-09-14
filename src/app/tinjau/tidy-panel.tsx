@@ -265,6 +265,7 @@ function Move({
             cashflow={move.cashflow}
             icon={move.icon}
             hue={move.hue}
+            tile
           />
           <span className="mt-0.5 block text-xs text-ink-muted">
             {move.count} transaksi · sekarang di {move.from} ·{' '}

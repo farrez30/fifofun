@@ -46,13 +46,14 @@ export function MonthDetailPanel({ detail }: { detail: MonthDetail }) {
           >
             {detail.byCategory.map((line) => (
               <li key={`${line.cashflow} ${line.name}`} className="px-3 py-2.5">
-                <div className="flex items-baseline justify-between gap-3">
+                <div className="flex items-center justify-between gap-3">
                   <CategoryMark
                     name={line.name}
                     cashflow={line.cashflow}
                     icon={line.icon}
                     hue={line.hue}
                     className="min-w-0 flex-1"
+                    tile
                   />
                   <span className="tnum shrink-0 font-mono text-sm text-ink">{line.total}</span>
                 </div>

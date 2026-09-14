@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { SEGMENT, SEGMENT_ON, SEGMENTED } from '@/components/field-base'
 
 /**
  * Two readings of the same balance line, with the reader choosing.
@@ -63,7 +64,7 @@ export function BalanceSwitch({ recorded, restated, note, dipped = false }: Prop
         <div
           role="radiogroup"
           aria-label="Cara membaca saldo"
-          className="flex border border-line"
+          className={SEGMENTED}
           data-balance-switch
         >
           {VIEWS.map((option) => (
@@ -74,11 +75,7 @@ export function BalanceSwitch({ recorded, restated, note, dipped = false }: Prop
               aria-checked={view === option.id}
               title={option.hint}
               onClick={() => setView(option.id)}
-              className={`px-2.5 py-1 text-xs transition-colors duration-150 ${
-                view === option.id
-                  ? 'bg-accent text-paper'
-                  : 'bg-surface text-ink-muted hover:text-ink'
-              }`}
+              className={`${SEGMENT} ${view === option.id ? SEGMENT_ON : ''}`}
             >
               {option.label}
             </button>

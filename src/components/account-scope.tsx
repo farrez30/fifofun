@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { AccountMark } from '@/components/marks'
 import { NavHint } from '@/components/nav-hint'
+import { SEGMENT, SEGMENT_ON, SEGMENTED } from '@/components/field-base'
 import type { AccountKind } from '@/lib/ledger/types'
 
 /**
@@ -33,16 +34,12 @@ export function AccountScope({
 }) {
   return (
     <nav aria-label="Lingkup tren" className="mb-3">
-      <ul className="flex flex-wrap border border-line">
+      <ul className={`${SEGMENTED} flex-wrap`}>
         <li>
           <Link
             href="/#tren"
             aria-current={current === null ? 'true' : undefined}
-            className={`inline-flex h-11 items-center px-3 text-xs transition-colors duration-150 ${
-              current === null
-                ? 'bg-accent font-medium text-paper'
-                : 'bg-surface text-ink-muted hover:text-ink'
-            }`}
+            className={`${SEGMENT} ${current === null ? SEGMENT_ON : ''}`}
           >
             Semua akun
             <NavHint className="ml-1.5" />
@@ -53,11 +50,7 @@ export function AccountScope({
             <Link
               href={`/?akun=${account.id}#tren`}
               aria-current={current === account.id ? 'true' : undefined}
-              className={`inline-flex h-11 items-center px-3 text-xs transition-colors duration-150 ${
-                current === account.id
-                  ? 'bg-accent font-medium text-paper'
-                  : 'bg-surface text-ink-muted hover:text-ink'
-              }`}
+              className={`${SEGMENT} ${current === account.id ? SEGMENT_ON : ''}`}
             >
               <AccountMark name={account.name} kind={account.kind} />
               <NavHint className="ml-1.5" />
