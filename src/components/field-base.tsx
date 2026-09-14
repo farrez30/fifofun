@@ -34,8 +34,17 @@ import { type ReactNode } from 'react'
   is kept at `transparent` so the focused state can colour it without moving
   anything by a pixel.
 */
+/**
+ * Just the size half of `CONTROL`, for the handful of things that sit next
+ * to a control rather than being one: a currency prefix, a percent suffix, a
+ * hand-built number field. Sharing this rather than retyping `sm:text-sm`
+ * wherever something has to match is the whole reason it is named — the
+ * floor it names is the same floor the comment below explains.
+ */
+export const CONTROL_TEXT = 'text-body sm:text-sm'
+
 export const CONTROL =
-  'h-11 w-full rounded-sm border border-transparent bg-fill-tertiary px-3 text-body text-ink transition-colors duration-150 placeholder:text-ink-faint focus:border-accent focus:bg-surface sm:text-sm'
+  `h-11 w-full rounded-sm border border-transparent bg-fill-tertiary px-3 ${CONTROL_TEXT} text-ink transition-colors duration-150 placeholder:text-ink-faint focus:border-accent focus:bg-surface`
 
 /*
   Four buttons, because there were four all along and only two of them had a
@@ -126,7 +135,7 @@ export function FieldLabel({ htmlFor, children, hint, visuallyHidden = false }: 
  * on its own outside a grouped list.
  */
 export const CONTROL_INLINE =
-  'h-11 w-full bg-transparent px-0 text-right text-body text-ink placeholder:text-ink-faint focus:outline-none sm:text-sm'
+  `h-11 w-full bg-transparent px-0 text-right ${CONTROL_TEXT} text-ink placeholder:text-ink-faint focus:outline-none`
 
 /**
  * One row of a grouped, iOS-Settings-style form: label on the left, the

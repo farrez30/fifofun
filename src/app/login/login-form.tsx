@@ -43,7 +43,7 @@ export function LoginForm() {
   return (
     <form action={action} className="space-y-4" noValidate>
       <div className="space-y-1.5">
-        <label htmlFor="email" className="block text-sm font-medium text-ink">
+        <label htmlFor="email" className="block text-subhead font-medium text-ink">
           Email
         </label>
         <input
@@ -60,7 +60,7 @@ export function LoginForm() {
       </div>
 
       <div className="space-y-1.5">
-        <label htmlFor="password" className="block text-sm font-medium text-ink">
+        <label htmlFor="password" className="block text-subhead font-medium text-ink">
           Kata sandi
         </label>
         <input
@@ -72,11 +72,11 @@ export function LoginForm() {
           minLength={8}
           className={CONTROL}
         />
-        <p className="text-xs text-ink-faint">Minimal 8 karakter.</p>
+        <p className="text-footnote text-ink-faint">Minimal 8 karakter.</p>
       </div>
 
       <div className="space-y-1.5">
-        <label htmlFor="code" className="block text-sm font-medium text-ink">
+        <label htmlFor="code" className="block text-subhead font-medium text-ink">
           Kode undangan{' '}
           <span className="font-normal text-ink-faint">(hanya untuk akun baru)</span>
         </label>
@@ -94,7 +94,7 @@ export function LoginForm() {
           aria-describedby="code-hint"
           className={`${CONTROL} font-mono uppercase tracking-widest placeholder:tracking-widest`}
         />
-        <p id="code-hint" className="text-xs text-ink-faint">
+        <p id="code-hint" className="text-footnote text-ink-faint">
           Akun baru hanya bisa dibuat dengan undangan dari anggota rumah tangga.
         </p>
       </div>
@@ -107,8 +107,8 @@ export function LoginForm() {
           aria-live="polite"
           className={
             state.error
-              ? 'rounded-sm border border-over/30 bg-over-wash px-3 py-2 text-sm text-over'
-              : 'rounded-sm border border-under/30 bg-under-wash px-3 py-2 text-sm text-under'
+              ? 'rounded-sm border border-over/30 bg-over-wash px-3 py-2 text-subhead text-over'
+              : 'rounded-sm border border-under/30 bg-under-wash px-3 py-2 text-subhead text-under'
           }
         >
           {state.error ?? state.notice}

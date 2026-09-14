@@ -1,7 +1,7 @@
 'use client'
 
 import { useId, useState } from 'react'
-import { CONTROL, FieldLabel } from '@/components/field-base'
+import { CONTROL, CONTROL_TEXT, FieldLabel } from '@/components/field-base'
 import { normaliseTyped, toInputText } from '@/lib/money/input'
 
 /**
@@ -90,7 +90,7 @@ export function MoneyInput({
           shows up on the one surface nobody checked. Moving it a rung answers
           both the number and the meaning.
         */
-          className={`pointer-events-none absolute inset-y-0 flex items-center font-mono text-body text-ink-muted sm:text-sm ${
+          className={`pointer-events-none absolute inset-y-0 flex items-center font-mono ${CONTROL_TEXT} text-ink-muted ${
             compact ? 'left-1.5 sm:left-2' : 'left-3'
           }`}
         >

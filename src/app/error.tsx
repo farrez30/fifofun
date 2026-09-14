@@ -26,14 +26,14 @@ export default function Error({
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-6 py-10">
-      <p className="font-mono text-xs uppercase tracking-widest text-ink-faint">FiFoFun</p>
-      <h1 className="mt-3 text-xl font-semibold tracking-tight text-ink">
+      <p className="font-mono text-caption1 uppercase tracking-widest text-ink-faint">FiFoFun</p>
+      <h1 className="mt-3 text-title1 font-bold tracking-title1 text-ink">
         <span aria-hidden="true" className="mr-2 text-over">
           ▲
         </span>
         Ada yang gagal dimuat
       </h1>
-      <p className="mt-3 text-sm text-ink-muted">
+      <p className="mt-3 text-subhead text-ink-muted">
         Tidak ada data yang berubah. Halaman ini gagal sebelum menampilkan apa pun, bukan di
         tengah jalan.
       </p>
@@ -42,7 +42,7 @@ export default function Error({
         <button
           type="button"
           onClick={reset}
-          className="h-11 rounded-sm bg-accent px-5 text-sm font-medium text-paper transition-colors duration-150 hover:bg-accent-strong"
+          className="h-11 rounded-sm bg-accent px-5 text-subhead font-medium text-paper transition-colors duration-150 hover:bg-accent-strong"
         >
           Coba lagi
         </button>
@@ -58,14 +58,14 @@ export default function Error({
         {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
         <a
           href="/"
-          className="flex h-11 items-center rounded-sm border border-line px-5 text-sm text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
+          className="flex h-11 items-center rounded-sm border border-line px-5 text-subhead text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
         >
           Kembali ke ringkasan
         </a>
       </div>
 
       {error.digest ? (
-        <p className="mt-6 text-xs text-ink-faint">
+        <p className="mt-6 text-footnote text-ink-faint">
           Kode kejadian <span className="tnum font-mono text-ink-muted">{error.digest}</span>,
           untuk mencocokkan dengan catatan di server.
         </p>

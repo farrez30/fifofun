@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from 'react'
 import { MoneyInput } from '@/components/money-input'
-import { BUTTON_PLAIN, BUTTON_QUIET, CONTROL, FieldLabel, SEGMENT, SEGMENTED, SEGMENT_ON } from '@/components/field-base'
+import { BUTTON_PLAIN, BUTTON_QUIET, CONTROL, CONTROL_TEXT, FieldLabel, SEGMENT, SEGMENTED, SEGMENT_ON } from '@/components/field-base'
 import { formatMonthKey } from '@/lib/datetime'
 import { addMonths } from '@/lib/ledger/funds'
 import { formatIdrCompact } from '@/lib/money'
@@ -229,7 +229,7 @@ function PercentInput({
         />
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 right-2 flex items-center font-mono text-body text-ink-muted sm:text-sm"
+          className={`pointer-events-none absolute inset-y-0 right-2 flex items-center font-mono ${CONTROL_TEXT} text-ink-muted`}
         >
           %
         </span>

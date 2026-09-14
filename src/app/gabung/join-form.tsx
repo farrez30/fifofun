@@ -24,7 +24,7 @@ export function JoinForm() {
   return (
     <form action={action} className="space-y-4" noValidate>
       <div className="space-y-1.5">
-        <label htmlFor="code" className="block text-sm font-medium text-ink">
+        <label htmlFor="code" className="block text-subhead font-medium text-ink">
           Kode undangan
         </label>
         <input
@@ -44,7 +44,7 @@ export function JoinForm() {
           placeholder="ABCDE-FGHJK"
           className={`tnum ${CONTROL} font-mono uppercase tracking-widest placeholder:tracking-widest`}
         />
-        <p id="join-hint" className="text-xs text-ink-faint">
+        <p id="join-hint" className="text-footnote text-ink-faint">
           Sepuluh karakter. Huruf besar kecil dan tanda hubung tidak masalah.
         </p>
       </div>
@@ -54,7 +54,7 @@ export function JoinForm() {
           id="join-message"
           role="status"
           aria-live="polite"
-          className="rounded-sm border border-over/30 bg-over-wash px-3 py-2 text-sm text-over"
+          className="rounded-sm border border-over/30 bg-over-wash px-3 py-2 text-subhead text-over"
         >
           {state.message}
         </p>

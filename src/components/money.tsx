@@ -102,7 +102,7 @@ export function Stat({
       {previous === undefined ? null : (
         <Change now={sen} before={previous} label={previousLabel} />
       )}
-      {hint ? <p className="mt-1 text-xs text-ink-muted">{hint}</p> : null}
+      {hint ? <p className="mt-1 text-footnote text-ink-muted">{hint}</p> : null}
     </div>
   )
 }
@@ -121,7 +121,7 @@ function Change({ now, before, label }: { now: bigint; before: bigint; label?: s
   const since = label ? `dari ${label}` : 'dari bulan sebelumnya'
 
   if (delta === 0n) {
-    return <p className="mt-1 text-xs text-ink-faint">Sama persis {since}</p>
+    return <p className="mt-1 text-footnote text-ink-faint">Sama persis {since}</p>
   }
 
   const size = delta < 0n ? -delta : delta
@@ -130,7 +130,7 @@ function Change({ now, before, label }: { now: bigint; before: bigint; label?: s
   const share = before > 0n ? Number((size * 100n) / before) : null
 
   return (
-    <p className="mt-1 text-xs text-ink-muted">
+    <p className="mt-1 text-footnote text-ink-muted">
       <span aria-hidden="true" className="mr-1 text-ink-faint">
         {delta > 0n ? '▲' : '▼'}
       </span>

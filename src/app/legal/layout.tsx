@@ -12,7 +12,7 @@ export default function LegalLayout({ children }: LayoutProps<'/legal'>) {
       <header className="mb-8 border-b border-line pb-5">
         <Link
           href="/"
-          className="font-mono text-xs uppercase tracking-widest text-ink-faint hover:text-ink"
+          className="font-mono text-caption1 uppercase tracking-widest text-ink-faint hover:text-ink"
         >
           FiFoFun
         </Link>

@@ -887,10 +887,10 @@ const MARKED_CATEGORIES: { name: string; cashflow: CashflowType }[] = [
 const MARKS = (
   <div className="space-y-6">
     <section aria-labelledby="marks-arah">
-      <h2 id="marks-arah" className="mb-2 text-sm font-medium text-ink">
+      <h2 id="marks-arah" className="mb-2 text-subhead font-medium text-ink">
         Arah
       </h2>
-      <ul className="flex flex-wrap gap-4 text-sm text-ink">
+      <ul className="flex flex-wrap gap-4 text-subhead text-ink">
         {(['in', 'out', 'neither'] as Direction[]).map((direction) => (
           <li key={direction} className="flex items-center gap-1.5">
             <DirectionMark direction={direction} />
@@ -901,7 +901,7 @@ const MARKS = (
     </section>
 
     <section aria-labelledby="marks-cashflow">
-      <h2 id="marks-cashflow" className="mb-2 text-sm font-medium text-ink">
+      <h2 id="marks-cashflow" className="mb-2 text-subhead font-medium text-ink">
         Cashflow
       </h2>
       <ul className="flex flex-wrap gap-2">
@@ -914,10 +914,10 @@ const MARKS = (
     </section>
 
     <section aria-labelledby="marks-kategori">
-      <h2 id="marks-kategori" className="mb-2 text-sm font-medium text-ink">
+      <h2 id="marks-kategori" className="mb-2 text-subhead font-medium text-ink">
         Kategori
       </h2>
-      <ul className="flex flex-wrap gap-4 text-sm">
+      <ul className="flex flex-wrap gap-4 text-subhead">
         {MARKED_CATEGORIES.map((category) => (
           <li key={category.name}>
             <CategoryMark
@@ -936,10 +936,10 @@ const MARKS = (
     </section>
 
     <section aria-labelledby="marks-akun">
-      <h2 id="marks-akun" className="mb-2 text-sm font-medium text-ink">
+      <h2 id="marks-akun" className="mb-2 text-subhead font-medium text-ink">
         Akun
       </h2>
-      <ul className="flex flex-wrap gap-4 text-sm">
+      <ul className="flex flex-wrap gap-4 text-subhead">
         {ACCOUNT_KINDS.map((kind) => (
           <li key={kind}>
             <AccountMark name={ACCOUNT_KIND_LABELS[kind]} kind={kind} />
@@ -1958,7 +1958,7 @@ const SHELL_FIXTURES: Record<string, ReactElement> = {
   // current marker instead of any of the four.
   'shell-lainnya-aktif': (
     <AppShell title="Rencana" email="rumah.tangga@contoh.com" current="/rencana">
-      <p className="text-sm text-ink-muted">Isi halaman.</p>
+      <p className="text-subhead text-ink-muted">Isi halaman.</p>
     </AppShell>
   ),
   /*

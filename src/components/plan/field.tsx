@@ -1,7 +1,7 @@
 'use client'
 
 import { useId } from 'react'
-import { CONTROL, FieldLabel } from '@/components/field-base'
+import { CONTROL, CONTROL_TEXT, FieldLabel } from '@/components/field-base'
 
 /**
  * Form primitives for the planner.
@@ -74,7 +74,7 @@ export function NumberField({
           min={min}
           max={max}
           onChange={(event) => onChange(clamp(Number(event.target.value)))}
-          className={`${field} border-y border-line bg-surface px-2 text-center tnum font-mono text-body text-ink focus:border-accent sm:text-sm`}
+          className={`${field} border-y border-line bg-surface px-2 text-center tnum font-mono ${CONTROL_TEXT} text-ink focus:border-accent`}
         />
         <button
           type="button"

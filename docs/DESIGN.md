@@ -62,6 +62,45 @@ yang membuat yang ini bisa dikenali.
 Apple, jadi `--spacing` tidak disentuh. Yang berubah aturannya: langkah genap
 untuk layout, langkah ganjil untuk koreksi optis dan harus punya alasan.
 
+**Tipografi mengikuti peran Dynamic Type Apple**, diadopsi penuh di seluruh
+app, bukan lagi skala Tailwind. `text-caption2` sampai `text-large-title`
+ditambahkan ke `globals.css` sebagai peran tambahan, sengaja aditif: menimpa
+ulang `--text-sm` Tailwind sendiri akan menggeser geometri yang diukur
+`e2e/mobile.spec.ts` di setiap komponen sekaligus, dalam satu commit yang
+tidak bisa ditinjau. Diadopsi layar demi layar sebagai gantinya, lima commit
+berturutan, masing-masing dengan gate penuhnya sendiri.
+
+Peta perannya satu untuk seluruh app: `text-subhead` untuk teks berjalan dan
+baris daftar, `text-footnote` untuk keterangan dan catatan kaki,
+`text-caption1` (uppercase, `tracking-wide`) untuk header kolom tabel,
+`text-caption2` untuk chip kecil dan label tab bar, `text-title3` dengan
+`tracking-title3`-nya untuk judul seksi, `text-title1` untuk judul halaman.
+Angka mono ikut tangga yang sama: `text-title3` untuk figur biasa,
+`text-title2 font-semibold` untuk figur yang ditekankan — bukan skala bebas
+per komponen, supaya "angka besar di kartu" selalu berarti ukuran yang sama
+di mana pun ia muncul.
+
+**Label tidak berteriak**, diperluas dari `Stat` (`src/components/money.tsx`)
+ke setiap ubin angka di app: label di atas sebuah figur (App menghitung,
+Selisih, Tercatat di app, dan sejenisnya) memakai `text-footnote
+text-ink-faint` kalimat biasa, bukan lagi `text-xs uppercase tracking-wide`.
+Huruf kapital semua menghapus legibilitas persis di tempat yang paling
+butuh — label yang memberi tahu angka mana yang sedang dibaca. Header kolom
+tabel tetap uppercase: perannya membedakan kolom, bukan menamai satu angka,
+jadi kapital di situ tidak bersaing dengan apa pun.
+
+Satu pengecualian bernama tersisa di skala lama: daftar langkah
+`src/components/chart/waterfall.tsx`, kolom labelnya 104px di bawah `sm` dan
+sudah diukur `charts.spec.ts` pada 320px. Menaikkan `text-sm`/`text-xs` ke
+`text-subhead`/`text-footnote` di situ terbukti memotong sebuah figur nyata;
+tidak ada peran Dynamic Type yang metriknya sama persis dengan 14px, jadi
+baris itu tetap di kelas lamanya dengan alasan tertulis di sebelahnya.
+`sm:text-sm` pada `CONTROL_TEXT` (`field-base.tsx`) adalah pengecualian
+kedua: 17px di HP turun ke 14px dari breakpoint kecil ke atas, keputusan yang
+sudah ada sejak field jadi fill. `src/app/type-roles.test.ts` menegakkan
+keduanya sebagai satu-satunya penyintas; kelas Tailwind lain yang muncul di
+mana pun di `src/**/*.tsx` menggagalkan `pnpm test`.
+
 ## 3. Material
 
 **Kaca hanya untuk chrome.** Tab bar, sheet, dock yang mengambang, pil
@@ -158,8 +197,29 @@ bukan membantu.
 
 **Baris grouped punya bentuk sendiri** untuk form: `FieldRow` di
 `field-base.tsx`, label kiri/kontrol kanan dalam satu `rows-inset squircle`
-seperti daftar Pengaturan lain. Diterapkan penuh baru di form akun; form lain
-masih `FieldLabel` + kontrol bertumpuk, menunggu giliran.
+seperti daftar Pengaturan lain, kontrolnya `CONTROL_INLINE` (tanpa fill/border
+sendiri, permukaannya sudah dibawa baris). Diterapkan di form akun, kategori,
+transaksi (form ubah) dan catat: field satu baris (nama, select, tanggal,
+jam, keterangan) jadi baris; kalimat penjelas tiap field pindah jadi footer
+di bawah kartu (`text-footnote text-ink-muted`, idiom footnote seksi Apple)
+dan disambungkan `aria-describedby`, karena barisnya sendiri tidak lagi
+punya tempat untuk kalimat itu.
+
+`FieldRow` sengaja aditif, bukan pengganti setiap kontrol. Yang tetap
+bertumpuk di luar kartu: `MoneyInput` (kontrol majemuk — label, prefiks Rp,
+catatan — dipakai enam halaman, memaksanya jadi satu baris berarti varian
+ketujuh yang cuma dipakai sekali), `textarea`, dan fieldset radio/chip (arah
+uang, `AccountChips`, ikon kategori, swatch warna): field yang butuh lebar
+penuh atau bukan pasangan satu-label-satu-kontrol tidak dipaksa jadi baris.
+
+Dua form sengaja **tidak** memakai `FieldRow`. `dana/target-form.tsx` adalah
+strip di dalam `<details>` yang dibuat justru supaya delapan pos dana tidak
+jadi delapan form terbuka sekaligus; tiga baris `FieldRow` per pos akan
+menghidupkan kembali masalah yang strip itu ada untuk menghindarinya.
+`components/plan/field.tsx` hidup di grid kalkulator (`sm:grid-cols-2/3/4`),
+bukan daftar grouped — pasangan label-kiri di sel selebar itu tidak terbaca.
+Keduanya tetap memakai resep bersama `field-base.tsx` (`CONTROL`, `SEGMENTED`
+untuk pemilih mode) dan peran Dynamic Type yang sama dengan form lain.
 
 ## 5. Grafik
 
@@ -264,6 +324,7 @@ Tidak ada satupun jaminan yang diturunkan oleh restyle ini, dan beberapa naik.
 | Sidebar: lebar rail/terbentang, drift shell vs loading, lantai sentuh | `e2e/sidebar.spec.ts` |
 | Halaman tanpa shell lolos CSP dan axe atas build sungguhan | `e2e/pages/pages.spec.ts` (`pnpm test:e2e:pages`) |
 | Fisika gesture: proyeksi, rubber band, lantai tap | `swipe-actions.test.ts`, `use-swipe-tabs.test.ts`, `pull-to-refresh.test.ts` |
+| Skala Tailwind lama tidak diam-diam kembali | `src/app/type-roles.test.ts`, atas seluruh `src/**/*.tsx` |
 
 **Catatan perkakas: repo ini tidak punya konfigurasi Prettier.** Menjalankan
 `prettier --write` akan memaksakan titik koma dan kutip ganda ke seluruh file

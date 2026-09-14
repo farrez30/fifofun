@@ -14,7 +14,7 @@ export default function OfflinePage() {
   return (
     <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-6 py-10">
       <main id="main">
-        <p className="font-mono text-xs uppercase tracking-widest text-ink-faint">FiFoFun</p>
+        <p className="font-mono text-caption1 uppercase tracking-widest text-ink-faint">FiFoFun</p>
         <h1 className="mt-3 text-title1 font-bold tracking-title1 text-ink">
           Tidak ada koneksi
         </h1>
