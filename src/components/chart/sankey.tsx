@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Money } from '@/components/money'
 import { formatIdr, formatIdrCompact, senToRupiahNumber } from '@/lib/money'
+import { ChartReadout } from './readout'
 
 /**
  * A Sankey diagram of where money goes.
@@ -325,100 +326,120 @@ export function Sankey({ nodes, links, height: fixedHeight, caption, note, id }:
     <figure className="sankey squircle rounded-md bg-surface shadow-xs p-4">
       <figcaption className="mb-3 text-sm font-medium text-ink">{caption}</figcaption>
 
-      <div
-        className="relative overflow-x-auto"
-        tabIndex={0}
-        role="region"
-        aria-label={caption}
-      >
-        <svg
-          viewBox={`0 0 ${WIDTH} ${height}`}
-          /*
-            A floor on the drawn width, not a fixed one.
-
-            Left to shrink freely, a 760-wide diagram in a 375px phone renders
-            its 13px labels at about 6px, which is present but unreadable. Below
-            this floor it scrolls sideways instead, and the container around it
-            is focusable so a keyboard can reach that scroll.
-          */
-          className="h-auto w-full min-w-[40rem]"
-          role="img"
+      <ChartReadout>
+        <div
+          className="relative overflow-x-auto"
+          tabIndex={0}
+          role="region"
           aria-label={caption}
         >
-          <defs>
-            {ribbons.map((ribbon, index) => (
-              <linearGradient key={`${prefix}-g${index}`} id={`${prefix}-g${index}`}>
-                <stop offset="0%" style={{ stopColor: ribbon.from }} />
-                <stop offset="100%" style={{ stopColor: ribbon.to }} />
-              </linearGradient>
-            ))}
-          </defs>
+          <svg
+            viewBox={`0 0 ${WIDTH} ${height}`}
+            /*
+              A floor on the drawn width, not a fixed one.
 
-          <g>
-            {ribbons.map(({ link, path }, index) => (
-              /*
-                Focusable, so the isolation below is not pointer-only.
+              Left to shrink freely, a 760-wide diagram in a 375px phone renders
+              its 13px labels at about 6px, which is present but unreadable. Below
+              this floor it scrolls sideways instead, and the container around it
+              is focusable so a keyboard can reach that scroll.
+            */
+            className="h-auto w-full min-w-[40rem]"
+            role="img"
+            aria-label={caption}
+          >
+            <defs>
+              {ribbons.map((ribbon, index) => (
+                <linearGradient key={`${prefix}-g${index}`} id={`${prefix}-g${index}`}>
+                  <stop offset="0%" style={{ stopColor: ribbon.from }} />
+                  <stop offset="100%" style={{ stopColor: ribbon.to }} />
+                </linearGradient>
+              ))}
+            </defs>
 
-                Hovering a ribbon dims the others, which is the whole reason
-                a thin flow can be followed across the diagram. A keyboard had
-                no way to ask for that: the `<title>` was reachable by a screen
-                reader but the visual answer was not reachable at all. A
-                `role="img"` with the title as its name makes each ribbon a
-                stop, and the `:focus-visible` rules in globals.css give it the
-                same treatment a pointer gets.
-              */
-              <path
-                key={`${link.source}-${link.target}`}
-                data-ribbon={`${link.source}-${link.target}`}
-                tabIndex={0}
-                role="img"
-                d={path}
-                fill={`url(#${prefix}-g${index})`}
-                opacity={0.28}
-              >
-                <title>{`${placed.get(link.source)?.label} ke ${placed.get(link.target)?.label}: ${formatIdr(link.value)}`}</title>
-              </path>
-            ))}
-          </g>
+            <g>
+              {ribbons.map(({ link, path }, index) => {
+                const label = `${placed.get(link.source)?.label} ke ${placed.get(link.target)?.label}`
+                const value = formatIdr(link.value)
+                return (
+                  /*
+                    Focusable, so the isolation below is not pointer-only.
 
-          <g>
-            {[...placed.values()].map((node) => {
-              // The first column labels leftwards and every other column
-              // rightwards, so no label is ever drawn on top of a ribbon.
-              const toLeft = node.column === columns[0]
-              const labelX = toLeft ? node.x - LABEL_OFFSET : node.x + NODE_WIDTH + LABEL_OFFSET
-
-              return (
-                <g key={node.id}>
-                  <rect
-                    x={node.x}
-                    y={node.y}
-                    width={NODE_WIDTH}
-                    height={node.height}
-                    fill={fillOf(node)}
-                    rx={2}
+                    Hovering a ribbon dims the others, which is the whole reason
+                    a thin flow can be followed across the diagram. A keyboard had
+                    no way to ask for that: an `aria-label` with the same text
+                    `<title>` used to carry makes each ribbon a stop and names
+                    it, the `:focus-visible` rules in globals.css give it the
+                    same treatment a pointer gets, and `ChartReadout` above
+                    shows the same two facts as a floating bubble for whoever
+                    is looking rather than listening.
+                  */
+                  <path
+                    key={`${link.source}-${link.target}`}
+                    data-ribbon={`${link.source}-${link.target}`}
+                    data-readout-label={label}
+                    data-readout-value={value}
+                    tabIndex={0}
+                    role="img"
+                    aria-label={`${label}: ${value}`}
+                    d={path}
+                    fill={`url(#${prefix}-g${index})`}
+                    opacity={0.28}
                   />
-                  {/* Name and amount on separate lines. Side by side, a long
-                      name pushes the amount out of the gutter and it vanishes. */}
-                  <text
-                    x={labelX}
-                    y={node.labelY}
-                    textAnchor={toLeft ? 'end' : 'start'}
-                    fontSize={13}
-                    fill="var(--color-ink)"
+                )
+              })}
+            </g>
+
+            <g>
+              {[...placed.values()].map((node) => {
+                // The first column labels leftwards and every other column
+                // rightwards, so no label is ever drawn on top of a ribbon.
+                const toLeft = node.column === columns[0]
+                const labelX = toLeft ? node.x - LABEL_OFFSET : node.x + NODE_WIDTH + LABEL_OFFSET
+                const exact = formatIdr(BigInt(Math.round(node.value * 100)))
+
+                return (
+                  // Focusable and named for the same reason a ribbon is: the
+                  // printed label can be truncated (`fit()`) and the amount
+                  // compacted, so the full name and the exact figure need a
+                  // way to be reached that a squint at the drawing does not
+                  // offer.
+                  <g
+                    key={node.id}
+                    tabIndex={0}
+                    role="img"
+                    aria-label={`${node.label}: ${exact}`}
+                    data-readout-label={node.label}
+                    data-readout-value={exact}
                   >
-                    <title>{`${node.label}: ${formatIdr(BigInt(Math.round(node.value * 100)))}`}</title>
-                    <tspan dy={node.height > 26 ? 0 : -1}>{fit(node.label)}</tspan>
-                    <tspan x={labelX} dy={15} fontSize={11.5} fill="var(--color-ink-faint)">
-                      {formatIdrCompact(BigInt(Math.round(node.value * 100)))}
-                    </tspan>
-                  </text>
-                </g>
-              )
-            })}
-          </g>
-        </svg>
-      </div>
+                    <rect
+                      x={node.x}
+                      y={node.y}
+                      width={NODE_WIDTH}
+                      height={node.height}
+                      fill={fillOf(node)}
+                      rx={2}
+                    />
+                    {/* Name and amount on separate lines. Side by side, a long
+                        name pushes the amount out of the gutter and it vanishes. */}
+                    <text
+                      x={labelX}
+                      y={node.labelY}
+                      textAnchor={toLeft ? 'end' : 'start'}
+                      fontSize={13}
+                      fill="var(--color-ink)"
+                    >
+                      <tspan dy={node.height > 26 ? 0 : -1}>{fit(node.label)}</tspan>
+                      <tspan x={labelX} dy={15} fontSize={11.5} fill="var(--color-ink-faint)">
+                        {formatIdrCompact(BigInt(Math.round(node.value * 100)))}
+                      </tspan>
+                    </text>
+                  </g>
+                )
+              })}
+            </g>
+          </svg>
+        </div>
+      </ChartReadout>
 
       {note ? <div className="mt-3 border-t border-line pt-3">{note}</div> : null}
 

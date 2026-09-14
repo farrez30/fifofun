@@ -143,7 +143,7 @@ export function SparkCard({ view }: { view: SparkView }) {
             >
               <div
                 data-month={point.month}
-                className={point.latest ? view.latestFill : 'bg-line-strong'}
+                className={`rounded-t-[2px] ${point.latest ? view.latestFill : 'bg-line-strong'}`}
                 // A month that really spent nothing gets nothing. Everything
                 // else keeps a hairline, so a quiet month and an empty one do
                 // not look the same.

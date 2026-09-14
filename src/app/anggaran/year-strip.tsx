@@ -106,7 +106,7 @@ export function YearStrip({ view }: { view: BudgetYearView }) {
                 {month.hasData && month.outPct > 0 ? (
                   <span
                     data-year-out={month.month}
-                    className={`bar-rise absolute inset-x-0 bottom-0 block ${
+                    className={`bar-rise absolute inset-x-0 bottom-0 block rounded-t-[2px] ${
                       month.over ? 'bg-over' : 'bg-accent'
                     }`}
                     style={{ height: `max(2px, ${month.outPct}%)` }}

@@ -66,7 +66,7 @@ export function MonthDetailPanel({ detail }: { detail: MonthDetail }) {
                   <span className="tnum">{line.share.toFixed(1).replace('.', ',')}%</span>
                   <span className="h-1.5 w-16 bg-sunken">
                     <span
-                      className="block h-full bg-accent"
+                      className="block h-full rounded-r-[2px] bg-accent"
                       style={{ width: `max(2px, ${Math.min(100, line.share)}%)` }}
                     />
                   </span>
@@ -125,7 +125,7 @@ export function MonthDetailPanel({ detail }: { detail: MonthDetail }) {
                       </span>
                       <span className="ml-auto mt-1 block h-1.5 w-16 bg-sunken">
                         <span
-                          className="block h-full bg-accent"
+                          className="block h-full rounded-r-[2px] bg-accent"
                           style={{ width: `max(2px, ${Math.min(100, line.share)}%)` }}
                         />
                       </span>

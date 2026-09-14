@@ -315,7 +315,7 @@ export function BudgetSummary({ plan, lines }: Props) {
                       </span>
                       <span aria-hidden="true" className="mt-0.5 block h-1 w-full bg-sunken">
                         <span
-                          className="bar-grow block h-full"
+                          className="bar-grow block h-full rounded-r-[2px]"
                           style={{
                             width: `max(2px, ${share(line.amount, total)}%)`,
                             backgroundColor: `oklch(var(--category-l) var(--category-c) ${hueOf(

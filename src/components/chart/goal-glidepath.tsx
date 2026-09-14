@@ -306,6 +306,7 @@ export function GoalGlidepath({
             return (
               <span
                 key={point.year}
+                aria-hidden="true"
                 className="absolute top-0 whitespace-nowrap tabular-nums text-caption2 leading-none text-ink-faint"
                 style={{ left: `${pct}%`, transform: nudge(pct) }}
               >

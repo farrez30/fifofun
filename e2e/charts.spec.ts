@@ -1144,7 +1144,7 @@ test.describe('aliran uang', () => {
       `@media (hover: hover)` for a good reason: a sticky hover on a touch
       screen leaves a diagram that looks broken. The consequence was that
       somebody driving this with a keyboard could reach each flow's name
-      through its `<title>` and never see which flow it was.
+      through its `aria-label` and never see which flow it was.
 
       Focus is not gated, because focus arrives and leaves on purpose.
     */
@@ -1164,6 +1164,33 @@ test.describe('aliran uang', () => {
         }
       })
       .toEqual({ focusedComesForward: true, everyOtherGoesBack: true })
+  })
+
+  /*
+    `ChartReadout` itself needs no test here: this harness renders a fixture
+    with `renderToStaticMarkup` and no script tag at all (see e2e/render.ts),
+    so a client component's event handlers never attach and its `useState`
+    never runs. That is also why the isolation tests above work — they lean
+    on native `:hover`/`:focus-visible`, not on React. The readout's own
+    positioning logic is pure and lives in `readout-logic.ts`, tested there
+    with vitest; its wiring is confirmed against the running app, not a
+    static fixture. What this harness can and does check is that every mark
+    actually carries what the readout and a screen reader both read from.
+  */
+  test('names every ribbon and node for the readout and for a screen reader alike', async ({
+    page,
+  }) => {
+    await open(page, 'sankey-real')
+
+    for (const mark of await page.locator('[data-readout-label]').all()) {
+      const label = await mark.getAttribute('data-readout-label')
+      const value = await mark.getAttribute('data-readout-value')
+      const accessibleName = await mark.getAttribute('aria-label')
+      expect(label?.length).toBeGreaterThan(0)
+      expect(value?.length).toBeGreaterThan(0)
+      // The same two facts, said once for the eye and once for the ear.
+      expect(accessibleName).toBe(`${label}: ${value}`)
+    }
   })
 
   test('never writes one label across another', async ({ page }) => {

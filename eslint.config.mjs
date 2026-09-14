@@ -92,6 +92,7 @@ const chromeFiles = [
   'src/components/shell-fallback.tsx',
   'src/components/pull-to-refresh.tsx',
   'src/components/chart/drag-axis.tsx',
+  'src/components/chart/readout.tsx',
 ]
 
 /* The two files that have to name a colour rather than a token: a web app

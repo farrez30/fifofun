@@ -345,7 +345,7 @@ function Row({
                 <span className="relative mt-1 block h-1 w-full bg-sunken">
                   <span
                     data-budget={line.id}
-                    className={`bar-grow block h-full ${actual.over ? 'bg-warn' : 'bg-accent'}`}
+                    className={`bar-grow block h-full rounded-r-[2px] ${actual.over ? 'bg-warn' : 'bg-accent'}`}
                     style={{ width: `max(2px, ${Math.min(100, actual.pct)}%)` }}
                   />
                   {/* Where in the month "today" sits: a bar visibly ahead of
@@ -470,7 +470,7 @@ function Context({
           {actual && actual.pct > 0 ? (
             <span aria-hidden="true" className="relative block h-1 w-full bg-sunken">
               <span
-                className={`bar-grow block h-full ${actual.over ? 'bg-warn' : 'bg-accent'}`}
+                className={`bar-grow block h-full rounded-r-[2px] ${actual.over ? 'bg-warn' : 'bg-accent'}`}
                 style={{ width: `max(2px, ${Math.min(100, actual.pct)}%)` }}
               />
               {pace ? (

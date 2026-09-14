@@ -342,15 +342,20 @@ export function CashflowChartView({
                       )}
                     </div>
 
+                    {/* The radio's own aria-label above already carries the
+                        month and its figures; these two are the visual axis
+                        tick, which a screen reader walking the DOM rather
+                        than the radiogroup would otherwise hear twice. */}
                     <span
+                      aria-hidden="true"
                       className={`text-caption2 leading-none tabular-nums ${
                         chosen ? 'font-medium text-ink' : 'text-ink-faint'
                       }`}
                     >
                       {month.label}
                     </span>
-                    <span className="tnum text-[0.5625rem] leading-none text-ink-faint">
-                      {month.startsYear ? month.year : ' '}
+                    <span aria-hidden="true" className="tnum text-[0.5625rem] leading-none text-ink-faint">
+                      {month.startsYear ? month.year :' '}
                     </span>
                   </div>
                 )

@@ -182,6 +182,7 @@ export function BalanceTrend({ series, caption }: Props) {
             return (
               <span
                 key={point.month}
+                aria-hidden="true"
                 className="absolute top-0 whitespace-nowrap text-caption2 leading-none text-ink-faint"
                 style={{ left: `${pct}%`, transform: nudge(pct) }}
               >

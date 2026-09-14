@@ -165,7 +165,7 @@ export function AdherenceBullet({ adherence, observedIncome, caption }: Props) {
                   data-group={group.keys.join('-')}
                   data-verdict={group.verdict}
                   data-bound={group.bound}
-                  className={`relative h-full ${style.bar}`}
+                  className={`relative h-full rounded-r-[2px] ${style.bar}`}
                   // A pot with a few rupiah in it still shows something. A bar
                   // rounding away to nothing reads as a pot never used at all.
                   style={{ width: group.actual > 0n ? `max(2px, ${widthOf(group.actual)}%)` : '0' }}

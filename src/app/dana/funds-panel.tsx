@@ -178,7 +178,7 @@ function Row({
           <div className="relative h-2 flex-1 bg-sunken">
             <div
               data-fund={fund.name}
-              className={`h-full ${verdict.fill}`}
+              className={`h-full rounded-r-[2px] ${verdict.fill}`}
               // A pot with a rupiah or two in it still shows something. A bar
               // that rounds to nothing reads as a pot nobody has started.
               style={{ width: fund.saved > 0n ? `max(2px, ${share}%)` : '0' }}

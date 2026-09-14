@@ -239,7 +239,7 @@ function Row({
 
         <div
           data-step={step.id}
-          className={`absolute top-1/2 -translate-y-1/2 ${anchor ? 'h-6' : 'h-4'}`}
+          className={`absolute top-1/2 -translate-y-1/2 rounded-r-[2px] ${anchor ? 'h-6' : 'h-4'}`}
           style={{
             left: `${left}%`,
             // Never thinner than a hairline: a term worth a few thousand rupiah
