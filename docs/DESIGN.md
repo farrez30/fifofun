@@ -133,12 +133,58 @@ JavaScript.
 **Ikon tetap Phosphor.** SF Symbols tidak bisa dilisensikan untuk web, dan
 tidak ada jalan memutar yang layak dipertimbangkan.
 
+**Navigasi desktop adalah sidebar, bisa dilipat ke rail ikon-saja.**
+Delapan link `border-b-2` yang wrapping bukan tab bar iOS dan bukan pula
+sidebar macOS; HIG minta sidebar di regular width, dan itu yang sekarang ada
+di `shell-frame.tsx`. Rail dipaksa antara `sm` dan `lg`; di `lg` ke atas
+pembaca memilih sendiri lewat cookie `sidebar`, disimpan dan dibaca persis
+seperti `theme` (lihat §4 di atas), sehingga baik shell asli maupun
+`loading.tsx` menstempel lebar yang sama sebelum satu piksel pun digambar.
+Opaque, bukan kaca: tidak ada yang bergulir di baliknya (§3). Ikon dan rute
+satu sumber di `nav.ts`; `tabs.ts` menurunkan bar HP darinya, bukan menyalin.
+
+**Segmented control satu resep**, bukan tiga hand-rolled yang masing-masing
+mengisi segmen aktif dengan warna aksen solid. Itu tab, bukan segmented
+control Apple, yang seleksinya pil netral di atas track abu-abu — pola yang
+sama dengan alasan `BUTTON_TINTED` ada, alih-alih menint semua tombol yang
+bisa ditekan. `SEGMENTED`/`SEGMENT`/`SEGMENT_ON` di `field-base.tsx`.
+
+**Kategori punya bentuk tile** di baris list yang kategorinya jadi label
+utama baris (month-detail, tidy-panel, daftar kategori Pengaturan): ubin 28px
+bertint hue, glyph putih atau hitam di dalamnya, meniru baris Pengaturan iOS.
+Sel tabel dan baris yang menaruh kategori di tengah teks kecil (bukan sebagai
+label utama) tetap swatch + glyph terpisah, karena ubin di situ mengganggu,
+bukan membantu.
+
+**Baris grouped punya bentuk sendiri** untuk form: `FieldRow` di
+`field-base.tsx`, label kiri/kontrol kanan dalam satu `rows-inset squircle`
+seperti daftar Pengaturan lain. Diterapkan penuh baru di form akun; form lain
+masih `FieldLabel` + kontrol bertumpuk, menunggu giliran.
+
 ## 5. Grafik
 
 Kaca menyentuh tepat tiga hal, dan tidak satupun adalah mark: bingkai grafik
-jadi kartu grouped opaque, tooltip melayang boleh berkaca, handle `drag-axis`
+jadi kartu grouped opaque, readout melayang boleh berkaca, handle `drag-axis`
 boleh berkaca. Plot, mark, ribbon dan gridline tetap datar dan opaque
 selamanya. Swift Charts milik Apple sendiri datar.
+
+**Readout melayang** (`src/components/chart/readout.tsx`) menggantikan
+`<title>` bawaan browser di Sankey: lambat, butuh mouse diam, tidak
+terjangkau sentuhan atau keyboard-plus-mata sekaligus. Client component kecil
+yang di-portal ke `document.body`, dibaca dari `data-readout-label`/`-value`
+di setiap mark lewat delegasi pointer/fokus — bukan satu listener per mark,
+jadi grafik di baliknya tetap server component. Selalu di luar
+`<figure>`/`<svg>`, karena `e2e/glass.spec.ts` menolak kaca di dalam
+keduanya dan karena readout memang harus mengambang di atas, bukan di dalam,
+gambar yang diberi tahunya. Logika posisi dan pembacaan kontennya murni,
+dipisah ke `readout-logic.ts`, karena fixture e2e di sini statis
+(`renderToStaticMarkup` tanpa script) dan tidak bisa menjalankan React sama
+sekali; wiring-nya dibuktikan langsung di app yang jalan.
+
+**Ujung bar membulat 2px di sisi depan**, meniru `BarMark(cornerRadius:)`.
+Satu bar komposisi bertumpuk (ceiling anggaran di `budget-summary.tsx`)
+sengaja dilewati: membulatkan tiap segmen dalam tumpukan membuat notch di
+antara segmen yang berdekatan, bukan satu bar yang rapi.
 
 **Roda 82 hue kategori dipertahankan.** Apple hanya punya sekitar sembilan hue
 yang layak grafik, dan arsitektur di `palette.ts` adalah bahwa hue itu
@@ -213,6 +259,10 @@ Tidak ada satupun jaminan yang diturunkan oleh restyle ini, dan beberapa naik.
 | Kontras di dua skema | `e2e/a11y.spec.ts` |
 | Lantai sentuh, lantai 16px, nol overflow | `e2e/mobile.spec.ts` |
 | Geometri grafik, dan isolasi ribbon lewat keyboard | `e2e/charts.spec.ts` |
+| Setiap mark grafik bernama sama untuk readout dan pembaca layar | `e2e/charts.spec.ts` ("names every ribbon and node…") |
+| Posisi dan klem readout, murni tanpa browser | `readout-logic.test.ts` |
+| Sidebar: lebar rail/terbentang, drift shell vs loading, lantai sentuh | `e2e/sidebar.spec.ts` |
+| Halaman tanpa shell lolos CSP dan axe atas build sungguhan | `e2e/pages/pages.spec.ts` (`pnpm test:e2e:pages`) |
 | Fisika gesture: proyeksi, rubber band, lantai tap | `swipe-actions.test.ts`, `use-swipe-tabs.test.ts`, `pull-to-refresh.test.ts` |
 
 **Catatan perkakas: repo ini tidak punya konfigurasi Prettier.** Menjalankan
