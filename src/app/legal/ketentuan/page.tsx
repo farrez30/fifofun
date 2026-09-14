@@ -20,8 +20,8 @@ export default function TermsPage() {
   return (
     <>
       <div>
-        <h1 className="text-xl font-semibold tracking-tight text-ink">Ketentuan Penggunaan</h1>
-        <p className="mt-1 text-xs text-ink-faint">Terakhir diperbarui {UPDATED}</p>
+        <h1 className="text-title1 font-bold tracking-title1 text-ink">Ketentuan Penggunaan</h1>
+        <p className="mt-1 text-footnote text-ink-faint">Terakhir diperbarui {UPDATED}</p>
       </div>
 
       <p>
@@ -115,7 +115,7 @@ export default function TermsPage() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section>
-      <h2 className="text-base font-medium text-ink">{title}</h2>
+      <h2 className="text-title3 font-semibold tracking-title3 text-ink">{title}</h2>
       <div className="mt-2">{children}</div>
     </section>
   )

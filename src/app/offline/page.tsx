@@ -15,19 +15,19 @@ export default function OfflinePage() {
     <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-6 py-10">
       <main id="main">
         <p className="font-mono text-xs uppercase tracking-widest text-ink-faint">FiFoFun</p>
-        <h1 className="mt-3 text-xl font-semibold tracking-tight text-ink">
+        <h1 className="mt-3 text-title1 font-bold tracking-title1 text-ink">
           Tidak ada koneksi
         </h1>
-        <p className="mt-3 text-sm text-ink-muted">
+        <p className="mt-3 text-body text-ink-muted sm:text-subhead">
           Halaman ini sengaja kosong. Angka keuanganmu tidak disimpan di
           perangkat, jadi tidak ada versi lama yang bisa ditampilkan di sini.
         </p>
-        <p className="mt-2 text-sm text-ink-muted">
+        <p className="mt-2 text-body text-ink-muted sm:text-subhead">
           Saldo kemarin yang ditampilkan seolah-olah saldo hari ini jauh lebih
           berbahaya daripada layar kosong, karena angka yang salah tetap akan
           dipercaya.
         </p>
-        <p className="mt-6 text-sm text-ink-muted">
+        <p className="mt-6 text-body text-ink-muted sm:text-subhead">
           Coba lagi setelah jaringan kembali.
         </p>
       </main>
