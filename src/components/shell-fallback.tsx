@@ -86,7 +86,9 @@ export function ShellFallback({ title, current, lead, children }: Props) {
       title={title}
       current={current}
       lead={lead}
-      account={<div aria-hidden="true" className="skeleton hidden h-8 w-44 sm:block" />}
+      /* The sidebar itself is `hidden sm:flex`, so this needs no breakpoint of
+         its own: below `sm` it is simply never mounted into view. */
+      account={<div aria-hidden="true" className="skeleton h-11 w-full" />}
       tabs={<MobileTabsFallback current={current} />}
     >
       {children}

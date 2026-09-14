@@ -1998,6 +1998,30 @@ const SHELL_FIXTURES: Record<string, ReactElement> = {
   ),
 }
 
+/*
+  Same shell, folded to a rail. `documentFor` stamps `data-sidebar="collapsed"`
+  on `<html>` for these the way the root layout does from the cookie, since a
+  static fixture has no request to read one from.
+*/
+const SHELL_FIXTURES_COLLAPSED: Record<string, ReactElement> = {
+  'shell-lipat': (
+    <AppShell
+      title="Ringkasan"
+      email="rumah.tangga@contoh.com"
+      current="/"
+      lead="Angka bulan berjalan, dihitung dari transaksi yang sudah masuk."
+    >
+      <TransactionTable
+        rows={TABLE_ROWS}
+        accounts={TABLE_ACCOUNTS}
+        categories={TABLE_CATEGORIES}
+        caption="Transaksi terakhir"
+        emptyText="Belum ada transaksi."
+      />
+    </AppShell>
+  ),
+}
+
 async function write() {
   await mkdir(FIXTURE_DIR, { recursive: true })
   for (const [name, element] of Object.entries(FIXTURES)) {
@@ -2006,7 +2030,17 @@ async function write() {
   for (const [name, element] of Object.entries(SHELL_FIXTURES)) {
     await writeFile(`${FIXTURE_DIR}/${name}.html`, await documentFor(element, true), 'utf8')
   }
-  const total = Object.keys(FIXTURES).length + Object.keys(SHELL_FIXTURES).length
+  for (const [name, element] of Object.entries(SHELL_FIXTURES_COLLAPSED)) {
+    await writeFile(
+      `${FIXTURE_DIR}/${name}.html`,
+      await documentFor(element, true, { sidebar: 'collapsed' }),
+      'utf8',
+    )
+  }
+  const total =
+    Object.keys(FIXTURES).length +
+    Object.keys(SHELL_FIXTURES).length +
+    Object.keys(SHELL_FIXTURES_COLLAPSED).length
   console.log(`${total} fixture pages written to ${FIXTURE_DIR}`)
 }
 

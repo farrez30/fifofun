@@ -113,16 +113,24 @@ async function fontFaces(): Promise<string> {
  * bottom of the viewport, and the harness's `p-6` both double-counts the
  * gutters and pushes the page 48px wider than the screen it is being checked
  * against, which reads as an overflow the application does not have.
+ *
+ * @param html Attributes to stamp on `<html>` — the same thing the root
+ * layout does for `data-theme` and `data-sidebar`, since neither the shell
+ * nor its loading fallback reads a cookie itself.
  */
-export async function documentFor(element: ReactElement, bare = false): Promise<string> {
+export async function documentFor(
+  element: ReactElement,
+  bare = false,
+  html: { sidebar?: 'collapsed' } = {},
+): Promise<string> {
   const markup = renderToStaticMarkup(
     createElement(AppRouterContext.Provider, { value: INERT_ROUTER }, element),
   )
   const body = bare ? markup : `<main class="p-6">${markup}</main>`
-
+  const htmlAttrs = html.sidebar ? ` data-sidebar="${html.sidebar}"` : ''
 
   return `<!doctype html>
-<html lang="id">
+<html lang="id"${htmlAttrs}>
 <head>
 <meta charset="utf-8">
 <title>Fixture</title>

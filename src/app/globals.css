@@ -1,6 +1,16 @@
 @import 'tailwindcss';
 
 /*
+  Whether the desktop sidebar is folded, read off `<html data-sidebar>`
+  rather than component state — see `src/app/layout.tsx` and
+  `src/components/sidebar-actions.ts` for why it has to be a cookie the
+  server already knows about before either the real shell or a route's
+  loading fallback draws a single pixel. `lg:collapsed:w-14` says "at this
+  breakpoint, when the reader folded the sidebar, this instead".
+*/
+@custom-variant collapsed (:root[data-sidebar='collapsed'] &);
+
+/*
   FiFoFun design tokens.
 
   This file used to open with three rules written against the way generated

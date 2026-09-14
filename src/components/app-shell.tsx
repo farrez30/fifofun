@@ -1,41 +1,40 @@
+import { SignOut } from '@phosphor-icons/react/dist/ssr/SignOut'
 import { signOut } from '@/app/login/actions'
 import { MobileTabs } from '@/components/mobile-tabs'
 import { NavHint } from '@/components/nav-hint'
-import { ShellFrame } from '@/components/shell-frame'
+import { SIDEBAR_LABEL, SIDEBAR_ROW, SIDEBAR_ROW_OFF, ShellFrame } from '@/components/shell-frame'
 import { countUnconfirmed } from '@/lib/queries/household'
 import type { NavHref } from '@/components/nav'
 
 /**
  * The frame every signed-in page sits in.
  *
- * From the small breakpoint up, navigation is a plain row of links rather than
- * a sidebar. Even at eight destinations a sidebar would be furniture rather
- * than orientation. The current page is marked with `aria-current` and a border
- * rather than colour alone, so it is legible to a screen reader and to anyone
- * who cannot separate the accent from the ink.
+ * From the small breakpoint up, navigation is a sidebar: HIG asks for one at
+ * regular width, and this used to argue the other way, that eight
+ * destinations in a sidebar would be furniture rather than orientation. What
+ * changed the answer was never the destination count — it was that the row
+ * of underlined links this replaced was not a sidebar's alternative, it was
+ * a worse tab bar wearing a desktop's width. The current page is still marked
+ * with `aria-current` and more than colour (a filled icon, a tinted row), so
+ * it stays legible to a screen reader and to anyone who cannot separate the
+ * accent from the ink.
  *
- * Below it, that row is replaced by a bar pinned to the bottom of the screen.
+ * Below `sm` the sidebar is a bar pinned to the bottom of the screen instead.
+ * Five destinations stay visible at all times there, and the four periodic
+ * ones sit behind a tab that is itself always on screen — Ringkasan, Laporan,
+ * Catat and Tinjau are the two screens with work in them plus the two read
+ * every visit, and a sixth tab at 375px puts a label under 60px, narrower
+ * than the word it has to hold.
  *
- * This reverses what stood here before, which argued the row was right on a
- * phone too because it wrapped where a sidebar would have had to become a menu
- * behind a button. Wrapping is what turned out to be the cost: eight links wrap
- * to three or four lines at 375px, and with the account row and the heading
- * above them the header spent most of the first screen before a single figure
- * appeared.
- *
- * The reasoning that produced the old decision still holds, and the bar keeps
- * it. What it refused was orientation hidden behind a button, not a bottom bar:
- * five destinations stay visible at all times, and only the four periodic ones
- * sit behind a tab that is itself always on screen. Two of those already lived
- * in the footer on the same argument.
- *
- * Settings is used twice a year and a permanent tab for that costs every other
- * page a little attention, so it stays in the footer beside the invitation
- * link. And a single transaction has no tab at all: it is reached from wherever
+ * Pengaturan and Undangan sit in the sidebar's second group and the phone's
+ * sheet rather than the primary four: used a couple of times a year, and a
+ * permanent slot for either costs every other page a little attention. A
+ * single transaction has no destination at all — it is reached from wherever
  * it was seen.
  *
  * The markup itself lives in `ShellFrame`, shared with the route-level loading
- * shells so a navigation never swaps one frame for a slightly different one.
+ * shells so a navigation, and a sidebar fold, never swap one frame for a
+ * slightly different one.
  */
 
 interface Props {
@@ -63,13 +62,13 @@ export function AppShell({ title, email, current, lead, children }: Props) {
       current={current}
       lead={lead}
       account={
-        <form action={signOut} className="hidden items-baseline gap-3 sm:flex">
-          <span className="text-sm text-ink-muted">{email}</span>
-          <button
-            type="submit"
-            className="rounded-sm border border-line px-3 py-1.5 text-sm text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
-          >
-            Keluar
+        <form action={signOut} className="space-y-0.5">
+          <p className="truncate px-2.5 text-footnote text-ink-muted sr-only lg:not-sr-only lg:collapsed:sr-only">
+            {email}
+          </p>
+          <button type="submit" className={`${SIDEBAR_ROW} ${SIDEBAR_ROW_OFF} w-full`}>
+            <SignOut aria-hidden="true" className="size-5 shrink-0" />
+            <span className={SIDEBAR_LABEL}>Keluar</span>
           </button>
         </form>
       }
