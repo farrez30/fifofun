@@ -2,7 +2,7 @@
 
 import { useActionState, useId, useState } from 'react'
 import { useFormStatus } from 'react-dom'
-import { BUTTON_PRIMARY, CONTROL, FieldLabel } from '@/components/field-base'
+import { BUTTON_PRIMARY, CONTROL, CONTROL_INLINE, FieldLabel, FieldRow } from '@/components/field-base'
 import { MoneyInput } from '@/components/money-input'
 import { ACCOUNT_KEYS, ACCOUNT_KEY_LABELS } from '@/lib/ledger/settings'
 import { ACCOUNT_KINDS, type AccountKind } from '@/lib/ledger/types'
@@ -48,27 +48,38 @@ export function AccountForm({ account }: { account?: AccountView }) {
     <form action={action} className="space-y-4">
       {account ? <input type="hidden" name="id" value={account.id} /> : null}
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <FieldLabel htmlFor={ids.name}>Nama akun</FieldLabel>
+      {/*
+        A grouped list rather than the two-column grid this used to be. Six
+        fields in a 2fr/3fr grid of stacked label-above-control pairs read as
+        a form; the same six in one row-per-field card read as a settings
+        screen, which is what a household editing a bank account already
+        expects from every native app on the phone it opened this on.
+
+        Saldo awal keeps `MoneyInput`'s own compound layout (a floating
+        "Rp" prefix, a note line under it) rather than being squeezed into a
+        row: that component serves six pages and forcing a row shape onto it
+        here would mean a seventh, one-off variant of a control everywhere
+        else in the app the account form is not.
+      */}
+      <div className="rows-inset squircle rounded-md bg-surface shadow-xs">
+        <FieldRow htmlFor={ids.name} label="Nama akun">
           <input
             id={ids.name}
             name="name"
             defaultValue={account?.name ?? ''}
             required
             maxLength={60}
-            className={CONTROL}
+            className={CONTROL_INLINE}
           />
-        </div>
+        </FieldRow>
 
-        <div className="space-y-1.5">
-          <FieldLabel htmlFor={ids.kind}>Jenis</FieldLabel>
+        <FieldRow htmlFor={ids.kind} label="Jenis">
           <select
             id={ids.kind}
             name="kind"
             value={kind}
             onChange={(event) => setKind(event.target.value as AccountKind)}
-            className={CONTROL}
+            className={CONTROL_INLINE}
           >
             {ACCOUNT_KINDS.map((option) => (
               <option key={option} value={option}>
@@ -76,30 +87,26 @@ export function AccountForm({ account }: { account?: AccountView }) {
               </option>
             ))}
           </select>
-        </div>
+        </FieldRow>
 
-        <div className="space-y-1.5">
-          <FieldLabel htmlFor={ids.institution}>Lembaga</FieldLabel>
+        <FieldRow htmlFor={ids.institution} label="Lembaga">
           <input
             id={ids.institution}
             name="institution"
             defaultValue={account?.institution ?? ''}
             maxLength={60}
-            placeholder="Bank Mandiri, Gojek, dan seterusnya"
-            className={CONTROL}
+            placeholder="Bank Mandiri, Gojek, dst."
+            className={`${CONTROL_INLINE} placeholder:text-right`}
           />
-        </div>
+        </FieldRow>
 
-        <div className="space-y-1.5">
-          <FieldLabel htmlFor={ids.key} hint="Satu kunci, satu akun.">
-            Kunci impor
-          </FieldLabel>
+        <FieldRow htmlFor={ids.key} label="Kunci impor" hint="Satu kunci, satu akun.">
           <select
             id={ids.key}
             name="key"
             value={key}
             onChange={(event) => setKey(event.target.value)}
-            className={CONTROL}
+            className={CONTROL_INLINE}
           >
             <option value="">tidak diimpor</option>
             {ACCOUNT_KEYS.map((option) => (
@@ -108,33 +115,30 @@ export function AccountForm({ account }: { account?: AccountView }) {
               </option>
             ))}
           </select>
-        </div>
+        </FieldRow>
 
-        <MoneyInput
-          label="Saldo awal"
-          value={openingBalance}
-          onChange={setOpeningBalance}
-          name="openingBalance"
-          note={
-            key === 'mandiri'
-              ? 'Saldo sebelum statement pertama yang kamu impor.'
-              : 'Saldo pada tanggal di sebelah, sebelum satu transaksi pun tercatat di sini.'
-          }
-        />
-
-        <div className="space-y-1.5">
-          <FieldLabel htmlFor={ids.at} hint="Boleh dikosongkan.">
-            Per tanggal
-          </FieldLabel>
+        <FieldRow htmlFor={ids.at} label="Per tanggal" hint="Boleh dikosongkan.">
           <input
             id={ids.at}
             type="date"
             name="openingBalanceAt"
             defaultValue={account?.openingBalanceAt ?? ''}
-            className={CONTROL}
+            className={CONTROL_INLINE}
           />
-        </div>
+        </FieldRow>
       </div>
+
+      <MoneyInput
+        label="Saldo awal"
+        value={openingBalance}
+        onChange={setOpeningBalance}
+        name="openingBalance"
+        note={
+          key === 'mandiri'
+            ? 'Saldo sebelum statement pertama yang kamu impor.'
+            : 'Saldo pada tanggal di sebelah, sebelum satu transaksi pun tercatat di sini.'
+        }
+      />
 
       {kind === 'bank' ? (
         <div className="space-y-1.5">

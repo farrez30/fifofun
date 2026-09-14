@@ -118,3 +118,46 @@ export function FieldLabel({ htmlFor, children, hint, visuallyHidden = false }: 
     </label>
   )
 }
+
+/**
+ * A control inside a `FieldRow`: no fill and no border of its own, because
+ * the row it sits in already reads as one control's worth of surface. The
+ * plain `CONTROL` above still fills and borders itself, for a field standing
+ * on its own outside a grouped list.
+ */
+export const CONTROL_INLINE =
+  'h-11 w-full bg-transparent px-0 text-right text-body text-ink placeholder:text-ink-faint focus:outline-none sm:text-sm'
+
+/**
+ * One row of a grouped, iOS-Settings-style form: label on the left, the
+ * control on the right, both on the same baseline. Several rows share one
+ * `rows-inset squircle rounded-md bg-surface shadow-xs` wrapper — the same
+ * card recipe a grouped list uses everywhere else in this app — with the
+ * hairline separator starting at the label rather than at the card's edge.
+ *
+ * Not every field belongs in one of these. A field wide enough to need its
+ * own line (a textarea, a paragraph of instructions under it) reads worse
+ * squeezed into two columns than it does standing alone with `FieldLabel`
+ * and `CONTROL`, which is why this is additive rather than a replacement.
+ */
+export function FieldRow({
+  htmlFor,
+  label,
+  hint,
+  children,
+}: {
+  htmlFor: string
+  label: string
+  hint?: string
+  children: ReactNode
+}) {
+  return (
+    <div className="grid min-h-14 grid-cols-[minmax(6rem,2fr)_3fr] items-center gap-3 px-4 py-2">
+      <label htmlFor={htmlFor} className="text-subhead text-ink">
+        {label}
+        {hint ? <span className="mt-0.5 block text-footnote text-ink-muted">{hint}</span> : null}
+      </label>
+      {children}
+    </div>
+  )
+}

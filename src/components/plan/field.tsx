@@ -238,7 +238,7 @@ export function Section({ id, title, lead, index, variant = 'card', children }: 
       aria-labelledby={id}
       // Cleared by the dock, which is the tallest thing that can cover an
       // anchor when one is jumped to.
-      className={`scroll-mt-32 ${bar ? '' : 'border border-line bg-paper'}`}
+      className={`scroll-mt-32 ${bar ? '' : 'squircle rounded-md bg-surface shadow-xs'}`}
     >
       <div
         className={
