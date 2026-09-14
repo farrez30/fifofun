@@ -61,7 +61,7 @@ export const CONTROL =
    instead of in the middle, and every outline this replaced had written
    `inline-flex items-center` out again to fix exactly that. */
 const BUTTON_BASE =
-  'inline-flex h-11 items-center justify-center rounded-full px-5 text-sm font-medium transition-[background-color,color,transform] duration-150 ease-press active:scale-[0.97] disabled:opacity-40 disabled:active:scale-100'
+  'inline-flex h-11 items-center justify-center rounded-full px-5 text-subhead font-medium transition-[background-color,color,transform] duration-150 ease-press active:scale-[0.97] disabled:opacity-40 disabled:active:scale-100'
 
 /** The one thing on the screen somebody came to press. */
 export const BUTTON_PRIMARY = `${BUTTON_BASE} bg-accent text-paper hover:bg-accent-strong`

@@ -90,7 +90,7 @@ export function MoneyInput({
           shows up on the one surface nobody checked. Moving it a rung answers
           both the number and the meaning.
         */
-          className={`pointer-events-none absolute inset-y-0 flex items-center font-mono text-sm text-ink-muted ${
+          className={`pointer-events-none absolute inset-y-0 flex items-center font-mono text-body text-ink-muted sm:text-sm ${
             compact ? 'left-1.5 sm:left-2' : 'left-3'
           }`}
         >
@@ -123,7 +123,7 @@ export function MoneyInput({
             and what a person types is Rupiah with separators in it. */}
         {name ? <input type="hidden" name={name} value={value.toString()} /> : null}
       </div>
-      {note ? <p className="text-xs text-ink-muted">{note}</p> : null}
+      {note ? <p className="text-footnote text-ink-muted">{note}</p> : null}
     </div>
   )
 }

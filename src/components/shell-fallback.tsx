@@ -43,7 +43,7 @@ function MobileTabsFallback({ current }: { current: NavHref }) {
                 weight={tab.href === current ? 'fill' : 'regular'}
                 className="size-6 shrink-0"
               />
-              <span className={`text-xs ${tab.href === current ? 'font-medium' : ''}`}>
+              <span className={`text-caption2 ${tab.href === current ? 'font-medium' : ''}`}>
                 {tab.label}
               </span>
             </Link>
@@ -65,7 +65,7 @@ function MobileTabsFallback({ current }: { current: NavHref }) {
               weight={inSheet ? 'fill' : 'regular'}
               className="size-6 shrink-0"
             />
-            <span className={`text-xs ${inSheet ? 'font-medium' : ''}`}>Lainnya</span>
+            <span className={`text-caption2 ${inSheet ? 'font-medium' : ''}`}>Lainnya</span>
           </button>
         </li>
       </ul>

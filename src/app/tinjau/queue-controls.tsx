@@ -44,12 +44,12 @@ export function QueueControls({ options }: { options: QueueOptions }) {
   return (
     <nav
       aria-label="Urutan dan kelompok antrean"
-      className="flex flex-wrap items-center gap-x-6 gap-y-1 border-b border-line pb-1 text-sm"
+      className="flex flex-wrap items-center gap-x-6 gap-y-1 border-b border-line pb-1 text-subhead"
     >
       <div role="group" aria-labelledby="urut-label" className="flex items-center gap-1">
         <span
           id="urut-label"
-          className="mr-1 text-xs font-medium uppercase tracking-wide text-ink-faint"
+          className="mr-1 text-footnote font-medium uppercase tracking-wide text-ink-faint"
         >
           Urutkan
         </span>
@@ -71,7 +71,7 @@ export function QueueControls({ options }: { options: QueueOptions }) {
       <div role="group" aria-labelledby="kelompok-label" className="flex items-center gap-1">
         <span
           id="kelompok-label"
-          className="mr-1 text-xs font-medium uppercase tracking-wide text-ink-faint"
+          className="mr-1 text-footnote font-medium uppercase tracking-wide text-ink-faint"
         >
           Kelompokkan
         </span>

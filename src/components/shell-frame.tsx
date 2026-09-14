@@ -110,7 +110,7 @@ export function ShellFrame({ title, current, lead, account, tabs, navHint, child
         className="hidden border-r border-line bg-sunken pt-safe-t pl-safe-l sm:sticky sm:top-0 sm:flex sm:h-dvh sm:w-14 sm:flex-col sm:self-start sm:overflow-x-hidden sm:overflow-y-auto lg:w-56 lg:collapsed:w-14"
       >
         <div className="flex h-14 shrink-0 items-center justify-between px-3">
-          <p className="hidden truncate font-mono text-xs uppercase tracking-widest text-ink-faint lg:block lg:collapsed:hidden">
+          <p className="hidden truncate font-mono text-caption1 uppercase tracking-widest text-ink-faint lg:block lg:collapsed:hidden">
             FiFoFun
           </p>
           {/* Only at `lg` and up: below it the rail is forced regardless of
@@ -167,7 +167,7 @@ export function ShellFrame({ title, current, lead, account, tabs, navHint, child
           >
             {title}
           </h1>
-          {lead ? <p className="mt-1 max-w-2xl text-sm text-ink-muted">{lead}</p> : null}
+          {lead ? <p className="mt-1 max-w-2xl text-subhead text-ink-muted">{lead}</p> : null}
         </header>
 
         {/*
@@ -196,7 +196,7 @@ export function ShellFrame({ title, current, lead, account, tabs, navHint, child
           {children}
         </main>
 
-        <footer className="mt-16 border-t border-line pt-5 text-xs text-ink-faint">
+        <footer className="mt-16 border-t border-line pt-5 text-footnote text-ink-faint">
           {/* Pengaturan and Undangan live in the sidebar's second group now,
               and in the sheet on a phone — never repeated a third time here. */}
           <ul className="flex flex-wrap gap-x-4 gap-y-1 sm:gap-4">

@@ -18,7 +18,7 @@ export function RulesList({ rules }: { rules: RuleRow[] }) {
 
   if (rules.length === 0) {
     return (
-      <p className="text-sm text-ink-muted">
+      <p className="text-subhead text-ink-muted">
         Belum ada aturan. Aturan pertama dibuat saat kamu menyetujui satu kelompok di sebelah.
       </p>
     )
@@ -27,32 +27,32 @@ export function RulesList({ rules }: { rules: RuleRow[] }) {
   return (
     <div>
       {result ? (
-        <p className={`mb-2 text-sm ${result.ok ? 'text-under' : 'text-over'}`}>{result.message}</p>
+        <p className={`mb-2 text-subhead ${result.ok ? 'text-under' : 'text-over'}`}>{result.message}</p>
       ) : null}
 
       <ul className="space-y-2">
         {rules.map((rule) => (
           <li key={rule.id} className="squircle rounded-md bg-surface shadow-xs p-3">
             <div className="flex items-baseline justify-between gap-3">
-              <p className="min-w-0 text-sm text-ink">
+              <p className="min-w-0 text-subhead text-ink">
                 <span className="truncate">{rule.pattern}</span>
               </p>
               <form action={action}>
                 <input type="hidden" name="ruleId" value={rule.id} />
                 <button
                   type="submit"
-                  className="shrink-0 text-xs text-ink-faint underline underline-offset-2 hover:text-over"
+                  className="shrink-0 text-footnote text-ink-faint underline underline-offset-2 hover:text-over"
                 >
                   Hapus
                 </button>
               </form>
             </div>
 
-            <p className="mt-0.5 text-xs text-ink-muted">
+            <p className="mt-0.5 text-footnote text-ink-muted">
               {MATCH_LABELS[rule.matchType as MatchType]} · {rule.categoryName ?? 'tanpa kategori'}
             </p>
 
-            <p className="mt-0.5 text-xs text-ink-faint">
+            <p className="mt-0.5 text-footnote text-ink-faint">
               {rule.hitCount === 0
                 ? 'Belum pernah cocok dengan satu transaksi pun.'
                 : `Sudah menyelesaikan ${rule.hitCount} transaksi.`}

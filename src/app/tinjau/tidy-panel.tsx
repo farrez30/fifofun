@@ -2,6 +2,7 @@
 
 import { useActionState, useMemo, useState } from 'react'
 import { useFormStatus } from 'react-dom'
+import { CONTROL } from '@/components/field-base'
 import { CategoryMark } from '@/components/marks'
 import { directionOf, type Direction } from '@/lib/ledger/direction'
 import { optionGroups, type OptionGroup } from '@/lib/ledger/settings'
@@ -79,7 +80,7 @@ function Submit({ label, disabled = false }: { label: string; disabled?: boolean
     <button
       type="submit"
       disabled={disabled || pending}
-      className="h-11 rounded-sm bg-accent px-4 text-sm font-medium text-paper transition-colors duration-150 hover:bg-accent-strong disabled:opacity-50"
+      className="h-11 rounded-sm bg-accent px-4 text-subhead font-medium text-paper transition-colors duration-150 hover:bg-accent-strong disabled:opacity-50"
     >
       {pending ? 'Merapikan' : label}
     </button>
@@ -91,7 +92,7 @@ function Reply({ result }: { result: ActionResult }) {
     <p
       role="status"
       aria-live="polite"
-      className={`mt-2 border px-3 py-2 text-sm text-ink ${
+      className={`mt-2 border px-3 py-2 text-subhead text-ink ${
         result.ok ? 'border-under/40 bg-under-wash' : 'border-over/40 bg-over-wash'
       }`}
     >
@@ -138,10 +139,10 @@ export function TidyPanel({ view, categories }: { view: TidyView; categories: Ca
       aria-labelledby="rapikan-judul"
       className="squircle rounded-md bg-sunken/40 p-4"
     >
-      <h2 id="rapikan-judul" className="text-sm font-medium text-ink">
+      <h2 id="rapikan-judul" className="text-subhead font-medium text-ink">
         {view.count} transaksi lama senilai {view.amount} ada di pos yang bukan tempatnya
       </h2>
-      <p className="mt-1 text-sm text-ink-muted">
+      <p className="mt-1 text-subhead text-ink-muted">
         Impor lama menebak kategori dari cara uangnya bergerak, bukan dari siapa yang dibayar, jadi
         setiap pembayaran QRIS jadi Makan/minum dan setiap tagihan jadi Belanja. Aturan yang
         sekarang tahu bedanya. Buka satu pindahan untuk memeriksa transaksinya sebelum menyetujui.
@@ -167,14 +168,14 @@ export function TidyPanel({ view, categories }: { view: TidyView; categories: Ca
       ) : null}
 
       {held > 0 || redirected > 0 ? (
-        <p className="mt-3 text-sm text-ink">
+        <p className="mt-3 text-subhead text-ink">
           {view.count - held} akan dipindahkan
           {held > 0 ? `, ${held} ditahan` : ''}
           {redirected > 0 ? `, ${redirected} dibelokkan ke pos lain` : ''}.
         </p>
       ) : null}
 
-      <p className="mt-3 text-sm text-ink-muted">
+      <p className="mt-3 text-subhead text-ink-muted">
         Hanya transaksi yang masih duduk di pos bawaan impor yang dipindahkan.
         {view.protectedCount > 0
           ? ` ${view.protectedCount} transaksi yang kategorinya pernah kamu tetapkan sendiri tidak disentuh.`
@@ -183,7 +184,7 @@ export function TidyPanel({ view, categories }: { view: TidyView; categories: Ca
           ? ` ${view.heldCount} transaksi yang pernah kamu tahan juga tidak ditawarkan lagi.`
           : ''}
       </p>
-      <p className="mt-2 text-sm text-ink-muted">
+      <p className="mt-2 text-subhead text-ink-muted">
         Perpindahan ini tidak bisa dibatalkan sekaligus. Yang salah bisa kamu ubah satu per satu
         dari halaman transaksinya.
       </p>
@@ -199,7 +200,7 @@ export function TidyPanel({ view, categories }: { view: TidyView; categories: Ca
           .map(([id, choice]) => (
             <input key={id} type="hidden" name={`pilih:${id}`} value={choice} />
           ))}
-        <label className="flex min-h-11 items-center gap-2 text-sm text-ink">
+        <label className="flex min-h-11 items-center gap-2 text-subhead text-ink">
           <input
             type="checkbox"
             name="confirm"
@@ -267,14 +268,14 @@ function Move({
             hue={move.hue}
             tile
           />
-          <span className="mt-0.5 block text-xs text-ink-muted">
+          <span className="mt-0.5 block text-footnote text-ink-muted">
             {move.count} transaksi · sekarang di {move.from} ·{' '}
             {/* Said in words rather than drawn as a caret, the way the report's
                 disclosures say what opening one gives you. */}
             {open ? 'tutup' : 'lihat transaksinya'}
           </span>
         </span>
-        <span className="shrink-0 tabular-nums text-sm text-ink">{move.amount}</span>
+        <span className="shrink-0 tabular-nums text-subhead text-ink">{move.amount}</span>
       </button>
 
       {open ? (
@@ -283,10 +284,10 @@ function Move({
             {move.entries.map((entry) => (
               <li key={entry.id} className="border-b border-line/60 pb-2 last:border-0">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                  <span className="min-w-0 text-sm text-ink">{entry.description}</span>
-                  <span className="tabular-nums text-sm text-ink">{entry.amount}</span>
+                  <span className="min-w-0 text-subhead text-ink">{entry.description}</span>
+                  <span className="tabular-nums text-subhead text-ink">{entry.amount}</span>
                 </div>
-                <p className="mt-0.5 text-xs text-ink-muted">
+                <p className="mt-0.5 text-footnote text-ink-muted">
                   <span className="tabular-nums">{entry.occurredAt}</span> · cocok dengan aturan
                   &ldquo;{entry.pattern}&rdquo; ·{' '}
                   <a
@@ -356,7 +357,7 @@ function EntryChoice({
       value={value}
       onChange={(event) => onChoose(entry.id, event.target.value)}
       aria-label={`Pos untuk ${entry.description}`}
-      className="mt-1.5 h-11 w-full max-w-sm border border-line bg-paper px-2 text-base text-ink sm:text-sm"
+      className={`mt-1.5 max-w-sm ${CONTROL}`}
     >
       <option value={HOLD}>Jangan pindahkan, biarkan di {move.from}</option>
       {allowed.map((group) => (

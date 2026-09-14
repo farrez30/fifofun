@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { DotsNine } from '@phosphor-icons/react/dist/ssr/DotsNine'
 import { SignOut } from '@phosphor-icons/react/dist/ssr/SignOut'
 import { signOut } from '@/app/login/actions'
+import { BUTTON_QUIET } from '@/components/field-base'
 import { NavHint } from '@/components/nav-hint'
 import { PullToRefresh } from '@/components/pull-to-refresh'
 import { SHEET, TAB, TABS } from '@/components/tabs'
@@ -283,7 +284,7 @@ export function MobileTabs({ current, email, review }: Props) {
                     </Suspense>
                   ) : null}
                 </span>
-                <span className={`text-xs ${tab.href === current ? 'font-medium' : ''}`}>
+                <span className={`text-caption2 ${tab.href === current ? 'font-medium' : ''}`}>
                   {tab.label}
                 </span>
                 {/* Pending dot in the gap between glyph and label. */}
@@ -333,7 +334,7 @@ export function MobileTabs({ current, email, review }: Props) {
                 weight={inSheet ? 'fill' : 'regular'}
                 className="size-6 shrink-0"
               />
-              <span className={`text-xs ${inSheet ? 'font-medium' : ''}`}>Lainnya</span>
+              <span className={`text-caption2 ${inSheet ? 'font-medium' : ''}`}>Lainnya</span>
             </button>
           </li>
         </ul>
@@ -404,18 +405,16 @@ export function MobileTabs({ current, email, review }: Props) {
 
           <div className="flex items-center justify-between gap-3 border-b border-line px-4 pb-3">
             <div className="min-w-0">
-              <h2 id="sheet-lainnya" className="text-sm font-medium text-ink">
+              <h2 id="sheet-lainnya" className="text-subhead font-medium text-ink">
                 Lainnya
               </h2>
-              <p className="truncate text-xs text-ink-muted">{email}</p>
+              <p className="truncate text-footnote text-ink-muted">{email}</p>
             </div>
-            {/* The same bordered button the desktop header uses, so signing
-                out looks like the decision it is instead of one more row. */}
+            {/* The desktop equivalent lives in the sidebar's own account
+                row now (`AppShell`), so this is the sheet's own copy of the
+                same quiet button rather than a shared one. */}
             <form action={signOut} className="shrink-0">
-              <button
-                type="submit"
-                className="flex items-center gap-1.5 rounded-sm border border-line px-3 py-1.5 text-sm text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
-              >
+              <button type="submit" className={`${BUTTON_QUIET} gap-1.5`}>
                 <SignOut aria-hidden="true" weight="regular" className="size-4 text-ink-muted" />
                 Keluar
               </button>
@@ -445,7 +444,7 @@ export function MobileTabs({ current, email, review }: Props) {
                        frame, on top of the page it just opened. */
                     onNavigate={() => sheet.current?.close()}
                     aria-current={item.href === current ? 'page' : undefined}
-                    className={`flex min-h-14 items-center gap-3 px-4 text-sm transition-colors duration-150 hover:bg-sunken ${
+                    className={`flex min-h-14 items-center gap-3 px-4 text-subhead transition-colors duration-150 hover:bg-sunken ${
                       item.href === current ? 'font-medium text-accent' : 'text-ink'
                     }`}
                   >

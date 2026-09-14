@@ -233,7 +233,7 @@ export function CashflowChip({
   return (
     <span
       data-mark="cashflow"
-      className={`inline-flex items-center rounded-xs border px-1.5 py-0.5 text-xs text-ink ${TONE_CHIP[toneOf(cashflow)]} ${className}`}
+      className={`inline-flex items-center rounded-xs border px-1.5 py-0.5 text-caption2 text-ink ${TONE_CHIP[toneOf(cashflow)]} ${className}`}
     >
       {CASHFLOW_LABELS[cashflow]}
     </span>

@@ -127,8 +127,8 @@ async function Queue({ options }: { options: QueueOptions }) {
 
       <aside className="space-y-5 lg:border-l lg:border-line lg:pl-6">
         <div>
-          <h2 className="text-sm font-medium text-ink">Aturan yang sudah kamu buat</h2>
-          <p className="mt-1 text-sm text-ink-muted">
+          <h2 className="text-subhead font-medium text-ink">Aturan yang sudah kamu buat</h2>
+          <p className="mt-1 text-subhead text-ink-muted">
             Dijalankan berurutan dari atas. Yang pertama cocok yang menang.
           </p>
         </div>
@@ -136,12 +136,12 @@ async function Queue({ options }: { options: QueueOptions }) {
         <RulesList rules={rules} />
 
         <div className="border-t border-line pt-4">
-          <h2 className="text-sm font-medium text-ink">Kenapa dikelompokkan</h2>
-          <p className="mt-1 text-sm text-ink-muted">
+          <h2 className="text-subhead font-medium text-ink">Kenapa dikelompokkan</h2>
+          <p className="mt-1 text-subhead text-ink-muted">
             Mutasi bank menulis lawan transaksi yang sama dengan catatan yang berbeda tiap kali.
             Dikelompokkan menurut lawan transaksinya, satu keputusan menyelesaikan puluhan baris.
           </p>
-          <p className="mt-2 text-sm text-ink-muted">
+          <p className="mt-2 text-subhead text-ink-muted">
             Menghapus aturan tidak mengembalikan kategori yang sudah tersimpan. Aturan menentukan
             cara membaca baris berikutnya, bukan menjadi kategorinya.
           </p>

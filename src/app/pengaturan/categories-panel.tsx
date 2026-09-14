@@ -63,10 +63,10 @@ export function CategoriesPanel({ categories }: { categories: CategoryView[] }) 
 
   return (
     <section aria-labelledby="kategori" className="scroll-mt-8">
-      <h2 id="kategori" className="text-base font-semibold tracking-tight text-ink">
+      <h2 id="kategori" className="text-title3 font-semibold tracking-title3 text-ink">
         Kategori
       </h2>
-      <p className="mt-1 text-sm text-ink-muted">
+      <p className="mt-1 text-subhead text-ink-muted">
         {live.length} kategori aktif di {groups.length} cashflow
         {archived.length > 0 ? `, ${archived.length} diarsipkan` : ''}.
       </p>
@@ -74,7 +74,7 @@ export function CategoriesPanel({ categories }: { categories: CategoryView[] }) 
       <div className="mt-3 space-y-6">
         {groups.map((group) => (
           <div key={group.cashflow}>
-            <h3 className="text-sm font-medium text-ink">{CASHFLOW_LABELS[group.cashflow]}</h3>
+            <h3 className="text-subhead font-medium text-ink">{CASHFLOW_LABELS[group.cashflow]}</h3>
             <Table
               rows={group.rows}
               siblings={categories}
@@ -87,7 +87,7 @@ export function CategoriesPanel({ categories }: { categories: CategoryView[] }) 
 
         {archived.length > 0 ? (
           <div>
-            <h3 className="text-sm font-medium text-ink">Diarsipkan</h3>
+            <h3 className="text-subhead font-medium text-ink">Diarsipkan</h3>
             <Table
               rows={archived}
               siblings={categories}
@@ -99,14 +99,14 @@ export function CategoriesPanel({ categories }: { categories: CategoryView[] }) 
         ) : null}
       </div>
 
-      <p className="mt-3 text-xs text-ink-muted">
+      <p className="mt-3 text-footnote text-ink-muted">
         Cashflow menentukan arah uang dan ikut tersimpan di setiap transaksi bersama sisi akunnya,
         jadi tidak bisa diubah setelah kategorinya dipakai. Warna dan ikon hanya penanda: yang
         tersimpan cuma derajat warnanya, terangnya mengikuti tema.
       </p>
 
       <details className="mt-3 squircle rounded-md bg-surface shadow-xs">
-        <summary className="cursor-pointer px-4 py-3 text-sm text-ink-muted">
+        <summary className="cursor-pointer px-4 py-3 text-subhead text-ink-muted">
           Nama yang dicari impor apa adanya
         </summary>
         <div className="border-t border-line p-4">
@@ -114,13 +114,13 @@ export function CategoriesPanel({ categories }: { categories: CategoryView[] }) 
             {LOOKED_UP_NAMES.map((name) => (
               <li
                 key={name}
-                className="rounded-xs border border-line bg-sunken px-1.5 py-0.5 text-xs text-ink"
+                className="rounded-xs border border-line bg-sunken px-1.5 py-0.5 text-footnote text-ink"
               >
                 {name}
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-xs text-ink-muted">
+          <p className="mt-2 text-footnote text-ink-muted">
             Kalau salah satu diganti nama, baris impor yang biasanya ke sana menunggu di Tinjau
             tanpa kategori. Itu bukan kerusakan, hanya pekerjaan tambahan sekali.
           </p>
@@ -128,7 +128,7 @@ export function CategoriesPanel({ categories }: { categories: CategoryView[] }) 
       </details>
 
       <details className="mt-3 squircle rounded-md bg-surface shadow-xs">
-        <summary className="cursor-pointer px-4 py-3 text-sm text-accent">Tambah kategori</summary>
+        <summary className="cursor-pointer px-4 py-3 text-subhead text-accent">Tambah kategori</summary>
         <div className="border-t border-line p-4">
           <CategoryForm siblings={categories} />
         </div>
@@ -173,11 +173,11 @@ function Table({
       </ul>
 
       <div className="relative mt-2 hidden overflow-x-auto squircle rounded-md bg-surface shadow-xs sm:block">
-      <table className="w-full min-w-[34rem] border-collapse text-sm">
+      <table className="w-full min-w-[34rem] border-collapse text-subhead">
 
         <caption className="sr-only">{caption}</caption>
         <thead>
-          <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-faint">
+          <tr className="border-b border-line text-left text-caption1 uppercase tracking-wide text-ink-faint">
             <th scope="col" className="px-4 py-2 font-medium">
               Kategori
             </th>
@@ -235,7 +235,7 @@ function Card({
        under it here the same way it does in the table. */
     <li className={`py-3 pr-3 ${category.parentId ? 'pl-7' : 'pl-3'}`}>
       <div className="flex items-center justify-between gap-3">
-        <span className="min-w-0 flex-1 text-sm text-ink">
+        <span className="min-w-0 flex-1 text-subhead text-ink">
           <CategoryMark
             name={category.name}
             cashflow={category.cashflow}
@@ -244,17 +244,17 @@ function Card({
             tile
           />
         </span>
-        <span className="tnum shrink-0 font-mono text-xs text-ink-muted">
+        <span className="tnum shrink-0 font-mono text-footnote text-ink-muted">
           {category.usage} transaksi
         </span>
       </div>
 
       {category.description ? (
-        <p className="mt-1 text-xs text-ink-muted">{category.description}</p>
+        <p className="mt-1 text-footnote text-ink-muted">{category.description}</p>
       ) : null}
 
       {isLookedUpByName(category.name) || isGroup ? (
-        <p className="mt-1 text-xs text-ink-faint">
+        <p className="mt-1 text-footnote text-ink-faint">
           {[
             isLookedUpByName(category.name) ? 'dicari impor' : null,
             isGroup ? 'kelompok, tidak menampung transaksi' : null,
@@ -269,7 +269,7 @@ function Card({
           type="button"
           onClick={onToggle}
           aria-expanded={open}
-          className="h-11 flex-1 rounded-sm border border-line px-3 text-sm text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
+          className="h-11 flex-1 rounded-sm border border-line px-3 text-subhead text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
         >
           {open ? 'Tutup' : 'Ubah'}
         </button>
@@ -327,13 +327,13 @@ function Row({
             hue={category.hue === '' ? null : Number(category.hue)}
           />
           {isLookedUpByName(category.name) ? (
-            <span className="ml-2 text-xs text-ink-faint">dicari impor</span>
+            <span className="ml-2 text-footnote text-ink-faint">dicari impor</span>
           ) : null}
           {isGroup ? (
-            <span className="ml-2 text-xs text-ink-faint">kelompok, tidak menampung transaksi</span>
+            <span className="ml-2 text-footnote text-ink-faint">kelompok, tidak menampung transaksi</span>
           ) : null}
           {category.description ? (
-            <span className="mt-0.5 block text-xs font-normal text-ink-muted">
+            <span className="mt-0.5 block text-footnote font-normal text-ink-muted">
               {category.description}
             </span>
           ) : null}
@@ -343,7 +343,7 @@ function Row({
         </td>
         <td className="whitespace-nowrap px-4 py-2.5">
           {category.archived ? (
-            <span className="text-xs text-ink-faint">tidak diurutkan</span>
+            <span className="text-footnote text-ink-faint">tidak diurutkan</span>
           ) : (
             <div className="flex gap-1">
               <MoveButton id={category.id} direction="up" name={category.name} disabled={first} />
@@ -362,7 +362,7 @@ function Row({
               type="button"
               onClick={onToggle}
               aria-expanded={open}
-              className="h-9 rounded-sm border border-line px-2.5 text-xs text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
+              className="h-9 rounded-sm border border-line px-2.5 text-footnote text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
             >
               {open ? 'Tutup' : 'Ubah'}
             </button>
@@ -410,7 +410,7 @@ function MoveButton({
       {/* A refused reorder used to do nothing at all: the arrow moved no row
           and said no word. */}
       {result && !result.ok ? (
-        <span role="status" className="ml-2 text-xs text-over">
+        <span role="status" className="ml-2 text-footnote text-over">
           {result.message}
         </span>
       ) : null}
@@ -427,12 +427,12 @@ function ArchiveButton({ category }: { category: CategoryView }) {
       <input type="hidden" name="archived" value={category.archived ? '0' : '1'} />
       <button
         type="submit"
-        className="h-9 rounded-sm border border-line px-2.5 text-xs text-ink-muted transition-colors duration-150 hover:border-line-strong hover:text-ink"
+        className="h-9 rounded-sm border border-line px-2.5 text-footnote text-ink-muted transition-colors duration-150 hover:border-line-strong hover:text-ink"
       >
         {category.archived ? 'Pakai lagi' : 'Arsipkan'}
       </button>
       {result ? (
-        <span role="status" className={`text-xs ${result.ok ? 'text-under' : 'text-over'}`}>
+        <span role="status" className={`text-footnote ${result.ok ? 'text-under' : 'text-over'}`}>
           {result.message}
         </span>
       ) : null}

@@ -45,10 +45,10 @@ export function AccountsPanel({ accounts }: { accounts: AccountView[] }) {
 
   return (
     <section aria-labelledby="akun" className="scroll-mt-8">
-      <h2 id="akun" className="text-base font-semibold tracking-tight text-ink">
+      <h2 id="akun" className="text-title3 font-semibold tracking-title3 text-ink">
         Akun
       </h2>
-      <p className="mt-1 text-sm text-ink-muted">
+      <p className="mt-1 text-subhead text-ink-muted">
         {live.length} akun aktif
         {archived.length > 0 ? `, ${archived.length} diarsipkan` : ''}.
       </p>
@@ -76,11 +76,11 @@ export function AccountsPanel({ accounts }: { accounts: AccountView[] }) {
       </ul>
 
       <div className="relative mt-3 hidden overflow-x-auto squircle rounded-md bg-surface shadow-xs sm:block">
-        <table className="w-full min-w-[46rem] border-collapse text-sm">
+        <table className="w-full min-w-[46rem] border-collapse text-subhead">
 
           <caption className="sr-only">Akun beserta kunci impor dan urutannya</caption>
           <thead>
-            <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-faint">
+            <tr className="border-b border-line text-left text-caption1 uppercase tracking-wide text-ink-faint">
               <th scope="col" className="px-4 py-2 font-medium">
                 Akun
               </th>
@@ -116,14 +116,14 @@ export function AccountsPanel({ accounts }: { accounts: AccountView[] }) {
         </table>
       </div>
 
-      <p className="mt-2 text-xs text-ink-muted">
+      <p className="mt-2 text-footnote text-ink-muted">
         Kunci impor menghubungkan baris e-statement dan pesan bot Telegram ke akun ini, jadi
         namanya bebas diganti tanpa memutus impor. Yang tidak boleh pindah diam-diam adalah
         kuncinya.
       </p>
 
       <details className="mt-3 squircle rounded-md bg-surface shadow-xs">
-        <summary className="cursor-pointer px-4 py-3 text-sm text-accent">Tambah akun</summary>
+        <summary className="cursor-pointer px-4 py-3 text-subhead text-accent">Tambah akun</summary>
         <div className="border-t border-line p-4">
           <AccountForm />
         </div>
@@ -151,7 +151,7 @@ function Row({
         <th scope="row" className="whitespace-nowrap px-4 py-2.5 text-left font-normal text-ink">
           <AccountMark name={account.name} kind={account.kind} />
           {account.archived ? (
-            <span className="ml-2 text-xs text-ink-faint">(arsip)</span>
+            <span className="ml-2 text-footnote text-ink-faint">(arsip)</span>
           ) : null}
         </th>
         <td className="whitespace-nowrap px-4 py-2.5 text-ink-muted">
@@ -160,7 +160,7 @@ function Row({
           ) : (
             <>
               <code className="text-ink">{account.key}</code>
-              <span className="ml-1.5 text-xs">
+              <span className="ml-1.5 text-footnote">
                 {ACCOUNT_KEY_LABELS[account.key as AccountKey]}
               </span>
             </>
@@ -174,7 +174,7 @@ function Row({
         </td>
         <td className="whitespace-nowrap px-4 py-2.5">
           {account.archived ? (
-            <span className="text-xs text-ink-faint">tidak diurutkan</span>
+            <span className="text-footnote text-ink-faint">tidak diurutkan</span>
           ) : (
             <div className="flex gap-1">
               <MoveButton id={account.id} direction="up" name={account.name} disabled={first} />
@@ -188,7 +188,7 @@ function Row({
               type="button"
               onClick={onToggle}
               aria-expanded={open}
-              className="h-9 rounded-sm border border-line px-2.5 text-xs text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
+              className="h-9 rounded-sm border border-line px-2.5 text-footnote text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
             >
               {open ? 'Tutup' : 'Ubah'}
             </button>
@@ -225,16 +225,16 @@ function Card({
   return (
     <li className="p-3">
       <div className="flex items-baseline justify-between gap-3">
-        <span className="min-w-0 flex-1 text-sm text-ink">
+        <span className="min-w-0 flex-1 text-subhead text-ink">
           <AccountMark name={account.name} kind={account.kind} />
-          {account.archived ? <span className="ml-2 text-xs text-ink-faint">(arsip)</span> : null}
+          {account.archived ? <span className="ml-2 text-footnote text-ink-faint">(arsip)</span> : null}
         </span>
-        <span className="tnum shrink-0 font-mono text-sm text-ink-muted">
+        <span className="tnum shrink-0 font-mono text-subhead text-ink-muted">
           {formatIdr(BigInt(account.openingBalance))}
         </span>
       </div>
 
-      <p className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs text-ink-muted">
+      <p className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-footnote text-ink-muted">
         {account.key === '' ? (
           <span>tidak diimpor</span>
         ) : (
@@ -256,7 +256,7 @@ function Card({
           type="button"
           onClick={onToggle}
           aria-expanded={open}
-          className="h-11 flex-1 rounded-sm border border-line px-3 text-sm text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
+          className="h-11 flex-1 rounded-sm border border-line px-3 text-subhead text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
         >
           {open ? 'Tutup' : 'Ubah'}
         </button>
@@ -307,7 +307,7 @@ function MoveButton({
       {/* A refused reorder used to do nothing at all: the arrow moved no row
           and said no word. */}
       {result && !result.ok ? (
-        <span role="status" className="ml-2 text-xs text-over">
+        <span role="status" className="ml-2 text-footnote text-over">
           {result.message}
         </span>
       ) : null}
@@ -324,12 +324,12 @@ function ArchiveButton({ account }: { account: AccountView }) {
       <input type="hidden" name="archived" value={account.archived ? '0' : '1'} />
       <button
         type="submit"
-        className="h-9 rounded-sm border border-line px-2.5 text-xs text-ink-muted transition-colors duration-150 hover:border-line-strong hover:text-ink"
+        className="h-9 rounded-sm border border-line px-2.5 text-footnote text-ink-muted transition-colors duration-150 hover:border-line-strong hover:text-ink"
       >
         {account.archived ? 'Pakai lagi' : 'Arsipkan'}
       </button>
       {result ? (
-        <span role="status" className={`text-xs ${result.ok ? 'text-under' : 'text-over'}`}>
+        <span role="status" className={`text-footnote ${result.ok ? 'text-under' : 'text-over'}`}>
           {result.message}
         </span>
       ) : null}

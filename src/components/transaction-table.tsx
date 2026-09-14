@@ -76,7 +76,7 @@ export function TransactionTable({ rows, accounts, categories, caption, emptyTex
   if (rows.length === 0) {
     return (
       <div className="squircle rounded-md bg-surface shadow-xs p-6">
-        <p className="text-sm text-ink-muted">{emptyText}</p>
+        <p className="text-subhead text-ink-muted">{emptyText}</p>
       </div>
     )
   }
@@ -109,7 +109,7 @@ export function TransactionTable({ rows, accounts, categories, caption, emptyTex
                   <>
                     <Link
                       href={`/transaksi/${row.id}`}
-                      className="flex h-full min-w-20 items-center justify-center border-l border-line bg-sunken px-4 text-sm font-medium text-ink"
+                      className="flex h-full min-w-20 items-center justify-center border-l border-line bg-sunken px-4 text-subhead font-medium text-ink"
                     >
                       Ubah
                       <span className="sr-only"> {row.description}</span>
@@ -126,17 +126,17 @@ export function TransactionTable({ rows, accounts, categories, caption, emptyTex
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline justify-between gap-3">
-                      <span className="min-w-0 flex-1 truncate text-sm text-ink">
+                      <span className="min-w-0 flex-1 truncate text-subhead text-ink">
                         {row.description}
                       </span>
                       <SignedMoney
                         sen={row.amount}
                         direction={signedDirection(row.cashflow)}
-                        className="shrink-0 text-sm"
+                        className="shrink-0 text-subhead"
                       />
                     </div>
 
-                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-muted">
+                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-footnote text-ink-muted">
                       <span className="tnum">{formatJakarta(row.occurredAt, 'date')}</span>
                       <span aria-hidden="true" className="text-ink-faint">
                         ·
@@ -175,10 +175,10 @@ export function TransactionTable({ rows, accounts, categories, caption, emptyTex
         role="region"
         aria-label={`${caption}, bisa digeser ke samping`}
       >
-        <table className="w-full min-w-[42rem] text-sm">
+        <table className="w-full min-w-[42rem] text-subhead">
           <caption className="sr-only">{caption}</caption>
           <thead>
-            <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-faint">
+            <tr className="border-b border-line text-left text-caption1 uppercase tracking-wide text-ink-faint">
               <th scope="col" className="px-4 py-2.5 font-medium">
                 Waktu
               </th>
@@ -302,7 +302,7 @@ function Tag({
 }) {
   return (
     <span
-      className={`rounded-xs border px-1.5 py-0.5 text-xs text-ink-muted ${spaced ? 'ml-2' : ''} ${
+      className={`rounded-xs border px-1.5 py-0.5 text-caption2 text-ink-muted ${spaced ? 'ml-2' : ''} ${
         tone === 'warn' ? 'border-warn/40 bg-warn-wash' : 'border-line bg-sunken'
       }`}
     >
@@ -335,14 +335,14 @@ export function TablePager({
         <Link
           href={hrefFor(page - 1)}
           rel="prev"
-          className="inline-flex h-11 items-center rounded-sm border border-line px-3 text-sm text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
+          className="inline-flex h-11 items-center rounded-sm border border-line px-3 text-subhead text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
         >
           Sebelumnya
           <NavHint className="ml-1.5" />
         </Link>
       ) : null}
 
-      <p className="text-sm text-ink-muted">
+      <p className="text-subhead text-ink-muted">
         Halaman {page} dari {pages}
       </p>
 
@@ -350,7 +350,7 @@ export function TablePager({
         <Link
           href={hrefFor(page + 1)}
           rel="next"
-          className="inline-flex h-11 items-center rounded-sm border border-line px-3 text-sm text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
+          className="inline-flex h-11 items-center rounded-sm border border-line px-3 text-subhead text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
         >
           Berikutnya
           <NavHint className="ml-1.5" />

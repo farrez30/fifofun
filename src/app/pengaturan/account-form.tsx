@@ -152,7 +152,7 @@ export function AccountForm({ account }: { account?: AccountView }) {
             rows={3}
             className={`${CONTROL} h-auto py-2`}
           />
-          <p className="text-xs text-ink-muted">
+          <p className="text-footnote text-ink-muted">
             Dipakai saat impor untuk membedakan top-up ke dompetmu sendiri dari uang yang kamu
             kirim ke orang lain. Tanpa ini, semua top-up terhitung pengeluaran.
           </p>
@@ -160,7 +160,7 @@ export function AccountForm({ account }: { account?: AccountView }) {
       ) : null}
 
       {account ? (
-        <p className="text-xs text-ink-muted">
+        <p className="text-footnote text-ink-muted">
           Mengubah saldo awal menggeser saldo akun ini di semua bulan. Untuk dompet yang sudah
           berjalan, pakai Sesuaikan saldo di Ringkasan supaya selisihnya tercatat sebagai
           transaksi.
@@ -170,7 +170,7 @@ export function AccountForm({ account }: { account?: AccountView }) {
       <div className="flex flex-wrap items-center gap-3">
         <Submit label={account ? 'Simpan akun' : 'Tambah akun'} />
         {result ? (
-          <p role="status" className={`text-sm ${result.ok ? 'text-under' : 'text-over'}`}>
+          <p role="status" className={`text-subhead ${result.ok ? 'text-under' : 'text-over'}`}>
             {result.message}
             {result.detail ? <span className="text-ink-muted"> {result.detail}</span> : null}
           </p>

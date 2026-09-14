@@ -172,12 +172,12 @@ export function CategoryForm({ category, cashflow, siblings }: Props) {
       </div>
 
       <fieldset>
-        <legend className="text-sm font-medium text-ink">Ikon</legend>
+        <legend className="text-subhead font-medium text-ink">Ikon</legend>
         <div className="mt-2 flex flex-wrap gap-1">
           {/* An icon chosen by accident has to be removable, the same way the
               hue below has "Ikuti warna bawaan". */}
           <label
-            className={`inline-flex size-11 cursor-pointer items-center justify-center rounded-sm border text-xs transition-colors duration-150 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent ${
+            className={`inline-flex size-11 cursor-pointer items-center justify-center rounded-sm border text-footnote transition-colors duration-150 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent ${
               icon === ''
                 ? 'border-accent bg-accent-wash text-ink'
                 : 'border-line text-ink-muted hover:border-line-strong hover:bg-sunken'
@@ -227,7 +227,7 @@ export function CategoryForm({ category, cashflow, siblings }: Props) {
       </fieldset>
 
       <fieldset>
-        <legend className="text-sm font-medium text-ink">Warna</legend>
+        <legend className="text-subhead font-medium text-ink">Warna</legend>
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
           {PRESET_HUES.map((preset) => (
             <button
@@ -258,21 +258,21 @@ export function CategoryForm({ category, cashflow, siblings }: Props) {
           <button
             type="button"
             onClick={() => setHue('')}
-            className="h-9 rounded-sm border border-line px-2.5 text-xs text-ink-muted transition-colors duration-150 hover:border-line-strong hover:text-ink"
+            className="h-9 rounded-sm border border-line px-2.5 text-footnote text-ink-muted transition-colors duration-150 hover:border-line-strong hover:text-ink"
           >
             Ikuti warna bawaan
           </button>
         </div>
 
-        <p className="mt-2 flex items-center gap-2 text-sm text-ink">
-          <span className="text-xs text-ink-muted">Tampilnya:</span>
+        <p className="mt-2 flex items-center gap-2 text-subhead text-ink">
+          <span className="text-footnote text-ink-muted">Tampilnya:</span>
           <CategoryMark
             name={name || 'Kategori baru'}
             cashflow={flow}
             icon={icon || null}
             hue={hue === '' ? null : Number(hue)}
           />
-          <span className="text-xs text-ink-faint">
+          <span className="text-footnote text-ink-faint">
             {hue === ''
               ? `bawaan ${categoryHue({ name: name || 'Kategori baru', hue: null })} derajat`
               : `${hue} derajat`}
@@ -283,7 +283,7 @@ export function CategoryForm({ category, cashflow, siblings }: Props) {
       <div className="flex flex-wrap items-center gap-3">
         <Submit label={category ? 'Simpan kategori' : 'Tambah kategori'} />
         {result ? (
-          <p role="status" className={`text-sm ${result.ok ? 'text-under' : 'text-over'}`}>
+          <p role="status" className={`text-subhead ${result.ok ? 'text-under' : 'text-over'}`}>
             {result.message}
             {result.detail ? <span className="text-ink-muted"> {result.detail}</span> : null}
           </p>
