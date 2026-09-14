@@ -4,11 +4,11 @@ export function PlannerSkeleton() {
     <div className="space-y-8" role="status" aria-busy="true" aria-label="Menyiapkan simulasi">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="skeleton h-20 border border-line" />
+          <div key={i} className="skeleton squircle shadow-xs h-20" />
         ))}
       </div>
-      <div className="skeleton h-72 border border-line" />
-      <div className="skeleton h-96 border border-line" />
+      <div className="skeleton squircle shadow-xs h-72" />
+      <div className="skeleton squircle shadow-xs h-96" />
     </div>
   )
 }

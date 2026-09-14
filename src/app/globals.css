@@ -967,8 +967,14 @@
       collapses durations and leaves delays alone, so the debounce survives
       for every reader while the fade does not.
     */
+    /*
+      `--radius-md`, matching the grouped card every real page settled on
+      (`squircle rounded-md bg-surface shadow-xs`). A skeleton drawn at the
+      old `--radius-sm` with a hairline border read as the boxes this
+      restyle retired, not as the card it stands in for.
+    */
     background-color: var(--color-fill-tertiary);
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-md);
     position: relative;
     overflow: hidden;
     opacity: 0;

@@ -2,8 +2,8 @@
 export function BudgetSkeleton() {
   return (
     <div className="space-y-4" role="status" aria-busy="true" aria-label="Memuat anggaran">
-      <div className="skeleton h-12 border border-line" />
-      <div className="skeleton h-96 border border-line" />
+      <div className="skeleton squircle shadow-xs h-12" />
+      <div className="skeleton squircle shadow-xs h-96" />
     </div>
   )
 }

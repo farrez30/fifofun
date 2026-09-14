@@ -6,9 +6,9 @@
 export function EntryDetailSkeleton() {
   return (
     <div className="space-y-6" role="status" aria-busy="true" aria-label="Memuat transaksi">
-      <div className="skeleton h-28 border border-line" />
-      <div className="skeleton h-96 border border-line" />
-      <div className="skeleton h-24 border border-line" />
+      <div className="skeleton squircle shadow-xs h-28" />
+      <div className="skeleton squircle shadow-xs h-96" />
+      <div className="skeleton squircle shadow-xs h-24" />
     </div>
   )
 }
