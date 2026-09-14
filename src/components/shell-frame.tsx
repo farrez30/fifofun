@@ -62,6 +62,11 @@ function NavRow({
       <Link
         href={item.href}
         aria-current={active ? 'page' : undefined}
+        // Native tooltip, so the rail's icon-only states (forced between
+        // `sm` and `lg`, optional above it) still name themselves to a
+        // mouse. `sr-only` alone reaches a screen reader; it reaches nobody
+        // pointing at a glyph they cannot read.
+        title={item.label}
         className={`${SIDEBAR_ROW} ${active ? SIDEBAR_ROW_ON : SIDEBAR_ROW_OFF}`}
       >
         <item.glyph
@@ -113,6 +118,7 @@ export function ShellFrame({ title, current, lead, account, tabs, navHint, child
           <form action={toggleSidebar} className="hidden lg:block">
             <button
               type="submit"
+              title="Lipat atau bentangkan navigasi"
               className="flex size-11 shrink-0 items-center justify-center rounded-md text-ink-muted transition-colors duration-150 hover:bg-fill-quaternary active:bg-fill-tertiary"
             >
               <SidebarSimple aria-hidden="true" className="size-5" />
