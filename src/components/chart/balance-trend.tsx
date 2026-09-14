@@ -64,8 +64,8 @@ export function BalanceTrend({ series, caption }: Props) {
   if (!trend) {
     return (
       <figure className="squircle rounded-md bg-surface shadow-xs p-6">
-        <figcaption className="text-sm font-medium text-ink">{caption}</figcaption>
-        <p className="mt-2 text-sm text-ink-muted">
+        <figcaption className="text-subhead font-medium text-ink">{caption}</figcaption>
+        <p className="mt-2 text-subhead text-ink-muted">
           Perlu dua bulan tercatat sebelum ada arah yang bisa dibaca. Sekarang baru{' '}
           {series.length}.
         </p>
@@ -85,8 +85,8 @@ export function BalanceTrend({ series, caption }: Props) {
 
   return (
     <figure className="squircle rounded-md bg-surface shadow-xs p-4">
-      <figcaption className="mb-1 text-sm font-medium text-ink">{caption}</figcaption>
-      <p className="mb-4 text-xs text-ink-muted">
+      <figcaption className="mb-1 text-subhead font-medium text-ink">{caption}</figcaption>
+      <p className="mb-4 text-footnote text-ink-muted">
         {formatIdrCompact(latest.balance)} pada akhir {labelFor(latest, null)}, {WORDS[direction]}{' '}
         {direction === 'datar'
           ? `sejak ${labelFor(points[0], null)}`
@@ -194,14 +194,14 @@ export function BalanceTrend({ series, caption }: Props) {
       </div>
 
       {cropped ? (
-        <p className="mt-3 text-xs text-ink-muted">
+        <p className="mt-3 text-footnote text-ink-muted">
           Sumbu tegaknya mulai dari {formatIdrCompact(scale.bottom)}, bukan nol, supaya selisih
           antar bulan kelihatan. Karena itu digambar sebagai garis: panjang batang dari lantai yang
           bukan nol akan membesar-besarkan selisihnya.
         </p>
       ) : null}
 
-      <p className="mt-2 text-xs text-ink-faint">
+      <p className="mt-2 text-footnote text-ink-faint">
         Yang dihitung baru uang. Emas dan tanah belum bisa dicatat di app ini, jadi ini bukan
         kekayaan bersih.
       </p>

@@ -77,8 +77,8 @@ export function BudgetBullet({ review, caption, income }: Props) {
   if (lines.length === 0) {
     return (
       <figure className="squircle rounded-md bg-surface shadow-xs p-6">
-        <figcaption className="text-sm font-medium text-ink">{caption}</figcaption>
-        <p className="mt-2 text-sm text-ink-muted">Belum ada anggaran maupun pengeluaran bulan ini.</p>
+        <figcaption className="text-subhead font-medium text-ink">{caption}</figcaption>
+        <p className="mt-2 text-subhead text-ink-muted">Belum ada anggaran maupun pengeluaran bulan ini.</p>
       </figure>
     )
   }
@@ -97,15 +97,15 @@ export function BudgetBullet({ review, caption, income }: Props) {
   return (
     <figure className="squircle rounded-md bg-surface shadow-xs p-4">
       <figcaption className="mb-1 flex flex-wrap items-baseline justify-between gap-3">
-        <span className="text-sm font-medium text-ink">{caption}</span>
-        <span className="tnum font-mono text-xs text-ink-muted">
+        <span className="text-subhead font-medium text-ink">{caption}</span>
+        <span className="tnum font-mono text-footnote text-ink-muted">
           {formatIdrCompact(review.totalActual)}
           <span className="text-ink-faint"> dari {formatIdrCompact(review.totalBudget)}</span>
         </span>
       </figcaption>
 
       <div className="mb-4 space-y-2">
-        <p className="text-xs text-ink-muted">
+        <p className="text-footnote text-ink-muted">
           {review.source === 'derived'
             ? 'Pembandingnya median enam bulan terakhirmu, bukan angka yang kamu tetapkan sendiri. Tetapkan anggaranmu kapan saja untuk menggantinya.'
             : 'Pembandingnya anggaran yang kamu tetapkan sendiri.'}
@@ -123,7 +123,7 @@ export function BudgetBullet({ review, caption, income }: Props) {
       </ul>
 
       {quiet > 0 ? (
-        <p className="mt-4 border-t border-line pt-3 text-xs text-ink-faint">
+        <p className="mt-4 border-t border-line pt-3 text-footnote text-ink-faint">
           {quiet} kategori lewat sedikit tanpa ditandai. Selisih di bawah satu persen pengeluaran
           bulan ini tidak diberi tanda, supaya tanda yang ada tetap berarti.
         </p>
@@ -144,7 +144,7 @@ function FreeMoney({ income, allocated }: { income: bigint; allocated: bigint })
 
   if (free < 0n) {
     return (
-      <p className="border border-over/40 bg-over-wash px-3 py-2 text-xs text-ink">
+      <p className="border border-over/40 bg-over-wash px-3 py-2 text-footnote text-ink">
         <span aria-hidden="true" className="mr-1.5 text-over">
           ▲
         </span>
@@ -156,14 +156,14 @@ function FreeMoney({ income, allocated }: { income: bigint; allocated: bigint })
 
   if (free === 0n) {
     return (
-      <p className="text-xs text-ink-muted">
+      <p className="text-footnote text-ink-muted">
         Seluruh pemasukan bulan ini sudah ada posnya, tidak ada yang menganggur.
       </p>
     )
   }
 
   return (
-    <p className="text-xs text-ink-muted">
+    <p className="text-footnote text-ink-muted">
       <span className="tnum font-mono text-ink">{formatIdr(free)}</span> belum diberi pos apa pun
       bulan ini. Ini bukan sisa uang: sisa uang adalah yang selamat sampai akhir bulan, yang ini
       belum pernah ditugaskan sejak awal.
@@ -186,7 +186,7 @@ function Row({
 
   return (
     <li>
-      <div className="mb-1 flex items-baseline justify-between gap-3 text-sm">
+      <div className="mb-1 flex items-baseline justify-between gap-3 text-subhead">
         <span className="flex items-center gap-1.5 text-ink">
           {style.glyph ? (
             <span aria-hidden="true" className={style.text}>
@@ -195,7 +195,7 @@ function Row({
           ) : null}
           {line.category}
         </span>
-        <span className="tnum font-mono text-xs text-ink-muted">
+        <span className="tnum font-mono text-footnote text-ink-muted">
           {formatIdr(line.actual)}
           <span className="text-ink-faint">
             {' · '}

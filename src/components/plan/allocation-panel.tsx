@@ -62,16 +62,14 @@ export function AllocationPanel({
         />
 
         <div className="rounded-sm border border-line bg-sunken p-3">
-          <p className="text-xs font-medium uppercase tracking-wide text-ink-faint">
-            Saran untuk kondisimu
-          </p>
-          <p className="mt-1 text-sm font-medium text-ink">{recommendation.framework.name}</p>
-          <p className="mt-1 text-xs text-ink-muted">{recommendation.reason}</p>
+          <p className="text-footnote text-ink-faint">Saran untuk kondisimu</p>
+          <p className="mt-1 text-subhead font-medium text-ink">{recommendation.framework.name}</p>
+          <p className="mt-1 text-footnote text-ink-muted">{recommendation.reason}</p>
           {!isRecommended ? (
             <button
               type="button"
               onClick={() => onFrameworkChange(recommendation.framework.id)}
-              className="mt-2 text-xs text-accent underline underline-offset-2 hover:text-accent-strong"
+              className="mt-2 text-footnote text-accent underline underline-offset-2 hover:text-accent-strong"
             >
               Pakai yang ini
             </button>
@@ -81,7 +79,7 @@ export function AllocationPanel({
 
       <div className="squircle rounded-md bg-surface shadow-xs">
         {!allocation.framework.partition ? (
-          <p className="border-b border-line bg-warn-wash px-4 py-2.5 text-xs text-ink-muted">
+          <p className="border-b border-line bg-warn-wash px-4 py-2.5 text-footnote text-ink-muted">
             <span aria-hidden="true" className="mr-1.5 text-warn">
               ▲
             </span>
@@ -96,13 +94,13 @@ export function AllocationPanel({
             return (
               <li key={bucket.key} className="p-4">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <span className="text-sm font-medium text-ink">
+                  <span className="text-subhead font-medium text-ink">
                     {bucket.label}
                     <span className="ml-2 rounded-xs border border-line px-1.5 py-0.5 text-caption2 font-normal uppercase tracking-wide text-ink-muted">
                       {BOUND_LABEL[bucket.bound]}
                     </span>
                   </span>
-                  <span className="tnum font-mono text-sm text-ink">
+                  <span className="tnum font-mono text-subhead text-ink">
                     {formatIdr(bucket.amount)}
                     <span className="ml-2 text-ink-faint">{percent}%</span>
                   </span>
@@ -115,14 +113,14 @@ export function AllocationPanel({
                   />
                 </div>
 
-                <p className="mt-2 text-xs text-ink-muted">{bucket.rationale}</p>
+                <p className="mt-2 text-footnote text-ink-muted">{bucket.rationale}</p>
               </li>
             )
           })}
         </ul>
 
         {allocation.unallocated !== 0n ? (
-          <p className="border-t border-line px-4 py-2.5 text-xs text-ink-muted">
+          <p className="border-t border-line px-4 py-2.5 text-footnote text-ink-muted">
             Sisa pembulatan {formatIdr(allocation.unallocated)} tidak dialokasikan, supaya
             jumlah bagian selalu kembali persis ke penghasilan.
           </p>
@@ -142,7 +140,7 @@ export function AllocationPanel({
           confidence={allocation.framework.confidence}
         />
         {allocation.framework.caveat ? (
-          <p className="text-xs text-ink-muted">{allocation.framework.caveat}</p>
+          <p className="text-footnote text-ink-muted">{allocation.framework.caveat}</p>
         ) : null}
       </div>
     </div>

@@ -59,7 +59,7 @@ export function BalanceSwitch({ recorded, restated, note, dipped = false }: Prop
   return (
     <div>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-ink-muted">{note}</p>
+        <p className="text-footnote text-ink-muted">{note}</p>
 
         <div
           role="radiogroup"
@@ -89,7 +89,7 @@ export function BalanceSwitch({ recorded, restated, note, dipped = false }: Prop
       </div>
 
       {view === 'restated' ? (
-        <p className="mt-2 text-xs text-ink-muted">
+        <p className="mt-2 text-footnote text-ink-muted">
           Ini penyajian ulang, bukan catatan baru: tidak ada transaksi yang dipindah atau diubah.
           Tanggal aslinya memang tidak ada, tak satu pun rekening pernah melihatnya, jadi
           sebarannya mengikuti isi ulang tiap dompet per bulan. Bentuk garisnya jadi lebih jujur,

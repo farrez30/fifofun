@@ -182,13 +182,13 @@ export function Planner({ history, observedIncome, snapshot, currentYear, saved 
 
           {!stuck && derived.outliers.length > 0 ? (
             <div className="border border-warn/40 bg-warn-wash p-4">
-              <p className="text-sm font-medium text-ink">
+              <p className="text-subhead font-medium text-ink">
                 <span aria-hidden="true" className="mr-1.5 text-warn">
                   ▲
                 </span>
                 Bulan yang tidak normal, dan sengaja tidak dijadikan patokan
               </p>
-              <ul className="mt-2 space-y-1 text-sm text-ink-muted">
+              <ul className="mt-2 space-y-1 text-subhead text-ink-muted">
                 {derived.outliers.slice(0, 4).map((outlier) => (
                   <li key={`${outlier.category}-${outlier.month}`}>
                     {outlier.category} pada {outlier.month} mencapai{' '}
@@ -198,7 +198,7 @@ export function Planner({ history, observedIncome, snapshot, currentYear, saved 
                   </li>
                 ))}
               </ul>
-              <p className="mt-2 text-xs text-ink-muted">
+              <p className="mt-2 text-footnote text-ink-muted">
                 Patokan gaya hidup memakai median, bukan rata-rata. Satu belanja besar yang masuk
                 kategori sempit akan menaikkan rata-rata dan diam-diam mengesahkan pemborosan itu
                 sebagai kebiasaan.

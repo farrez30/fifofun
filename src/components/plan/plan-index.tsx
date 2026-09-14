@@ -57,7 +57,7 @@ export function PlanIndex({ sections }: { sections: PlanSection[] }) {
             <a
               href={`#${section.id}`}
               aria-current={current === section.id ? 'location' : undefined}
-              className={`inline-flex h-11 items-center gap-1.5 whitespace-nowrap rounded-sm px-2.5 text-xs transition-colors duration-150 sm:h-9 ${
+              className={`inline-flex h-11 items-center gap-1.5 whitespace-nowrap rounded-sm px-2.5 text-footnote transition-colors duration-150 sm:h-9 ${
                 current === section.id
                   ? 'bg-accent-wash text-ink'
                   : 'text-ink-muted hover:bg-sunken hover:text-ink'

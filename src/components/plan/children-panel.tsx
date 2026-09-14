@@ -124,7 +124,7 @@ export function ChildrenPanel({
       ) : null}
 
       {gaps.length > 0 ? (
-        <p className="text-sm text-ink-muted">
+        <p className="text-subhead text-ink-muted">
           Jarak saat ini {gaps.map((gap) => `${gap} tahun`).join(', ')}.{' '}
           {family.crunchYears.length === 0
             ? 'Tidak ada uang pangkal yang jatuh bersamaan.'
@@ -168,8 +168,8 @@ export function ChildrenPanel({
       ) : null}
 
       <div>
-        <h3 className="text-sm font-medium text-ink">Jarak antar anak</h3>
-        <p className="mt-1 max-w-2xl text-sm text-ink-muted">{recommendation.reason}</p>
+        <h3 className="text-subhead font-medium text-ink">Jarak antar anak</h3>
+        <p className="mt-1 max-w-2xl text-subhead text-ink-muted">{recommendation.reason}</p>
 
         {/* Cards below `sm`, the same split as the ledger. This is a table of
             verdicts, not a drawing, and it was being read one column at a time
@@ -184,7 +184,7 @@ export function ChildrenPanel({
             return (
               <li key={option.years} className={`px-3 py-2.5 ${chosen ? 'bg-accent-wash' : ''}`}>
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className="text-sm text-ink">
+                  <span className="text-subhead text-ink">
                     <span className="tnum font-mono">{option.years}</span> tahun
                     {chosen ? (
                       <span className="ml-2 text-caption2 uppercase tracking-wide text-accent">
@@ -199,7 +199,7 @@ export function ChildrenPanel({
                     {style.label}
                   </span>
                 </div>
-                <div className="mt-1 text-xs text-ink-muted">
+                <div className="mt-1 text-footnote text-ink-muted">
                   {option.collisions.length === 0 ? (
                     'Tidak ada tabrakan uang pangkal'
                   ) : (
@@ -233,12 +233,12 @@ export function ChildrenPanel({
           role="region"
           aria-label="Tabel jarak antar anak, bisa digeser ke samping"
         >
-          <table className="w-full text-sm">
+          <table className="w-full text-subhead">
             <caption className="sr-only">
               Penilaian setiap jarak kelahiran, dari sisi kesehatan dan biaya masuk sekolah
             </caption>
             <thead>
-              <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-faint">
+              <tr className="border-b border-line text-left text-caption1 uppercase tracking-wide text-ink-faint">
                 <th scope="col" className="px-4 py-2.5 font-medium">
                   Jarak
                 </th>
@@ -306,7 +306,7 @@ export function ChildrenPanel({
             confidence={CHILD_SPACING.healthMinimumYears.confidence}
             retrievedAt={CHILD_SPACING.healthMinimumYears.retrievedAt}
           />
-          <p className="text-xs text-ink-muted">
+          <p className="text-footnote text-ink-muted">
             Sisi kesehatan dikutip dari BKKBN, WHO dan USAID. Sisi biaya diturunkan di
             aplikasi ini dari usia masuk TK 4, SD 6, SMP 12, SMA 15 dan kuliah 18: sebuah
             jarak bertabrakan persis ketika ia sama dengan selisih dua usia itu.
@@ -336,13 +336,13 @@ function Figure({
 }) {
   return (
     <div className="squircle rounded-md bg-surface shadow-xs p-4">
-      <p className="text-xs font-medium uppercase tracking-wide text-ink-faint">{label}</p>
+      <p className="text-footnote text-ink-faint">{label}</p>
       <p
-        className={`mt-1.5 tnum font-mono text-ink ${emphasis ? 'text-2xl font-medium' : 'text-lg'}`}
+        className={`mt-1.5 tnum font-mono text-ink ${emphasis ? 'text-title2 font-semibold tracking-title2' : 'text-title3 tracking-title3'}`}
       >
         {value}
       </p>
-      {hint ? <p className="mt-1 text-xs text-ink-muted">{hint}</p> : null}
+      {hint ? <p className="mt-1 text-footnote text-ink-muted">{hint}</p> : null}
     </div>
   )
 }

@@ -57,8 +57,8 @@ export function Waterfall({ statement, caption }: Props) {
   if (steps.length === 2 && steps[0].total === 0n && steps[1].total === 0n) {
     return (
       <figure className="squircle rounded-md bg-surface shadow-xs p-6">
-        <figcaption className="text-sm font-medium text-ink">{caption}</figcaption>
-        <p className="mt-2 text-sm text-ink-muted">
+        <figcaption className="text-subhead font-medium text-ink">{caption}</figcaption>
+        <p className="mt-2 text-subhead text-ink-muted">
           Belum ada uang yang bergerak bulan ini, jadi tidak ada yang bisa diurutkan.
         </p>
       </figure>
@@ -74,8 +74,8 @@ export function Waterfall({ statement, caption }: Props) {
   return (
     <figure className="squircle rounded-md bg-surface shadow-xs p-4">
       <figcaption className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <span className="text-sm font-medium text-ink">{caption}</span>
-        <span className="text-xs text-ink-muted">
+        <span className="text-subhead font-medium text-ink">{caption}</span>
+        <span className="text-footnote text-ink-muted">
           {formatIdrCompact(opening.total)} menjadi {formatIdrCompact(closing.total)},{' '}
           {change === 0n
             ? 'tidak berubah'
@@ -130,7 +130,7 @@ export function Waterfall({ statement, caption }: Props) {
         ))}
       </ol>
 
-      <p className="mt-3 text-xs text-ink-muted">
+      <p className="mt-3 text-footnote text-ink-muted">
         Warnanya menandai jenis posnya, bukan baik atau buruknya. Uang yang masuk investasi tetap
         keluar dari saldo, sama seperti uang belanja, dan arah tiap langkah dibaca dari panah serta
         tandanya.
@@ -188,6 +188,14 @@ function Row({
 
   return (
     <li className={`${COLUMNS} items-center`}>
+      {/* Held at the Tailwind scale rather than the Dynamic Type roles the
+          rest of this file moved to: the label column is 104px below `sm`,
+          already the tightest budget in the app, and `charts.spec.ts`
+          ("fits a phone without hiding the amounts off the side") measures
+          it at 320px. `text-subhead`/`text-footnote` are one pixel taller
+          than `text-sm`/`text-xs` and that pixel was enough to clip a real
+          figure. Metric-identical `caption1`/`caption2` do not exist at 14px,
+          so this stays put rather than shrinking the type to fit. */}
       <div className="min-w-0 py-1">
         <p
           className={`truncate text-sm leading-5 ${anchor ? 'font-medium text-ink' : 'text-ink'}`}

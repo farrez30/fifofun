@@ -67,15 +67,15 @@ export function RatioPanel({ snapshot }: { snapshot: FinancialSnapshot }) {
     <div className="space-y-4">
       <div className="squircle rounded-md bg-surface shadow-xs p-4">
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-          <p className="text-sm font-medium text-ink">
+          <p className="text-subhead font-medium text-ink">
             {report.counts.danger > 0
               ? `${report.counts.danger} dari ${report.results.length} rasio ada di zona bahaya`
               : report.counts.warning > 0
                 ? `${report.counts.warning} dari ${report.results.length} rasio perlu diwaspadai`
                 : 'Kelima rasio ada di zona sehat'}
           </p>
-          <p className="text-xs text-ink-faint">
-            Skor <span className="tnum font-mono text-sm text-ink">{report.score}</span> dari 100
+          <p className="text-footnote text-ink-faint">
+            Skor <span className="tnum font-mono text-subhead text-ink">{report.score}</span> dari 100
           </p>
         </div>
 
@@ -115,7 +115,7 @@ export function RatioPanel({ snapshot }: { snapshot: FinancialSnapshot }) {
           })}
         </ul>
 
-        <p className="mt-3 text-xs text-ink-muted">
+        <p className="mt-3 text-footnote text-ink-muted">
           Skornya rata-rata lima rasio, dengan sehat bernilai 100, waspada 60, dan bahaya 20.
           Angka itu alat baca cepat, dan yang menentukan tindakan adalah baris di bawah.
         </p>
@@ -123,11 +123,9 @@ export function RatioPanel({ snapshot }: { snapshot: FinancialSnapshot }) {
 
       {report.weakest ? (
         <div className="squircle rounded-md bg-sunken p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-ink-faint">
-            Mulai dari sini
-          </p>
-          <p className="mt-1 text-sm font-medium text-ink">{report.weakest.threshold.label}</p>
-          <p className="mt-1 text-sm text-ink-muted">{report.weakest.advice}</p>
+          <p className="text-footnote text-ink-faint">Mulai dari sini</p>
+          <p className="mt-1 text-subhead font-medium text-ink">{report.weakest.threshold.label}</p>
+          <p className="mt-1 text-subhead text-ink-muted">{report.weakest.advice}</p>
         </div>
       ) : null}
 
@@ -137,9 +135,9 @@ export function RatioPanel({ snapshot }: { snapshot: FinancialSnapshot }) {
           return (
             <li key={result.threshold.id} id={`rasio-${result.threshold.id}`} className="scroll-mt-32 p-4">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <span className="text-sm font-medium text-ink">{result.threshold.label}</span>
+                <span className="text-subhead font-medium text-ink">{result.threshold.label}</span>
                 <span className="flex items-center gap-2">
-                  <span className="tnum font-mono text-sm text-ink">
+                  <span className="tnum font-mono text-subhead text-ink">
                     {/* A ratio with no denominator is unknown, not zero, and a
                         dash in a column of figures reads as zero. */}
                     {result.value === null ? (
@@ -159,10 +157,10 @@ export function RatioPanel({ snapshot }: { snapshot: FinancialSnapshot }) {
                 </span>
               </div>
 
-              <p className="mt-1.5 text-xs text-ink-muted">{result.reading}</p>
+              <p className="mt-1.5 text-footnote text-ink-muted">{result.reading}</p>
 
               {result.target ? (
-                <p className="mt-2 rounded-sm border border-line bg-sunken px-3 py-2 text-xs text-ink">
+                <p className="mt-2 rounded-sm border border-line bg-sunken px-3 py-2 text-footnote text-ink">
                   Untuk sampai sehat:{' '}
                   {result.target.direction === 'increase' ? 'tambah' : 'kurangi'}{' '}
                   <span className="tnum font-mono">{formatIdr(result.target.amount)}</span> pada{' '}
@@ -170,7 +168,7 @@ export function RatioPanel({ snapshot }: { snapshot: FinancialSnapshot }) {
                 </p>
               ) : null}
 
-              <p className="mt-2 text-[0.6875rem] text-ink-faint">
+              <p className="mt-2 text-caption2 text-ink-faint">
                 {result.threshold.formula} · ambang {display(result.threshold.healthy, result.threshold.unit)}
               </p>
             </li>
@@ -183,7 +181,7 @@ export function RatioPanel({ snapshot }: { snapshot: FinancialSnapshot }) {
         url="https://sikapiuangmu.ojk.go.id/"
         confidence="regulator"
       />
-      <p className="text-xs text-ink-muted">
+      <p className="text-footnote text-ink-muted">
         Standar rasio cicilan di Indonesia 30% datar. Aturan 28/36 yang beredar di internet
         berasal dari pasar KPR Amerika dan sengaja tidak dipakai di sini.
       </p>

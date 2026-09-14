@@ -75,14 +75,14 @@ export function SparkCard({ view }: { view: SparkView }) {
 
   return (
     <li className="squircle rounded-md bg-sunken p-3">
-      <p className="truncate text-sm text-ink" title={view.category}>
+      <p className="truncate text-subhead text-ink" title={view.category}>
         {view.category}
       </p>
-      <p className="tnum mt-0.5 font-mono text-sm text-ink">{view.latestAmount}</p>
+      <p className="tnum mt-0.5 font-mono text-subhead text-ink">{view.latestAmount}</p>
 
       {/* `role="status"` is already a polite live region; saying it twice is
           how a reader ends up hearing it twice. */}
-      <p className="tnum mt-1 text-xs text-ink-muted" role="status">
+      <p className="tnum mt-1 text-footnote text-ink-muted" role="status">
         {active ? (
           <>
             {active.label} · {active.amount}
@@ -154,7 +154,7 @@ export function SparkCard({ view }: { view: SparkView }) {
         })}
       </div>
 
-      <p className={`mt-1.5 text-xs ${view.tone}`}>
+      <p className={`mt-1.5 text-footnote ${view.tone}`}>
         {view.glyph ? (
           <span aria-hidden="true" className="mr-1">
             {view.glyph}

@@ -68,8 +68,8 @@ export function CategorySparks({ review, caption }: Props) {
   if (trends.length === 0) {
     return (
       <figure className="squircle rounded-md bg-surface shadow-xs p-6">
-        <figcaption className="text-sm font-medium text-ink">{caption}</figcaption>
-        <p className="mt-2 text-sm text-ink-muted">
+        <figcaption className="text-subhead font-medium text-ink">{caption}</figcaption>
+        <p className="mt-2 text-subhead text-ink-muted">
           Belum ada pengeluaran berkategori untuk dibandingkan antar bulan.
         </p>
       </figure>
@@ -81,13 +81,13 @@ export function CategorySparks({ review, caption }: Props) {
   return (
     <figure className="squircle rounded-md bg-surface shadow-xs p-4">
       <figcaption className="mb-1 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <span className="text-sm font-medium text-ink">{caption}</span>
-        <span className="text-xs text-ink-muted">
+        <span className="text-subhead font-medium text-ink">{caption}</span>
+        <span className="text-footnote text-ink-muted">
           {months.length} bulan, {trends.length} kategori terbesar
         </span>
       </figcaption>
 
-      <p className="mb-4 text-xs text-ink-muted">
+      <p className="mb-4 text-footnote text-ink-muted">
         {moving.length === 0
           ? 'Tidak ada kategori yang bulan ini jauh berbeda dari kebiasaannya.'
           : `${moving.length} kategori bulan ini jauh berbeda dari kebiasaannya: ${moving
@@ -105,7 +105,7 @@ export function CategorySparks({ review, caption }: Props) {
         /* Native disclosure rather than state: opening a list needs no
            JavaScript, and the cards inside are the same client islands. */
         <details className="mt-4 border-t border-line pt-3">
-          <summary className="cursor-pointer text-xs text-accent underline underline-offset-2">
+          <summary className="cursor-pointer text-footnote text-accent underline underline-offset-2">
             Tampilkan {omitted} kategori lain, bersama-sama {formatIdrCompact(omittedTotal)}{' '}
             sepanjang {months.length} bulan ini
           </summary>
@@ -117,7 +117,7 @@ export function CategorySparks({ review, caption }: Props) {
         </details>
       ) : null}
 
-      <p className="mt-3 text-xs text-ink-faint">
+      <p className="mt-3 text-footnote text-ink-faint">
         Arahkan kursor atau pakai tombol panah untuk membaca bulan tertentu. Garis putus-putus itu
         kebiasaan kategori ini, bukan anggaran.
       </p>

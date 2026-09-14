@@ -71,7 +71,7 @@ export function HouseholdInputs({
   )
 
   const status = (
-    <p role="status" className="text-xs text-ink-muted">
+    <p role="status" className="text-footnote text-ink-muted">
       {pending ? (
         'Menyimpan.'
       ) : result ? (
@@ -92,7 +92,7 @@ export function HouseholdInputs({
   if (variant === 'minimised') {
     return (
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <p className="text-xs text-ink">
+        <p className="text-footnote text-ink">
           <span className="tnum font-mono">{formatIdrCompact(income)}</span> per bulan ·{' '}
           {adults} dewasa · {childCount} anak
           {irregular ? ' · penghasilan tidak tetap' : ''}
@@ -101,7 +101,7 @@ export function HouseholdInputs({
         <button
           type="button"
           onClick={() => onVariantChange?.('compact')}
-          className="h-9 rounded-sm border border-line px-2.5 text-xs text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
+          className="h-9 rounded-sm border border-line px-2.5 text-footnote text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
         >
           Tampilkan
         </button>
@@ -141,7 +141,7 @@ export function HouseholdInputs({
         <button
           type="button"
           onClick={() => onVariantChange?.('minimised')}
-          className="h-10 rounded-sm border border-line px-2.5 text-xs text-ink-muted transition-colors duration-150 hover:border-line-strong hover:bg-sunken hover:text-ink"
+          className="h-10 rounded-sm border border-line px-2.5 text-footnote text-ink-muted transition-colors duration-150 hover:border-line-strong hover:bg-sunken hover:text-ink"
         >
           Kecilkan
         </button>
@@ -202,7 +202,7 @@ export function HouseholdInputs({
           <button
             type="button"
             onClick={() => onIncomeChange(observedIncome)}
-            className="h-11 rounded-sm border border-line px-3 text-sm text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
+            className="h-11 rounded-sm border border-line px-3 text-subhead text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
           >
             Pakai median
           </button>
@@ -229,7 +229,7 @@ function Stepper({
 }) {
   return (
     <div className="flex items-center gap-1.5">
-      <span aria-hidden="true" className="text-xs text-ink-muted">
+      <span aria-hidden="true" className="text-footnote text-ink-muted">
         {label}
       </span>
       <NumberField
@@ -262,7 +262,7 @@ function SaveButton({
       form={formId}
       disabled={pending}
       className={`shrink-0 rounded-sm border px-3 text-ink transition-colors duration-150 disabled:opacity-40 ${
-        compact ? 'h-10 text-xs' : 'h-11 text-sm'
+        compact ? 'h-10 text-footnote' : 'h-11 text-subhead'
       } ${dirty ? 'border-accent bg-accent-wash' : 'border-line-strong hover:bg-sunken'}`}
     >
       {pending ? 'Menyimpan' : 'Simpan rencana'}

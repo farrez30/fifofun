@@ -60,20 +60,20 @@ export function GoalsPanel({
   return (
     <div className="space-y-6">
       <div className="squircle rounded-md bg-surface shadow-xs p-4">
-        <h3 className="text-sm font-medium text-ink">Dana darurat</h3>
+        <h3 className="text-subhead font-medium text-ink">Dana darurat</h3>
         <div className="mt-3 flex flex-wrap items-baseline gap-x-6 gap-y-2">
-          <p className="tnum font-mono text-2xl font-medium text-ink">
+          <p className="tnum font-mono text-title2 font-semibold tracking-title2 text-ink">
             {formatIdr(emergency.amount)}
           </p>
-          <p className="text-sm text-ink-muted">
+          <p className="text-subhead text-ink-muted">
             {emergency.months} bulan pengeluaran · {emergency.rule}
           </p>
         </div>
-        <p className="mt-2 max-w-2xl text-sm text-ink-muted">{emergency.rationale}</p>
+        <p className="mt-2 max-w-2xl text-subhead text-ink-muted">{emergency.rationale}</p>
       </div>
 
       <div>
-        <h3 className="text-sm font-medium text-ink">Hitung tujuan apa pun</h3>
+        <h3 className="text-subhead font-medium text-ink">Hitung tujuan apa pun</h3>
         <div className="mt-3 grid gap-4 sm:grid-cols-3">
           <MoneyInput label="Target" value={target} onChange={onTargetChange} />
           <NumberField
@@ -120,12 +120,12 @@ export function GoalsPanel({
         </div>
 
         <div className="mt-3 squircle rounded-md bg-sunken p-4">
-          <p className="text-sm text-ink">
+          <p className="text-subhead text-ink">
             <span className="font-medium">{instrument.instrument.label}</span> untuk jangka{' '}
             {years} tahun.
           </p>
-          <p className="mt-1 text-sm text-ink-muted">{instrument.rationale}</p>
-          <p className="mt-2 text-xs text-ink-faint">
+          <p className="mt-1 text-subhead text-ink-muted">{instrument.rationale}</p>
+          <p className="mt-2 text-footnote text-ink-faint">
             Rentang wajarnya {(instrument.instrument.min * 100).toFixed(1).replace('.', ',')}%
             sampai {(instrument.instrument.max * 100).toFixed(1).replace('.', ',')}% per tahun.
             Angka dasar dipakai untuk proyeksi, bukan janji.
@@ -142,8 +142,8 @@ export function GoalsPanel({
       </div>
 
       <div>
-        <h3 className="text-sm font-medium text-ink">Haji</h3>
-        <p className="mt-1 max-w-2xl text-sm text-ink-muted">
+        <h3 className="text-subhead font-medium text-ink">Haji</h3>
+        <p className="mt-1 max-w-2xl text-subhead text-ink-muted">
           Haji bukan satu pembayaran besar, melainkan dua yang terpisah puluhan tahun. Setoran
           awal membeli nomor antrean; pelunasannya baru jatuh tempo ketika tahun
           keberangkatan tiba. Kebanyakan kalkulator menganggapnya satu angka, dan itu
@@ -197,7 +197,7 @@ export function GoalsPanel({
           />
         </ol>
 
-        <p className="mt-3 border border-line bg-accent-wash p-4 text-sm text-ink">
+        <p className="mt-3 border border-line bg-accent-wash p-4 text-subhead text-ink">
           {hajj.insight}
         </p>
 
@@ -229,16 +229,16 @@ function Step({
     <li className="flex gap-3 squircle rounded-md bg-surface shadow-xs p-4">
       <span
         aria-hidden="true"
-        className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-line text-xs tnum font-mono text-ink-muted"
+        className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-line text-caption1 tnum font-mono text-ink-muted"
       >
         {index}
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <p className="text-sm font-medium text-ink">{title}</p>
-          <p className="tnum font-mono text-sm text-ink">{amount}</p>
+          <p className="text-subhead font-medium text-ink">{title}</p>
+          <p className="tnum font-mono text-subhead text-ink">{amount}</p>
         </div>
-        <p className="mt-1 text-xs text-ink-muted">{detail}</p>
+        <p className="mt-1 text-footnote text-ink-muted">{detail}</p>
       </div>
     </li>
   )
@@ -257,13 +257,13 @@ function Figure({
 }) {
   return (
     <div className="squircle rounded-md bg-surface shadow-xs p-4">
-      <p className="text-xs font-medium uppercase tracking-wide text-ink-faint">{label}</p>
+      <p className="text-footnote text-ink-faint">{label}</p>
       <p
-        className={`mt-1.5 tnum font-mono text-ink ${emphasis ? 'text-xl font-medium' : 'text-lg'}`}
+        className={`mt-1.5 tnum font-mono text-ink ${emphasis ? 'text-title2 font-semibold tracking-title2' : 'text-title3 tracking-title3'}`}
       >
         {value}
       </p>
-      {hint ? <p className="mt-1 text-xs text-ink-muted">{hint}</p> : null}
+      {hint ? <p className="mt-1 text-footnote text-ink-muted">{hint}</p> : null}
     </div>
   )
 }

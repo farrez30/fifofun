@@ -96,14 +96,14 @@ export function GapPanel({
       >
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-ink-faint">
+            <p className="text-footnote text-ink-faint">
               {gap.closed ? 'Rencana ini sudah muat' : 'Kurang tiap bulan'}
             </p>
-            <p className="mt-1 tnum font-mono text-3xl font-medium text-ink">
+            <p className="mt-1 tnum font-mono text-title1 font-semibold tracking-title1 text-ink">
               {formatIdr(gap.closed ? gap.surplus : gap.monthlyGap)}
             </p>
           </div>
-          <p className="max-w-sm text-sm text-ink-muted">
+          <p className="max-w-sm text-subhead text-ink-muted">
             Rencana ini butuh{' '}
             <span className="tnum font-mono text-ink">{formatIdr(gap.required)}</span> per bulan,
             penghasilan sekarang{' '}
@@ -113,7 +113,7 @@ export function GapPanel({
       </div>
 
       {gap.closed ? (
-        <p className="text-sm text-ink-muted">
+        <p className="text-subhead text-ink-muted">
           Sisanya bisa dipercepat ke tujuan yang paling lama antreannya, bukan disimpan di
           rekening harian.
         </p>
@@ -146,16 +146,14 @@ export function GapPanel({
           </div>
 
           <div className="squircle rounded-md bg-sunken p-4">
-            <p className="text-xs font-medium uppercase tracking-wide text-ink-faint">
-              Kalau tidak melakukan apa-apa
-            </p>
-            <p className="mt-1 text-sm text-ink">{closing.reason}</p>
+            <p className="text-footnote text-ink-faint">Kalau tidak melakukan apa-apa</p>
+            <p className="mt-1 text-subhead text-ink">{closing.reason}</p>
           </div>
 
           {cuts.candidates.length > 0 ? (
             <div>
-              <h3 className="text-sm font-medium text-ink">Dari mana potongannya</h3>
-              <p className="mt-1 text-sm text-ink-muted">
+              <h3 className="text-subhead font-medium text-ink">Dari mana potongannya</h3>
+              <p className="mt-1 text-footnote text-ink-muted">
                 Diurutkan menurut besarnya sumbangan, bukan menurut mana yang paling mudah
                 dilepas. Langganan Rp200.000 tidak akan menutup kekurangan jutaan, dan
                 membatalkannya hanya memberi rasa sudah bertindak.
@@ -164,10 +162,10 @@ export function GapPanel({
                 {cuts.candidates.slice(0, 8).map((candidate) => (
                   <li
                     key={candidate.category}
-                    className="flex flex-wrap items-baseline justify-between gap-2 px-4 py-2.5 text-sm"
+                    className="flex flex-wrap items-baseline justify-between gap-2 px-4 py-2.5 text-subhead"
                   >
                     <span className="text-ink">{candidate.category}</span>
-                    <span className="tnum font-mono text-xs text-ink-muted">
+                    <span className="tnum font-mono text-footnote text-ink-muted">
                       {formatIdr(candidate.current)} → {formatIdr(candidate.target)}
                       <span className="ml-2 text-ink">
                         hemat {formatIdr(candidate.saves)}
@@ -180,7 +178,7 @@ export function GapPanel({
                 ))}
               </ul>
               {!cuts.enough ? (
-                <p className="mt-2 text-xs text-ink-muted">
+                <p className="mt-2 text-footnote text-ink-muted">
                   <span aria-hidden="true" className="mr-1 text-warn">
                     ▲
                   </span>
@@ -194,15 +192,15 @@ export function GapPanel({
       )}
 
       <div>
-        <h3 className="text-sm font-medium text-ink">Selisih dengan gaya hidup sekarang</h3>
+        <h3 className="text-subhead font-medium text-ink">Selisih dengan gaya hidup sekarang</h3>
         <ul className="mt-3 rows-inset squircle rounded-md bg-surface shadow-xs">
           {comparison.deltas.slice(0, 8).map((delta) => (
             <li
               key={delta.category}
-              className="flex flex-wrap items-baseline justify-between gap-2 px-4 py-2.5 text-sm"
+              className="flex flex-wrap items-baseline justify-between gap-2 px-4 py-2.5 text-subhead"
             >
               <span className="text-ink">{delta.category}</span>
-              <span className="tnum font-mono text-xs">
+              <span className="tnum font-mono text-footnote">
                 <span className="text-ink-muted">
                   {formatIdr(delta.current)} → {formatIdr(delta.target)}
                 </span>
@@ -218,8 +216,8 @@ export function GapPanel({
 
       {adults >= 2 ? (
         <div className="squircle rounded-md bg-surface shadow-xs p-4">
-          <h3 className="text-sm font-medium text-ink">Kalau berdua, bukan sendiri</h3>
-          <p className="mt-1 text-sm text-ink-muted">
+          <h3 className="text-subhead font-medium text-ink">Kalau berdua, bukan sendiri</h3>
+          <p className="mt-1 text-subhead text-ink-muted">
             Dua orang tinggal bersama tidak menghabiskan dua kali biaya satu orang. Sewa,
             listrik dan internet dipakai berdua. Skala ekuivalensi OECD menaruhnya di sekitar
             1,5 kali, jadi menikah menghemat sekitar seperempat dibanding hidup terpisah.
@@ -261,13 +259,13 @@ function Route({
   return (
     <div className={`border p-4 ${warn ? 'border-warn/40 bg-warn-wash' : 'border-line bg-surface'}`}>
       <div className="flex items-baseline justify-between gap-2">
-        <p className="text-sm font-medium text-ink">{title}</p>
+        <p className="text-subhead font-medium text-ink">{title}</p>
         <span className="rounded-xs border border-line px-1.5 py-0.5 text-caption2 uppercase tracking-wide text-ink-muted">
           {badge}
         </span>
       </div>
-      <p className="mt-2 tnum font-mono text-lg text-ink">{amount}</p>
-      <p className="mt-2 text-xs text-ink-muted">{reason}</p>
+      <p className="mt-2 tnum font-mono text-title3 tracking-title3 text-ink">{amount}</p>
+      <p className="mt-2 text-footnote text-ink-muted">{reason}</p>
     </div>
   )
 }
@@ -283,9 +281,9 @@ function Pair({
 }) {
   return (
     <div>
-      <dt className="text-xs uppercase tracking-wide text-ink-faint">{label}</dt>
+      <dt className="text-footnote text-ink-faint">{label}</dt>
       <dd
-        className={`mt-1 tnum font-mono text-ink ${emphasis ? 'text-base font-medium' : 'text-sm'}`}
+        className={`mt-1 tnum font-mono text-ink ${emphasis ? 'text-callout font-medium' : 'text-subhead'}`}
       >
         {value}
       </dd>

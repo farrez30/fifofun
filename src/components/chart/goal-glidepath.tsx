@@ -93,12 +93,12 @@ export function GoalGlidepath({
     const surplus = startingBalance - target
     return (
       <figure className="squircle rounded-md bg-surface shadow-xs p-4">
-        <figcaption className="text-sm font-medium text-ink">{caption}</figcaption>
-        <p className="mt-2 text-sm text-ink-muted">
+        <figcaption className="text-subhead font-medium text-ink">{caption}</figcaption>
+        <p className="mt-2 text-subhead text-ink-muted">
           <Verdict path={path} />
         </p>
         {surplus > 0n ? (
-          <p className="mt-1 text-sm text-ink-muted">
+          <p className="mt-1 text-subhead text-ink-muted">
             Kelebihannya {formatIdr(surplus)}. Itu uang menganggur terhadap tujuan ini, dan
             lebih berguna dipindahkan ke tujuan berikutnya.
           </p>
@@ -170,8 +170,8 @@ export function GoalGlidepath({
 
   return (
     <figure className="squircle rounded-md bg-surface shadow-xs p-4">
-      <figcaption className="mb-1 text-sm font-medium text-ink">{caption}</figcaption>
-      <p className="mb-4 text-xs text-ink-muted">
+      <figcaption className="mb-1 text-subhead font-medium text-ink">{caption}</figcaption>
+      <p className="mb-4 text-footnote text-ink-muted">
         <Verdict path={path} />
       </p>
 
@@ -332,13 +332,13 @@ export function GoalGlidepath({
       </div>
 
       {onYearsChange ? (
-        <p className="mt-1 text-xs text-ink-muted">
+        <p className="mt-1 text-footnote text-ink-muted">
           Seret penanda tahunnya, atau pilih lalu pakai tombol panah. Setoran bulanannya ikut
           berubah, dan begitu juga bagian yang tidak perlu kamu setorkan sendiri.
         </p>
       ) : null}
 
-      <p className="mt-3 border-t border-line pt-3 text-xs text-ink-faint">
+      <p className="mt-3 border-t border-line pt-3 text-footnote text-ink-faint">
         Imbal hasil {(annualRate * 100).toFixed(1).replace('.', ',')}% per tahun dipakai rata
         sepanjang jangka. Pasar tidak bergerak begitu. Ini proyeksi, bukan janji, dan tahun buruk
         yang jatuh dekat tenggat jauh lebih menyakitkan daripada yang jatuh di awal.
