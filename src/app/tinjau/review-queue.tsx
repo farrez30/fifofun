@@ -5,20 +5,23 @@ import { useFormStatus } from 'react-dom'
 import { AccountMark, CashflowChip, DirectionMark } from '@/components/marks'
 import { SignedMoney } from '@/components/money'
 import { formatJakarta, formatMonthKey } from '@/lib/datetime'
-import { formatIdr, formatIdrCompact } from '@/lib/money'
+import { formatIdrCompact } from '@/lib/money'
 import {
   DIRECTION_LABELS,
   directionOf,
   signedDirection,
   type Direction,
 } from '@/lib/ledger/direction'
+import { monthKeyOf, monthKeyToString } from '@/lib/ledger/monthly'
 import { MATCH_LABELS, type MatchType, type ReviewGroup } from '@/lib/ledger/rules'
 import { optionGroups } from '@/lib/ledger/settings'
 import type { CashflowType } from '@/lib/ledger/types'
 import type { UnconfirmedRow } from '@/lib/queries/household'
-import type { QueueOptions } from './query'
+import { queueHref, type QueueOptions } from './query'
 import { applyCategory, categoriseOne, type ActionResult } from './actions'
 import { subtractSettled } from './optimistic'
+import type { QueueSummary } from './summary'
+import { CaretDown } from '@phosphor-icons/react/dist/ssr/CaretDown'
 import { ListChecks } from '@phosphor-icons/react/dist/ssr/ListChecks'
 import { Unavailable } from '@/components/unavailable'
 
@@ -62,7 +65,7 @@ interface Props {
   categories: CategoryOption[]
   accounts: AccountOption[]
   /** Everything still waiting, so progress is a fraction rather than a feeling. */
-  remaining: { count: number; total: bigint }
+  remaining: QueueSummary
   options: QueueOptions
 }
 
@@ -95,19 +98,57 @@ export function ReviewQueue({ groups, categories, accounts, remaining, options }
   const incoming = groups.length - out
   const byName = new Map(accounts.map((account) => [account.id, account]))
 
+  const rangeLabel = shown.range
+    ? shown.range.from === shown.range.to
+      ? formatMonthKey(shown.range.from)
+      : `${formatMonthKey(shown.range.from)} sampai ${formatMonthKey(shown.range.to)}`
+    : null
+
   return (
     <div className="space-y-5">
       <div className="squircle rounded-md bg-sunken p-4">
         <p className="text-sm text-ink">
-          <span className="tnum font-mono">{shown.count}</span> transaksi menunggu, senilai{' '}
-          <span className="tnum font-mono">{formatIdr(shown.total)}</span>.
+          <span className="tnum font-mono">{shown.count}</span> transaksi menunggu
+          {rangeLabel ? `, ${rangeLabel}` : ''}.
         </p>
-        <p className="mt-1 text-sm text-ink-muted">
+
+        <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1">
+          <div>
+            <dt className="text-xs uppercase tracking-wide text-ink-faint">Menunggu keluar</dt>
+            <dd className="text-sm text-ink">
+              <SignedMoney sen={shown.out.total} direction="out" />
+              <span className="ml-1 text-ink-faint">({shown.out.count})</span>
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs uppercase tracking-wide text-ink-faint">Menunggu masuk</dt>
+            <dd className="text-sm text-ink">
+              <SignedMoney sen={shown.in.total} direction="in" />
+              <span className="ml-1 text-ink-faint">({shown.in.count})</span>
+            </dd>
+          </div>
+        </dl>
+
+        <p className="mt-2 text-sm text-ink-muted">
           Terkumpul jadi {groups.length} kelompok: {out} keluar, {incoming} masuk.
           {options.kelompok === 'lawan'
             ? ` Sepuluh teratas saja sudah mencakup ${formatIdrCompact(covered)}.`
             : ''}
         </p>
+
+        {shown.unseen > 0 ? (
+          <p className="mt-1 text-sm text-ink-muted">
+            {shown.unseen} transaksi lain tidak punya lawan yang bisa dikelompokkan, dan hanya
+            terlihat kalau dikelompokkan{' '}
+            <a
+              href={queueHref({ ...options, kelompok: 'bulan' })}
+              className="text-accent underline underline-offset-2"
+            >
+              per bulan
+            </a>
+            .
+          </p>
+        ) : null}
       </div>
 
       <ul className="space-y-2">
@@ -132,15 +173,9 @@ export function ReviewQueue({ groups, categories, accounts, remaining, options }
 
 /** The months a group spans, said once rather than per row. */
 function spanOf(group: ReviewGroup<UnconfirmedRow>): string {
-  const from = formatMonthKey(monthOf(group.firstAt))
-  const to = formatMonthKey(monthOf(group.lastAt))
+  const from = formatMonthKey(monthKeyToString(monthKeyOf(group.firstAt)))
+  const to = formatMonthKey(monthKeyToString(monthKeyOf(group.lastAt)))
   return from === to ? from : `${from} sampai ${to}`
-}
-
-function monthOf(date: Date): string {
-  // Jakarta is a fixed offset, so this is the same month the grouper used.
-  const shifted = new Date(date.getTime() + 7 * 60 * 60 * 1000)
-  return `${shifted.getUTCFullYear()}-${String(shifted.getUTCMonth() + 1).padStart(2, '0')}`
 }
 
 function GroupCard({
@@ -165,6 +200,19 @@ function GroupCard({
   const [result, action] = useActionState<ActionResult | null, FormData>(applyCategory, null)
   const [pattern, setPattern] = useState(group.pattern)
   const [matchType, setMatchType] = useState<MatchType>(group.matchType)
+
+  /*
+    Ids settled one at a time through the panel below, lifted up here rather
+    than kept inside it: the count on "Terapkan ke N" and the sentence above
+    the form both need to know how many are already spoken for before either
+    is rendered. The server never needs this list — `applyCategory` reads
+    `getUnconfirmed` fresh, so a row saved on its own has already left the
+    set a pattern match can reach.
+  */
+  const [settledSingles, markSettledSingle] = useOptimistic<string[], string>(
+    [],
+    (ids, id) => [...ids, id],
+  )
 
   const headingId = `grup-${index}`
   const allowed = categories.filter(
@@ -260,6 +308,14 @@ function GroupCard({
             </ul>
           </div>
 
+          {settledSingles.length > 0 ? (
+            <p className="mb-3 text-sm text-ink-muted">
+              {group.kind === 'counterparty'
+                ? `${settledSingles.length} sudah kamu atur sendiri, ${Math.max(0, group.count - settledSingles.length)} sisanya ikut pilihan di atas.`
+                : `${settledSingles.length} sudah kamu atur sendiri.`}
+            </p>
+          ) : null}
+
           {group.kind === 'counterparty' ? (
             <form action={settleAction} className="space-y-3">
               <input type="hidden" name="pattern" value={pattern} />
@@ -274,7 +330,7 @@ function GroupCard({
                 />
 
                 <div className="flex items-end">
-                  <Submit count={group.count} />
+                  <Submit count={Math.max(0, group.count - settledSingles.length)} />
                 </div>
               </div>
 
@@ -336,7 +392,13 @@ function GroupCard({
             </p>
           )}
 
-          <SingleRows entries={group.entries} categories={allowed} accounts={accounts} />
+          <SingleRows
+            entries={group.entries}
+            categories={allowed}
+            accounts={accounts}
+            settled={settledSingles}
+            onSettleOne={markSettledSingle}
+          />
         </div>
       ) : null}
     </div>
@@ -430,27 +492,40 @@ function Submit({ count }: { count: number }) {
 
 /**
  * The escape hatch for a row that does not belong with the rest of its group.
- * Collapsed by default: needing it is the exception, and showing eighty rows by
- * default would undo the point of grouping them.
+ *
+ * Open by default for a small group, where checking each row costs nothing;
+ * closed for a large one, where needing it is the exception. Either way every
+ * row is here: a count that promises more than the list shows is the bug this
+ * replaced, and a scrollable list is a smaller cost than a silent gap.
  */
 function SingleRows({
   entries,
   categories,
   accounts,
+  settled,
+  onSettleOne,
 }: {
   entries: UnconfirmedRow[]
   categories: CategoryOption[]
   accounts: Map<string, AccountOption>
+  /** Ids saved one at a time so far, lifted to the group card above. */
+  settled: readonly string[]
+  onSettleOne: (id: string) => void
 }) {
   const [result, action] = useActionState<ActionResult | null, FormData>(categoriseOne, null)
 
-  /* Same shape as the group mark above: ids in flight, base always empty. */
-  const [settled, markSettled] = useOptimistic<string[], string>([], (ids, id) => [...ids, id])
-
   return (
-    <details className="mt-4 border-t border-line pt-3 text-sm" open={categories.length === 0}>
-      <summary className="cursor-pointer text-ink-muted">
-        Atur satu per satu ({entries.length} transaksi)
+    <details
+      className="group mt-4 border-t border-line pt-3 text-sm"
+      open={categories.length === 0 || entries.length <= 8}
+    >
+      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 text-ink [&::-webkit-details-marker]:hidden">
+        <span>Pilih pos per transaksi ({entries.length})</span>
+        <CaretDown
+          aria-hidden="true"
+          weight="bold"
+          className="size-4 shrink-0 text-ink-faint transition-transform duration-150 group-open:rotate-180"
+        />
       </summary>
 
       {result ? (
@@ -461,7 +536,7 @@ function SingleRows({
       ) : null}
 
       <ul className="mt-2 space-y-2">
-        {entries.slice(0, 25).map((entry) => {
+        {entries.map((entry) => {
           const account = accounts.get(entry.fromAccountId ?? entry.toAccountId ?? '')
           if (settled.includes(entry.id)) {
             return (
@@ -473,7 +548,7 @@ function SingleRows({
             )
           }
           const settleOne = (formData: FormData) => {
-            markSettled(entry.id)
+            onSettleOne(entry.id)
             action(formData)
           }
           return (
@@ -530,12 +605,6 @@ function SingleRows({
           )
         })}
       </ul>
-
-      {entries.length > 25 ? (
-        <p className="mt-2 text-xs text-ink-faint">
-          Menampilkan 25 dari {entries.length}. Sisanya muncul setelah yang ini diselesaikan.
-        </p>
-      ) : null}
     </details>
   )
 }

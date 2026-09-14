@@ -48,10 +48,10 @@ test.describe('antrean tinjau', () => {
     const opened = page.locator('[aria-expanded="true"]')
     await expect(opened).toHaveCount(1)
 
+    // A small group opens its per-row panel by default: checking each of a
+    // handful of rows costs nothing, so there is nothing to click open.
     const body = page.locator('[id$="-isi"]').first()
-    // The per-row list is collapsed by default, because needing it is the
-    // exception; opening it is what somebody does to check one row.
-    await body.locator('summary', { hasText: 'Atur satu per satu' }).click()
+    await expect(body.locator('details').last()).toHaveJSProperty('open', true)
 
     // Date and time to the second, the way the statement writes it.
     await expect(body).toContainText(/\d{2} \w{3} \d{4} \d{2}:\d{2}:\d{2}/)
@@ -60,6 +60,31 @@ test.describe('antrean tinjau', () => {
 
     const header = await page.locator('button[aria-expanded]').first().innerText()
     expect(header).toMatch(/\d+ transaksi · /)
+  })
+
+  test('never truncates the per-row list, however large the group', async ({ page }) => {
+    await open(page, 'review-queue-panjang')
+
+    // Thirty rows past the point this used to slice at 25: the count in the
+    // disclosure and the rows actually in the DOM have to agree, and nothing
+    // says "menampilkan N dari" anywhere.
+    const panel = page.locator('[id$="-isi"]').first()
+    const singleRows = panel.locator('details').last()
+    await expect(singleRows.locator('summary')).toContainText('Pilih pos per transaksi (30)')
+    await expect(singleRows.locator('ul > li')).toHaveCount(30)
+    await expect(page.getByText(/Menampilkan \d+ dari/)).toHaveCount(0)
+
+    // Large groups start closed, the mirror image of the small one above.
+    await expect(singleRows).toHaveJSProperty('open', false)
+  })
+
+  test('keeps the per-row disclosure a real target on a phone', async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 780 })
+    await open(page, 'review-queue-panjang')
+
+    const disclosure = page.locator('[id$="-isi"] summary:has-text("Pilih pos per transaksi")').first()
+    const box = await disclosure.boundingBox()
+    expect(box?.height).toBeGreaterThanOrEqual(44)
   })
 
   test('offers only the categories that can actually be saved', async ({ page }) => {
@@ -87,6 +112,20 @@ test.describe('antrean tinjau', () => {
     // One group takes money out, the other brings it back.
     expect(anis.some((text) => text.startsWith('-') || text.includes('−'))).toBe(true)
     expect(anis.some((text) => text.includes('+'))).toBe(true)
+  })
+
+  test('splits the headline into two signed totals and names the month span', async ({ page }) => {
+    await open(page, 'review-queue')
+
+    // The old headline summed both directions into one number and never said
+    // what period it covered. Now it is two figures, never one, plus the
+    // span the shown groups actually reach.
+    const headline = page.locator('.squircle.bg-sunken').first()
+    await expect(headline).toContainText('Mei 2026 sampai Agu 2026')
+    await expect(headline.getByText('Menunggu keluar')).toBeVisible()
+    await expect(headline.getByText('Menunggu masuk')).toBeVisible()
+    await expect(headline.locator('dd', { hasText: '−' })).toHaveCount(1)
+    await expect(headline.locator('dd', { hasText: '+' })).toHaveCount(1)
   })
 
   test('reads by month when asked, newest first', async ({ page }) => {

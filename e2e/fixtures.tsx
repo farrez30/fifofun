@@ -61,6 +61,8 @@ import { CategoriesPanel, type CategoryView } from '@/app/pengaturan/categories-
 import { CategoryForm } from '@/app/pengaturan/category-form'
 import { QueueControls } from '@/app/tinjau/queue-controls'
 import { ReviewQueue } from '@/app/tinjau/review-queue'
+import { ImportForm } from '@/app/impor/import-form'
+import type { ImportReport } from '@/app/impor/actions'
 import { EntryForm } from '@/app/catat/entry-form'
 import { AdjustBalanceForm, type BalanceRow } from '@/app/catat/adjust-balance'
 import { DuplicatesPanel } from '@/app/catat/duplicates-panel'
@@ -72,6 +74,7 @@ import type { AccountMovement } from '@/lib/ledger/monthly'
 import { categoryHue } from '@/lib/ledger/palette'
 import { formatIdr } from '@/lib/money'
 import { groupBySuggestion } from '@/lib/ledger/rules'
+import { summariseQueue } from '@/app/tinjau/summary'
 import type { UnconfirmedRow } from '@/lib/queries/household'
 import { ACCOUNT_KINDS, CASHFLOW_TYPES } from '@/lib/ledger/types'
 import { ACCOUNT_KIND_LABELS, DIRECTION_LABELS, type Direction } from '@/lib/ledger/direction'
@@ -1056,10 +1059,28 @@ const QUEUE_ROWS: UnconfirmedRow[] = [
   queueRow('INDOMARET AEROPOLIS', idr('126.500,00'), 'spending', '2026-08-01T06:00:00.000Z', 'acc-mandiri'),
 ]
 
-const QUEUE_REMAINING = {
-  count: QUEUE_ROWS.length,
-  total: QUEUE_ROWS.reduce((sum, entry) => sum + entry.amount, 0n),
-}
+const QUEUE_GROUPS = groupBySuggestion(QUEUE_ROWS)
+const QUEUE_REMAINING = summariseQueue(QUEUE_ROWS.length, QUEUE_GROUPS)
+
+/*
+  One counterparty, thirty rows: large enough that `SingleRows` used to slice
+  it down to 25 and stay quiet about the other five. Same pattern throughout
+  so `groupBySuggestion` keeps them in a single group, which is the case that
+  bug needed.
+*/
+const QUEUE_ROWS_PANJANG: UnconfirmedRow[] = Array.from({ length: 30 }, (_, index) =>
+  queueRow(
+    // suggestPattern keeps only the text before ' - ', so every row still
+    // groups under the same counterparty despite the differing note.
+    `TOKO SEJAHTERA JAYA - transaksi ${index + 1}`,
+    idr('50.000,00') + BigInt(index) * idr('1.000,00'),
+    'spending',
+    `2026-07-${String((index % 28) + 1).padStart(2, '0')}T03:00:00.000Z`,
+    'acc-mandiri',
+  ),
+)
+const QUEUE_GROUPS_PANJANG = groupBySuggestion(QUEUE_ROWS_PANJANG)
+const QUEUE_REMAINING_PANJANG = summariseQueue(QUEUE_ROWS_PANJANG.length, QUEUE_GROUPS_PANJANG)
 
 /* Four accounts of four kinds, which is what the chips have to stay legible at. */
 const CATAT_ACCOUNTS = [
@@ -1470,7 +1491,7 @@ export const FIXTURES = {
   ),
   'review-queue': (
     <ReviewQueue
-      groups={groupBySuggestion(QUEUE_ROWS)}
+      groups={QUEUE_GROUPS}
       categories={QUEUE_CATEGORIES}
       accounts={QUEUE_ACCOUNTS}
       remaining={QUEUE_REMAINING}
@@ -1488,6 +1509,48 @@ export const FIXTURES = {
         options={{ urut: 'waktu', kelompok: 'bulan' }}
       />
     </div>
+  ),
+  // A single group past the point SingleRows used to truncate at 25: every
+  // row has to render, and the count in the disclosure has to match.
+  'review-queue-panjang': (
+    <ReviewQueue
+      groups={QUEUE_GROUPS_PANJANG}
+      categories={QUEUE_CATEGORIES}
+      accounts={QUEUE_ACCOUNTS}
+      remaining={QUEUE_REMAINING_PANJANG}
+      options={{ urut: 'nominal', kelompok: 'lawan' }}
+    />
+  ),
+  // A statement's write stopped mid-way, the message import-form.tsx renders
+  // when `importStatement` returns instead of throwing.
+  'impor-laporan-gagal': (
+    <ImportForm
+      initialReport={
+        {
+          ok: false,
+          message: 'Impor berhenti saat menyimpan.',
+          detail:
+            'Sebagian transaksi mungkin sudah tersimpan. Mengunggah berkas yang sama lagi aman: baris yang sudah masuk tidak akan digandakan.',
+        } satisfies ImportReport
+      }
+    />
+  ),
+  'impor-laporan-sukses': (
+    <ImportForm
+      initialReport={
+        {
+          ok: true,
+          filename: 'e-Statement_XXXXXXXXX4257_01 Jul 2026-31 Jul 2026.xlsx',
+          message: '42 transaksi masuk, dan saldonya cocok sampai ke sen terakhir.',
+          period: { start: '2026-07-01', end: '2026-07-31' },
+          inserted: 42,
+          duplicates: 0,
+          needsReview: 6,
+          openingBalance: 'Rp1.000.000',
+          closingBalance: 'Rp1.149.000',
+        } satisfies ImportReport
+      }
+    />
   ),
   bills: <BillsPanel review={BILLS} />,
   'bills-untouched': <BillsPanel review={BILLS_UNTOUCHED} />,

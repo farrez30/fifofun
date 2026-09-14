@@ -8,6 +8,15 @@ export const metadata: Metadata = { title: 'Impor' }
 /* Blocks on runtime data by design; the why lives in src/app/page.tsx above `instant`. */
 export const instant = false
 
+/*
+ * The platform's own cut-off, written down rather than left to live only in
+ * docs/deploy.md. A Server Action killed at this line is what `wait.ts` on
+ * the client is racing against: past it, the form has to stop waiting and say
+ * so, because the platform is about to say so on its own by cutting the
+ * connection mid-response instead of returning an answer.
+ */
+export const maxDuration = 60
+
 
 export default async function ImporPage() {
   const user = await getUser()

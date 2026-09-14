@@ -45,9 +45,17 @@ const nextConfig: NextConfig = {
   experimental: {
     /*
       Holds a failed navigation or Server Action pending instead of throwing, and
-      retries it once the connection returns. Safe for the import flow in
-      particular: the retried request never reached the server the first time, and
-      an import is idempotent by file hash regardless.
+      retries it once the connection returns.
+
+      Genuinely safe for a dropped connection, where the retried request never
+      reached the server the first time. Not the whole story for the import
+      flow specifically: a function killed mid-response (the platform's own
+      timeout, see docs/deploy.md) looks identical to a dropped connection from
+      here and gets replayed the same way, except the first attempt may already
+      have written. The replay itself stays harmless either way, because an
+      import is idempotent by file hash, but "harmless" and "never reached the
+      server" are different claims; src/app/impor/actions.ts and its
+      client-side deadline in wait.ts are what actually answer the second one.
     */
     useOffline: true,
 

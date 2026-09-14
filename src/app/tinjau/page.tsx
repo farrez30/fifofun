@@ -23,6 +23,7 @@ import { QueueControls } from './queue-controls'
 import { ReviewQueue } from './review-queue'
 import { RulesList } from './rules-list'
 import { QueueSkeleton } from './skeleton'
+import { summariseQueue } from './summary'
 import { TidyPanel } from './tidy-panel'
 
 export const metadata: Metadata = { title: 'Tinjau' }
@@ -103,10 +104,7 @@ async function Queue({ options }: { options: QueueOptions }) {
   const assignable = categories.filter((category) => ASSIGNABLE.has(category.cashflow))
 
   const groups = groupBySuggestion(pending, rules as Rule[], toGroupOptions(options))
-  const remaining = {
-    count: pending.length,
-    total: pending.reduce((sum, row) => sum + row.amount, 0n),
-  }
+  const remaining = summariseQueue(pending.length, groups)
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_18rem]">

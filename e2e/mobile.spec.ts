@@ -237,7 +237,11 @@ test('no control hides the value it is holding', async ({ page }) => {
         type Control = HTMLInputElement | HTMLTextAreaElement
         for (const node of document.querySelectorAll<Control>('input, textarea')) {
           if (node instanceof HTMLInputElement) {
-            if (node.type === 'hidden' || node.type === 'checkbox' || node.type === 'radio') continue
+            // None of these show their `.value` as text in a box: hidden and
+            // file are never visible at all (the chosen filename here is a
+            // separate, unconstrained paragraph), and checkbox/radio show a
+            // state, not a string.
+            if (['hidden', 'checkbox', 'radio', 'file'].includes(node.type)) continue
           }
           if (node.getBoundingClientRect().width === 0) continue
           // A textarea wraps, so more content than box is a scrollbar, not a loss.

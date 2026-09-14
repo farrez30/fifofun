@@ -1,10 +1,12 @@
 'use client'
 
-import { useActionState, useRef, useState } from 'react'
+import { useActionState, useEffect, useRef, useState } from 'react'
 import { useFormStatus } from 'react-dom'
+import { useOffline } from 'next/offline'
 import { BUTTON_PRIMARY } from '@/components/field-base'
 import { formatIdr } from '@/lib/money'
 import { importStatement, type ImportReport } from './actions'
+import { waitPhase, withDeadline, type WaitPhase } from './wait'
 
 /**
  * The upload form.
@@ -14,7 +16,23 @@ import { importStatement, type ImportReport } from './actions'
  * a screen reader. The result panel is deliberately detailed: this upload is
  * also the accuracy check on manual bookkeeping, so what it found matters as
  * much as whether it worked.
+ *
+ * The wait itself gets an honest ending. `experimental.useOffline` holds a
+ * failed request pending and retries it without a deadline of its own, which
+ * looks identical to a slow server from a form that only ever renders
+ * `pending`. Past ninety seconds this stops waiting and says so, and the
+ * status line beneath the button explains what a still-changing label cannot.
  */
+
+/** After this, the deadline below wins and the form stops waiting on its own. */
+const DEADLINE_MS = 90_000
+
+const WAIT_MESSAGE: Record<Exclude<WaitPhase, 'checking'>, string> = {
+  slow: 'Masih berjalan, biasanya selesai di bawah sepuluh detik.',
+  stalled:
+    'Lebih lama dari biasanya. Kalau halaman ini dimuat ulang, impor yang sudah tersimpan tidak akan ganda.',
+  offline: 'Koneksi terputus. Berkas dikirim ulang begitu jaringan kembali, jangan tutup halaman ini.',
+}
 
 function Submit({ hasFile }: { hasFile: boolean }) {
   const { pending } = useFormStatus()
@@ -23,6 +41,7 @@ function Submit({ hasFile }: { hasFile: boolean }) {
     <button
       type="submit"
       disabled={pending || !hasFile}
+      aria-busy={pending}
       className={BUTTON_PRIMARY}
     >
       {pending ? 'Memeriksa dan mencocokkan' : 'Impor'}
@@ -30,8 +49,57 @@ function Submit({ hasFile }: { hasFile: boolean }) {
   )
 }
 
-export function ImportForm() {
-  const [report, action] = useActionState<ImportReport | null, FormData>(importStatement, null)
+/** The extra line under the button, once the wait has gone on long enough to say more. */
+function WaitStatus() {
+  const { pending } = useFormStatus()
+  const offline = useOffline()
+  const [elapsedMs, setElapsedMs] = useState(0)
+
+  useEffect(() => {
+    if (!pending) return
+    // Both timers land on a later turn of the event loop rather than during
+    // this render, `setTimeout(…, 0)` included: a fresh submission has to
+    // start the count at zero rather than carry over whatever a previous one
+    // left behind, and the tick after it counts up from there.
+    let elapsed = 0
+    const reset = setTimeout(() => setElapsedMs(0), 0)
+    const id = setInterval(() => {
+      elapsed += 1_000
+      setElapsedMs(elapsed)
+    }, 1_000)
+    return () => {
+      clearTimeout(reset)
+      clearInterval(id)
+    }
+  }, [pending])
+
+  if (!pending) return null
+  const phase = waitPhase(elapsedMs, offline)
+  if (phase === 'checking') return null
+
+  return (
+    <p role="status" aria-live="polite" className="text-sm text-ink-muted">
+      {WAIT_MESSAGE[phase]}
+    </p>
+  )
+}
+
+/**
+ * `initialReport` exists for the fixture harness: a static page has no way
+ * to submit a form and wait for a reply, so this is how one shows what a
+ * finished report looks like. The real page never passes it.
+ */
+export function ImportForm({ initialReport = null }: { initialReport?: ImportReport | null } = {}) {
+  const [report, action] = useActionState<ImportReport | null, FormData>(
+    (previous, formData) =>
+      withDeadline(importStatement(previous, formData), DEADLINE_MS, () => ({
+        ok: false,
+        message: 'Server belum menjawab setelah 90 detik.',
+        detail:
+          'Buka Tinjau untuk memeriksa apakah transaksinya sudah masuk. Mengunggah berkas yang sama lagi aman, tidak akan digandakan.',
+      })),
+    initialReport,
+  )
   const [filename, setFilename] = useState<string | null>(null)
   const [dragging, setDragging] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -91,6 +159,7 @@ export function ImportForm() {
         </div>
 
         <Submit hasFile={filename !== null} />
+        <WaitStatus />
       </form>
 
       {report ? <Report report={report} /> : null}
@@ -217,8 +286,14 @@ function Pair({
   return (
     <div>
       <dt className="text-xs uppercase tracking-wide text-ink-faint">{label}</dt>
-      <dd className={`mt-0.5 text-ink ${mono ? 'tnum font-mono' : ''}`}>{value}</dd>
-      {hint ? <p className="text-xs text-ink-faint">{hint}</p> : null}
+      <dd className={`mt-0.5 text-ink ${mono ? 'tnum font-mono' : ''}`}>
+        {value}
+        {/* Nested inside <dd> rather than a sibling <p>: a <dl>'s own children
+            (once <div>-wrapped) may only be dt/dd, and axe's definition-list
+            check enforces it. This report is the first e2e fixture to render
+            far enough to exercise that check. */}
+        {hint ? <span className="mt-0.5 block text-xs font-normal text-ink-faint">{hint}</span> : null}
+      </dd>
     </div>
   )
 }
