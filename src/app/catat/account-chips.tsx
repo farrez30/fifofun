@@ -31,14 +31,14 @@ export function AccountChips({
 }) {
   return (
     <fieldset>
-      <legend className="text-xs font-medium uppercase tracking-wide text-ink-faint">
+      <legend className="text-subhead font-medium text-ink">
         {legend}
       </legend>
       <div className="mt-1.5 flex flex-wrap gap-2">
         {accounts.map((account, index) => (
           <label
             key={account.id}
-            className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-sm border border-line bg-paper px-3 text-sm text-ink transition-colors duration-150 hover:border-line-strong has-checked:border-accent has-checked:bg-accent-wash"
+            className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-sm border border-line bg-paper px-3 text-subhead text-ink transition-colors duration-150 hover:border-line-strong has-checked:border-accent has-checked:bg-accent-wash"
           >
             <input
               type="radio"

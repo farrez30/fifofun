@@ -2,7 +2,7 @@
 
 import { useActionState, useId, useState } from 'react'
 import { useFormStatus } from 'react-dom'
-import { BUTTON_PRIMARY, CONTROL, FieldLabel } from '@/components/field-base'
+import { BUTTON_PRIMARY, CONTROL, CONTROL_INLINE, FieldRow } from '@/components/field-base'
 import { CategoryMark, ICONS, ICON_NAMES } from '@/components/marks'
 import { PRESET_HUES, categoryHue } from '@/lib/ledger/palette'
 import { isLookedUpByName, twinsOf } from '@/lib/ledger/settings'
@@ -47,6 +47,12 @@ export function CategoryForm({ category, cashflow, siblings }: Props) {
   )
 
   const ids = { name: useId(), cashflow: useId(), hue: useId(), parent: useId(), description: useId() }
+  const footerIds = {
+    name: useId(),
+    cashflow: useId(),
+    description: useId(),
+    parent: useId(),
+  }
 
   const [name, setName] = useState(category?.name ?? '')
   const [flow, setFlow] = useState<CashflowType>(category?.cashflow ?? cashflow ?? 'spending')
@@ -72,9 +78,17 @@ export function CategoryForm({ category, cashflow, siblings }: Props) {
     <form action={action} className="space-y-4">
       {category ? <input type="hidden" name="id" value={category.id} /> : null}
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <FieldLabel htmlFor={ids.name}>Nama kategori</FieldLabel>
+      {/*
+        A grouped card of four rows rather than the two-column grid this
+        used to be, for the reason `FieldRow` was written: name, cashflow,
+        kamus and kelompok each want one line, not a label stacked above a
+        control. The sentence explaining each one moves to a footer under
+        the card (Apple's own section-footnote idiom) and is wired back to
+        its field with `aria-describedby`, since the field itself no longer
+        has room to carry it.
+      */}
+      <div className="rows-inset squircle rounded-md bg-surface shadow-xs">
+        <FieldRow htmlFor={ids.name} label="Nama kategori">
           <input
             id={ids.name}
             name="name"
@@ -82,25 +96,20 @@ export function CategoryForm({ category, cashflow, siblings }: Props) {
             onChange={(event) => setName(event.target.value)}
             required
             maxLength={60}
-            className={CONTROL}
+            aria-describedby={isLookedUpByName(category?.name ?? '') ? footerIds.name : undefined}
+            className={CONTROL_INLINE}
           />
-          {isLookedUpByName(category?.name ?? '') ? (
-            <p className="text-xs text-ink-muted">
-              Nama ini dicari impor apa adanya. Kalau diganti, baris yang biasanya masuk ke sini
-              akan menunggu di Tinjau tanpa kategori sampai kamu memberinya kategori atau aturan.
-            </p>
-          ) : null}
-        </div>
+        </FieldRow>
 
-        <div className="space-y-1.5">
-          <FieldLabel htmlFor={ids.cashflow}>Cashflow</FieldLabel>
+        <FieldRow htmlFor={ids.cashflow} label="Cashflow">
           <select
             id={ids.cashflow}
             name={locked ? undefined : 'cashflow'}
             value={flow}
             disabled={locked}
             onChange={(event) => setFlow(event.target.value as CashflowType)}
-            className={`${CONTROL} disabled:opacity-60`}
+            aria-describedby={footerIds.cashflow}
+            className={`${CONTROL_INLINE} disabled:opacity-60`}
           >
             {CASHFLOW_TYPES.map((option) => (
               <option key={option} value={option}>
@@ -108,61 +117,70 @@ export function CategoryForm({ category, cashflow, siblings }: Props) {
               </option>
             ))}
           </select>
-          {/* The one field here that cannot be changed later deserves to say
-              what it means, not only what it is called. */}
-          <p className="text-xs text-ink-muted">{CASHFLOW_HELP[flow]}</p>
-          {locked ? (
-            <>
-              <input type="hidden" name="cashflow" value={flow} />
-              <p className="text-xs text-ink-muted">
-                Dipakai {category?.usage} transaksi, jadi arahnya terkunci. Buat kategori baru
-                kalau memang butuh arah yang berbeda.
-              </p>
-            </>
-          ) : null}
-          {twins.length > 0 ? (
-            <p className="text-xs text-ink-muted">
-              Pos seperti ini berpasangan dengan {twins.map((twin) => CASHFLOW_LABELS[twin]).join(' atau ')}
-              , dan keduanya diganti nama bersama-sama.
-            </p>
-          ) : null}
-        </div>
+          {locked ? <input type="hidden" name="cashflow" value={flow} /> : null}
+        </FieldRow>
+
+        <FieldRow htmlFor={ids.description} label="Kamus">
+          <input
+            id={ids.description}
+            name="description"
+            defaultValue={category?.description ?? ''}
+            maxLength={160}
+            placeholder="Satu kalimat"
+            aria-describedby={footerIds.description}
+            className={CONTROL_INLINE}
+          />
+        </FieldRow>
+
+        <FieldRow htmlFor={ids.parent} label="Kelompok">
+          <select
+            id={ids.parent}
+            name="parentId"
+            value={hasChildren ? '' : parentId}
+            disabled={hasChildren || parents.length === 0}
+            onChange={(event) => setParentId(event.target.value)}
+            aria-describedby={footerIds.parent}
+            className={`${CONTROL_INLINE} disabled:opacity-60`}
+          >
+            <option value="">Berdiri sendiri</option>
+            {parents.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.name}
+              </option>
+            ))}
+          </select>
+        </FieldRow>
       </div>
 
-      <div className="space-y-1.5">
-        <FieldLabel htmlFor={ids.description}>Kamus</FieldLabel>
-        <input
-          id={ids.description}
-          name="description"
-          defaultValue={category?.description ?? ''}
-          maxLength={160}
-          placeholder="Satu kalimat: apa yang masuk ke sini"
-          className={CONTROL}
-        />
-        <p className="text-xs text-ink-muted">
+      {/* The one field here that cannot be changed later deserves to say
+          what it means, not only what it is called. */}
+      <div className="space-y-1.5 px-4">
+        {isLookedUpByName(category?.name ?? '') ? (
+          <p id={footerIds.name} className="text-footnote text-ink-muted">
+            Nama ini dicari impor apa adanya. Kalau diganti, baris yang biasanya masuk ke sini
+            akan menunggu di Tinjau tanpa kategori sampai kamu memberinya kategori atau aturan.
+          </p>
+        ) : null}
+        <p id={footerIds.cashflow} className="text-footnote text-ink-muted">
+          {CASHFLOW_HELP[flow]}
+        </p>
+        {locked ? (
+          <p className="text-footnote text-ink-muted">
+            Dipakai {category?.usage} transaksi, jadi arahnya terkunci. Buat kategori baru kalau
+            memang butuh arah yang berbeda.
+          </p>
+        ) : null}
+        {twins.length > 0 ? (
+          <p className="text-footnote text-ink-muted">
+            Pos seperti ini berpasangan dengan {twins.map((twin) => CASHFLOW_LABELS[twin]).join(' atau ')}
+            , dan keduanya diganti nama bersama-sama.
+          </p>
+        ) : null}
+        <p id={footerIds.description} className="text-footnote text-ink-muted">
           Kalimat ini muncul di bawah pilihan kategori saat mencatat dan meninjau. Tulis aturan
           batasnya, bukan mengulang namanya: kapan sesuatu masuk ke sini, bukan ke pos sebelah.
         </p>
-      </div>
-
-      <div className="space-y-1.5">
-        <FieldLabel htmlFor={ids.parent}>Kelompok</FieldLabel>
-        <select
-          id={ids.parent}
-          name="parentId"
-          value={hasChildren ? '' : parentId}
-          disabled={hasChildren || parents.length === 0}
-          onChange={(event) => setParentId(event.target.value)}
-          className={`${CONTROL} disabled:opacity-60`}
-        >
-          <option value="">Berdiri sendiri</option>
-          {parents.map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.name}
-            </option>
-          ))}
-        </select>
-        <p className="text-xs text-ink-muted">
+        <p id={footerIds.parent} className="text-footnote text-ink-muted">
           {hasChildren
             ? 'Kategori ini sendiri sebuah kelompok, jadi tidak bisa dimasukkan ke kelompok lain. Kelompok tidak menampung transaksi; yang dijumlahkan adalah isinya.'
             : parents.length === 0

@@ -3,7 +3,7 @@
 import { useActionState, useId, useState } from 'react'
 import { useFormStatus } from 'react-dom'
 import { AccountChips, type AccountOption } from '@/app/catat/account-chips'
-import { BUTTON_PRIMARY, CONTROL, FieldLabel } from '@/components/field-base'
+import { BUTTON_PRIMARY, CONTROL, CONTROL_INLINE, FieldLabel, FieldRow } from '@/components/field-base'
 import { MoneyInput } from '@/components/money-input'
 import { CASHFLOW_LABELS, type CashflowType } from '@/lib/ledger/types'
 import type { Editable } from '@/lib/ledger/edit'
@@ -61,7 +61,16 @@ export function EditEntryForm({
   accounts: AccountOption[]
 }) {
   const [result, action] = useActionState<ActionResult | null, FormData>(updateEntry, null)
-  const ids = { category: useId(), description: useId(), note: useId(), date: useId(), time: useId(), pass: useId() }
+  const ids = {
+    category: useId(),
+    description: useId(),
+    note: useId(),
+    date: useId(),
+    time: useId(),
+    pass: useId(),
+    heading: useId(),
+    kamus: useId(),
+  }
 
   const [amount, setAmount] = useState(() => BigInt(entry.amount || '0'))
   const [passThrough, setPassThrough] = useState(entry.isPassThrough)
@@ -74,14 +83,22 @@ export function EditEntryForm({
   const chosen = categories.find((category) => category.id === categoryId)
 
   return (
-    <form action={action} className="space-y-4 squircle rounded-md bg-surface shadow-xs p-4">
-      <h2 className="text-sm font-medium text-ink">Ubah transaksi</h2>
+    <form action={action} className="space-y-4" aria-labelledby={ids.heading}>
+      <h2 id={ids.heading} className="text-subhead font-medium text-ink">
+        Ubah transaksi
+      </h2>
       <input type="hidden" name="id" value={entry.id} />
       <input type="hidden" name="passThrough" value={passThrough ? '1' : '0'} />
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <FieldLabel htmlFor={ids.category}>Kategori</FieldLabel>
+      {/*
+        A grouped card rather than a card wrapping a grid: the form's own
+        surface (this row list) is now the only one, where it used to sit
+        inside the `p-4` card `page.tsx` already draws around it. Date and
+        Jam move in as rows of their own instead of a side-by-side pair —
+        one control per line, like every other row here.
+      */}
+      <div className="rows-inset squircle rounded-md bg-surface shadow-xs">
+        <FieldRow htmlFor={ids.category} label="Kategori">
           <select
             id={ids.category}
             name="categoryId"
@@ -89,7 +106,10 @@ export function EditEntryForm({
             disabled={!entry.editable.category}
             required={entry.editable.category}
             onChange={(event) => setCategoryId(event.target.value)}
-            className={`${CONTROL} disabled:opacity-60`}
+            aria-describedby={
+              !entry.editable.category || chosen?.description ? ids.kamus : undefined
+            }
+            className={`${CONTROL_INLINE} disabled:opacity-60`}
           >
             {entry.editable.category ? (
               <option value="" disabled>
@@ -108,64 +128,63 @@ export function EditEntryForm({
               </optgroup>
             ))}
           </select>
-          {chosen?.description && entry.editable.category ? (
-            <p data-kamus className="text-xs text-ink-muted">
-              {chosen.description}
-            </p>
-          ) : null}
-          {entry.editable.category ? null : (
-            <p className="text-xs text-ink-muted">
-              Perpindahan antar akun tidak punya kategori: yang dicatat adalah akun asal dan akun
-              tujuannya.
-            </p>
-          )}
-        </div>
+        </FieldRow>
 
-        <div className="space-y-1.5">
-          <FieldLabel htmlFor={ids.description}>Keterangan</FieldLabel>
+        <FieldRow htmlFor={ids.description} label="Keterangan">
           <input
             id={ids.description}
             name="description"
             defaultValue={entry.description}
             required
             maxLength={140}
-            className={CONTROL}
+            className={CONTROL_INLINE}
           />
-        </div>
+        </FieldRow>
 
         {entry.editable.amount ? (
           <>
-            <MoneyInput label="Nominal" value={amount} onChange={setAmount} name="amount" />
-            {/* Side by side from the small breakpoint up. On a phone the
-                pair is two 141px native pickers, and a date field is the one
-                control where being cramped costs the most. */}
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <FieldLabel htmlFor={ids.date}>Tanggal</FieldLabel>
-                <input
-                  id={ids.date}
-                  type="date"
-                  name="date"
-                  defaultValue={entry.date}
-                  required
-                  className={CONTROL}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <FieldLabel htmlFor={ids.time}>Jam</FieldLabel>
-                <input
-                  id={ids.time}
-                  type="time"
-                  name="time"
-                  defaultValue={entry.time}
-                  required
-                  className={CONTROL}
-                />
-              </div>
-            </div>
+            <FieldRow htmlFor={ids.date} label="Tanggal">
+              <input
+                id={ids.date}
+                type="date"
+                name="date"
+                defaultValue={entry.date}
+                required
+                className={CONTROL_INLINE}
+              />
+            </FieldRow>
+            <FieldRow htmlFor={ids.time} label="Jam">
+              <input
+                id={ids.time}
+                type="time"
+                name="time"
+                defaultValue={entry.time}
+                required
+                className={CONTROL_INLINE}
+              />
+            </FieldRow>
           </>
         ) : null}
       </div>
+
+      <div className="px-4">
+        {entry.editable.category ? (
+          chosen?.description ? (
+            <p id={ids.kamus} data-kamus className="text-footnote text-ink-muted">
+              {chosen.description}
+            </p>
+          ) : null
+        ) : (
+          <p id={ids.kamus} className="text-footnote text-ink-muted">
+            Perpindahan antar akun tidak punya kategori: yang dicatat adalah akun asal dan akun
+            tujuannya.
+          </p>
+        )}
+      </div>
+
+      {entry.editable.amount ? (
+        <MoneyInput label="Nominal" value={amount} onChange={setAmount} name="amount" />
+      ) : null}
 
       {entry.editable.accounts ? (
         entry.cashflow === 'transfer' ? (
@@ -218,8 +237,8 @@ export function EditEntryForm({
           className="mt-0.5 size-4 shrink-0 accent-[var(--color-accent)]"
         />
         <span>
-          <span className="block text-sm text-ink">Uang titipan</span>
-          <span className="block text-xs text-ink-muted">
+          <span className="block text-subhead text-ink">Uang titipan</span>
+          <span className="block text-footnote text-ink-muted">
             Tidak dihitung sebagai pemasukan atau pengeluaran, tapi tetap menggerakkan saldo akun.
           </span>
         </span>
@@ -228,7 +247,7 @@ export function EditEntryForm({
       <div className="flex flex-wrap items-center gap-3">
         <Submit />
         {result ? (
-          <p role="status" className={`text-sm ${result.ok ? 'text-under' : 'text-over'}`}>
+          <p role="status" className={`text-subhead ${result.ok ? 'text-under' : 'text-over'}`}>
             {result.message}
             {result.detail ? <span className="text-ink-muted"> {result.detail}</span> : null}
           </p>

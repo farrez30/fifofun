@@ -52,6 +52,39 @@ test.describe('catat transaksi', () => {
     await expect(page.locator('input[name="accountId"]')).toHaveCount(4)
     await expect(page.locator('[data-mark="account"]')).toHaveCount(4)
   })
+
+  test('lines up each FieldRow label with its control at phone width', async ({ page }) => {
+    await open(page, 'catat-entry')
+    await page.setViewportSize({ width: 375, height: 900 })
+
+    // Grouped rows read as a settings screen only if the label and the
+    // control it names sit on the same row. `FieldRow` centres both
+    // vertically rather than aligning their tops, since a 44px control
+    // and a one-line label are different heights, so this compares
+    // centres, the thing `items-center` actually promises.
+    const rows = await page.evaluate(() => {
+      const results: { drift: number; controlIsRight: boolean }[] = []
+      for (const label of document.querySelectorAll('.rows-inset label[for]')) {
+        const control = document.getElementById(label.getAttribute('for')!)
+        if (!control) continue
+        const labelBox = label.getBoundingClientRect()
+        const controlBox = control.getBoundingClientRect()
+        results.push({
+          drift: Math.abs(
+            (labelBox.top + labelBox.bottom) / 2 - (controlBox.top + controlBox.bottom) / 2,
+          ),
+          controlIsRight: controlBox.left >= labelBox.right,
+        })
+      }
+      return results
+    })
+
+    expect(rows.length).toBeGreaterThan(0)
+    for (const row of rows) {
+      expect(row.drift).toBeLessThanOrEqual(4)
+      expect(row.controlIsRight).toBe(true)
+    }
+  })
 })
 
 test.describe('sesuaikan saldo', () => {

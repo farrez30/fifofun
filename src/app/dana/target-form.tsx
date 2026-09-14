@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from 'react'
 import { MoneyInput } from '@/components/money-input'
-import { CONTROL, FieldLabel } from '@/components/field-base'
+import { BUTTON_PLAIN, BUTTON_QUIET, CONTROL, FieldLabel, SEGMENT, SEGMENTED, SEGMENT_ON } from '@/components/field-base'
 import { formatMonthKey } from '@/lib/datetime'
 import { addMonths } from '@/lib/ledger/funds'
 import { formatIdrCompact } from '@/lib/money'
@@ -84,23 +84,23 @@ export function TargetForm({
   const eta = months === null || asOf === '' ? null : addMonths(asOf, months)
 
   return (
-    <details className="mt-3 border-t border-line pt-2 text-xs">
+    <details className="mt-3 border-t border-line pt-2 text-footnote">
       <summary className="cursor-pointer text-accent underline underline-offset-2">
         {target === '' ? 'Tetapkan target' : 'Ubah target'}
       </summary>
 
-      <div className="mt-2 flex gap-1" role="group" aria-label={`Cara menetapkan target ${name}`}>
+      <div
+        className={`mt-2 ${SEGMENTED}`}
+        role="group"
+        aria-label={`Cara menetapkan target ${name}`}
+      >
         {(['tenggat', 'setoran'] as const).map((option) => (
           <button
             key={option}
             type="button"
             onClick={() => setMode(option)}
             aria-pressed={mode === option}
-            className={`h-9 rounded-sm border px-2.5 text-xs transition-colors duration-150 ${
-              mode === option
-                ? 'border-accent bg-accent-wash text-ink'
-                : 'border-line text-ink-muted hover:border-line-strong hover:text-ink'
-            }`}
+            className={`${SEGMENT} ${mode === option ? SEGMENT_ON : ''}`}
           >
             {option === 'tenggat' ? 'Tentukan tenggat' : 'Tentukan setoran'}
           </button>
@@ -121,13 +121,13 @@ export function TargetForm({
 
         {mode === 'tenggat' ? (
           <label className="flex flex-col gap-1">
-            <span className="text-ink-muted">Dibutuhkan bulan</span>
+            <span className="text-footnote text-ink-muted">Dibutuhkan bulan</span>
             <input
               type="month"
               name="month"
               defaultValue={month}
               aria-label={`Bulan target untuk ${name}`}
-              className="h-10 border border-line bg-paper px-2 text-base text-ink sm:text-sm"
+              className={`${CONTROL} sm:h-10 sm:w-auto`}
             />
           </label>
         ) : (
@@ -151,22 +151,12 @@ export function TargetForm({
           </>
         )}
 
-        <button
-          type="submit"
-          name="mode"
-          value={mode}
-          className="h-10 rounded-sm border border-line-strong px-3 text-xs text-ink transition-colors duration-150 hover:bg-sunken"
-        >
+        <button type="submit" name="mode" value={mode} className={BUTTON_QUIET}>
           Simpan
         </button>
 
         {mode === 'setoran' && eta ? (
-          <button
-            type="submit"
-            name="mode"
-            value="tenggat"
-            className="h-10 rounded-sm border border-line px-3 text-xs text-ink-muted transition-colors duration-150 hover:border-line-strong hover:text-ink"
-          >
+          <button type="submit" name="mode" value="tenggat" className={BUTTON_PLAIN}>
             Jadikan tenggat
           </button>
         ) : null}
@@ -239,7 +229,7 @@ function PercentInput({
         />
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 right-2 flex items-center font-mono text-sm text-ink-muted"
+          className="pointer-events-none absolute inset-y-0 right-2 flex items-center font-mono text-body text-ink-muted sm:text-sm"
         >
           %
         </span>

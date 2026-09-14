@@ -74,7 +74,7 @@ export function NumberField({
           min={min}
           max={max}
           onChange={(event) => onChange(clamp(Number(event.target.value)))}
-          className={`${field} border-y border-line bg-surface px-2 text-center tnum font-mono text-base text-ink focus:border-accent sm:text-sm`}
+          className={`${field} border-y border-line bg-surface px-2 text-center tnum font-mono text-body text-ink focus:border-accent sm:text-sm`}
         />
         <button
           type="button"
@@ -86,7 +86,7 @@ export function NumberField({
           <span aria-hidden="true">+</span>
         </button>
       </div>
-      {unit ? <p className="text-xs text-ink-muted">{unit}</p> : null}
+      {unit ? <p className="text-footnote text-ink-muted">{unit}</p> : null}
     </div>
   )
 }
@@ -133,7 +133,7 @@ export function SelectField<T extends string>({
         ))}
       </select>
       {selected?.description ? (
-        <p className="text-xs text-ink-muted">{selected.description}</p>
+        <p className="text-footnote text-ink-muted">{selected.description}</p>
       ) : null}
     </div>
   )
@@ -193,9 +193,9 @@ export function Toggle({
         className={`h-4 w-4 shrink-0 accent-[var(--color-accent)] ${chip ? '' : 'mt-0.5'}`}
       />
       <span>
-        <span className={`block text-ink ${chip ? 'text-xs' : 'text-sm'}`}>{label}</span>
+        <span className={`block text-ink ${chip ? 'text-footnote' : 'text-subhead'}`}>{label}</span>
         {description && !chip ? (
-          <span className="block text-xs text-ink-muted">{description}</span>
+          <span className="block text-footnote text-ink-muted">{description}</span>
         ) : null}
       </span>
     </label>
@@ -248,15 +248,15 @@ export function Section({ id, title, lead, index, variant = 'card', children }: 
         }
       >
         {index === undefined ? null : (
-          <span aria-hidden="true" className="tnum font-mono text-xs text-ink-faint">
+          <span aria-hidden="true" className="tnum font-mono text-caption1 text-ink-faint">
             {String(index).padStart(2, '0')}
           </span>
         )}
         <div className="min-w-0">
-          <h2 id={id} className="text-base font-semibold tracking-tight text-ink">
+          <h2 id={id} className="text-title3 font-semibold tracking-title3 text-ink">
             {title}
           </h2>
-          {lead ? <p className="mt-1 max-w-2xl text-sm text-ink-muted">{lead}</p> : null}
+          {lead ? <p className="mt-1 max-w-2xl text-subhead text-ink-muted">{lead}</p> : null}
         </div>
       </div>
       <div className={bar ? 'space-y-2 px-3 py-2' : 'space-y-4 p-4 sm:p-5'}>{children}</div>
@@ -287,7 +287,7 @@ const CONFIDENCE_LABEL = {
  */
 export function SourceNote({ source, url, confidence, retrievedAt }: SourceNoteProps) {
   return (
-    <p className="text-xs text-ink-faint">
+    <p className="text-footnote text-ink-faint">
       <span className="text-ink-muted">{CONFIDENCE_LABEL[confidence]}</span>
       {' · '}
       {url ? (

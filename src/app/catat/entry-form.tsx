@@ -1,11 +1,11 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useId, useState } from 'react'
 import { useFormStatus } from 'react-dom'
-import { BUTTON_PRIMARY, CONTROL } from '@/components/field-base'
+import { BUTTON_PRIMARY, CONTROL, CONTROL_INLINE, FieldLabel, FieldRow } from '@/components/field-base'
 import { DirectionMark } from '@/components/marks'
 import { MoneyInput } from '@/components/money-input'
-import { DIRECTION_LABELS, directionOf, type Direction } from '@/lib/ledger/direction'
+import { directionOf, type Direction } from '@/lib/ledger/direction'
 import { CASHFLOW_LABELS, type CashflowType } from '@/lib/ledger/types'
 import { AccountChips, type AccountOption } from './account-chips'
 import { recordEntry } from './actions'
@@ -73,17 +73,22 @@ export function EntryForm({ accounts, categories, defaults, entryKey }: Props) {
     byCashflow.set(category.cashflow, [...(byCashflow.get(category.cashflow) ?? []), category])
   }
 
+  const ids = {
+    category: useId(),
+    description: useId(),
+    date: useId(),
+    time: useId(),
+    note: useId(),
+    kamus: useId(),
+  }
+
   return (
-    <form
-      action={action}
-      noValidate
-      className="space-y-5 squircle rounded-md bg-surface shadow-xs p-4 sm:p-5"
-    >
+    <form action={action} noValidate className="space-y-5">
       {result ? (
         <p
           role="status"
           aria-live="polite"
-          className={`border px-3 py-2 text-sm text-ink ${
+          className={`border px-3 py-2 text-subhead text-ink ${
             result.ok ? 'border-under/40 bg-under-wash' : 'border-over/40 bg-over-wash'
           }`}
         >
@@ -95,14 +100,12 @@ export function EntryForm({ accounts, categories, defaults, entryKey }: Props) {
       <input type="hidden" name="clientId" value={clientId} />
 
       <fieldset>
-        <legend className="text-xs font-medium uppercase tracking-wide text-ink-faint">
-          Arah uang
-        </legend>
+        <legend className="text-subhead font-medium text-ink">Arah uang</legend>
         <div className="mt-1.5 flex flex-wrap gap-2">
           {DIRECTION_CHOICES.map((choice) => (
             <label
               key={choice.value}
-              className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-sm border border-line bg-paper px-3 text-sm text-ink transition-colors duration-150 hover:border-line-strong has-checked:border-accent has-checked:bg-accent-wash"
+              className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-sm border border-line bg-paper px-3 text-subhead text-ink transition-colors duration-150 hover:border-line-strong has-checked:border-accent has-checked:bg-accent-wash"
             >
               <input
                 type="radio"
@@ -140,100 +143,102 @@ export function EntryForm({ accounts, categories, defaults, entryKey }: Props) {
         />
       )}
 
-      <label className="block">
-        <span className="block text-xs font-medium uppercase tracking-wide text-ink-faint">
-          Kategori
-        </span>
-        <select
-          key={direction}
-          name="categoryId"
-          required
-          defaultValue=""
-          onChange={(event) => setCategoryId(event.target.value)}
-          className="mt-1.5 h-11 w-full border border-line bg-paper px-2 text-base text-ink sm:text-sm"
-        >
-          <option value="" disabled>
-            {direction === 'neither'
-              ? 'Hanya Antar Account untuk perpindahan'
-              : `Pilih kategori uang ${DIRECTION_LABELS[direction]}`}
-          </option>
-          {[...byCashflow.entries()].map(([cashflow, options]) => (
-            <optgroup key={cashflow} label={CASHFLOW_LABELS[cashflow]}>
-              {options.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </optgroup>
-          ))}
-        </select>
-        {/* The name is a label; the sentence is the rule. Read out for the
-            chosen category so the tie-break is beside the decision, not in a
-            settings page nobody has open while typing. */}
-        {chosen?.description ? (
-          <span data-kamus className="mt-1.5 block text-xs text-ink-muted">
-            {chosen.description}
-          </span>
-        ) : null}
-      </label>
+      {/*
+        A grouped card for the four remaining fields, in place of the four
+        stacked label-above-control pairs this used to be. Kategori's kamus
+        sentence moves to a footer under the card, the idiom every other
+        FieldRow form in this app now uses, and the placeholder shortens to
+        `Pilih kategori`: the optgroup headings already say which direction
+        each group belongs to, and the longer sentences overran the row's
+        control column on a phone.
+      */}
+      <div className="rows-inset squircle rounded-md bg-surface shadow-xs">
+        <FieldRow htmlFor={ids.category} label="Kategori">
+          <select
+            id={ids.category}
+            key={direction}
+            name="categoryId"
+            required
+            defaultValue=""
+            onChange={(event) => setCategoryId(event.target.value)}
+            aria-describedby={chosen?.description ? ids.kamus : undefined}
+            className={CONTROL_INLINE}
+          >
+            <option value="" disabled>
+              Pilih kategori
+            </option>
+            {[...byCashflow.entries()].map(([cashflow, options]) => (
+              <optgroup key={cashflow} label={CASHFLOW_LABELS[cashflow]}>
+                {options.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        </FieldRow>
 
-      <MoneyInput name="amount" label="Nominal" value={amount} onChange={setAmount} />
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block">
-          <span className="block text-xs font-medium uppercase tracking-wide text-ink-faint">
-            Tanggal
-          </span>
+        <FieldRow htmlFor={ids.description} label="Keterangan">
           <input
+            id={ids.description}
+            type="text"
+            name="description"
+            required
+            maxLength={140}
+            placeholder="Makan siang"
+            className={CONTROL_INLINE}
+          />
+        </FieldRow>
+
+        <FieldRow htmlFor={ids.date} label="Tanggal">
+          <input
+            id={ids.date}
             type="date"
             name="date"
             required
             defaultValue={defaults.date}
-            className={`${CONTROL} mt-1.5`}
+            className={CONTROL_INLINE}
           />
-        </label>
-        <label className="block">
-          <span className="block text-xs font-medium uppercase tracking-wide text-ink-faint">
-            Jam
-          </span>
+        </FieldRow>
+
+        <FieldRow htmlFor={ids.time} label="Jam">
           <input
+            id={ids.time}
             type="time"
             name="time"
             required
             defaultValue={defaults.time}
-            className={`${CONTROL} mt-1.5`}
+            className={CONTROL_INLINE}
           />
-        </label>
+        </FieldRow>
       </div>
 
-      <label className="block">
-        <span className="block text-xs font-medium uppercase tracking-wide text-ink-faint">
-          Keterangan
-        </span>
-        <input
-          type="text"
-          name="description"
-          required
-          maxLength={140}
-          placeholder="Makan siang"
-          className={`${CONTROL} mt-1.5`}
-        />
-      </label>
+      {/* The name is a label; the sentence is the rule. Read out for the
+          chosen category so the tie-break is beside the decision, not in a
+          settings page nobody has open while typing. */}
+      {chosen?.description ? (
+        <div className="px-4">
+          <p id={ids.kamus} data-kamus className="text-footnote text-ink-muted">
+            {chosen.description}
+          </p>
+        </div>
+      ) : null}
 
-      <label className="block">
-        <span className="block text-xs font-medium uppercase tracking-wide text-ink-faint">
+      <MoneyInput name="amount" label="Nominal" value={amount} onChange={setAmount} />
+
+      <div className="space-y-1.5">
+        <FieldLabel htmlFor={ids.note} hint="opsional">
           Catatan
-          <span className="ml-2 font-normal normal-case tracking-normal text-ink-faint">
-            opsional
-          </span>
-        </span>
+        </FieldLabel>
         <textarea
+          id={ids.note}
           name="note"
           rows={2}
           maxLength={500}
-          className={`${CONTROL} mt-1.5 h-auto py-2`}
+          className={`${CONTROL} h-auto py-2`}
         />
-      </label>
+      </div>
 
       <Submit />
     </form>

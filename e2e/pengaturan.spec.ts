@@ -166,6 +166,21 @@ test.describe('formulir kategori', () => {
     await expect(page.getByText('arahnya terkunci')).toHaveCount(0)
   })
 
+  test('wires the cashflow field to the sentence explaining it', async ({ page }) => {
+    await open(page, 'settings-category-form')
+
+    // FieldRow moved the explanation out of the field's own column into a
+    // footer under the card, so the connection a sighted reader sees by
+    // proximity has to be spelled out for anyone using a screen reader.
+    const select = page.locator('select[name="cashflow"]')
+    const describedBy = await select.getAttribute('aria-describedby')
+    expect(describedBy).toBeTruthy()
+
+    const note = page.locator(`#${describedBy}`)
+    await expect(note).toBeVisible()
+    await expect(note).not.toBeEmpty()
+  })
+
   test('offers one line of kamus, and no more than that', async ({ page }) => {
     await open(page, 'settings-category-form')
 
