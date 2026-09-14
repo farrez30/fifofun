@@ -357,6 +357,25 @@ test('focus never lands behind the furniture pinned to the screen', async ({ pag
               Math.min(box.right, over.right) - Math.max(box.left, over.left) > 0
             if (!overlap) continue
 
+            /*
+              An element taller than the space it could ever be scrolled into
+              cannot be cleared of anything, and demanding it be is a rule no
+              browser can satisfy. The flow diagram is the case: its scroll
+              region is a focus stop and it stands 963px tall inside 664px of
+              viewport, so some part of it is behind the bar at every possible
+              scroll position.
+
+              2.4.11 at AA asks that a focused component not be ENTIRELY
+              hidden, which is the check that survives here: what has to hold
+              is that a usable band of it is still visible. Fifty pixels rather
+              than one, because a sliver of a diagram is not a focus indicator
+              anybody can find.
+            */
+            if (box.height > over.top) {
+              const visible = Math.min(box.bottom, over.top) - Math.max(box.top, 0)
+              if (visible >= 50) continue
+            }
+
             bad.push({
               fixture: name,
               where: (node.textContent ?? node.tagName).trim().slice(0, 40),

@@ -2,6 +2,7 @@
 
 import { useActionState, useRef, useState } from 'react'
 import { useFormStatus } from 'react-dom'
+import { BUTTON_PRIMARY } from '@/components/field-base'
 import { formatIdr } from '@/lib/money'
 import { importStatement, type ImportReport } from './actions'
 
@@ -22,7 +23,7 @@ function Submit({ hasFile }: { hasFile: boolean }) {
     <button
       type="submit"
       disabled={pending || !hasFile}
-      className="h-11 rounded-sm bg-accent px-5 text-sm font-medium text-paper transition-colors duration-150 hover:bg-accent-strong disabled:opacity-50"
+      className={BUTTON_PRIMARY}
     >
       {pending ? 'Memeriksa dan mencocokkan' : 'Impor'}
     </button>

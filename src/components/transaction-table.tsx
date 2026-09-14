@@ -74,7 +74,7 @@ export function TransactionTable({ rows, accounts, categories, caption, emptyTex
 
   if (rows.length === 0) {
     return (
-      <div className="border border-line bg-surface p-6">
+      <div className="squircle rounded-md bg-surface shadow-xs p-6">
         <p className="text-sm text-ink-muted">{emptyText}</p>
       </div>
     )
@@ -84,7 +84,7 @@ export function TransactionTable({ rows, accounts, categories, caption, emptyTex
     <>
       <ul
         aria-label={caption}
-        className="divide-y divide-line border border-line bg-surface sm:hidden"
+        className="rows-inset squircle rounded-md bg-surface shadow-xs sm:hidden"
       >
         {rows.map((row) => {
           const category = categoryOf(row, categoryById)
@@ -161,7 +161,7 @@ export function TransactionTable({ rows, accounts, categories, caption, emptyTex
       </ul>
 
       <div
-        className="relative hidden overflow-x-auto border border-line bg-surface sm:block"
+        className="relative hidden overflow-x-auto squircle rounded-md bg-surface shadow-xs sm:block"
         tabIndex={0}
         role="region"
         aria-label={`${caption}, bisa digeser ke samping`}

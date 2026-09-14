@@ -176,7 +176,7 @@ export function ChildrenPanel({
             on a phone. */}
         <ul
           aria-label="Jarak antar anak"
-          className="mt-3 divide-y divide-line border border-line bg-surface sm:hidden"
+          className="mt-3 rows-inset squircle rounded-md bg-surface shadow-xs sm:hidden"
         >
           {spacing.map((option) => {
             const style = VERDICT_STYLE[option.verdict]
@@ -187,13 +187,13 @@ export function ChildrenPanel({
                   <span className="text-sm text-ink">
                     <span className="tnum font-mono">{option.years}</span> tahun
                     {chosen ? (
-                      <span className="ml-2 text-[0.625rem] uppercase tracking-wide text-accent">
+                      <span className="ml-2 text-caption2 uppercase tracking-wide text-accent">
                         dipilih
                       </span>
                     ) : null}
                   </span>
                   <span
-                    className={`inline-flex shrink-0 items-center gap-1 rounded-xs border px-1.5 py-0.5 text-[0.625rem] uppercase tracking-wide ${style.chip}`}
+                    className={`inline-flex shrink-0 items-center gap-1 rounded-xs border px-1.5 py-0.5 text-caption2 uppercase tracking-wide ${style.chip}`}
                   >
                     <span aria-hidden="true">{style.glyph}</span>
                     {style.label}
@@ -228,7 +228,7 @@ export function ChildrenPanel({
         </ul>
 
         <div
-          className="relative mt-3 hidden overflow-x-auto border border-line bg-surface sm:block"
+          className="relative mt-3 hidden overflow-x-auto squircle rounded-md bg-surface shadow-xs sm:block"
           tabIndex={0}
           role="region"
           aria-label="Tabel jarak antar anak, bisa digeser ke samping"
@@ -265,14 +265,14 @@ export function ChildrenPanel({
                     <th scope="row" className="whitespace-nowrap px-4 py-2.5 text-left font-normal text-ink">
                       <span className="tnum font-mono">{option.years}</span> tahun
                       {chosen ? (
-                        <span className="ml-2 text-[0.625rem] uppercase tracking-wide text-accent">
+                        <span className="ml-2 text-caption2 uppercase tracking-wide text-accent">
                           dipilih
                         </span>
                       ) : null}
                     </th>
                     <td className="px-4 py-2.5">
                       <span
-                        className={`inline-flex items-center gap-1 rounded-xs border px-1.5 py-0.5 text-[0.625rem] uppercase tracking-wide ${style.chip}`}
+                        className={`inline-flex items-center gap-1 rounded-xs border px-1.5 py-0.5 text-caption2 uppercase tracking-wide ${style.chip}`}
                       >
                         <span aria-hidden="true">{style.glyph}</span>
                         {style.label}
@@ -335,7 +335,7 @@ function Figure({
   emphasis?: boolean
 }) {
   return (
-    <div className="border border-line bg-surface p-4">
+    <div className="squircle rounded-md bg-surface shadow-xs p-4">
       <p className="text-xs font-medium uppercase tracking-wide text-ink-faint">{label}</p>
       <p
         className={`mt-1.5 tnum font-mono text-ink ${emphasis ? 'text-2xl font-medium' : 'text-lg'}`}

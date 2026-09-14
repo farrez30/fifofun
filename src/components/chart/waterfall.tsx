@@ -56,7 +56,7 @@ export function Waterfall({ statement, caption }: Props) {
 
   if (steps.length === 2 && steps[0].total === 0n && steps[1].total === 0n) {
     return (
-      <figure className="border border-line bg-surface p-6">
+      <figure className="squircle rounded-md bg-surface shadow-xs p-6">
         <figcaption className="text-sm font-medium text-ink">{caption}</figcaption>
         <p className="mt-2 text-sm text-ink-muted">
           Belum ada uang yang bergerak bulan ini, jadi tidak ada yang bisa diurutkan.
@@ -72,7 +72,7 @@ export function Waterfall({ statement, caption }: Props) {
   const change = closing.total - opening.total
 
   return (
-    <figure className="border border-line bg-surface p-4">
+    <figure className="squircle rounded-md bg-surface shadow-xs p-4">
       <figcaption className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <span className="text-sm font-medium text-ink">{caption}</span>
         <span className="text-xs text-ink-muted">
@@ -104,7 +104,7 @@ export function Waterfall({ statement, caption }: Props) {
             return (
               <span
                 key={String(tick)}
-                className={`absolute bottom-0 whitespace-nowrap text-[0.625rem] leading-none text-ink-faint ${
+                className={`absolute bottom-0 whitespace-nowrap text-caption2 leading-none text-ink-faint ${
                   crowded ? 'hidden sm:block' : ''
                 }`}
                 style={{ left: `${pct}%`, transform: nudge(pct) }}

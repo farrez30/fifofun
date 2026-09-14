@@ -68,11 +68,33 @@ export function Stat({
   previousLabel,
 }: StatProps) {
   return (
-    <div className="border border-line bg-surface p-4">
-      <p className="text-xs font-medium uppercase tracking-wide text-ink-faint">{label}</p>
+    /*
+      `data-stat` is what the tests hold on to. They used to find these cards
+      with `div.border`, which meant a visual class was load bearing for a test
+      about what the card says, and the first restyle that dropped the border
+      would have broken two assertions with a message about an empty locator.
+    */
+    <div data-stat className="squircle rounded-md bg-surface p-4 shadow-xs">
+      {/*
+        The label stopped shouting.
+
+        It was 12px uppercase with widened tracking, which is the caption idiom
+        of a dashboard template and the one thing Apple's guidance is blunt
+        about: all caps costs legibility, because it removes the ascenders and
+        descenders a reader uses to recognise a word without spelling it out.
+        Footnote size in sentence case says the same thing and is easier to
+        read, which matters more here than anywhere, since this label is what
+        tells you which figure you are looking at.
+
+        And the card lost its border for a radius and a shadow. In dark mode the
+        shadow is nearly invisible and is meant to be: the surface staircase
+        does the separating there, which is why the elevation tokens go darker
+        rather than lighter when the theme does.
+      */}
+      <p className="text-footnote text-ink-faint">{label}</p>
       <p
-        className={`mt-1.5 tnum font-mono ${
-          emphasis ? 'text-2xl font-medium text-ink' : 'text-lg text-ink'
+        className={`mt-1.5 tnum font-mono tracking-title2 ${
+          emphasis ? 'text-title2 font-semibold text-ink' : 'text-title3 text-ink'
         }`}
       >
         {formatIdr(sen)}

@@ -79,7 +79,7 @@ export function AllocationPanel({
         </div>
       </div>
 
-      <div className="border border-line bg-surface">
+      <div className="squircle rounded-md bg-surface shadow-xs">
         {!allocation.framework.partition ? (
           <p className="border-b border-line bg-warn-wash px-4 py-2.5 text-xs text-ink-muted">
             <span aria-hidden="true" className="mr-1.5 text-warn">
@@ -98,7 +98,7 @@ export function AllocationPanel({
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <span className="text-sm font-medium text-ink">
                     {bucket.label}
-                    <span className="ml-2 rounded-xs border border-line px-1.5 py-0.5 text-[0.625rem] font-normal uppercase tracking-wide text-ink-muted">
+                    <span className="ml-2 rounded-xs border border-line px-1.5 py-0.5 text-caption2 font-normal uppercase tracking-wide text-ink-muted">
                       {BOUND_LABEL[bucket.bound]}
                     </span>
                   </span>

@@ -25,7 +25,7 @@ export function BillsPanel({ review }: Props) {
 
   if (bills.length === 0) {
     return (
-      <div className="border border-line bg-surface p-6">
+      <div className="squircle rounded-md bg-surface shadow-xs p-6">
         <p className="text-sm font-medium text-ink">Belum ada tagihan yang tercatat.</p>
         <p className="mt-2 text-sm text-ink-muted">
           Impor tidak bisa menebak mana pembayaran yang berupa tagihan rutin. Listrik, internet,
@@ -42,7 +42,7 @@ export function BillsPanel({ review }: Props) {
   }
 
   return (
-    <div className="border border-line bg-surface">
+    <div className="squircle rounded-md bg-surface shadow-xs">
       <div className="border-b border-line p-4">
         {/*
           Three cases, not two. A month with nothing due because everything was

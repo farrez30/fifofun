@@ -92,7 +92,7 @@ export function GoalGlidepath({
   if (invested !== null && invested.months === 0) {
     const surplus = startingBalance - target
     return (
-      <figure className="border border-line bg-surface p-4">
+      <figure className="squircle rounded-md bg-surface shadow-xs p-4">
         <figcaption className="text-sm font-medium text-ink">{caption}</figcaption>
         <p className="mt-2 text-sm text-ink-muted">
           <Verdict path={path} />
@@ -169,7 +169,7 @@ export function GoalGlidepath({
   const labelEvery = Math.ceil(points.length / 9)
 
   return (
-    <figure className="border border-line bg-surface p-4">
+    <figure className="squircle rounded-md bg-surface shadow-xs p-4">
       <figcaption className="mb-1 text-sm font-medium text-ink">{caption}</figcaption>
       <p className="mb-4 text-xs text-ink-muted">
         <Verdict path={path} />
@@ -180,7 +180,7 @@ export function GoalGlidepath({
           {scale.ticks.map((tick) => (
             <span
               key={String(tick)}
-              className="absolute right-0 -translate-y-1/2 whitespace-nowrap text-[0.625rem] leading-none text-ink-faint"
+              className="absolute right-0 -translate-y-1/2 whitespace-nowrap text-caption2 leading-none text-ink-faint"
               style={{ top: `${yAt(tick)}%` }}
             >
               {formatIdrCompact(tick)}
@@ -243,7 +243,7 @@ export function GoalGlidepath({
               figure twice, a centimetre apart, reads as two different values. */}
           {scale.top === target ? null : (
             <span
-              className="absolute left-0 -translate-y-full pb-0.5 text-[0.625rem] leading-none text-accent-strong"
+              className="absolute left-0 -translate-y-full pb-0.5 text-caption2 leading-none text-accent-strong"
               style={{ top: `${targetY}%` }}
             >
               Target {formatIdrCompact(target)}
@@ -266,7 +266,7 @@ export function GoalGlidepath({
                 }}
               />
               <span
-                className="absolute translate-y-1.5 whitespace-nowrap text-[0.625rem] leading-none text-under"
+                className="absolute translate-y-1.5 whitespace-nowrap text-caption2 leading-none text-under"
                 style={{ top: `${targetY}%`, left: `${xAtMonth(invested.months) + 1}%` }}
               >
                 {spanOf(path.monthsEarned ?? 0)} lebih cepat
@@ -306,7 +306,7 @@ export function GoalGlidepath({
             return (
               <span
                 key={point.year}
-                className="absolute top-0 whitespace-nowrap tabular-nums text-[0.625rem] leading-none text-ink-faint"
+                className="absolute top-0 whitespace-nowrap tabular-nums text-caption2 leading-none text-ink-faint"
                 style={{ left: `${pct}%`, transform: nudge(pct) }}
               >
                 {index === 0 ? point.year : `'${String(point.year).slice(2)}`}

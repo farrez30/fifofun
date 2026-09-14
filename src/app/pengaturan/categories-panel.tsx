@@ -105,7 +105,7 @@ export function CategoriesPanel({ categories }: { categories: CategoryView[] }) 
         tersimpan cuma derajat warnanya, terangnya mengikuti tema.
       </p>
 
-      <details className="mt-3 border border-line bg-surface">
+      <details className="mt-3 squircle rounded-md bg-surface shadow-xs">
         <summary className="cursor-pointer px-4 py-3 text-sm text-ink-muted">
           Nama yang dicari impor apa adanya
         </summary>
@@ -127,7 +127,7 @@ export function CategoriesPanel({ categories }: { categories: CategoryView[] }) 
         </div>
       </details>
 
-      <details className="mt-3 border border-line bg-surface">
+      <details className="mt-3 squircle rounded-md bg-surface shadow-xs">
         <summary className="cursor-pointer px-4 py-3 text-sm text-accent">Tambah kategori</summary>
         <div className="border-t border-line p-4">
           <CategoryForm siblings={categories} />
@@ -156,7 +156,7 @@ function Table({
           page and each one was its own sideways drag. */}
       <ul
         aria-label={caption}
-        className="mt-2 divide-y divide-line border border-line bg-surface sm:hidden"
+        className="mt-2 rows-inset squircle rounded-md bg-surface shadow-xs sm:hidden"
       >
         {rows.map((category, index) => (
           <Card
@@ -172,7 +172,7 @@ function Table({
         ))}
       </ul>
 
-      <div className="relative mt-2 hidden overflow-x-auto border border-line bg-surface sm:block">
+      <div className="relative mt-2 hidden overflow-x-auto squircle rounded-md bg-surface shadow-xs sm:block">
       <table className="w-full min-w-[34rem] border-collapse text-sm">
 
         <caption className="sr-only">{caption}</caption>

@@ -3,12 +3,25 @@ import nextVitals from 'eslint-config-next/core-web-vitals'
 import nextTs from 'eslint-config-next/typescript'
 
 /*
-  Rules that keep the interface from reading as machine-generated.
+  Rules that keep the interface honest.
 
-  These are the half of the anti-slop checklist a machine can verify. The other
-  half needs judgement and lives in the `anti-slop` skill. Putting the literal
-  ones here means they hold whether or not anyone remembers to read anything.
+  These used to be the half of an anti-slop checklist a machine can verify, and
+  three of them were written against drop shadows, hover scaling and
+  glassmorphism. Two of those three are gone, because the interface is an Apple
+  interface now and elevation and material are part of that vocabulary. What
+  replaced them are not permissions but channels: blur has to come from a named
+  material, elevation has to come from the scale, and glass has to stay in the
+  navigation layer. `docs/DESIGN.md` carries the reasoning; this file carries
+  the half that holds whether or not anyone reads it.
 */
+const pureBlackOrWhite = {
+  // Pure white and pure black read as unfinished unless they are chosen, and
+  // the theme defines surfaces for exactly this reason. The two files that
+  // genuinely have to name one are exempted below rather than weakening this.
+  selector: 'Literal[value=/^#(fff|ffffff|000|000000)$/i]',
+  message: 'Use a surface token from globals.css, not pure white or black.',
+}
+
 const generatedLookRules = [
   {
     // The most reliable signal that copy was written by a language model.
@@ -19,29 +32,72 @@ const generatedLookRules = [
     selector: 'JSXText[value=/[\\u{1F300}-\\u{1FAFF}\\u{2600}-\\u{27BF}]/u]',
     message: 'Emoji are not UI elements. Use an icon from the project set.',
   },
+  pureBlackOrWhite,
   {
-    // Pure white and pure black read as unfinished; the theme defines tinted
-    // surfaces for exactly this reason.
-    selector: 'Literal[value=/^#(fff|ffffff|000|000000)$/i]',
-    message: 'Use a surface token from globals.css, not pure white or black.',
+    /*
+      Growing on hover is still the reflex it always was, and Apple does not do
+      it: a control under the finger gets smaller, not larger, because the
+      press is what is being reported. `active:scale-[0.97]` is the shape that
+      means something.
+    */
+    // 105, 110 and 115 only. `scale-100` is the reset a disabled control
+    // needs to opt out of the press, and banning it bans the fix as well as
+    // the bug.
+    selector: 'Literal[value=/(^|\s|:)scale-1(05|10|15)(\s|$)/]',
+    message: 'Reflex hover effect. A pressed control shrinks; it does not grow.',
   },
   {
-    // A variant prefix such as `hover:` may sit immediately before the class,
-    // so a whitespace-only boundary would miss the most common form of all.
-    selector: 'Literal[value=/(^|\\s|:)(scale-1[01][05]|shadow-lg)(\\s|$)/]',
-    message: 'Reflex hover effect. Decide what the hover should communicate.',
+    /*
+      The blur values are the four material thicknesses and nothing else. A
+      `backdrop-blur-[13px]` written by eye is somebody inventing a fifth one,
+      which is how a material system turns back into a pile of numbers.
+    */
+    selector: "Literal[value=/(^|\\s|:)backdrop-blur(-|\\[|\\s|$)/]",
+    message:
+      'Use a material class (material, material-thin, material-thick, material-ultra-thin), not a raw blur.',
   },
   {
-    // Separation in this app comes from 1px borders, which stay legible in
-    // dense tables and survive dark mode without retuning.
-    selector: 'Literal[value=/(^|\\s)(shadow-(md|lg|xl|2xl))(\\s|$)/]',
-    message: 'Prefer a 1px border over a drop shadow for separation.',
-  },
-  {
-    selector: 'Literal[value=/(^|\\s)backdrop-blur/]',
-    message: 'No glassmorphism. Use an opaque surface token.',
+    /*
+      The elevation scale is xs, sm, md, lg, xl, and each step names a kind of
+      surface rather than an amount of blur. `shadow-2xl` and `shadow-inner`
+      are Tailwind's, not Apple's, and neither has a surface to belong to.
+    */
+    selector: 'Literal[value=/(^|\\s|:)shadow-(2xl|inner)(\\s|$)/]',
+    message: 'The elevation scale is xs/sm/md/lg/xl. Pick the one that names the surface.',
   },
 ]
+
+/*
+  Glass belongs to the navigation layer.
+
+  A card, a row or a tile with a material on it is the anti-pattern Apple names
+  outright: the eye loses the contrast between sharp content and blurred
+  chrome, and a translucent surface over a flat one is an expensive way to draw
+  `rgba()`. The files listed against this rule are the ones that draw chrome;
+  everything else gets an opaque token.
+
+  This is the cheap half of the guard. `e2e/glass.spec.ts` is the real one: it
+  reads computed styles across every fixture and catches the cases a class name
+  never mentions.
+*/
+const chromeOnlyGlass = {
+  selector: "Literal[value=/(^|\\s|:)material(-(thin|thick|ultra-thin))?(\\s|$)/]",
+  message:
+    'Glass is for the navigation layer: a bar, a sheet, a floating dock or readout. Content surfaces are opaque.',
+}
+
+const chromeFiles = [
+  'src/components/mobile-tabs.tsx',
+  'src/components/shell-frame.tsx',
+  'src/components/shell-fallback.tsx',
+  'src/components/pull-to-refresh.tsx',
+  'src/components/chart/drag-axis.tsx',
+]
+
+/* The two files that have to name a colour rather than a token: a web app
+   manifest is read by the installer before any stylesheet exists, and the
+   browser chrome colour is a meta tag. */
+const rawColourFiles = ['src/app/manifest.ts', 'src/app/layout.tsx']
 
 const eslintConfig = defineConfig([
   ...nextVitals,
@@ -69,7 +125,7 @@ const eslintConfig = defineConfig([
           ignoreTypeReferences: true,
         },
       ],
-      'no-restricted-syntax': ['error', ...generatedLookRules],
+      'no-restricted-syntax': ['error', ...generatedLookRules, chromeOnlyGlass],
       'no-restricted-imports': [
         'error',
         {
@@ -105,6 +161,34 @@ const eslintConfig = defineConfig([
             },
           ],
         },
+      ],
+    },
+  },
+  {
+    /*
+      The files that draw chrome, and the only ones allowed to reach for glass.
+
+      Test files are on the list for a different reason: a test that asserts
+      something about materials has to be able to say the word, and the rule
+      matches a string literal rather than a class attribute, which is the
+      price of checking this in lint at all. The sweep in `e2e/glass.spec.ts`
+      reads computed style and does not have that blind spot.
+    */
+    files: [...chromeFiles, 'src/**/*.test.{ts,tsx}'],
+    rules: {
+      'no-restricted-syntax': ['error', ...generatedLookRules],
+    },
+  },
+  {
+    // A manifest is read before any stylesheet exists and a theme colour is a
+    // meta tag, so both have to name a colour outright. Every other rule in the
+    // list still applies to them.
+    files: rawColourFiles,
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        ...generatedLookRules.filter((rule) => rule !== pureBlackOrWhite),
+        chromeOnlyGlass,
       ],
     },
   },

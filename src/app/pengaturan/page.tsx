@@ -4,6 +4,7 @@ import { Suspense } from 'react'
 import { AppShell } from '@/components/app-shell'
 import { getAccounts, getCategories, getHousehold, getUsage } from '@/lib/queries/household'
 import { getUser } from '@/lib/supabase/server'
+import { Appearance } from './appearance'
 import { AccountsPanel, type AccountView } from './accounts-panel'
 import { CategoriesPanel, type CategoryView } from './categories-panel'
 import { SettingsSkeleton } from './skeleton'
@@ -72,6 +73,7 @@ async function Settings() {
     <div className="space-y-10">
       <AccountsPanel accounts={accountViews} />
       <CategoriesPanel categories={categoryViews} />
+      <Appearance />
     </div>
   )
 }

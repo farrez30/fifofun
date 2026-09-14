@@ -68,7 +68,7 @@ export function SplitForm({
   }
 
   return (
-    <form action={action} className="space-y-3 border border-line bg-surface p-4">
+    <form action={action} className="space-y-3 squircle rounded-md bg-surface shadow-xs p-4">
       <h2 className="text-sm font-medium text-ink">Pisah jadi beberapa kategori</h2>
       <input type="hidden" name="id" value={id} />
 

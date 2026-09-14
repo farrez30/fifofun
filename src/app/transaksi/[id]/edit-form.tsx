@@ -74,7 +74,7 @@ export function EditEntryForm({
   const chosen = categories.find((category) => category.id === categoryId)
 
   return (
-    <form action={action} className="space-y-4 border border-line bg-surface p-4">
+    <form action={action} className="space-y-4 squircle rounded-md bg-surface shadow-xs p-4">
       <h2 className="text-sm font-medium text-ink">Ubah transaksi</h2>
       <input type="hidden" name="id" value={entry.id} />
       <input type="hidden" name="passThrough" value={passThrough ? '1' : '0'} />

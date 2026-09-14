@@ -15,6 +15,9 @@ import {
 } from '@/lib/queries/household'
 import { getUser } from '@/lib/supabase/server'
 import { PlannerSkeleton } from './skeleton'
+import { Target } from '@phosphor-icons/react/dist/ssr/Target'
+import { BUTTON_QUIET } from '@/components/field-base'
+import { Unavailable } from '@/components/unavailable'
 
 export const metadata: Metadata = { title: 'Rencana' }
 /* Blocks on runtime data by design; the why lives in src/app/page.tsx above `instant`. */
@@ -23,16 +26,18 @@ export const instant = false
 
 function NoData({ reason }: { reason: string }) {
   return (
-    <div className="border border-line bg-surface p-10 text-center">
-      <h2 className="text-base font-medium text-ink">Simulasi butuh data dulu</h2>
-      <p className="mx-auto mt-2 max-w-md text-sm text-ink-muted">{reason}</p>
-      <a
-        href="/impor"
-        className="mt-4 inline-block rounded-sm border border-line px-3 py-2 text-sm text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
-      >
-        Impor e-Statement
-      </a>
-    </div>
+    <Unavailable
+      glyph={Target}
+      heading
+      title="Simulasi butuh data dulu"
+      action={
+        <a href="/impor" className={BUTTON_QUIET}>
+          Impor e-Statement
+        </a>
+      }
+    >
+      {reason}
+    </Unavailable>
   )
 }
 

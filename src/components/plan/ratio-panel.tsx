@@ -65,7 +65,7 @@ export function RatioPanel({ snapshot }: { snapshot: FinancialSnapshot }) {
 
   return (
     <div className="space-y-4">
-      <div className="border border-line bg-surface p-4">
+      <div className="squircle rounded-md bg-surface shadow-xs p-4">
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
           <p className="text-sm font-medium text-ink">
             {report.counts.danger > 0
@@ -97,13 +97,13 @@ export function RatioPanel({ snapshot }: { snapshot: FinancialSnapshot }) {
                   className="block rounded-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                 >
                   <span
-                    className={`flex h-7 items-center justify-center border text-[0.625rem] sm:h-6 ${
+                    className={`flex h-7 items-center justify-center border text-caption2 sm:h-6 ${
                       style ? style.chip : 'border-line bg-sunken text-ink-faint'
                     }`}
                   >
                     <span aria-hidden="true">{style ? style.glyph : '–'}</span>
                   </span>
-                  <span className="mt-1 block truncate text-center text-[0.625rem] text-ink-muted">
+                  <span className="mt-1 block truncate text-center text-caption2 text-ink-muted">
                     {SHORT_LABEL[result.threshold.id] ?? result.threshold.label}
                   </span>
                   <span className="sr-only">
@@ -122,7 +122,7 @@ export function RatioPanel({ snapshot }: { snapshot: FinancialSnapshot }) {
       </div>
 
       {report.weakest ? (
-        <div className="border border-line bg-sunken p-4">
+        <div className="squircle rounded-md bg-sunken p-4">
           <p className="text-xs font-medium uppercase tracking-wide text-ink-faint">
             Mulai dari sini
           </p>
@@ -131,7 +131,7 @@ export function RatioPanel({ snapshot }: { snapshot: FinancialSnapshot }) {
         </div>
       ) : null}
 
-      <ul className="divide-y divide-line border border-line bg-surface">
+      <ul className="rows-inset squircle rounded-md bg-surface shadow-xs">
         {report.results.map((result) => {
           const style = result.verdict ? VERDICT_STYLE[result.verdict] : null
           return (
@@ -150,7 +150,7 @@ export function RatioPanel({ snapshot }: { snapshot: FinancialSnapshot }) {
                   </span>
                   {style ? (
                     <span
-                      className={`inline-flex items-center gap-1 rounded-xs border px-1.5 py-0.5 text-[0.625rem] uppercase tracking-wide ${style.chip}`}
+                      className={`inline-flex items-center gap-1 rounded-xs border px-1.5 py-0.5 text-caption2 uppercase tracking-wide ${style.chip}`}
                     >
                       <span aria-hidden="true">{style.glyph}</span>
                       {style.label}

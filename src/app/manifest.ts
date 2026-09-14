@@ -23,8 +23,17 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: '/',
     display: 'standalone',
     orientation: 'portrait',
-    background_color: '#1f1d1b',
-    theme_color: '#1f1d1b',
+    /*
+      The splash screen, which a manifest can only state once.
+
+      systemBackground in dark, because an installed application opens to
+      whatever the phone is set to far more often than not, and a launch that
+      flashes light before settling dark is the more jarring of the two
+      mistakes. The document's own theme colour follows the chosen appearance
+      per request; this is the one the installer bakes in.
+    */
+    background_color: '#000000',
+    theme_color: '#000000',
     categories: ['finance', 'productivity'],
     icons: [
       { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },

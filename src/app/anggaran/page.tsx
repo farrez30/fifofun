@@ -79,7 +79,7 @@ async function Budgets({ params }: { params: Record<string, string | string[] | 
 
   if (budgetable.length === 0) {
     return (
-      <div className="border border-line bg-surface p-6">
+      <div className="squircle rounded-md bg-surface shadow-xs p-6">
         <p className="text-sm font-medium text-ink">Belum ada kategori Spending atau Bills.</p>
         <p className="mt-2 text-sm text-ink-muted">
           Anggaran ditetapkan per kategori pengeluaran.{' '}

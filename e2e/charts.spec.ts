@@ -248,7 +248,7 @@ test.describe('setahun ke belakang', () => {
 test.describe('perbandingan dengan bulan sebelumnya', () => {
   test('says which way each headline moved, and by how much', async ({ page }) => {
     await open(page, 'stats')
-    const cards = await page.locator('div.border').allInnerTexts()
+    const cards = await page.locator('[data-stat]').allInnerTexts()
 
     // Case insensitive: the labels are uppercased in CSS, and innerText reports
     // what the screen shows rather than what the markup says.
@@ -267,7 +267,7 @@ test.describe('perbandingan dengan bulan sebelumnya', () => {
 
   test('says nothing at all on the first month recorded', async ({ page }) => {
     await open(page, 'stats')
-    const card = page.locator('div.border', { hasText: 'Sisa uang' }).last()
+    const card = page.locator('[data-stat]', { hasText: 'Sisa uang' }).last()
     await expect(card).not.toContainText('bulan sebelumnya')
     await expect(card).not.toContainText('▲')
   })
@@ -1136,6 +1136,34 @@ test.describe('aliran uang', () => {
         ),
       )
       .toEqual(Array.from({ length: count }, () => '0.28'))
+  })
+
+  test('traces a ribbon for a keyboard, not only for a pointer', async ({ page }) => {
+    /*
+      The isolation was pointer-only, and the pointer rules are gated behind
+      `@media (hover: hover)` for a good reason: a sticky hover on a touch
+      screen leaves a diagram that looks broken. The consequence was that
+      somebody driving this with a keyboard could reach each flow's name
+      through its `<title>` and never see which flow it was.
+
+      Focus is not gated, because focus arrives and leaves on purpose.
+    */
+    await open(page, 'sankey-real')
+    const ribbons = page.locator('[data-ribbon]')
+
+    await ribbons.nth(2).focus()
+
+    await expect
+      .poll(async () => {
+        const after = await ribbons.evaluateAll((nodes) =>
+          nodes.map((node) => Number(getComputedStyle(node).opacity)),
+        )
+        return {
+          focusedComesForward: after[2] > 0.5,
+          everyOtherGoesBack: after.every((opacity, index) => index === 2 || opacity < 0.1),
+        }
+      })
+      .toEqual({ focusedComesForward: true, everyOtherGoesBack: true })
   })
 
   test('never writes one label across another', async ({ page }) => {

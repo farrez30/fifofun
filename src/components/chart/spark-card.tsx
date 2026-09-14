@@ -74,7 +74,7 @@ export function SparkCard({ view }: { view: SparkView }) {
   }
 
   return (
-    <li className="border border-line bg-sunken p-3">
+    <li className="squircle rounded-md bg-sunken p-3">
       <p className="truncate text-sm text-ink" title={view.category}>
         {view.category}
       </p>

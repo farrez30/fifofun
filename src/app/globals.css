@@ -3,30 +3,77 @@
 /*
   FiFoFun design tokens.
 
-  Three rules drive the choices below, each one a reaction to how AI-generated
-  interfaces tend to look:
+  This file used to open with three rules written against the way generated
+  interfaces look: warm paper rather than white, separation from 1px borders
+  rather than shadows, and money never coloured by hue alone. The third one
+  still holds and is still load bearing. The first two were reversed on
+  purpose, when the decision was taken to build this as an Apple interface
+  rather than as a reaction to a house style. `docs/DESIGN.md` records that
+  decision, what it cost, and what was refused along with it.
 
-  1. The page is never pure white and never near-black-with-purple. The base is
-     warm paper; the ink is a warm near-black. Both carry a trace of chroma so
-     the screen reads as a considered surface rather than a default.
-  2. Separation comes from 1px borders, not drop shadows. It is the idiom that
-     makes dense financial tables legible, and it survives dark mode intact.
+  What replaces them:
+
+  1. Apple's semantic colour system, in its Increase Contrast variant for the
+     light theme. Apple's stock light palette does not clear WCAG AA: white on
+     systemBlue measures 4,02:1 and systemGreen on white measures 2,22:1, and
+     axe runs over every component in this repository in both colour schemes.
+     Apple's own high-contrast trait slot is the right source for a palette
+     that has to pass. Dark mode ships the stock values, which already do.
+  2. Separation from material and elevation. Glass belongs to the navigation
+     layer only: the tab bar, the sheet, a dock that floats over content. A
+     card is opaque, a list row is opaque, and a chart is opaque all the way
+     down. Blur behind data is the one thing Apple's own guidance names as an
+     anti-pattern, and a ledger is the last place to argue with it.
   3. Money is never coloured by hue alone. Over and under budget carry an icon
      and a position as well, because red and green are the pair roughly one man
-     in twelve cannot reliably tell apart.
+     in twelve cannot reliably tell apart. Unchanged, and the only one of the
+     original three that survives intact.
 */
 
 @theme {
-  --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
-  /* Figures sit in a monospace with true tabular widths so columns of Rupiah
-     line up on the decimal without any per-cell alignment work. */
-  --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', monospace;
+  /*
+    The system face, with one anchor at the end of it.
 
-  /* A deliberate radius scale rather than rounded-xl on everything. */
-  --radius-xs: 0.1875rem;
-  --radius-sm: 0.3125rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
+    On Apple hardware `-apple-system` resolves to San Francisco, and the OS
+    picks Text below about twenty pixels and Display above it without being
+    asked. SF cannot be served as a webfont; it is the operating system's font,
+    loaded by the operating system, and no licence changes that.
+
+    Which leaves everybody else. A stack ending at `system-ui` hands Android
+    Roboto, Windows Segoe, and the Linux CI runner whatever fontconfig happens
+    to offer, whose digits run some six percent wider than the face this
+    application was measured against. `e2e/render.ts` exists because that
+    already happened once: it passed on a laptop for months and failed on CI.
+    So IBM Plex stays, demoted from the identity to the anchor, and every
+    machine without SF renders one face this repository has actually measured.
+  */
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display',
+    'IBM Plex Sans', system-ui, sans-serif;
+
+  /*
+    Figures, and a deliberate divergence from Apple.
+
+    Apple sets currency in SF with the `tnum` feature on, never in SF Mono, and
+    that is the better answer when the face is guaranteed. Here it is not: the
+    fallback story is exactly where this application's legibility lives, and a
+    monospace is the only way to promise a column of Rupiah the same advance
+    width on every machine that will ever open it. Recorded in DESIGN.md as a
+    divergence rather than an oversight.
+  */
+  --font-mono:
+    'IBM Plex Mono', ui-monospace, 'SF Mono', SFMono-Regular, monospace;
+
+  /*
+    Apple's real corner radii. Every one of them is a continuous corner on
+    device; these are the radius, and the curvature is the part the web cannot
+    have for free. `corner-shape` is applied further down, where it exists.
+  */
+  --radius-xs: 0.375rem; /*  6px  chips, badges              */
+  --radius-sm: 0.5rem; /*  8px  text fields, small buttons */
+  --radius-md: 0.625rem; /* 10px  inset-grouped section      */
+  --radius-lg: 0.875rem; /* 14px  alerts, elevated panels    */
+  --radius-xl: 1.25rem; /* 20px  sheets                     */
 
   /*
     The strip a phone keeps for itself: the home indicator along the bottom, the
@@ -40,115 +87,527 @@
   --spacing-safe-l: env(safe-area-inset-left, 0px);
   --spacing-safe-r: env(safe-area-inset-right, 0px);
 
-
-  /* Surfaces */
-
-  --color-paper: oklch(98.6% 0.004 85);
-  --color-surface: oklch(100% 0 0);
-  --color-sunken: oklch(96.4% 0.006 85);
-  --color-line: oklch(90.5% 0.006 85);
-  --color-line-strong: oklch(83% 0.008 85);
-
-  /* Ink */
-  --color-ink: oklch(24% 0.012 75);
-  --color-ink-muted: oklch(48% 0.012 75);
   /*
-    Tuned against paper, surface and sunken only. The semantic wash backgrounds
-    are darker in dark mode, where this measures 4,23:1 and fails, so text on a
-    wash uses `ink-muted`. Anything faint enough for `ink-faint` had no business
-    sitting on a highlighted surface to begin with.
+    iOS Dynamic Type at the default content size, as a set of extra roles.
+
+    Deliberately additive. Re-pointing Tailwind's own `--text-sm` from 14px to
+    Apple's nearest neighbour would move geometry the phone suite measures, in
+    every component at once and in one commit. These get adopted screen by
+    screen instead, and `--text-body` at 17px is what finally lets a form
+    control name its size rather than say `text-base` to dodge the iOS zoom.
   */
-  /* 52%, not 62%. At 62% this measured 3,29:1 on the sunken surface, well under
-     the 4,5:1 that 12px text needs, and it is the colour every caption uses. */
-  --color-ink-faint: oklch(52% 0.01 75);
+  --text-caption2: 0.6875rem;
+  --text-caption2--line-height: 0.8125rem;
+  --text-caption1: 0.75rem;
+  --text-caption1--line-height: 1rem;
+  --text-footnote: 0.8125rem;
+  --text-footnote--line-height: 1.125rem;
+  --text-subhead: 0.9375rem;
+  --text-subhead--line-height: 1.25rem;
+  --text-callout: 1rem;
+  --text-callout--line-height: 1.3125rem;
+  --text-body: 1.0625rem;
+  --text-body--line-height: 1.375rem;
+  --text-title3: 1.25rem;
+  --text-title3--line-height: 1.5625rem;
+  --text-title2: 1.375rem;
+  --text-title2--line-height: 1.75rem;
+  --text-title1: 1.75rem;
+  --text-title1--line-height: 2.125rem;
+  --text-large-title: 2.125rem;
+  --text-large-title--line-height: 2.5625rem;
 
-  /* One accent, not a rainbow. A deep teal reads as money without resorting
-     to the green that every finance template reaches for first. */
-  --color-accent: oklch(52% 0.098 196);
-  --color-accent-strong: oklch(44% 0.105 196);
-  --color-accent-wash: oklch(95.5% 0.022 196);
+  /* Apple's tracking is a function of size: loose when small, tight when large. */
+  --tracking-caption2: 0.06em;
+  --tracking-caption1: 0.05em;
+  --tracking-footnote: 0.025em;
+  --tracking-subhead: 0.008em;
+  --tracking-title3: -0.008em;
+  --tracking-title2: -0.01em;
+  --tracking-title1: -0.014em;
+  --tracking-large-title: -0.016em;
 
-  /* Semantic money colours. Always paired with an icon in the markup. */
-  /* 53%, not 56%. The verdict chips set this at 10px on over-wash, where 56%
-     measured 4,30:1 against the 4,5:1 small text requires. */
-  --color-over: oklch(53% 0.16 32);
-  --color-over-wash: oklch(95.5% 0.03 32);
-  --color-under: oklch(50% 0.09 172);
-  --color-under-wash: oklch(95.5% 0.028 172);
-  --color-warn: oklch(66% 0.13 75);
-  --color-warn-wash: oklch(96% 0.035 75);
+  /*
+    The system palette. Light is Apple's accessible variant, dark is stock, for
+    the reason in the header.
+
+    `light-dark()` rather than a second palette inside a media query. The old
+    file carried a warning that a `@theme` block nested in a media query gets
+    hoisted out of it, so the dark values redefine the light ones
+    unconditionally and the light theme never renders at all. That trap is not
+    worked around here, it is removed: there is no palette inside a media query
+    any more, and the appearance override further down is one property.
+  */
+  --color-system-blue: light-dark(#0040dd, #0a84ff);
+  --color-system-teal: light-dark(#0071a4, #40c8e0);
+  --color-system-red: light-dark(#d70015, #ff6961);
+  --color-system-green: light-dark(#248a3d, #30d158);
+  --color-system-mint: light-dark(#00785a, #5be3c4);
+  --color-system-orange: light-dark(#c93400, #ff9f0a);
+  --color-system-yellow: light-dark(#8f6100, #ffb340);
+  --color-system-indigo: light-dark(#3634a3, #5e5ce6);
+  --color-system-purple: light-dark(#8944ab, #bf5af2);
+  --color-system-pink: light-dark(#d30f45, #ff375f);
+
+  /*
+    Labels.
+
+    Apple modulates one base colour by alpha rather than reaching for a lighter
+    grey, so a label composites cleanly over any fill without a halo. That
+    mechanism is kept. The alphas are not: Apple's 60 and 30 measure 3,44:1 and
+    1,72:1 on white, and they are the colours 336 and 167 places in this
+    application use. Raised until they clear, then measured on both surfaces:
+    muted 5,97 and 5,59, faint 4,85 and 4,85.
+  */
+  --color-ink: light-dark(#000000, #ffffff);
+  --color-ink-muted: light-dark(rgb(60 60 67 / 0.8), rgb(235 235 245 / 0.75));
+  --color-ink-faint: light-dark(rgb(60 60 67 / 0.75), rgb(235 235 245 / 0.62));
+
+  /*
+    Surfaces, from Apple's grouped family, because this is a grouped-list
+    application: dense tables in cards on a tinted canvas.
+
+    `sunken` is the one that is not a straight lift. Apple's light grouped
+    canvas and its tertiary grouped background are both #F2F2F7, which would
+    make every recessed well disappear into the page behind it. A well is a
+    fill in Apple's own vocabulary rather than a background level, so this is
+    one step darker than the canvas in light, and Apple's tertiary in dark,
+    which is how iOS actually draws a search field sitting on a grouped card.
+  */
+  --color-paper: light-dark(#f2f2f7, #000000);
+  --color-surface: light-dark(#ffffff, #1c1c1e);
+  --color-sunken: light-dark(#ededf2, #2c2c2e);
+
+  /*
+    Separators are always semi-transparent, never a solid grey, so that one
+    value reads correctly on a card, on the canvas and on a material.
+
+    `line-strong` is systemGray2 and systemGray3 rather than Apple's
+    `opaqueSeparator`: #38383A measures weaker against a dark card than the
+    plain separator does, which would invert the pair.
+  */
+  --color-line: light-dark(rgb(60 60 67 / 0.29), rgb(84 84 88 / 0.6));
+  --color-line-strong: light-dark(#aeaeb2, #48484a);
+
+  /* Control backgrounds and highlight overlays. Dark carries more alpha to
+     reach the same perceived weight on a darker field. */
+  --color-fill: light-dark(rgb(120 120 128 / 0.2), rgb(120 120 128 / 0.36));
+  --color-fill-secondary: light-dark(
+    rgb(120 120 128 / 0.16),
+    rgb(120 120 128 / 0.32)
+  );
+  --color-fill-tertiary: light-dark(
+    rgb(118 118 128 / 0.12),
+    rgb(118 118 128 / 0.24)
+  );
+  --color-fill-quaternary: light-dark(
+    rgb(116 116 128 / 0.08),
+    rgb(118 118 128 / 0.18)
+  );
+
+  /*
+    This application's semantics, bound to the system palette.
+
+    Still teal, and still one accent. systemBlue is the default of every
+    interface built to look like iOS, and teal is the one hue that makes this
+    one recognisable. `under` is systemMint rather than systemGreen for the
+    reason the original file gave: the teal-green was chosen so the pair is not
+    red and green. `warn` is systemYellow's accessible variant, which is a real
+    amber; accessible systemOrange is #C93400 and would collide with `over`.
+  */
+  --color-accent: var(--color-system-teal);
+  --color-accent-strong: light-dark(#00567d, #70d7ff);
+  --color-over: var(--color-system-red);
+  --color-under: var(--color-system-mint);
+  --color-warn: var(--color-system-yellow);
+
+  /*
+    The tinted fill behind a verdict chip. Each semantic colour on its own wash
+    measures between 4,52 and 4,75 in light, which is the tightest pair in the
+    whole system: change either side and re-measure, the same discipline the
+    original file wrote down for `over` at 53%.
+  */
+  --color-accent-wash: light-dark(#dceef6, #0e333c);
+  --color-over-wash: light-dark(#fde8ea, #3e1917);
+  --color-under-wash: light-dark(#dbf0e9, #0b322a);
+  --color-warn-wash: light-dark(#faefda, #3a2a08);
 
   /*
     The scrim behind a modal sheet.
 
-    Not derived from ink, which is the trap here: ink flips to near-white in dark
-    mode, and a scrim that follows it would brighten the screen instead of
+    Not derived from ink, which is the trap here: ink flips to white in dark
+    mode, and a scrim that followed it would brighten the screen instead of
     dimming it. A scrim darkens under both themes, so it is its own token and
     goes darker rather than lighter when the surfaces do.
   */
-  --color-scrim: oklch(24% 0.012 75 / 45%);
+  --color-scrim: light-dark(rgb(0 0 0 / 0.35), rgb(0 0 0 / 0.55));
+
+  /*
+    Elevation, which this project has never had.
+
+    Apple's grammar: a Y offset only, a blur roughly three to four times that
+    offset, no spread, and never a coloured shadow. In dark mode the shadow
+    gets darker and tighter rather than lighter, because separation there is
+    carried by the surface staircase and the shadow only has to ground an edge.
+
+    Restraint is the whole point. `xs` and `sm` raise a row, `md` is a popover,
+    `lg` is a sheet, `xl` is a modal. Never on a list row, never on a table
+    cell, never on a chart mark: the hairline is still the right idiom for
+    dense tables, and it did not stop being right because shadows became
+    available.
+  */
+  --shadow-xs: 0 0.5px 1.5px light-dark(rgb(0 0 0 / 0.05), rgb(0 0 0 / 0.5));
+  --shadow-sm:
+    0 1px 3px light-dark(rgb(0 0 0 / 0.07), rgb(0 0 0 / 0.55)),
+    0 1px 1px light-dark(rgb(0 0 0 / 0.04), rgb(0 0 0 / 0.4));
+  --shadow-md:
+    0 2px 8px light-dark(rgb(0 0 0 / 0.08), rgb(0 0 0 / 0.55)),
+    0 1px 2px light-dark(rgb(0 0 0 / 0.05), rgb(0 0 0 / 0.45));
+  --shadow-lg:
+    0 8px 24px light-dark(rgb(0 0 0 / 0.1), rgb(0 0 0 / 0.6)),
+    0 2px 6px light-dark(rgb(0 0 0 / 0.06), rgb(0 0 0 / 0.45));
+  --shadow-xl:
+    0 20px 56px light-dark(rgb(0 0 0 / 0.14), rgb(0 0 0 / 0.68)),
+    0 4px 12px light-dark(rgb(0 0 0 / 0.07), rgb(0 0 0 / 0.5));
+
+  /* The specular top edge of a glass surface. Inset, so it draws inside the
+     radius and follows `corner-shape` wherever that exists. */
+  --shadow-specular: inset 0 1px 0
+    light-dark(rgb(255 255 255 / 0.6), rgb(255 255 255 / 0.08));
+
+  /*
+    Liquid Glass, in four thicknesses.
+
+    Apple varies the tint, not the blur, so these radii are a scale of surface
+    weight rather than of theme. Capped at 24px: past that, on a fixed element
+    that re-samples its backdrop every scroll frame, you are paying real fill
+    rate on a mid-range Android for a difference nobody can name.
+
+    The alphas are a floor rather than a preference. Measured against the worst
+    thing this application can scroll under a bar, which is a chart drawn in
+    ink: at 0,82 in light the primary label measures 13,75:1 and the secondary
+    5,24:1, while at Apple's own 0,60 secondary alpha it measures 3,91:1 and
+    fails. Which is why `.material` raises the label hierarchy rather than
+    inheriting it.
+  */
+  --blur-material-ultra-thin: 8px;
+  --blur-material-thin: 14px;
+  --blur-material-regular: 20px;
+  --blur-material-thick: 24px;
+
+  --color-material-ultra-thin: light-dark(
+    rgb(255 255 255 / 0.62),
+    rgb(28 28 30 / 0.58)
+  );
+  --color-material-thin: light-dark(
+    rgb(255 255 255 / 0.72),
+    rgb(28 28 30 / 0.68)
+  );
+  --color-material-regular: light-dark(
+    rgb(255 255 255 / 0.82),
+    rgb(28 28 30 / 0.8)
+  );
+  --color-material-thick: light-dark(
+    rgb(255 255 255 / 0.92),
+    rgb(28 28 30 / 0.9)
+  );
+
+  /* The opaque twin, for reduced transparency and for engines without a
+     backdrop filter. The same visual weight, with no sampling. */
+  --color-material-opaque: light-dark(#f7f7fa, #1e1e20);
+  --color-material-edge: light-dark(
+    rgb(255 255 255 / 0.55),
+    rgb(255 255 255 / 0.1)
+  );
 }
 
+/*
+  `static`, because Tailwind drops a theme variable nothing references yet and
+  these are meant to be reached for from markup. An easing that vanishes does
+  not fail: it falls back to the initial value and the animation simply goes
+  linear, which is the kind of regression nobody files a bug about.
+*/
+@theme static {
+  /*
+    Apple's springs, sampled into CSS easings.
+
+    Each is `spring(duration: R, bounce: 1 - Z)` in SwiftUI's terms, integrated
+    as a damped harmonic oscillator and emitted as evenly spaced stops. The
+    response and damping pair above each token is the only thing worth editing;
+    the numbers are output. `scripts/springs.mjs` regenerates them and prints
+    the duration that belongs with each curve.
+
+    What a `linear()` cannot do is absorb velocity, because a CSS transition
+    always starts from rest. So these are the springs for motion that begins at
+    rest, and a gesture that ends in a flick gets its curve generated at the
+    moment the finger lifts, in `src/components/spring.ts`, out of the release
+    velocity itself.
+  */
+
+  /* response 0,50 damping 1,00, settles without overshooting */
+  --ease-smooth: linear(
+    0,
+    0.068,
+    0.2082,
+    0.3627,
+    0.5049,
+    0.6248,
+    0.721,
+    0.7955,
+    0.8518,
+    0.8936,
+    0.9242,
+    0.9463,
+    0.9622,
+    0.9736,
+    0.9816,
+    0.9872,
+    0.9911,
+    0.9939,
+    0.9958,
+    0.9971,
+    1
+  );
+
+  /* response 0,30 damping 0,85 */
+  --ease-snappy: linear(
+    0,
+    0.0778,
+    0.2416,
+    0.4228,
+    0.5872,
+    0.721,
+    0.822,
+    0.8937,
+    0.9419,
+    0.9725,
+    0.9905,
+    1.0003,
+    1.0048,
+    1.0062,
+    1.006,
+    1.0051,
+    1.004,
+    1.0029,
+    1
+  );
+
+  /* response 0,40 damping 0,70 */
+  --ease-bouncy: linear(
+    0,
+    0.0607,
+    0.2009,
+    0.3722,
+    0.5425,
+    0.6934,
+    0.8159,
+    0.9083,
+    0.9727,
+    1.0134,
+    1.0358,
+    1.045,
+    1.0453,
+    1.0405,
+    1.0331,
+    1.0251,
+    1.0176,
+    1.0113,
+    1.0063,
+    1.0027,
+    1.0003,
+    0.9988,
+    0.9981,
+    0.9979,
+    1
+  );
+
+  /* response 0,45 damping 0,85, the sheet arriving */
+  --ease-sheet-in: linear(
+    0,
+    0.0648,
+    0.2061,
+    0.3696,
+    0.5252,
+    0.6587,
+    0.7657,
+    0.8468,
+    0.9054,
+    0.9459,
+    0.9726,
+    0.9893,
+    0.9989,
+    1.0039,
+    1.0059,
+    1.0063,
+    1.0057,
+    1.0048,
+    1.0037,
+    1.0028,
+    1
+  );
+
+  /* response 0,25 damping 0,85, a control letting go */
+  --ease-press: linear(
+    0,
+    0.0955,
+    0.2872,
+    0.4878,
+    0.6585,
+    0.7881,
+    0.8785,
+    0.9372,
+    0.9726,
+    0.9922,
+    1.0018,
+    1.0056,
+    1.0063,
+    1.0055,
+    1.0043,
+    1.003,
+    1
+  );
+}
 
 @layer base {
+  /*
+    Appearance.
+
+    Three selectors and one duplicated pair, which is the whole theming system.
+    `light-dark()` in the token block resolves against the used value of
+    `color-scheme`, so switching the appearance means switching that one
+    property rather than redefining a palette, and the hoisting trap that made
+    the old arrangement dangerous has nothing left to hoist.
+
+    `data-theme` is stamped server side in `layout.tsx` from a cookie, not from
+    `localStorage` behind an inline script. The content security policy is
+    nonce based `strict-dynamic`, so an inline script would need a nonce
+    threaded to it, and the root layout already awaits `headers()` and renders
+    per request anyway. Reading a cookie there costs nothing, cannot flash the
+    wrong theme, and works with JavaScript off.
+  */
   :root {
     color-scheme: light dark;
+  }
+
+  :root[data-theme='light'] {
+    color-scheme: light;
+  }
+
+  :root[data-theme='dark'] {
+    color-scheme: dark;
+  }
+
+  :root {
+    /*
+      The duration that belongs with each spring easing, since a `linear()`
+      carries the shape of the curve but not how long it runs. Plain custom
+      properties rather than theme tokens: `--dur-*` is not a Tailwind
+      namespace, so there is no utility to generate and nothing would keep them
+      from being treated as unused.
+    */
+    --dur-smooth: 674ms;
+    --dur-snappy: 385ms;
+    --dur-bouncy: 583ms;
+    --dur-sheet-in: 578ms;
+    --dur-press: 321ms;
 
     /*
       Category colour is a stored hue and nothing else. Lightness and chroma are
       fixed here per theme, so `oklch(var(--category-l) var(--category-c) 212)`
-      is the same category in both modes without a second palette. Plain
-      custom properties rather than theme tokens: the only consumer is an
-      inline style, and the comment below explains why theme overrides live
-      on `:root`.
+      is the same category in both modes without a second palette.
+
+      These are the two values `light-dark()` cannot carry, because they are a
+      percentage and a number rather than colours, so they keep the media query
+      the palette no longer needs. `:not([data-theme='light'])` is what lets a
+      reader who chose the light appearance keep it on a machine set to dark.
+
+      Chroma was raised from 0,11 when the palette became Apple's. A wheel at
+      0,11 reads as a set of dusty pastels next to a systemTeal control, and
+      the point of the wheel is that a category is recognisable at a glance.
     */
-    --category-l: 50%;
-    --category-c: 0.11;
+    --category-l: 55%;
+    --category-c: 0.155;
   }
 
-  /*
-    Dark mode is designed, not inverted. The surfaces keep the same warm hue as
-    the light theme and separate by lightness, so the two feel like one product
-    seen under different light.
-
-    These are plain custom property overrides on `:root`, not a second `@theme`.
-    A `@theme` block nested inside a media query gets hoisted out of it, so the
-    dark values end up redefining the light ones unconditionally and the light
-    theme never renders at all. The failure is invisible on a machine set to
-    dark, which is how it survives review.
-  */
   @media (prefers-color-scheme: dark) {
-    :root {
-      --color-paper: oklch(17.5% 0.008 75);
-      --color-surface: oklch(21% 0.009 75);
-      --color-sunken: oklch(14.5% 0.007 75);
-      --color-line: oklch(28% 0.009 75);
-      --color-line-strong: oklch(36% 0.011 75);
-
-      --color-ink: oklch(93% 0.006 85);
-      --color-ink-muted: oklch(72% 0.008 85);
-      /* Raised from 56%: at 56% it measured 3,8:1 on the surface, under the
-         4,5:1 that 12px text needs. */
-      --color-ink-faint: oklch(63% 0.008 85);
-
-      --color-accent: oklch(72% 0.095 196);
-      --color-accent-strong: oklch(80% 0.09 196);
-      --color-accent-wash: oklch(28% 0.045 196);
-
-      --color-over: oklch(70% 0.14 32);
-      --color-over-wash: oklch(29% 0.06 32);
-      --color-under: oklch(72% 0.09 172);
-      --color-under-wash: oklch(27% 0.05 172);
-      --color-warn: oklch(78% 0.12 75);
-      --color-warn-wash: oklch(30% 0.055 75);
-
-      --category-l: 74%;
-      --category-c: 0.1;
-
-      --color-scrim: oklch(10% 0.008 75 / 62%);
+    :root:not([data-theme='light']) {
+      --category-l: 72%;
+      --category-c: 0.14;
     }
   }
 
+  :root[data-theme='dark'] {
+    --category-l: 72%;
+    --category-c: 0.14;
+  }
+
+  /*
+    Wide gamut, behind a gamut query rather than `@supports`.
+
+    `@supports (color: color(display-p3 1 1 1))` is true in headless Chromium,
+    which would have CI measuring colours in a syntax axe has to parse, on a
+    runner whose display is sRGB regardless. `color-gamut: p3` is false there,
+    so the suites keep reading the sRGB values that were measured, and real P3
+    hardware gets the vivid ones. Only the four tokens where the difference is
+    actually visible; the rest are dark enough that P3 buys nothing.
+  */
+  @media (color-gamut: p3) {
+    :root {
+      --color-system-teal: light-dark(
+        color(display-p3 0.043 0.435 0.627),
+        color(display-p3 0.318 0.776 0.867)
+      );
+      --color-system-red: light-dark(
+        color(display-p3 0.78 0.043 0.078),
+        color(display-p3 0.961 0.42 0.38)
+      );
+      --color-system-mint: light-dark(
+        color(display-p3 0.11 0.467 0.353),
+        color(display-p3 0.404 0.886 0.769)
+      );
+      --color-system-yellow: light-dark(
+        color(display-p3 0.537 0.38 0.039),
+        color(display-p3 0.984 0.706 0.275)
+      );
+    }
+  }
+
+  /*
+    Increase Contrast.
+
+    Apple's own high-contrast trait does three things, and all three are here:
+    labels and separators go more opaque, the semantic colours step to their
+    high-contrast variants, and glass stops being glass. The third one lives
+    with the materials further down, next to the rule it overrides.
+
+    Light mode already ships the accessible palette as its baseline, so it only
+    deepens. Dark is where the stock values get swapped out.
+  */
+  @media (prefers-contrast: more) {
+    :root {
+      --color-ink-muted: light-dark(
+        rgb(60 60 67 / 0.95),
+        rgb(235 235 245 / 0.92)
+      );
+      --color-ink-faint: light-dark(
+        rgb(60 60 67 / 0.85),
+        rgb(235 235 245 / 0.8)
+      );
+      --color-line: light-dark(rgb(60 60 67 / 0.55), rgb(84 84 88 / 0.85));
+      --color-line-strong: light-dark(#6d6d72, #8e8e93);
+      --color-fill: light-dark(rgb(120 120 128 / 0.35), rgb(120 120 128 / 0.5));
+      --color-fill-quaternary: light-dark(
+        rgb(116 116 128 / 0.16),
+        rgb(118 118 128 / 0.3)
+      );
+
+      --color-system-teal: light-dark(#00567d, #70d7ff);
+      --color-system-red: light-dark(#b3000f, #ff6961);
+      --color-system-mint: light-dark(#006b4f, #66e8cc);
+      --color-system-yellow: light-dark(#7a5200, #ffb340);
+      --color-system-blue: light-dark(#0031ad, #409cff);
+    }
+  }
 
   html {
     -webkit-text-size-adjust: 100%;
@@ -179,7 +638,7 @@
     Keyboard focus stops above the tab bar rather than behind it.
 
     The bar is fixed, so the browser does not count it as occupied space: a
-    focused row that sits in the bottom 64px is already "in view" as far as
+    focused row that sits in the bottom 64px is already 'in view' as far as
     scrolling is concerned, and nothing moves. Two rows of the ledger ended up
     completely covered that way, which is a plain 2.4.11 failure.
 
@@ -198,9 +657,22 @@
     background-color: var(--color-paper);
     color: var(--color-ink);
     font-family: var(--font-sans);
-    /* Slightly tighter than default; IBM Plex sets a touch loose for UI. */
+    /*
+      1,5 rather than Apple's 17/22, which is about 1,29. Apple sets that
+      ratio on a body role it applies deliberately; this is the document
+      default, inherited by captions and table cells, and tightening it there
+      would move every box in the application at once. The Dynamic Type roles
+      in the token block carry their own line heights and win where they are
+      used.
+    */
     line-height: 1.5;
-    text-rendering: optimizeLegibility;
+    /*
+      `optimizeLegibility` is gone. SF carries its own optical sizes and the
+      operating system switches between them; the property buys nothing here
+      and brings known ligature and performance quirks with it. This is the
+      one that actually does something, on a variable face.
+    */
+    font-optical-sizing: auto;
     -webkit-font-smoothing: antialiased;
     /*
       Held clear of the notch in landscape. Here rather than in the app shell
@@ -219,7 +691,6 @@
     overscroll-behavior-y: contain;
   }
 
-
   /*
     A modal dialog makes the page behind it inert, which stops it being clicked
     or tabbed into but not scrolled. Scrolling a page you cannot touch, behind a
@@ -237,7 +708,6 @@
   html[data-sheet-open] body {
     overflow: hidden;
   }
-
 
   /* Every figure in the app is tabular, so columns align without extra work. */
   .tnum,
@@ -270,15 +740,42 @@
     border-radius: var(--radius-xs);
   }
 
-  /* Respect a stated preference for less motion rather than overriding it. */
+  /*
+    Less motion, substituted rather than removed.
+
+    The blunt version of this block zeroed every duration in the document with
+    a universal selector and `!important`, which took seventy nine colour
+    cross-fades down along with the travel. A cross-fade is not motion. It is
+    what Apple replaces motion WITH, and removing it leaves a reader who asked
+    for calm with controls that change state by teleporting.
+
+    So the spring easings collapse to a straight line, which is what keeps an
+    overshoot from ever appearing for someone who asked for less, the spatial
+    animations are given a fade in place of their travel where they are
+    defined, and the colour work is left alone. `scroll-behavior` is the one
+    thing kept from the old block, because it has no fade equivalent.
+
+    One thing no CSS block reaches: `element.animate()`. Every gesture spring
+    in `src/components/spring.ts` checks this preference itself, or it would
+    quietly come back for exactly the readers who turned it off.
+  */
   @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-      animation-duration: 0.01ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
+    html {
       scroll-behavior: auto !important;
+    }
+
+    :root {
+      --ease-smooth: linear(0, 1);
+      --ease-snappy: linear(0, 1);
+      --ease-bouncy: linear(0, 1);
+      --ease-press: linear(0, 1);
+      --ease-sheet-in: linear(0, 1);
+      --dur-smooth: 1ms;
+      --dur-snappy: 1ms;
+      --dur-bouncy: 1ms;
+      --dur-press: 1ms;
+      /* Kept, because under this preference it is the opacity's duration. */
+      --dur-sheet-in: 160ms;
     }
   }
 
@@ -309,7 +806,13 @@
       min-height: 2.75rem;
     }
 
-    :where(button, a[role='button'], select, input[type='checkbox'], input[type='radio']) {
+    :where(
+      button,
+      a[role='button'],
+      select,
+      input[type='checkbox'],
+      input[type='radio']
+    ) {
       min-width: 2.75rem;
     }
   }
@@ -330,23 +833,22 @@
     its own pressed state.
   */
   :where(
-      a,
-      button,
-      summary,
-      label,
-      select,
-      input,
-      textarea,
-      [role='button'],
-      [role='slider']
-    ):not(.touch-none) {
+    a,
+    button,
+    summary,
+    label,
+    select,
+    input,
+    textarea,
+    [role='button'],
+    [role='slider']
+  ):not(.touch-none) {
     touch-action: manipulation;
   }
 
   :where(a, button, summary, [role='button']) {
     -webkit-tap-highlight-color: transparent;
   }
-
 
   ::selection {
     background-color: var(--color-accent-wash);
@@ -447,10 +949,36 @@
     afterthought.
   */
   .skeleton {
-    background-color: var(--color-sunken);
+    /*
+      A fill rather than `sunken`. Under Apple's grouped palette the light
+      canvas and a recessed surface sit within a few points of each other, and
+      a placeholder the same colour as the page behind it is not a placeholder.
+      A fill composites against whatever it is actually sitting on, which is
+      the whole reason Apple has a fill ladder separate from its backgrounds.
+
+      Nothing that resolves inside a quarter second paints one at all. A
+      skeleton that appears and vanishes inside two hundred milliseconds does
+      not report a wait, it reports a flicker, and the reader learns to
+      distrust the screen rather than to wait for it. The pending dot in the
+      navigation already covers the first hundred milliseconds.
+
+      A one millisecond animation behind a 250ms delay, which is the same
+      device `.nav-hint` uses and for the same reason: the block above
+      collapses durations and leaves delays alone, so the debounce survives
+      for every reader while the fade does not.
+    */
+    background-color: var(--color-fill-tertiary);
     border-radius: var(--radius-sm);
     position: relative;
     overflow: hidden;
+    opacity: 0;
+    animation: skeleton-appear 1ms linear 250ms both;
+  }
+
+  @keyframes skeleton-appear {
+    to {
+      opacity: 1;
+    }
   }
 
   .skeleton::after {
@@ -460,7 +988,10 @@
     background: linear-gradient(
       90deg,
       transparent,
-      color-mix(in oklch, var(--color-line) 60%, transparent),
+      /* Mixed from `line-strong`, which is opaque. `line` is itself under a
+         third of an alpha now, and sixty percent of that is a sweep nobody
+         can see. */
+        color-mix(in oklch, var(--color-line-strong) 45%, transparent),
       transparent
     );
     animation: skeleton-sweep 1.4s ease-in-out infinite;
@@ -530,5 +1061,430 @@
     .sankey [data-ribbon]:hover {
       opacity: 0.62;
     }
+  }
+
+  /*
+    The same isolation, for a keyboard, and deliberately outside the hover
+    query above.
+
+    The hover rules are gated because a sticky hover on a touch screen leaves a
+    diagram that looks broken. Focus has no such problem: it arrives on purpose
+    and it leaves on purpose. Gating it on `hover: hover` would have taken the
+    feature away from somebody using a keyboard with a tablet, which is exactly
+    the reader who has the least other way to trace one flow out of thirty.
+  */
+  .sankey [data-ribbon] {
+    transition: opacity 120ms ease-out;
+  }
+
+  .sankey:has([data-ribbon]:focus-visible) [data-ribbon]:not(:focus-visible) {
+    opacity: 0.05;
+  }
+
+  .sankey [data-ribbon]:focus-visible {
+    opacity: 0.62;
+  }
+
+  /*
+    Liquid Glass, best effort, and an honest account of where the effort stops.
+
+    What this reproduces: the frosted sample, the saturation boost that stands
+    in for vibrancy, the specular top edge, the hairline light border, the
+    grounding shadow.
+
+    What it does not and cannot: real-time optical lensing, a highlight that
+    tracks the tilt of the device, a touch glow that starts at the fingertip,
+    glow that propagates to a neighbouring glass element. Those are compositor
+    level operations with no browser equivalent, and approximating the first
+    one with `feDisplacementMap` is Chromium only and falls apart over an
+    animated backdrop, which is every surface here. This gets to the frosted
+    glass era faithfully and stops pretending after that.
+
+    Glass is chrome. The tab bar, the sheet, a dock that floats, the refresh
+    pill, a chart's hover readout. Never a card, never a list row, never a
+    plot. Two reasons, and neither is taste. Apple's own guidance names glass
+    on content rows as an anti-pattern, because the eye loses the contrast
+    between sharp content and blurred chrome. And a `backdrop-filter` over a
+    flat surface collapses into a plain `rgba()` wash: glass only reads as
+    glass when there is something varied underneath, which in this application
+    means content scrolling past. `e2e/glass.spec.ts` enforces the rule.
+
+    Never glass on glass, either: the inner layer samples an already blurred
+    source and both go milky.
+  */
+  .material {
+    position: relative;
+    isolation: isolate;
+    background-color: var(--color-material-regular);
+    -webkit-backdrop-filter: blur(var(--blur-material-regular)) saturate(170%);
+    backdrop-filter: blur(var(--blur-material-regular)) saturate(170%);
+    border-color: var(--color-material-edge);
+    box-shadow: var(--shadow-specular), var(--shadow-md);
+
+    /*
+      On a material the label hierarchy steps up one rung.
+
+      This is the web translation of Apple's vibrancy label styles. On device,
+      a secondary label over a material is a fill recomputed per pixel against
+      whatever is behind it; CSS has one monolithic backdrop pass with no
+      access to those pixels, so the alpha is raised to the worst case
+      instead. Measured over the darkest thing this application can scroll
+      under a bar: at Apple's 0,60 the secondary label lands at 3,91:1 and
+      fails, at 0,80 it lands at 5,24:1.
+    */
+    --color-ink-muted: light-dark(rgb(60 60 67 / 0.9), rgb(235 235 245 / 0.85));
+    --color-ink-faint: light-dark(rgb(60 60 67 / 0.8), rgb(235 235 245 / 0.75));
+  }
+
+  .material-ultra-thin {
+    background-color: var(--color-material-ultra-thin);
+    -webkit-backdrop-filter: blur(var(--blur-material-ultra-thin))
+      saturate(140%);
+    backdrop-filter: blur(var(--blur-material-ultra-thin)) saturate(140%);
+  }
+
+  .material-thin {
+    background-color: var(--color-material-thin);
+    -webkit-backdrop-filter: blur(var(--blur-material-thin)) saturate(160%);
+    backdrop-filter: blur(var(--blur-material-thin)) saturate(160%);
+  }
+
+  .material-thick {
+    background-color: var(--color-material-thick);
+    -webkit-backdrop-filter: blur(var(--blur-material-thick)) saturate(180%);
+    backdrop-filter: blur(var(--blur-material-thick)) saturate(180%);
+  }
+
+  /* The specular sweep, as a pseudo element so content stacks above it. A
+     static gradient rather than an animated shimmer: the reduced-motion block
+     freezes an infinite animation at its first keyframe, which would leave a
+     sweep parked mid-travel for exactly the readers who asked for calm. */
+  .material::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(
+      ellipse 80% 40% at 30% 0%,
+      light-dark(rgb(255 255 255 / 0.35), rgb(255 255 255 / 0.06)) 0%,
+      transparent 70%
+    );
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  /*
+    No backdrop filter at all: an engine without the feature, one with it
+    disabled, and, the case that actually bites, any descendant of an element
+    carrying a transform, filter, clip-path or perspective. Those silently
+    create a new backdrop root and the sample comes back blank.
+  */
+  @supports not (
+    (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
+  ) {
+    .material,
+    .material-ultra-thin,
+    .material-thin,
+    .material-thick {
+      background-color: var(--color-material-opaque);
+    }
+  }
+
+  /*
+    Reduced transparency.
+
+    Required rather than optional, and Apple's own fallback is instructive: it
+    makes glass frostier, more opaque and more obscuring, rather than removing
+    the surface. The layout does not move, only the sampling stops.
+
+    Worth knowing where this does and does not fire. Chromium and Firefox have
+    supported the query for years; Safari is the one to verify against, and it
+    is also the platform where Reduce Transparency is most used, so a missing
+    implementation would mean the fallback never runs for the people who most
+    asked for it. Two things cover that gap: the contrast block below, which
+    Safari does support, and the tint alphas in the token block, which are set
+    so the non-reduced state already clears AA over the worst backdrop in the
+    application. This is a comfort improvement, not the thing standing between
+    a reader and a legible label.
+  */
+  @media (prefers-reduced-transparency: reduce) {
+    .material,
+    .material-ultra-thin,
+    .material-thin,
+    .material-thick {
+      background-color: var(--color-material-opaque);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+      border-color: var(--color-line);
+      box-shadow: var(--shadow-sm);
+      /* The surface is opaque now, so the labels return to the normal ladder. */
+      --color-ink-muted: light-dark(
+        rgb(60 60 67 / 0.8),
+        rgb(235 235 245 / 0.75)
+      );
+      --color-ink-faint: light-dark(
+        rgb(60 60 67 / 0.75),
+        rgb(235 235 245 / 0.62)
+      );
+    }
+
+    .material::before {
+      display: none;
+    }
+  }
+
+  /*
+    Increase Contrast, the half of it that belongs to materials. Apple's own
+    behaviour: glass becomes predominantly black or white and gains a
+    contrasting ring. The palette half of this preference is up with the
+    tokens.
+  */
+  @media (prefers-contrast: more) {
+    .material,
+    .material-ultra-thin,
+    .material-thin,
+    .material-thick {
+      background-color: light-dark(#ffffff, #000000);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+      border: 1px solid var(--color-ink);
+      box-shadow: none;
+    }
+
+    .material::before {
+      display: none;
+    }
+  }
+
+  /*
+    Windows high contrast is a separate mode, not a stronger version of this
+    one. The system substitutes its own colours and a translucent surface is
+    meaningless there.
+  */
+  @media (forced-colors: active) {
+    .material,
+    .material-ultra-thin,
+    .material-thin,
+    .material-thick {
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+      background-color: Canvas;
+      border: 1px solid CanvasText;
+      box-shadow: none;
+    }
+
+    .material::before {
+      display: none;
+    }
+  }
+
+  /*
+    The continuous corner, where it exists.
+
+    Every radius in the token block is one of Apple's real values, and every
+    one of them is a superellipse on device rather than a quarter circle.
+    `corner-shape` is the property that finally says so, and `bevel` is the
+    keyword to feature-detect on because it is the cheapest one to parse.
+
+    The honest caveat: this shipped in Chromium first, and the browser where
+    the squircle matters most is iOS Safari, which is this application's
+    primary target. So it is a free improvement on Android and a no-op on the
+    platform it was borrowed from, until that changes. Worth the three lines,
+    not worth pretending otherwise.
+
+    Deliberately not the `clip-path` version of this trick. A clip path clips
+    the element's whole rendering including its outline, and the focus ring in
+    the base layer is an outline on every interactive element in the
+    application. It would also clip `box-shadow`, which means a filter and a
+    second compositing layer per card.
+  */
+  @supports (corner-shape: bevel) {
+    :where(
+      .material,
+      .material-thin,
+      .material-thick,
+      .material-ultra-thin,
+      .squircle
+    ) {
+      corner-shape: squircle;
+    }
+  }
+
+  /*
+    The bottom sheet, and an animation it never had.
+
+    `showModal()` on a dialog whose resting transform is already its final one
+    does not animate at all: the sheet popped into place, and the
+    `transition-transform` sitting on it had nothing to interpolate from. The
+    missing piece is `@starting-style`, which is the only way to give an element
+    entering the top layer a state to come from, and `allow-discrete`, which
+    keeps `display` around long enough for the exit to be seen.
+
+    Deliberately no transition on `overlay`. That is Chromium only, and it is
+    not needed here: the exit is driven from JavaScript, with `close()` called
+    when the spring lands, so the element is still in the top layer for the
+    whole of it. Escape and the Android back gesture go to the unanimated
+    `close()` on purpose, because intercepting `cancel` to animate them means
+    consuming a back navigation, and a keypress carries no velocity worth
+    honouring anyway.
+
+    One detent, sized to its content. Six rows, a header and a grabber come to
+    roughly 470px, which is 58% of an iPhone 14 and 83% of an SE, so a `.medium`
+    detent at half the screen would cut the list off on every device and a
+    second `.large` one would only add space above a list that already fits.
+    What the clamp is actually for is the reader who has turned their text size
+    up: the rows grow, the sheet reaches the ceiling, and the list inside it
+    scrolls instead of the bottom two rows becoming unreachable. That was a real
+    bug before this line, not a hypothetical one.
+  */
+  .sheet {
+    max-height: 88dvh;
+    transform: translateY(0);
+    opacity: 1;
+    transition:
+      transform var(--dur-sheet-in) var(--ease-sheet-in),
+      opacity 200ms ease-out,
+      display var(--dur-sheet-in) allow-discrete;
+  }
+
+  /*
+    The sheet hangs below the screen.
+
+    Apple's springs overshoot, and this one is anchored to the bottom edge, so a
+    snap back from a drag that was refused travels about eight pixels past home
+    and opens a band of scrim underneath the sheet for a tenth of a second.
+    Bleeding the sheet off the bottom is how iOS avoids the same thing, and the
+    padding puts the content back where it was.
+  */
+  .sheet[open] {
+    /*
+      The column layout belongs to the open state, and this is not cosmetic. A
+      closed dialog is `display: none` by user agent style, and a `display` on
+      the base class overrides it: the sheet stayed laid out while shut, its six
+      rows sat behind the tab bar, and the 2.4.11 sweep found them there. The
+      `allow-discrete` in the transition above is what carries `none` to `flex`
+      and back without losing the animation.
+    */
+    display: flex;
+    flex-direction: column;
+    margin-bottom: -24px;
+    padding-bottom: 24px;
+  }
+
+  .sheet:not([open]) {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+
+  @starting-style {
+    .sheet[open] {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+  }
+
+  .sheet::backdrop {
+    background-color: var(--color-scrim);
+    opacity: 1;
+    transition:
+      opacity 200ms ease-out,
+      display 200ms allow-discrete;
+  }
+
+  .sheet:not([open])::backdrop {
+    opacity: 0;
+  }
+
+  @starting-style {
+    .sheet[open]::backdrop {
+      opacity: 0;
+    }
+  }
+
+  /*
+    The list inside the sheet, once the sheet has a ceiling.
+
+    `overscroll-behavior` because the page behind is locked by
+    `html[data-sheet-open]` but an inner scroller that reaches its end will
+    still chain outwards and rubber-band the locked page on iOS, which reads as
+    the sheet being broken.
+  */
+  .sheet-list {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /*
+    Less motion, for the two things that travel.
+
+    The blanket rule these replace zeroed every duration in the document, which
+    also zeroed the colour cross-fades that Apple prescribes as the substitute
+    for motion. Here each spatial animation gets the fade instead of the travel,
+    which still says "this is new" without moving anything across the screen.
+  */
+  @media (prefers-reduced-motion: reduce) {
+    .page-enter {
+      animation: arrive 160ms ease-out both;
+    }
+
+    .reveal {
+      animation: arrive 120ms ease-out both;
+    }
+
+    .bar-grow,
+    .bar-rise {
+      transition-duration: 1ms;
+    }
+
+    .sheet,
+    .sheet:not([open]) {
+      transform: none;
+    }
+
+    @starting-style {
+      .sheet[open] {
+        transform: none;
+        opacity: 0;
+      }
+    }
+  }
+
+  @keyframes arrive {
+    from {
+      opacity: 0;
+    }
+  }
+
+  /*
+    The separator between rows of an inset-grouped list.
+
+    It starts at the text rather than at the card, which is the detail that
+    most decides whether a list reads as a list or as a stack of boxes. A rule
+    running edge to edge divides the card; one that begins where the words
+    begin belongs to the rows, and the eye follows the column of text down
+    instead of being cut across at every step.
+
+    A pseudo-element rather than `divide-y`, because a border on the child
+    would have to be paired with a matching inset on the content to avoid
+    moving it, and every row in this application sets its own padding. This
+    draws over the gap without touching layout, so it can be swapped in
+    wherever `divide-y divide-line` was without re-checking geometry.
+
+    `1rem` is the horizontal padding those rows use. Where a row indents
+    further, for a leading glyph, it says so with `--row-inset`.
+  */
+  .rows-inset > * + * {
+    position: relative;
+  }
+
+  .rows-inset > * + *::before {
+    content: '';
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline: var(--row-inset, 1rem) 0;
+    block-size: 1px;
+    background-color: var(--color-line);
+    pointer-events: none;
   }
 }

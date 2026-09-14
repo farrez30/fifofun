@@ -116,7 +116,7 @@ export function BudgetTable({ plan }: { plan: BudgetPlanView }) {
         {/* `scroll-mt` on the fields: the allocation bar above is sticky, and
             without it a focused input can be scrolled to exactly where the bar
             covers it. */}
-        <div className="relative overflow-x-auto border border-line bg-surface [&_input]:scroll-mt-32">
+        <div className="relative overflow-x-auto squircle rounded-md bg-surface shadow-xs [&_input]:scroll-mt-32">
           <table className="w-full border-collapse text-sm sm:min-w-[38rem]">
             <caption className="sr-only">Anggaran {label} per kategori</caption>
             <thead>

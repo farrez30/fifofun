@@ -42,7 +42,7 @@ export function MonthDetailPanel({ detail }: { detail: MonthDetail }) {
           */}
           <ul
             aria-label={`Per kategori, ${detail.label}`}
-            className="divide-y divide-line border border-line bg-surface mt-3 sm:hidden"
+            className="rows-inset squircle rounded-md bg-surface shadow-xs mt-3 sm:hidden"
           >
             {detail.byCategory.map((line) => (
               <li key={`${line.cashflow} ${line.name}`} className="px-3 py-2.5">
@@ -78,7 +78,7 @@ export function MonthDetailPanel({ detail }: { detail: MonthDetail }) {
             role="region"
             tabIndex={0}
             aria-label={`Tabel per kategori ${detail.label}, bisa digeser ke samping`}
-            className="relative mt-3 hidden overflow-x-auto border border-line bg-surface sm:block"
+            className="relative mt-3 hidden overflow-x-auto squircle rounded-md bg-surface shadow-xs sm:block"
           >
             <table className="w-full min-w-[30rem] text-sm">
               <caption className="sr-only">Per kategori, {detail.label}</caption>
@@ -146,7 +146,7 @@ export function MonthDetailPanel({ detail }: { detail: MonthDetail }) {
 
           <ul
             aria-label={`Transaksi terbesar, ${detail.label}`}
-            className="divide-y divide-line border border-line bg-surface mt-2 sm:hidden"
+            className="rows-inset squircle rounded-md bg-surface shadow-xs mt-2 sm:hidden"
           >
             {detail.top.map((row, index) => (
               <li key={`${row.date}-${index}`} className="px-3 py-2.5">
@@ -187,7 +187,7 @@ export function MonthDetailPanel({ detail }: { detail: MonthDetail }) {
             role="region"
             tabIndex={0}
             aria-label={`Tabel transaksi terbesar ${detail.label}, bisa digeser ke samping`}
-            className="relative mt-2 hidden overflow-x-auto border border-line bg-surface sm:block"
+            className="relative mt-2 hidden overflow-x-auto squircle rounded-md bg-surface shadow-xs sm:block"
           >
             <table className="w-full min-w-[30rem] text-sm">
               <caption className="sr-only">Transaksi terbesar, {detail.label}</caption>

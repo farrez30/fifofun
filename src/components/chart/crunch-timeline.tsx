@@ -40,7 +40,7 @@ export function CrunchTimeline({ projection, caption, onBirthYearChange }: Props
 
   if (years.length === 0) {
     return (
-      <figure className="border border-line bg-surface p-6">
+      <figure className="squircle rounded-md bg-surface shadow-xs p-6">
         <figcaption className="text-sm font-medium text-ink">{caption}</figcaption>
         <p className="mt-2 text-sm text-ink-muted">
           Tambahkan rencana anak untuk melihat sebaran biayanya per tahun.
@@ -55,7 +55,7 @@ export function CrunchTimeline({ projection, caption, onBirthYearChange }: Props
   const labels = children.map((child) => child.label)
 
   return (
-    <figure className="border border-line bg-surface p-4">
+    <figure className="squircle rounded-md bg-surface shadow-xs p-4">
       <figcaption className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
         <span className="text-sm font-medium text-ink">{caption}</span>
         <span className="flex flex-wrap items-center gap-3 text-xs text-ink-muted">
@@ -102,7 +102,7 @@ export function CrunchTimeline({ projection, caption, onBirthYearChange }: Props
             return (
               <div key={year.year} className="flex min-w-6 flex-1 flex-col items-center gap-1">
                 <span
-                  className={`text-[0.625rem] leading-none ${crunch ? 'text-over' : 'text-transparent'}`}
+                  className={`text-caption2 leading-none ${crunch ? 'text-over' : 'text-transparent'}`}
                   aria-hidden="true"
                 >
                   ▲

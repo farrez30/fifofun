@@ -86,3 +86,25 @@ describe('inEdgeStrip', () => {
     expect(320 - EDGE * 2).toBeGreaterThan(64)
   })
 })
+
+describe('swipeTarget, carrying velocity', () => {
+  /*
+    Distance alone could not tell a flick from a drag, and a flick is the more
+    deliberate of the two. These are the cases that motivated projecting it.
+  */
+  it('navigates on a short flick that never reached the distance', () => {
+    // 30px out and still moving at 1,5px/ms projects well past 64.
+    expect(swipeTarget(ORDER, '/laporan', -30, 0, -1.5)).toBe('/catat')
+    expect(swipeTarget(ORDER, '/laporan', -30, 0, 0)).toBeNull()
+  })
+
+  it('refuses a flick that started inside a tap', () => {
+    // However fast, under the floor is a tap that wobbled. Every row in this
+    // application is tappable, so this is the assertion that matters most.
+    expect(swipeTarget(ORDER, '/laporan', -20, 0, -4)).toBeNull()
+  })
+
+  it('still navigates on a slow drag that went the whole way', () => {
+    expect(swipeTarget(ORDER, '/laporan', -80, 0, 0)).toBe('/catat')
+  })
+})

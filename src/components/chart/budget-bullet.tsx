@@ -76,7 +76,7 @@ export function BudgetBullet({ review, caption, income }: Props) {
 
   if (lines.length === 0) {
     return (
-      <figure className="border border-line bg-surface p-6">
+      <figure className="squircle rounded-md bg-surface shadow-xs p-6">
         <figcaption className="text-sm font-medium text-ink">{caption}</figcaption>
         <p className="mt-2 text-sm text-ink-muted">Belum ada anggaran maupun pengeluaran bulan ini.</p>
       </figure>
@@ -95,7 +95,7 @@ export function BudgetBullet({ review, caption, income }: Props) {
   const quiet = lines.filter((line) => line.status !== 'under' && !line.material).length
 
   return (
-    <figure className="border border-line bg-surface p-4">
+    <figure className="squircle rounded-md bg-surface shadow-xs p-4">
       <figcaption className="mb-1 flex flex-wrap items-baseline justify-between gap-3">
         <span className="text-sm font-medium text-ink">{caption}</span>
         <span className="tnum font-mono text-xs text-ink-muted">

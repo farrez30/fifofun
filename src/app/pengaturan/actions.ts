@@ -1,6 +1,7 @@
 'use server'
 
-import { updateTag } from 'next/cache'
+import { revalidatePath, updateTag } from 'next/cache'
+import { cookies } from 'next/headers'
 import { accountsTag, categoriesTag } from '@/lib/queries/tags'
 import { z } from 'zod'
 import { SESSION_EXPIRED, context, fail, isoDateField, senField, type ActionResult } from '@/lib/actions'
@@ -610,4 +611,47 @@ function readCategory(formData: FormData) {
 function revalidateSettings(householdId: string) {
   updateTag(accountsTag(householdId))
   updateTag(categoriesTag(householdId))
+}
+
+/**
+ * Which appearance this browser should use.
+ *
+ * Deliberately the one thing on this page that touches no table. Appearance is
+ * a property of the screen somebody is reading on, not of the household: two
+ * people sharing a ledger do not share a phone, and storing it against the user
+ * would have one of them fighting the other's choice every time they opened the
+ * app. A cookie keeps it where it belongs.
+ *
+ * No authentication check, for the same reason, and it is worth being explicit
+ * that this is a decision rather than an omission: the value can only be one of
+ * three strings, it is validated against them here and again where it is read,
+ * and it grants nothing. The worst an attacker can do by forging this cookie is
+ * show somebody a dark page.
+ *
+ * A year, because a preference that quietly expires is worse than one that was
+ * never offered. `lax` so it survives following a link into the app, `httpOnly`
+ * because nothing in the browser needs to read it, and `secure` outside
+ * development where there is no certificate.
+ */
+export async function setAppearance(formData: FormData): Promise<void> {
+  const theme = formData.get('theme')
+  const store = await cookies()
+
+  if (theme === 'light' || theme === 'dark') {
+    store.set('theme', theme, {
+      path: '/',
+      maxAge: 60 * 60 * 24 * 365,
+      sameSite: 'lax',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+    })
+  } else {
+    // Anything else means "follow the system", which is the absence of a
+    // choice rather than a third value to store.
+    store.delete('theme')
+  }
+
+  /* The palette is stamped on <html> by the root layout, so the document that
+     carries it has to be built again. Nothing cached per household changes. */
+  revalidatePath('/', 'layout')
 }

@@ -27,7 +27,7 @@ export function ReceivablesPanel({ review, staleAfter = 30 }: Props) {
 
   if (receivables.length === 0) {
     return (
-      <div className="border border-line bg-surface p-6">
+      <div className="squircle rounded-md bg-surface shadow-xs p-6">
         <p className="text-sm text-ink">Tidak ada piutang yang tercatat.</p>
         <p className="mt-2 text-sm text-ink-muted">
           Catat uang yang kamu talangi sebagai Piutang Baru, dan pelunasannya sebagai Piutang
@@ -38,7 +38,7 @@ export function ReceivablesPanel({ review, staleAfter = 30 }: Props) {
   }
 
   return (
-    <div className="border border-line bg-surface">
+    <div className="squircle rounded-md bg-surface shadow-xs">
       <div className="border-b border-line p-4">
         <p className="text-sm font-medium text-ink">
           {open.length === 0

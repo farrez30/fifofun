@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { NavHint } from '@/components/nav-hint'
 import { formatMonthKey } from '@/lib/datetime'
 import { addMonths } from '@/lib/ledger/funds'
+import { BUTTON_QUIET } from '@/components/field-base'
 
 /**
  * Which month is being budgeted.
@@ -25,7 +26,7 @@ export function MonthNav({ period, thisMonth }: { period: string; thisMonth: str
       <Link
         href={`/anggaran?bulan=${previous}`}
         rel="prev"
-        className="inline-flex h-11 items-center rounded-sm border border-line px-3 text-sm text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
+        className={BUTTON_QUIET}
       >
         {formatMonthKey(previous)}
         <NavHint className="ml-1.5" />
@@ -38,7 +39,7 @@ export function MonthNav({ period, thisMonth }: { period: string; thisMonth: str
       <Link
         href={`/anggaran?bulan=${next}`}
         rel="next"
-        className="inline-flex h-11 items-center rounded-sm border border-line px-3 text-sm text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
+        className={BUTTON_QUIET}
       >
         {formatMonthKey(next)}
         <NavHint className="ml-1.5" />
@@ -47,7 +48,7 @@ export function MonthNav({ period, thisMonth }: { period: string; thisMonth: str
       {period === thisMonth ? null : (
         <Link
           href="/anggaran"
-          className="inline-flex h-11 items-center rounded-sm border border-line px-3 text-sm text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
+          className={BUTTON_QUIET}
         >
           Bulan ini
           <NavHint className="ml-1.5" />
@@ -67,7 +68,7 @@ export function MonthNav({ period, thisMonth }: { period: string; thisMonth: str
         />
         <button
           type="submit"
-          className="h-11 rounded-sm border border-line px-3 text-sm text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
+          className={BUTTON_QUIET}
         >
           Buka
         </button>

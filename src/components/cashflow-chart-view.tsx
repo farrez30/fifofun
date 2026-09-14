@@ -187,7 +187,7 @@ export function CashflowChartView({
   const axis = mode === 'net' ? netTicks : ticks
 
   return (
-    <figure className="border border-line bg-surface p-4">
+    <figure className="squircle rounded-md bg-surface shadow-xs p-4">
       <figcaption className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <span className="text-sm font-medium text-ink">{caption}</span>
 
@@ -248,7 +248,7 @@ export function CashflowChartView({
           {gridlines(axis, split).map((line) => (
             <span
               key={line.key}
-              className="tnum absolute right-0 -translate-y-1/2 font-mono text-[0.625rem] text-ink-faint"
+              className="tnum absolute right-0 -translate-y-1/2 font-mono text-caption2 text-ink-faint"
               style={{ bottom: `${line.bottom}%` }}
             >
               {line.text}
@@ -346,7 +346,7 @@ export function CashflowChartView({
                     </div>
 
                     <span
-                      className={`text-[0.625rem] leading-none tabular-nums ${
+                      className={`text-caption2 leading-none tabular-nums ${
                         chosen ? 'font-medium text-ink' : 'text-ink-faint'
                       }`}
                     >

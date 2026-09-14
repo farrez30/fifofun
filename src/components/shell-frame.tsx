@@ -90,8 +90,23 @@ export function ShellFrame({ title, current, lead, account, tabs, navHint, child
           </ul>
         </nav>
 
+        {/*
+          A large title, which is the iOS navigation bar's resting state.
+
+          Apple sets this at 34px bold with tracking pulled in, below the bar
+          rather than inside it, and collapses it into the bar as the content
+          scrolls up. Only the resting half is here: the collapse wants the
+          scroll listener in `use-stuck.ts`, and that file's own comments record
+          what a dock that changes height did to scroll anchoring, so it is a
+          change that gets made deliberately rather than in passing.
+
+          The tracking is the part that is easy to skip and most of what makes
+          the difference. Apple's tracking is a function of size, tightening as
+          the type grows, and a 34px line set at the default spacing reads as a
+          heading somebody enlarged rather than as a title.
+        */}
         <h1
-          className={`text-xl font-semibold tracking-tight text-ink sm:mt-5 ${
+          className={`text-title1 font-bold tracking-title1 text-ink sm:mt-5 ${
             titled ? 'sr-only sm:not-sr-only' : 'mt-2'
           }`}
         >
@@ -139,7 +154,7 @@ export function ShellFrame({ title, current, lead, account, tabs, navHint, child
           </li>
           <li className="hidden sm:block">
             <Link href="/undangan" className="hover:text-ink">
-              Undang anggota
+              Undangan
               {navHint}
             </Link>
           </li>

@@ -19,6 +19,8 @@ import type { UnconfirmedRow } from '@/lib/queries/household'
 import type { QueueOptions } from './query'
 import { applyCategory, categoriseOne, type ActionResult } from './actions'
 import { subtractSettled } from './optimistic'
+import { ListChecks } from '@phosphor-icons/react/dist/ssr/ListChecks'
+import { Unavailable } from '@/components/unavailable'
 
 /**
  * The categorisation queue.
@@ -82,12 +84,9 @@ export function ReviewQueue({ groups, categories, accounts, remaining, options }
 
   if (groups.length === 0) {
     return (
-      <div className="border border-line bg-surface p-10 text-center">
-        <h2 className="text-base font-medium text-ink">Tidak ada yang menunggu keputusan</h2>
-        <p className="mx-auto mt-2 max-w-md text-sm text-ink-muted">
-          Semua transaksi sudah punya kategori yang kamu setujui, entah langsung atau lewat aturan.
-        </p>
-      </div>
+      <Unavailable glyph={ListChecks} heading title="Tidak ada yang menunggu keputusan">
+        Semua transaksi sudah punya kategori yang kamu setujui, entah langsung atau lewat aturan.
+      </Unavailable>
     )
   }
 
@@ -98,7 +97,7 @@ export function ReviewQueue({ groups, categories, accounts, remaining, options }
 
   return (
     <div className="space-y-5">
-      <div className="border border-line bg-sunken p-4">
+      <div className="squircle rounded-md bg-sunken p-4">
         <p className="text-sm text-ink">
           <span className="tnum font-mono">{shown.count}</span> transaksi menunggu, senilai{' '}
           <span className="tnum font-mono">{formatIdr(shown.total)}</span>.
@@ -190,7 +189,7 @@ function GroupCard({
       <div
         role="status"
         aria-busy="true"
-        className="reveal border border-line bg-surface px-4 py-3"
+        className="reveal squircle rounded-md bg-surface shadow-xs px-4 py-3"
       >
         <span className="text-sm text-ink-muted">
           Menyimpan {group.count} transaksi dari {label}
@@ -200,7 +199,7 @@ function GroupCard({
   }
 
   return (
-    <div className="border border-line bg-surface">
+    <div className="squircle rounded-md bg-surface shadow-xs">
       <button
         type="button"
         onClick={onToggle}

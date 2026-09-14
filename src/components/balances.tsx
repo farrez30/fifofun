@@ -176,7 +176,7 @@ export function Balances({
       <BalanceCards rows={balanceRows} />
 
       <div
-        className="relative hidden overflow-x-auto border border-line bg-surface sm:block"
+        className="relative hidden overflow-x-auto squircle rounded-md bg-surface shadow-xs sm:block"
         tabIndex={0}
         role="region"
         aria-label="Tabel saldo per akun, bisa digeser ke samping"
@@ -216,7 +216,7 @@ export function Balances({
 
 function Split({ label, sen, hint }: { label: string; sen: bigint; hint: string }) {
   return (
-    <div className="border border-line bg-surface p-4">
+    <div className="squircle rounded-md bg-surface shadow-xs p-4">
       <p className="text-xs font-medium uppercase tracking-wide text-ink-faint">{label}</p>
       <p className="mt-1.5 tnum font-mono text-lg text-ink">{formatIdr(sen)}</p>
       <p className="mt-1 text-xs text-ink-muted">{hint}</p>

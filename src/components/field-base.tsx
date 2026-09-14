@@ -11,35 +11,73 @@ import { type ReactNode } from 'react'
  */
 
 /*
-  16px on a phone, 14px from the small breakpoint up.
+  17px on a phone, 14px from the small breakpoint up.
 
-  Not a preference. iOS Safari zooms the whole viewport when a focused control
-  measures under 16px, and there is no way to decline it from the page: the
-  viewport meta cannot forbid it and `-webkit-text-size-adjust` does not govern
-  it. Every data entry screen in this app was doing that on every tap.
+  The floor is not a preference. iOS Safari zooms the whole viewport when a
+  focused control measures under 16px, and there is no way to decline it from
+  the page: the viewport meta cannot forbid it and `-webkit-text-size-adjust`
+  does not govern it. Every data entry screen in this app was doing that on
+  every tap.
 
-  The floor is easy to lose again, because 14px is the right size everywhere
+  It used to say `text-base`, which is 16 and clears the floor by nothing at
+  all. `text-body` is Apple's own body role at 17, so the control now names its
+  size rather than picking the smallest number that happens to work, and there
+  is a pixel of room before the zoom comes back.
+
+  The floor is still easy to lose, because 14px is the right size everywhere
   else and `text-sm` is what anyone would reach for. `e2e/mobile.spec.ts` reads
   the computed size of every control in every fixture and fails under 16px.
+
+  A fill rather than a border. That is what a text field is on iOS, and it is
+  also what stops a form of eight fields reading as eight boxes: the fill says
+  "type here" without drawing a rectangle around every one of them. The border
+  is kept at `transparent` so the focused state can colour it without moving
+  anything by a pixel.
 */
 export const CONTROL =
-  'h-11 w-full rounded-sm border border-line bg-surface px-3 text-base text-ink transition-colors duration-150 placeholder:text-ink-faint hover:border-line-strong focus:border-accent sm:text-sm'
+  'h-11 w-full rounded-sm border border-transparent bg-fill-tertiary px-3 text-body text-ink transition-colors duration-150 placeholder:text-ink-faint focus:border-accent focus:bg-surface sm:text-sm'
 
 /*
-  The two buttons, and the difference between them is a claim about which one a
-  person came to press.
+  Four buttons, because there were four all along and only two of them had a
+  name.
 
   The accent recipe was already in nine places when the settings, budget and
   transaction screens were written, and those screens copied an outline button
-  six times instead, which left five whole pages where Save and Copy and Delete
-  all looked identical. Both live here now for the same reason CONTROL does: a
-  second copy is how two controls end up a pixel apart.
-*/
-export const BUTTON_PRIMARY =
-  'h-11 rounded-sm bg-accent px-5 text-sm font-medium text-paper transition-colors duration-150 hover:bg-accent-strong disabled:opacity-50'
+  eight more times instead, in four slightly different recipes: `border-line`
+  or `border-line-strong`, `h-10` or `h-11`, with or without a hover fill. That
+  is how five pages ended up where Save and Copy and Delete all looked alike.
 
-export const BUTTON_QUIET =
-  'h-11 rounded-sm border border-line-strong px-3 text-sm text-ink transition-colors duration-150 hover:bg-sunken disabled:opacity-50'
+  Apple's hierarchy is what the four are named after, and the order is a claim
+  about how many of them may appear together: exactly one filled, at most one
+  tinted near it, and as many gray and plain as the screen needs. Tinting
+  everything is how the signal a tint carries gets spent.
+
+  Capsules, which is the shape iOS 26 made the default. It costs nothing, it is
+  the single most recognisable thing about the language, and a pill next to a
+  rounded rectangle field is the pairing the platform actually ships.
+*/
+/* `inline-flex` rather than nothing, because several of these sit on a `Link`.
+   An anchor is inline, so a height on it leaves the label on the baseline
+   instead of in the middle, and every outline this replaced had written
+   `inline-flex items-center` out again to fix exactly that. */
+const BUTTON_BASE =
+  'inline-flex h-11 items-center justify-center rounded-full px-5 text-sm font-medium transition-[background-color,color,transform] duration-150 ease-press active:scale-[0.97] disabled:opacity-40 disabled:active:scale-100'
+
+/** The one thing on the screen somebody came to press. */
+export const BUTTON_PRIMARY = `${BUTTON_BASE} bg-accent text-paper hover:bg-accent-strong`
+
+/** An action that belongs to the filled one: Batal beside Simpan, the second
+    half of a pair. Apple's tinted button, which is the accent at wash weight
+    carrying the accent as its label. */
+export const BUTTON_TINTED = `${BUTTON_BASE} bg-accent-wash text-accent hover:bg-accent-wash/70`
+
+/** Everything else with a box around it. The fill is what replaced eight
+    different outlines. */
+export const BUTTON_QUIET = `${BUTTON_BASE} bg-fill-secondary px-4 text-ink hover:bg-fill`
+
+/** A verb with nothing drawn around it: a row action, a link that does
+    something. No box, so it never competes with the three above. */
+export const BUTTON_PLAIN = `${BUTTON_BASE} px-2 text-accent hover:bg-fill-quaternary`
 
 interface LabelProps {
   htmlFor: string
@@ -53,7 +91,7 @@ export function FieldLabel({ htmlFor, children, hint, visuallyHidden = false }: 
   return (
     <label
       htmlFor={htmlFor}
-      className={visuallyHidden ? 'sr-only' : 'block text-sm font-medium text-ink'}
+      className={visuallyHidden ? 'sr-only' : 'block text-subhead font-medium text-ink'}
     >
       {children}
       {hint ? <span className="ml-2 font-normal text-ink-faint">{hint}</span> : null}

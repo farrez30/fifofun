@@ -63,7 +63,7 @@ export function BalanceTrend({ series, caption }: Props) {
 
   if (!trend) {
     return (
-      <figure className="border border-line bg-surface p-6">
+      <figure className="squircle rounded-md bg-surface shadow-xs p-6">
         <figcaption className="text-sm font-medium text-ink">{caption}</figcaption>
         <p className="mt-2 text-sm text-ink-muted">
           Perlu dua bulan tercatat sebelum ada arah yang bisa dibaca. Sekarang baru{' '}
@@ -84,7 +84,7 @@ export function BalanceTrend({ series, caption }: Props) {
   const line = points.map((point, index) => `${xAt(index)},${yAt(point.balance)}`).join(' ')
 
   return (
-    <figure className="border border-line bg-surface p-4">
+    <figure className="squircle rounded-md bg-surface shadow-xs p-4">
       <figcaption className="mb-1 text-sm font-medium text-ink">{caption}</figcaption>
       <p className="mb-4 text-xs text-ink-muted">
         {formatIdrCompact(latest.balance)} pada akhir {labelFor(latest, null)}, {WORDS[direction]}{' '}
@@ -99,7 +99,7 @@ export function BalanceTrend({ series, caption }: Props) {
           {scale.ticks.map((tick) => (
             <span
               key={String(tick)}
-              className="absolute right-0 -translate-y-1/2 whitespace-nowrap text-[0.625rem] leading-none text-ink-faint"
+              className="absolute right-0 -translate-y-1/2 whitespace-nowrap text-caption2 leading-none text-ink-faint"
               style={{ top: `${yAt(tick)}%` }}
             >
               {formatIdrCompact(tick)}
@@ -182,7 +182,7 @@ export function BalanceTrend({ series, caption }: Props) {
             return (
               <span
                 key={point.month}
-                className="absolute top-0 whitespace-nowrap text-[0.625rem] leading-none text-ink-faint"
+                className="absolute top-0 whitespace-nowrap text-caption2 leading-none text-ink-faint"
                 style={{ left: `${pct}%`, transform: nudge(pct) }}
               >
                 {labelFor(point, previous)}

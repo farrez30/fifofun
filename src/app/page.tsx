@@ -48,6 +48,9 @@ import {
 } from '@/lib/queries/household'
 import { getUser } from '@/lib/supabase/server'
 import { DashboardSkeleton } from './skeleton'
+import { Receipt } from '@phosphor-icons/react/dist/ssr/Receipt'
+import { BUTTON_PRIMARY } from '@/components/field-base'
+import { Unavailable } from '@/components/unavailable'
 
 export const metadata: Metadata = { title: 'Ringkasan' }
 
@@ -76,20 +79,20 @@ export const instant = false
 
 function EmptyState() {
   return (
-    <div className="border border-line bg-surface p-10 text-center">
-      <h2 className="text-base font-medium text-ink">Belum ada transaksi</h2>
-      <p className="mx-auto mt-2 max-w-md text-sm text-ink-muted">
-        Unggah e-Statement Mandiri dalam format .xlsx untuk mengisi catatanmu. Setiap baris
-        dicocokkan dengan saldo yang dicetak bank, jadi kalau ada yang tidak pas kamu akan tahu
-        barisnya yang mana.
-      </p>
-      <Link
-        href="/impor"
-        className="mt-4 inline-block rounded-sm bg-accent px-4 py-2 text-sm font-medium text-paper transition-colors duration-150 hover:bg-accent-strong"
-      >
-        Impor e-Statement
-      </Link>
-    </div>
+    <Unavailable
+      glyph={Receipt}
+      heading
+      title="Belum ada transaksi"
+      action={
+        <Link href="/impor" className={BUTTON_PRIMARY}>
+          Impor e-Statement
+        </Link>
+      }
+    >
+      Unggah e-Statement Mandiri dalam format .xlsx untuk mengisi catatanmu. Setiap baris
+      dicocokkan dengan saldo yang dicetak bank, jadi kalau ada yang tidak pas kamu akan tahu
+      barisnya yang mana.
+    </Unavailable>
   )
 }
 

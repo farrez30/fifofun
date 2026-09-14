@@ -1,15 +1,30 @@
 import type { Metadata, Viewport } from 'next'
-import { headers } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { IBM_Plex_Mono, IBM_Plex_Sans } from 'next/font/google'
 import { ProgressiveWebApp } from '@/components/pwa'
 import { SkipLink } from '@/components/skip-link'
 import './globals.css'
 
 /*
-  IBM Plex, not Inter, Geist or Space Grotesk. Those three are the default
-  choices of almost every generated interface, and Plex brings something this
-  app genuinely needs besides distinctiveness: real tabular figures, so columns
-  of Rupiah align on the decimal without per-cell work.
+  IBM Plex, demoted from the identity to the anchor.
+
+  The interface is set in the system face now, which on Apple hardware means San
+  Francisco and everywhere else means whatever the platform considers readable.
+  That is the point of a system stack and it is also its problem: Android lands
+  on Roboto, Windows on Segoe, and the Linux CI runner on whatever fontconfig
+  offers, whose digits run some six percent wider than the face this app was
+  measured against. Plex sits at the end of the stack in `globals.css` so every
+  machine without SF gets one face this repository has actually measured, and
+  Plex Mono stays the money face outright, because a column of Rupiah has to
+  keep the same advance width everywhere and only a monospace promises that.
+
+  The two `variable` names below are declared and then never referenced, which
+  looks like a mistake and is not. `next/font` registers these under their real
+  family names, so `globals.css` can simply say `'IBM Plex Sans'` and get them,
+  and it has to: the Playwright harness injects its own `@font-face` under those
+  same literal names, and a stack built out of `var(--font-plex-sans)` would
+  resolve to nothing in a fixture and quietly measure the wrong font. The
+  declarations stay because they are what makes Next emit the faces at all.
 */
 const sans = IBM_Plex_Sans({
   subsets: ['latin'],
@@ -58,7 +73,9 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     title: 'FiFoFun',
-    statusBarStyle: 'default',
+    // Translucent, because the dark canvas is true black now and `default`
+    // paints the status bar on a white strip above it.
+    statusBarStyle: 'black-translucent',
     // Apple ignores the manifest and reads this instead.
     startupImage: [],
   },
@@ -74,14 +91,49 @@ export const metadata: Metadata = {
   },
 }
 
-export const viewport: Viewport = {
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#fbfaf8' },
-    { media: '(prefers-color-scheme: dark)', color: '#1c1a18' },
-  ],
-  width: 'device-width',
-  initialScale: 1,
-  viewportFit: 'cover',
+/* systemGroupedBackground, both schemes. Named once because the viewport below
+   and the manifest both have to say the same thing. */
+const CANVAS = { light: '#f2f2f7', dark: '#000000' } as const
+
+/**
+ * The appearance this reader chose, or nothing if they never chose.
+ *
+ * A cookie rather than `localStorage`, and the difference is not a preference.
+ * The usual toggle needs a render-blocking inline script to avoid a flash of
+ * the wrong theme, and the policy here is nonce based `strict-dynamic`, so that
+ * script would need a nonce threaded to it. The layout already awaits
+ * `headers()` and renders per request, so the cookie is free: no inline script,
+ * no flash, and it still works with JavaScript off.
+ */
+async function appearance(): Promise<'light' | 'dark' | undefined> {
+  const value = (await cookies()).get('theme')?.value
+  return value === 'light' || value === 'dark' ? value : undefined
+}
+
+/**
+ * Browser chrome colour, which has to follow the chosen appearance.
+ *
+ * A static `viewport` export can only offer the media query pair, and a media
+ * query answers what the operating system prefers rather than what the reader
+ * picked. Someone who set this application to light, on a phone set to dark,
+ * would get a light page under a black status bar. Reading the same cookie the
+ * document reads is the only thing that keeps the two in step.
+ */
+export async function generateViewport(): Promise<Viewport> {
+  const theme = await appearance()
+
+  return {
+    themeColor:
+      theme === undefined
+        ? [
+            { media: '(prefers-color-scheme: light)', color: CANVAS.light },
+            { media: '(prefers-color-scheme: dark)', color: CANVAS.dark },
+          ]
+        : CANVAS[theme],
+    width: 'device-width',
+    initialScale: 1,
+    viewportFit: 'cover',
+  }
 }
 
 /* Allowed to block: the nonce read below makes the whole tree per-request. */
@@ -102,7 +154,11 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
   await headers()
 
   return (
-    <html lang="id" className={`${sans.variable} ${mono.variable}`}>
+    <html
+      lang="id"
+      data-theme={await appearance()}
+      className={`${sans.variable} ${mono.variable}`}
+    >
       <body className="min-h-dvh antialiased">
         {/* Keyboard users reach the content without tabbing the whole nav.
             A client component, because several pages can be mounted at once

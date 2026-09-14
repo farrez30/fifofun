@@ -15,14 +15,26 @@
  * convention lives here and nowhere else.
  */
 
+import { endpoint, rubberBand } from '@/components/spring'
+
 /** Movement below this is a tap that wobbled, not a drag that began. */
 export const SLOP = 8
 
 /** The same sideways bias the tab swipe demands, so the two agree on intent. */
 export const BIAS = 2
 
-/** Dragging past the tray's width resists, the way pull-to-refresh does. */
-export const RESISTANCE = 0.5
+/**
+  Dragging past the tray resists on Apple's own overscroll curve.
+
+  It used to be a flat halving, which is easy to reason about and wrong in one
+  specific way: a linear resistance has no limit, so a determined finger could
+  drag the card a hundred pixels past a tray eighty pixels wide and sit there
+  looking at a hundred pixels of nothing. The real curve asymptotes at the
+  dimension being pulled against, so the card decelerates into its limit and
+  cannot be dragged off the end of it.
+
+  `rubberBand` lives in `spring.ts` with the rest of the physics, and carries
+  the derivation. */
 
 /**
  * Whether a drag is horizontal enough for the row to claim it, or vertical
@@ -42,11 +54,30 @@ export function claimsDrag(dx: number, dy: number): boolean | null {
 export function trayOffset(dx: number, trayWidth: number, openAtStart: boolean): number {
   const raw = (openAtStart ? -trayWidth : 0) + dx
   if (raw >= 0) return 0
-  if (raw < -trayWidth) return -trayWidth + (raw + trayWidth) * RESISTANCE
+  if (raw < -trayWidth) return -trayWidth - rubberBand(-(raw + trayWidth), trayWidth)
   return raw
 }
 
-/** What letting go means. Halfway open stays open; short of that, closed. */
-export function releaseVerdict(offset: number, trayWidth: number): 'open' | 'closed' {
-  return offset <= -trayWidth / 2 ? 'open' : 'closed'
+/**
+ * What letting go means, judged on where the gesture was going.
+ *
+ * Halfway is still the line, but the distance measured against it is the
+ * projected one rather than the one the finger stopped at. A flick of twenty
+ * pixels that was still accelerating meant to open the tray; a slow drag of
+ * sixty that came to rest did not, and a threshold made only of distance
+ * cannot tell those apart.
+ *
+ * The fast deceleration rate, not the default. The tray is eighty pixels wide,
+ * and projecting at the rate a full-screen scroll view uses would turn every
+ * nudge into a commit.
+ *
+ * `velocity` is px/ms, negative leftwards, and defaults to zero so the old
+ * call shape and the pure distance cases still read the same.
+ */
+export function releaseVerdict(
+  offset: number,
+  trayWidth: number,
+  velocity = 0,
+): 'open' | 'closed' {
+  return endpoint(offset, velocity, 0.99) <= -trayWidth / 2 ? 'open' : 'closed'
 }

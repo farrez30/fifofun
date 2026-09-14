@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef, useState } from 'react'
 import { useFormStatus } from 'react-dom'
 import { deleteEntry } from '@/app/catat/actions'
 import { claimsDrag, releaseVerdict, trayOffset } from '@/components/swipe-actions'
+import { TRAY, Velocity, release, translateOf } from '@/components/spring'
 import type { ActionResult } from '@/lib/actions'
 
 /**
@@ -49,6 +50,10 @@ export function SwipeActionRow({ actions, children }: Props) {
     null,
   )
   const dragged = useRef(false)
+  const velocity = useRef(new Velocity())
+  /* The spring carrying the card, so a finger landing on a moving one takes it
+     over rather than fighting it. */
+  const running = useRef<Animation | null>(null)
 
   function applyTransform(px: number, animate: boolean) {
     const card = cardRef.current
@@ -57,21 +62,62 @@ export function SwipeActionRow({ actions, children }: Props) {
     card.style.transform = px === 0 ? '' : `translateX(${px}px)`
   }
 
-  function close() {
+  /**
+   * Spring the card from where it is to where it is going.
+   *
+   * Critically damped, and that is not a matter of taste. The tray is
+   * `absolute inset-y-0 right-0` inside a clipped container, so an overshoot at
+   * either end opens a gap and shows the page through it: past open, a band
+   * between the card and the tray; past closed, a band on the left. A delete
+   * button that bounces is also the wrong register for money.
+   */
+  function springCard(to: number, speed: number) {
+    const card = cardRef.current
+    if (!card) return
+    running.current?.cancel()
+    card.style.transition = 'none'
+    running.current = release(card, TRAY, {
+      from: translateOf(card, 'x'),
+      to,
+      velocity: speed,
+    }, 'x')
+  }
+
+  function close(speed = 0) {
     setOpen(false)
-    applyTransform(0, true)
+    springCard(0, speed)
     if (closeOpenTray === close) closeOpenTray = null
   }
 
-  function openTray() {
+  function openTray(speed = 0) {
     if (closeOpenTray && closeOpenTray !== close) closeOpenTray()
     closeOpenTray = close
     setOpen(true)
-    applyTransform(-trayWidth.current, true)
+    /*
+      One tick where the tray commits, and nowhere else.
+
+      There is no Vibration API in any browser on iOS and there never has been,
+      so this is Android only; it is here because the application is Indonesian
+      and the modal device is Android, which inverts the coverage argument that
+      usually kills haptics on the web. Not on the drag, not on the close, not
+      on a tap: a buzz on the way to deleting a transaction reads as an alarm
+      rather than as confirmation, and haptic spam is its own anti-pattern.
+    */
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      if (!matchMedia('(prefers-reduced-motion: reduce)').matches) navigator.vibrate(10)
+    }
+    springCard(-trayWidth.current, speed)
   }
 
   function down(event: React.PointerEvent<HTMLDivElement>) {
     if (event.pointerType === 'mouse') return
+    /* Take the card over from wherever it is. The position is read before the
+       animation is cancelled, because cancelling reverts to the base style;
+       the velocity is thrown away, because from this frame the finger owns
+       it. */
+    running.current?.cancel()
+    running.current = null
+    velocity.current.start(event.clientX, event.timeStamp)
     trayWidth.current = trayRef.current?.offsetWidth ?? 0
     if (trayWidth.current === 0) return
     drag.current = { x: event.clientX, y: event.clientY, openAtStart: open, claimed: false }
@@ -103,6 +149,7 @@ export function SwipeActionRow({ actions, children }: Props) {
       }
     }
 
+    velocity.current.track(event.clientX, event.timeStamp)
     applyTransform(trayOffset(dx, trayWidth.current, state.openAtStart), false)
   }
 
@@ -111,13 +158,15 @@ export function SwipeActionRow({ actions, children }: Props) {
     drag.current = null
     if (!state?.claimed) return
 
+    velocity.current.track(event.clientX, event.timeStamp)
+    const speed = velocity.current.current
     const offset = trayOffset(
       event.clientX - state.x,
       trayWidth.current,
       state.openAtStart,
     )
-    if (releaseVerdict(offset, trayWidth.current) === 'open') openTray()
-    else close()
+    if (releaseVerdict(offset, trayWidth.current, speed) === 'open') openTray(speed)
+    else close(speed)
   }
 
   function cancel() {
@@ -177,7 +226,11 @@ export function SwipeActionRow({ actions, children }: Props) {
       >
         {actions}
       </div>
-      <div ref={cardRef} className="relative bg-surface transition-transform duration-150">
+      {/* No transition on the card. It used to carry a flat 150ms, which is
+          what made a hard flick and a gentle nudge travel at identical speed;
+          the spring that replaced it is generated per release and applied
+          through the Web Animations API. */}
+      <div ref={cardRef} className="relative bg-surface">
         {children}
       </div>
     </div>

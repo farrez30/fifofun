@@ -86,7 +86,7 @@ export function DuplicatesPanel({ pairs }: { pairs: DuplicateView[] }) {
 
       <ul className="mt-3 space-y-3">
         {pairs.map((pair) => (
-          <li key={pair.manualId} className="border border-line bg-surface">
+          <li key={pair.manualId} className="squircle rounded-md bg-surface shadow-xs">
             {/*
               Stacked rather than side by side, and still a comparison. The two
               amounts stay on one right edge one above the other, which is what

@@ -2,6 +2,8 @@ import { formatMonthKey } from '@/lib/datetime'
 import type { FundCashflow, FundProgress, FundsReview } from '@/lib/ledger/funds'
 import { formatIdr, formatIdrCompact } from '@/lib/money'
 import { TargetForm } from './target-form'
+import { Coins } from '@phosphor-icons/react/dist/ssr/Coins'
+import { Unavailable } from '@/components/unavailable'
 
 /**
  * How full each pot is, and whether the rate it is being filled at will do.
@@ -78,9 +80,8 @@ export function FundsPanel({ review, idOf, caption, income, asOf }: Props) {
 
   if (funds.length === 0) {
     return (
-      <div className="border border-line bg-surface p-6">
-        <p className="text-sm font-medium text-ink">Belum ada pos tabungan atau tujuan.</p>
-        <p className="mt-2 text-sm text-ink-muted">
+      <Unavailable glyph={Coins} title="Belum ada pos tabungan atau tujuan">
+        <p>
           Buat satu di{' '}
           <a href="/pengaturan#kategori" className="text-accent underline underline-offset-2">
             Pengaturan kategori
@@ -88,12 +89,12 @@ export function FundsPanel({ review, idOf, caption, income, asOf }: Props) {
           dengan cashflow Invest / Savings, Sinking Fund, atau Financial Goals. Setoran ke pos itu
           langsung terbaca dari transaksi yang kamu kategorikan ke sana.
         </p>
-      </div>
+      </Unavailable>
     )
   }
 
   return (
-    <div className="border border-line bg-surface">
+    <div className="squircle rounded-md bg-surface shadow-xs">
       <div className="border-b border-line p-4">
         <p className="text-sm font-medium text-ink">
           {untouched

@@ -5,6 +5,9 @@ import { DirectionMark } from '@/components/marks'
 import type { Direction } from '@/lib/ledger/direction'
 import { deleteEntry } from './actions'
 import type { ActionResult } from '@/lib/actions'
+import { BUTTON_QUIET } from '@/components/field-base'
+import { NotePencil } from '@phosphor-icons/react/dist/ssr/NotePencil'
+import { Unavailable } from '@/components/unavailable'
 
 /**
  * The last ten rows a person typed here.
@@ -31,12 +34,9 @@ export function RecentEntries({ rows }: { rows: RecentEntry[] }) {
 
   if (rows.length === 0) {
     return (
-      <div className="border border-line bg-surface p-6">
-        <p className="text-sm font-medium text-ink">Belum ada catatan manual.</p>
-        <p className="mt-2 text-sm text-ink-muted">
-          Catatan pertama muncul di sini setelah disimpan, dan bisa dihapus dari sini juga.
-        </p>
-      </div>
+      <Unavailable glyph={NotePencil} title="Belum ada catatan manual">
+        Catatan pertama muncul di sini setelah disimpan, dan bisa dihapus dari sini juga.
+      </Unavailable>
     )
   }
 
@@ -60,7 +60,7 @@ export function RecentEntries({ rows }: { rows: RecentEntry[] }) {
           reachable and cannot be submitted. */}
       <ul
         aria-label="Catatan manual terakhir"
-        className="divide-y divide-line border border-line bg-surface sm:hidden"
+        className="rows-inset squircle rounded-md bg-surface shadow-xs sm:hidden"
       >
         {rows.map((row) => (
           <li key={row.id} className="p-3">
@@ -95,7 +95,7 @@ export function RecentEntries({ rows }: { rows: RecentEntry[] }) {
                 <button
                   type="submit"
                   aria-label={`Hapus ${row.description}`}
-                  className="h-11 rounded-sm border border-line-strong px-3 text-sm text-ink transition-colors duration-150 hover:bg-sunken"
+                  className={BUTTON_QUIET}
                 >
                   Hapus
                 </button>
@@ -114,7 +114,7 @@ export function RecentEntries({ rows }: { rows: RecentEntry[] }) {
       </ul>
 
       <div
-        className="relative hidden overflow-x-auto border border-line bg-surface sm:block"
+        className="relative hidden overflow-x-auto squircle rounded-md bg-surface shadow-xs sm:block"
         tabIndex={0}
         role="region"
         aria-label="Tabel catatan manual terakhir, bisa digeser ke samping"
@@ -178,7 +178,7 @@ export function RecentEntries({ rows }: { rows: RecentEntry[] }) {
                     <button
                       type="submit"
                       aria-label={`Hapus ${row.description}`}
-                      className="h-11 border border-line-strong px-3 text-sm text-ink transition-colors duration-150 hover:bg-sunken"
+                      className={BUTTON_QUIET}
                     >
                       Hapus
                     </button>

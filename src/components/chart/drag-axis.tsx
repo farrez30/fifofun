@@ -263,7 +263,7 @@ export function DragPin({
         className="block size-3 rotate-45 border border-paper"
         style={{ backgroundColor: color }}
       />
-      <span className="tnum mt-1 font-mono text-[0.625rem] leading-none text-ink">
+      <span className="tnum mt-1 font-mono text-caption2 leading-none text-ink">
         {format(value)}
       </span>
     </button>

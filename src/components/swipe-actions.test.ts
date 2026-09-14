@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BIAS, claimsDrag, releaseVerdict, RESISTANCE, SLOP, trayOffset } from './swipe-actions'
+import { BIAS, claimsDrag, releaseVerdict, SLOP, trayOffset } from './swipe-actions'
 
 describe('claimsDrag', () => {
   it('stays undecided inside the slop on both axes', () => {
@@ -35,7 +35,21 @@ describe('trayOffset', () => {
   })
 
   it('resists past the tray instead of following', () => {
-    expect(trayOffset(-200, 100, false)).toBe(-100 + -100 * RESISTANCE)
+    // Apple's overscroll curve rather than a flat halving. 100px past a 100px
+    // tray used to show 50px of nothing; it now shows 35 and is still slowing.
+    expect(trayOffset(-200, 100, false)).toBeCloseTo(-135.48, 2)
+  })
+
+  it('cannot be dragged off the end of the tray', () => {
+    /*
+      The point of the curve, and what the old linear resistance could not do.
+      A halving had no limit: a determined finger dragged the card arbitrarily
+      far past the tray and sat looking at a gap. This asymptotes at the tray's
+      own width, so however hard it is pulled the card stops one tray-width
+      past open.
+    */
+    expect(trayOffset(-100_000, 100, false)).toBeGreaterThan(-200)
+    expect(trayOffset(-100_000, 100, false)).toBeLessThan(-199)
   })
 
   it('starts from the open position when the tray was already out', () => {
@@ -49,6 +63,24 @@ describe('releaseVerdict', () => {
     expect(releaseVerdict(-49, 100)).toBe('closed')
     expect(releaseVerdict(-50, 100)).toBe('open')
     expect(releaseVerdict(-150, 100)).toBe('open')
+  })
+
+  it('opens on a flick that never reached halfway', () => {
+    /*
+      Where the gesture was going, not where the finger stopped. Twenty pixels
+      out and still moving left at one and a half pixels per millisecond
+      projects to roughly a hundred and seventy, which is well past the tray.
+      Without this a quick flick left the card sitting a fifth open, which is
+      the state the gesture exists to avoid.
+    */
+    expect(releaseVerdict(-20, 100, -1.5)).toBe('open')
+    expect(releaseVerdict(-20, 100, 0)).toBe('closed')
+  })
+
+  it('closes a long drag that had already stopped', () => {
+    // Past halfway on distance alone, but going nowhere: a slow drag that came
+    // to rest is somebody changing their mind, and it should not commit.
+    expect(releaseVerdict(-60, 100, 0.4)).toBe('closed')
   })
 
   it('a tap that never moved closes', () => {

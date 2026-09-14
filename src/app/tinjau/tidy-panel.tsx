@@ -136,7 +136,7 @@ export function TidyPanel({ view, categories }: { view: TidyView; categories: Ca
     <section
       id="rapikan"
       aria-labelledby="rapikan-judul"
-      className="border border-line bg-sunken/40 p-4"
+      className="squircle rounded-md bg-sunken/40 p-4"
     >
       <h2 id="rapikan-judul" className="text-sm font-medium text-ink">
         {view.count} transaksi lama senilai {view.amount} ada di pos yang bukan tempatnya
@@ -251,7 +251,7 @@ function Move({
   const moving = move.entries.filter((entry) => choices[entry.id] !== HOLD).length
 
   return (
-    <div className="border border-line bg-surface">
+    <div className="squircle rounded-md bg-surface shadow-xs">
       <button
         type="button"
         onClick={onToggle}

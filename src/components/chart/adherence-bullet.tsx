@@ -63,7 +63,7 @@ export function AdherenceBullet({ adherence, observedIncome, caption }: Props) {
 
   if (income <= 0n) {
     return (
-      <figure className="border border-line bg-surface p-6">
+      <figure className="squircle rounded-md bg-surface shadow-xs p-6">
         <figcaption className="text-sm font-medium text-ink">{caption}</figcaption>
         <p className="mt-2 text-sm text-ink-muted">
           Perbandingannya butuh penghasilan bulanan. Isi angkanya di atas, atau impor mutasi
@@ -90,7 +90,7 @@ export function AdherenceBullet({ adherence, observedIncome, caption }: Props) {
   const hypothetical = income !== observedIncome
 
   return (
-    <figure className="border border-line bg-surface">
+    <figure className="squircle rounded-md bg-surface shadow-xs">
       <div className="border-b border-line p-4">
         <figcaption className="text-sm font-medium text-ink">{caption}</figcaption>
         <p className="mt-1 text-sm text-ink-muted">
@@ -127,7 +127,7 @@ export function AdherenceBullet({ adherence, observedIncome, caption }: Props) {
                     </span>
                   ) : null}
                   {group.labels.join(' + ')}
-                  <span className="ml-2 rounded-xs border border-line px-1.5 py-0.5 text-[0.625rem] uppercase tracking-wide text-ink-muted">
+                  <span className="ml-2 rounded-xs border border-line px-1.5 py-0.5 text-caption2 uppercase tracking-wide text-ink-muted">
                     {BOUND_TAG[group.bound]} {Math.round(group.share * 100)}%
                   </span>
                 </span>

@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import type { NavHref } from '@/components/nav'
+import { endpoint } from '@/components/spring'
 
 /**
  * Moving between tabs with a thumb.
@@ -41,6 +42,9 @@ import type { NavHref } from '@/components/nav'
 
 /** Enough travel to be meant, and enough sideways bias to not be a scroll. */
 const DISTANCE = 64
+/** No flick, however fast, navigates from inside a tap. Every row here is
+    tappable, so this is what keeps a thumb from changing page by accident. */
+const FLOOR = 24
 const BIAS = 2
 /** Both screen edges belong to the browser's own back and forward gestures. */
 export const EDGE = 24
@@ -67,8 +71,24 @@ export function swipeTarget(
   current: NavHref,
   dx: number,
   dy: number,
+  velocity = 0,
 ): NavHref | null {
-  if (Math.abs(dx) < DISTANCE) return null
+  /*
+    Distance or intent, and a floor underneath both.
+
+    Sixty-four pixels alone could not tell a flick from a slow drag: a sharp
+    twenty pixel swipe, which is unmistakably somebody asking for the next tab,
+    did nothing. Projecting the release velocity forward answers it, at the
+    fast deceleration rate rather than the default because this is a decision
+    about a gesture and not about a scroll that has to coast.
+
+    The twenty-four pixel floor stays regardless, and it is the important half:
+    without it a tap with any lateral velocity at all could navigate, and every
+    row in this application is tappable.
+  */
+  const reach = Math.abs(endpoint(dx, velocity, 0.99))
+  if (Math.abs(dx) < FLOOR) return null
+  if (Math.abs(dx) < DISTANCE && reach < DISTANCE) return null
   if (Math.abs(dx) < Math.abs(dy) * BIAS) return null
 
   const index = order.indexOf(current)
@@ -167,6 +187,7 @@ export function useSwipeTabs(order: readonly NavHref[], current: NavHref) {
 
     let startX = 0
     let startY = 0
+    let startAt = 0
     let tracking = false
 
     function down(event: PointerEvent) {
@@ -183,6 +204,7 @@ export function useSwipeTabs(order: readonly NavHref[], current: NavHref) {
 
       startX = event.clientX
       startY = event.clientY
+      startAt = event.timeStamp
       tracking = true
     }
 
@@ -190,7 +212,15 @@ export function useSwipeTabs(order: readonly NavHref[], current: NavHref) {
       if (!tracking) return
       tracking = false
 
-      const target = swipeTarget(order, current, event.clientX - startX, event.clientY - startY)
+      const elapsed = event.timeStamp - startAt
+      const speed = elapsed > 0 ? (event.clientX - startX) / elapsed : 0
+      const target = swipeTarget(
+        order,
+        current,
+        event.clientX - startX,
+        event.clientY - startY,
+        speed,
+      )
       if (target) router.push(target)
     }
 

@@ -1898,6 +1898,33 @@ const SHELL_FIXTURES: Record<string, ReactElement> = {
       <p className="text-sm text-ink-muted">Isi halaman.</p>
     </AppShell>
   ),
+  /*
+    The tab bar with the worst thing in the application underneath it.
+
+    Every other shell fixture puts the bar over a paragraph on the page canvas,
+    which is a backdrop of one flat colour. A translucent bar over one flat
+    colour composites to a number that says nothing, and axe cannot see past a
+    backdrop filter at all: it walks ancestors for an opaque background, finds
+    the canvas, and reports a ratio the reader will never actually experience.
+    So the bar would go translucent and the strictest suite in this repository
+    would stay green while quietly measuring the wrong thing.
+
+    A Sankey is the answer because it is the densest, highest contrast surface
+    here: thirty ribbons at full chroma and a set of labels in ink, all of which
+    can sit directly under the bar at some scroll position on the dashboard.
+    Whatever the tab labels measure over this is what they are worth.
+  */
+  'shell-over-chart': (
+    <AppShell title="Ringkasan" email="rumah.tangga@contoh.com" current="/">
+      <Sankey
+        nodes={FULL_FLOW.nodes}
+        links={FULL_FLOW.links}
+        caption="Aliran uang 2026-07"
+        id="alur-di-bawah-bar"
+        note={<FoldedCategories folded={FULL_FLOW.folded} into={FULL_FLOW.foldedInto} />}
+      />
+    </AppShell>
+  ),
   // What a route-level loading.tsx paints: the static chrome stand-in around a
   // page skeleton. Its tab bar and account pill face the same geometry, axe and
   // touch-floor sweeps as the real shell.

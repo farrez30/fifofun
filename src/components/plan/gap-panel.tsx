@@ -145,7 +145,7 @@ export function GapPanel({
             />
           </div>
 
-          <div className="border border-line bg-sunken p-4">
+          <div className="squircle rounded-md bg-sunken p-4">
             <p className="text-xs font-medium uppercase tracking-wide text-ink-faint">
               Kalau tidak melakukan apa-apa
             </p>
@@ -160,7 +160,7 @@ export function GapPanel({
                 dilepas. Langganan Rp200.000 tidak akan menutup kekurangan jutaan, dan
                 membatalkannya hanya memberi rasa sudah bertindak.
               </p>
-              <ul className="mt-3 divide-y divide-line border border-line bg-surface">
+              <ul className="mt-3 rows-inset squircle rounded-md bg-surface shadow-xs">
                 {cuts.candidates.slice(0, 8).map((candidate) => (
                   <li
                     key={candidate.category}
@@ -195,7 +195,7 @@ export function GapPanel({
 
       <div>
         <h3 className="text-sm font-medium text-ink">Selisih dengan gaya hidup sekarang</h3>
-        <ul className="mt-3 divide-y divide-line border border-line bg-surface">
+        <ul className="mt-3 rows-inset squircle rounded-md bg-surface shadow-xs">
           {comparison.deltas.slice(0, 8).map((delta) => (
             <li
               key={delta.category}
@@ -217,7 +217,7 @@ export function GapPanel({
       </div>
 
       {adults >= 2 ? (
-        <div className="border border-line bg-surface p-4">
+        <div className="squircle rounded-md bg-surface shadow-xs p-4">
           <h3 className="text-sm font-medium text-ink">Kalau berdua, bukan sendiri</h3>
           <p className="mt-1 text-sm text-ink-muted">
             Dua orang tinggal bersama tidak menghabiskan dua kali biaya satu orang. Sewa,
@@ -262,7 +262,7 @@ function Route({
     <div className={`border p-4 ${warn ? 'border-warn/40 bg-warn-wash' : 'border-line bg-surface'}`}>
       <div className="flex items-baseline justify-between gap-2">
         <p className="text-sm font-medium text-ink">{title}</p>
-        <span className="rounded-xs border border-line px-1.5 py-0.5 text-[0.625rem] uppercase tracking-wide text-ink-muted">
+        <span className="rounded-xs border border-line px-1.5 py-0.5 text-caption2 uppercase tracking-wide text-ink-muted">
           {badge}
         </span>
       </div>

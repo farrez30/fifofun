@@ -2,8 +2,8 @@
 
 import { useActionState } from 'react'
 import { useFormStatus } from 'react-dom'
-import { CONTROL } from '@/components/field-base'
 import { type AuthState, authenticate } from './actions'
+import { BUTTON_PRIMARY, BUTTON_QUIET, CONTROL } from '@/components/field-base'
 
 const EMPTY: AuthState = {}
 
@@ -24,11 +24,13 @@ function Submit({
       name="intent"
       value={intent}
       disabled={pending}
-      className={
-        variant === 'primary'
-          ? 'h-11 w-full rounded-sm bg-accent text-sm font-medium text-paper transition-colors duration-150 hover:bg-accent-strong disabled:opacity-60'
-          : 'h-11 w-full rounded-sm border border-line text-sm font-medium text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken disabled:opacity-60'
-      }
+      /*
+        The two halves of the only decision on this screen. Filled is the one
+        somebody came to press; gray is the other real option rather than a
+        weaker version of the same one. `w-full` because a login form is one
+        column and a capsule floating in the middle of it reads as unfinished.
+      */
+      className={`w-full ${variant === 'primary' ? BUTTON_PRIMARY : BUTTON_QUIET}`}
     >
       {pending ? 'Memproses' : children}
     </button>
@@ -90,7 +92,7 @@ export function LoginForm() {
           spellCheck={false}
           placeholder="ABCDE-FGHJK"
           aria-describedby="code-hint"
-          className="h-11 w-full rounded-sm border border-line bg-surface px-3 font-mono text-base uppercase tracking-widest text-ink placeholder:tracking-widest placeholder:text-ink-faint focus:border-accent"
+          className={`${CONTROL} font-mono uppercase tracking-widest placeholder:tracking-widest`}
         />
         <p id="code-hint" className="text-xs text-ink-faint">
           Akun baru hanya bisa dibuat dengan undangan dari anggota rumah tangga.

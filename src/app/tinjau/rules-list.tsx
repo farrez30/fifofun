@@ -32,7 +32,7 @@ export function RulesList({ rules }: { rules: RuleRow[] }) {
 
       <ul className="space-y-2">
         {rules.map((rule) => (
-          <li key={rule.id} className="border border-line bg-surface p-3">
+          <li key={rule.id} className="squircle rounded-md bg-surface shadow-xs p-3">
             <div className="flex items-baseline justify-between gap-3">
               <p className="min-w-0 text-sm text-ink">
                 <span className="truncate">{rule.pattern}</span>

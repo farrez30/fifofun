@@ -80,7 +80,17 @@ export function MoneyInput({
       <div className="relative">
         <span
           aria-hidden="true"
-          className={`pointer-events-none absolute inset-y-0 flex items-center font-mono text-sm text-ink-faint ${
+          /*
+          `ink-muted`, not `ink-faint`.
+
+          The unit is part of the figure rather than a caption about it: read
+          the field aloud and the Rp comes out. It was the caption colour, and
+          once the control became a fill rather than a white box that colour
+          measured 4,45:1 against it, which is the kind of near miss that only
+          shows up on the one surface nobody checked. Moving it a rung answers
+          both the number and the meaning.
+        */
+          className={`pointer-events-none absolute inset-y-0 flex items-center font-mono text-sm text-ink-muted ${
             compact ? 'left-1.5 sm:left-2' : 'left-3'
           }`}
         >

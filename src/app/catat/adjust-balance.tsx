@@ -2,7 +2,7 @@
 
 import { Fragment, useActionState, useId, useState } from 'react'
 import { useFormStatus } from 'react-dom'
-import { CONTROL } from '@/components/field-base'
+import { BUTTON_QUIET, CONTROL } from '@/components/field-base'
 import { AccountMark, DirectionMark } from '@/components/marks'
 import { MoneyInput } from '@/components/money-input'
 import { formatIdr } from '@/lib/money'
@@ -81,7 +81,7 @@ export function BalanceRows({ rows }: { rows: BalanceRow[] }) {
                   aria-expanded={open === row.accountId}
                   aria-controls={panelId}
                   onClick={() => setOpen(open === row.accountId ? null : row.accountId)}
-                  className="h-11 rounded-sm border border-line px-3 text-sm text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
+                  className={BUTTON_QUIET}
                 >
                   Sesuaikan saldo
                 </button>
@@ -120,7 +120,7 @@ export function BalanceCards({ rows }: { rows: BalanceRow[] }) {
   return (
     <ul
       aria-label="Saldo tiap akun"
-      className="divide-y divide-line border border-line bg-surface sm:hidden"
+      className="rows-inset squircle rounded-md bg-surface shadow-xs sm:hidden"
     >
       {rows.map((row) => {
         // Distinct from the table's, because both trees are in the document.

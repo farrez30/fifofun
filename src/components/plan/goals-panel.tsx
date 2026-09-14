@@ -59,7 +59,7 @@ export function GoalsPanel({
 
   return (
     <div className="space-y-6">
-      <div className="border border-line bg-surface p-4">
+      <div className="squircle rounded-md bg-surface shadow-xs p-4">
         <h3 className="text-sm font-medium text-ink">Dana darurat</h3>
         <div className="mt-3 flex flex-wrap items-baseline gap-x-6 gap-y-2">
           <p className="tnum font-mono text-2xl font-medium text-ink">
@@ -119,7 +119,7 @@ export function GoalsPanel({
           />
         </div>
 
-        <div className="mt-3 border border-line bg-sunken p-4">
+        <div className="mt-3 squircle rounded-md bg-sunken p-4">
           <p className="text-sm text-ink">
             <span className="font-medium">{instrument.instrument.label}</span> untuk jangka{' '}
             {years} tahun.
@@ -226,7 +226,7 @@ function Step({
   detail: string
 }) {
   return (
-    <li className="flex gap-3 border border-line bg-surface p-4">
+    <li className="flex gap-3 squircle rounded-md bg-surface shadow-xs p-4">
       <span
         aria-hidden="true"
         className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-line text-xs tnum font-mono text-ink-muted"
@@ -256,7 +256,7 @@ function Figure({
   emphasis?: boolean
 }) {
   return (
-    <div className="border border-line bg-surface p-4">
+    <div className="squircle rounded-md bg-surface shadow-xs p-4">
       <p className="text-xs font-medium uppercase tracking-wide text-ink-faint">{label}</p>
       <p
         className={`mt-1.5 tnum font-mono text-ink ${emphasis ? 'text-xl font-medium' : 'text-lg'}`}

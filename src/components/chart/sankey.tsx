@@ -169,7 +169,7 @@ export function Sankey({ nodes, links, height: fixedHeight, caption, note, id }:
 
   if (nodes.length === 0 || positive.length === 0) {
     return (
-      <figure className="border border-line bg-surface p-6">
+      <figure className="squircle rounded-md bg-surface shadow-xs p-6">
         <figcaption className="text-sm font-medium text-ink">{caption}</figcaption>
         <p className="mt-2 text-sm text-ink-muted">
           Belum ada aliran uang yang bisa digambar untuk periode ini.
@@ -322,7 +322,7 @@ export function Sankey({ nodes, links, height: fixedHeight, caption, note, id }:
   const prefix = id ?? `sankey-${caption.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
 
   return (
-    <figure className="sankey border border-line bg-surface p-4">
+    <figure className="sankey squircle rounded-md bg-surface shadow-xs p-4">
       <figcaption className="mb-3 text-sm font-medium text-ink">{caption}</figcaption>
 
       <div
@@ -356,9 +356,22 @@ export function Sankey({ nodes, links, height: fixedHeight, caption, note, id }:
 
           <g>
             {ribbons.map(({ link, path }, index) => (
+              /*
+                Focusable, so the isolation below is not pointer-only.
+
+                Hovering a ribbon dims the others, which is the whole reason
+                a thin flow can be followed across the diagram. A keyboard had
+                no way to ask for that: the `<title>` was reachable by a screen
+                reader but the visual answer was not reachable at all. A
+                `role="img"` with the title as its name makes each ribbon a
+                stop, and the `:focus-visible` rules in globals.css give it the
+                same treatment a pointer gets.
+              */
               <path
                 key={`${link.source}-${link.target}`}
                 data-ribbon={`${link.source}-${link.target}`}
+                tabIndex={0}
+                role="img"
                 d={path}
                 fill={`url(#${prefix}-g${index})`}
                 opacity={0.28}

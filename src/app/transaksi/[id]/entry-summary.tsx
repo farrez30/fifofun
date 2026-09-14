@@ -30,7 +30,7 @@ export function EntrySummary({
   const to = row.toAccountId ? byId.get(row.toAccountId) : undefined
 
   return (
-    <section aria-labelledby="ringkasan" className="border border-line bg-surface p-4">
+    <section aria-labelledby="ringkasan" className="squircle rounded-md bg-surface shadow-xs p-4">
       <h2 id="ringkasan" className="sr-only">
         Transaksi ini
       </h2>

@@ -8,6 +8,15 @@ import { signOut } from '@/app/login/actions'
 import { NavHint } from '@/components/nav-hint'
 import { PullToRefresh } from '@/components/pull-to-refresh'
 import { SHEET, TAB, TABS } from '@/components/tabs'
+import {
+  RETURN,
+  SHEET_OUT,
+  Velocity,
+  endpoint,
+  release,
+  rubberBand,
+  translateOf,
+} from '@/components/spring'
 import { useSwipeTabs } from '@/components/use-swipe-tabs'
 import type { NavHref } from '@/components/nav'
 
@@ -62,9 +71,22 @@ function ReviewBadge({ review }: { review: Promise<number> }) {
 
   return (
     <>
+      {/*
+        Red, and a capsule.
+
+        It was the accent in a small rounded rectangle, which is this
+        application's chip shape, so it read as a label attached to the glyph
+        rather than as a count demanding attention. Apple has exactly one badge
+        and it is a red pill, which is worth copying here for the reason it
+        exists: a badge is the only thing in a tab bar allowed to interrupt, and
+        making it the same colour as the selected tab spends that on nothing.
+
+        Still not colour alone. The figure is the message and the sentence below
+        carries it for anyone who never sees the pill.
+      */}
       <span
         aria-hidden="true"
-        className="tnum absolute -right-2.5 -top-1 rounded-sm bg-accent px-1 font-mono text-[0.625rem] font-medium leading-4 text-paper"
+        className="tnum absolute -right-2.5 -top-1 min-w-4 rounded-full bg-over px-1 text-center font-mono text-caption2 font-medium leading-4 text-paper"
       >
         {count > 99 ? '99+' : count}
       </span>
@@ -90,10 +112,31 @@ export function MobileTabs({ current, email, review }: Props) {
   */
   const dragFrom = useRef<number | null>(null)
   const dragged = useRef(false)
+  const velocity = useRef(new Velocity())
+  /* The spring currently carrying the sheet, so a finger arriving mid-flight
+     can take it over rather than fight it. */
+  const running = useRef<Animation | null>(null)
 
   function grabberDown(event: React.PointerEvent<HTMLButtonElement>) {
     if (event.pointerType === 'mouse') return
-    dragFrom.current = event.clientY
+    /*
+      A finger landing on a sheet that has not finished moving takes it over
+      from wherever it is. The position is read before the animation is
+      cancelled, because cancelling reverts to the base style; the velocity is
+      deliberately thrown away, because from this frame the finger owns it.
+      That last part is what iOS does and what makes an integrator unnecessary.
+    */
+    const moving = running.current
+    if (moving && sheet.current) {
+      const at = translateOf(sheet.current, 'y')
+      moving.cancel()
+      running.current = null
+      sheet.current.style.transform = `translateY(${at}px)`
+      dragFrom.current = event.clientY - at
+    } else {
+      dragFrom.current = event.clientY
+    }
+    velocity.current.start(event.clientY, event.timeStamp)
     dragged.current = false
     try {
       event.currentTarget.setPointerCapture(event.pointerId)
@@ -105,22 +148,56 @@ export function MobileTabs({ current, email, review }: Props) {
 
   function grabberMove(event: React.PointerEvent<HTMLButtonElement>) {
     if (dragFrom.current === null || !sheet.current) return
-    const down = Math.max(0, event.clientY - dragFrom.current)
-    if (down > 4) dragged.current = true
+    const raw = event.clientY - dragFrom.current
+    /*
+      Downward the sheet follows the finger exactly. Upward it does not: there
+      is nothing above a sheet already at the top of its travel, so the pull is
+      fed through Apple's overscroll curve, which asymptotes rather than
+      clipping. A surface that decelerates into its limit reads as a limit; one
+      that stops dead reads as a bug.
+    */
+    const down = raw >= 0 ? raw : -rubberBand(-raw, window.innerHeight)
+    if (Math.abs(raw) > 4) dragged.current = true
+    velocity.current.track(event.clientY, event.timeStamp)
     // No transition while the finger holds the sheet: it follows, not chases.
     sheet.current.style.transition = 'none'
-    sheet.current.style.transform = down > 0 ? `translateY(${down}px)` : ''
+    sheet.current.style.transform = `translateY(${down}px)`
   }
 
   function grabberUp(event: React.PointerEvent<HTMLButtonElement>) {
-    if (dragFrom.current === null || !sheet.current) return
-    const down = event.clientY - dragFrom.current
+    const node = sheet.current
+    if (dragFrom.current === null || !node) return
+    const down = Math.max(0, event.clientY - dragFrom.current)
     dragFrom.current = null
-    // Released short of the threshold, the sheet eases home instead of
-    // teleporting; the global reduced-motion block collapses the ease.
-    sheet.current.style.transition = ''
-    sheet.current.style.transform = ''
-    if (down > 96) sheet.current.close()
+    velocity.current.track(event.clientY, event.timeStamp)
+    const speed = velocity.current.current
+    node.style.transition = ''
+
+    /*
+      Where the gesture was going, not where it stopped.
+
+      The threshold this replaced was a flat 96 pixels, which cannot tell a
+      flick from a slow drag: a sharp thirty pixel flick left the sheet open,
+      and a hundred and twenty pixel drag that had clearly changed its mind put
+      it away. Projecting the release velocity forward at the deceleration rate
+      a scroll view uses answers both. A thirty pixel flick at one pixel per
+      millisecond projects past five hundred and dismisses; a slow drag that
+      stopped projects barely past where it already is, and springs home, which
+      is right, because a long slow drag that stopped is a cancellation.
+    */
+    const going = endpoint(down, speed)
+    if (going > node.getBoundingClientRect().height / 2) {
+      const travel = { from: down, to: node.getBoundingClientRect().height, velocity: speed }
+      const leaving = release(node, SHEET_OUT, travel)
+      if (leaving) {
+        leaving.finished.then(() => node.close()).catch(() => undefined)
+      } else {
+        node.close()
+      }
+      return
+    }
+
+    running.current = release(node, RETURN, { from: down, to: 0, velocity: speed })
   }
 
   useSwipeTabs(SWIPE_ORDER, current)
@@ -170,7 +247,17 @@ export function MobileTabs({ current, email, review }: Props) {
         aria-label="Halaman utama"
         /* `sm:hidden` and not a media query in JavaScript: the bar must be
            absent on the first paint at desktop width, not removed after it. */
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface pb-safe-b pl-safe-l pr-safe-r sm:hidden"
+        /*
+          Glass, and the one surface in this application that earns it.
+
+          A backdrop filter over a flat colour composites to the same thing a
+          plain `rgba()` would, which is an expensive way to draw nothing. What
+          makes this one real is that the ledger scrolls underneath it: white
+          cards, coloured verdict chips and chart ink all pass behind the bar,
+          and the bar reports them. The border goes because a material carries
+          its own specular edge.
+        */
+        className="material fixed inset-x-0 bottom-0 z-40 border-t pb-safe-b pl-safe-l pr-safe-r sm:hidden"
       >
         <ul className="flex">
           {TABS.map((tab) => (
@@ -269,14 +356,27 @@ export function MobileTabs({ current, email, review }: Props) {
         tabIndex={-1}
         /* A dialog centres itself. `mt-auto mb-0` drops it to the bottom edge,
            where the hand that opened it already is. */
-        className="mx-auto mb-0 mt-auto w-full max-w-none rounded-t-md border-t border-line bg-surface p-0 text-ink transition-transform duration-150 backdrop:bg-scrim sm:hidden"
+        /*
+          `material-thick`, not `material`. A sheet covers the page rather than
+          floating over a strip of it, so it obscures where a bar reports; the
+          thickest tint is the one that still says glass without asking the
+          reader to look through their own ledger at the menu on top of it.
+
+          The radius is Apple's sheet corner. `.sheet` in `globals.css` carries
+          the height clamp, the presentation spring and the bleed that keeps the
+          overshoot from showing scrim underneath.
+        */
+        className="material material-thick sheet mx-auto mb-0 mt-auto w-full max-w-none rounded-t-xl border-t p-0 text-ink backdrop:bg-scrim sm:hidden"
         /* A click that lands on the dialog itself landed on the backdrop: every
            child covers its own area. */
         onClick={(event) => {
           if (event.target === sheet.current) sheet.current?.close()
         }}
       >
-        <div className="pb-safe-b">
+        {/* `flex min-h-0` so the clamp on `.sheet` actually has something to
+            clamp: without a column that can shrink, the rows overflow past the
+            ceiling instead of the list scrolling inside it. */}
+        <div className="flex min-h-0 flex-1 flex-col pb-safe-b">
           {/*
             The grabber every bottom sheet has taught a thumb to expect: drag
             it down to put the sheet away, or tap it. It replaces the Tutup
@@ -299,7 +399,7 @@ export function MobileTabs({ current, email, review }: Props) {
                guarantees the 44px. */
             className="mx-auto flex touch-none justify-center rounded-sm px-6 py-3"
           >
-            <span aria-hidden="true" className="h-1 w-9 rounded-sm bg-line-strong" />
+            <span aria-hidden="true" className="h-[5px] w-9 rounded-full bg-line-strong" />
           </button>
 
           <div className="flex items-center justify-between gap-3 border-b border-line px-4 pb-3">
@@ -323,7 +423,19 @@ export function MobileTabs({ current, email, review }: Props) {
           </div>
 
           <nav aria-label="Halaman lainnya">
-            <ul className="divide-y divide-line">
+            {/*
+              The list scrolls, the sheet does not.
+
+              `.sheet` carries a ceiling of 88dvh, and a ceiling with nothing
+              scrollable under it only hides the rows it cuts off. At the
+              default text size the six rows fit on every phone; turn the text
+              size up on a 568px screen and the bottom two used to become
+              unreachable, which is the actual bug here rather than a
+              hypothetical one. `.sheet-list` also contains its own overscroll,
+              so reaching the end of it never rubber-bands the locked page
+              behind the sheet.
+            */}
+            <ul className="sheet-list rows-inset">
               {SHEET.map((item) => (
                 <li key={item.href}>
                   <Link

@@ -239,7 +239,7 @@ function PercentInput({
         />
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 right-2 flex items-center font-mono text-sm text-ink-faint"
+          className="pointer-events-none absolute inset-y-0 right-2 flex items-center font-mono text-sm text-ink-muted"
         >
           %
         </span>

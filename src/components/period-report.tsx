@@ -146,7 +146,7 @@ export function PeriodReport({ summary, raw, categories, accounts, ledgerSize }:
 
   return (
     <div className="space-y-6">
-      <form method="get" className="border border-line bg-surface p-4">
+      <form method="get" className="squircle rounded-md bg-surface shadow-xs p-4">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <label>
             <span className={LABEL}>Dari tanggal</span>
@@ -250,7 +250,7 @@ export function PeriodReport({ summary, raw, categories, accounts, ledgerSize }:
         </div>
       </form>
 
-      <div className="border border-line bg-surface p-4">
+      <div className="squircle rounded-md bg-surface shadow-xs p-4">
         <p className="text-sm font-medium text-ink">
           {summary.matched === 0
             ? 'Tidak ada transaksi yang cocok dengan pilihan ini.'
@@ -269,15 +269,15 @@ export function PeriodReport({ summary, raw, categories, accounts, ledgerSize }:
 
         {summary.matched > 0 ? (
           <dl className="mt-4 grid gap-3 sm:grid-cols-3">
-            <div className="border border-line bg-sunken p-3">
+            <div className="squircle rounded-md bg-sunken p-3">
               <dt className="text-xs font-medium uppercase tracking-wide text-ink-faint">Masuk</dt>
               <dd className="tnum mt-1 font-mono text-lg text-under">{formatIdr(summary.inflow)}</dd>
             </div>
-            <div className="border border-line bg-sunken p-3">
+            <div className="squircle rounded-md bg-sunken p-3">
               <dt className="text-xs font-medium uppercase tracking-wide text-ink-faint">Keluar</dt>
               <dd className="tnum mt-1 font-mono text-lg text-ink">{formatIdr(summary.outflow)}</dd>
             </div>
-            <div className="border border-line bg-sunken p-3">
+            <div className="squircle rounded-md bg-sunken p-3">
               <dt className="text-xs font-medium uppercase tracking-wide text-ink-faint">Selisih</dt>
               <dd
                 className={`tnum mt-1 font-mono text-lg ${summary.net < 0n ? 'text-over' : 'text-under'}`}
@@ -300,7 +300,7 @@ export function PeriodReport({ summary, raw, categories, accounts, ledgerSize }:
           <h2 id="per-cashflow" className="mb-3 text-sm font-medium text-ink">
             Per cashflow
           </h2>
-          <ul className="divide-y divide-line border border-line bg-surface">
+          <ul className="rows-inset squircle rounded-md bg-surface shadow-xs">
             {summary.byCashflow.map((line) => (
               <li key={line.cashflow} className="flex items-baseline justify-between gap-3 p-3">
                 <span className="text-sm text-ink">{line.label}</span>
@@ -319,7 +319,7 @@ export function PeriodReport({ summary, raw, categories, accounts, ledgerSize }:
           <h2 id="per-kategori" className="mb-3 text-sm font-medium text-ink">
             Per kategori
           </h2>
-          <ul className="divide-y divide-line border border-line bg-surface">
+          <ul className="rows-inset squircle rounded-md bg-surface shadow-xs">
             {summary.byGroup.map((group) => (
               <li key={`${group.cashflow} ${group.group}`} className="p-3">
                 <Line

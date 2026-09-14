@@ -62,7 +62,7 @@ export function AccountsPanel({ accounts }: { accounts: AccountView[] }) {
         Every action here is its own form, so rendering both trees is safe: the
         hidden one cannot be submitted, and only the visible one is reachable.
       */}
-      <ul aria-label="Akun" className="mt-3 divide-y divide-line border border-line bg-surface sm:hidden">
+      <ul aria-label="Akun" className="mt-3 rows-inset squircle rounded-md bg-surface shadow-xs sm:hidden">
         {[...live, ...archived].map((account, index) => (
           <Card
             key={account.id}
@@ -75,7 +75,7 @@ export function AccountsPanel({ accounts }: { accounts: AccountView[] }) {
         ))}
       </ul>
 
-      <div className="relative mt-3 hidden overflow-x-auto border border-line bg-surface sm:block">
+      <div className="relative mt-3 hidden overflow-x-auto squircle rounded-md bg-surface shadow-xs sm:block">
         <table className="w-full min-w-[46rem] border-collapse text-sm">
 
           <caption className="sr-only">Akun beserta kunci impor dan urutannya</caption>
@@ -122,7 +122,7 @@ export function AccountsPanel({ accounts }: { accounts: AccountView[] }) {
         kuncinya.
       </p>
 
-      <details className="mt-3 border border-line bg-surface">
+      <details className="mt-3 squircle rounded-md bg-surface shadow-xs">
         <summary className="cursor-pointer px-4 py-3 text-sm text-accent">Tambah akun</summary>
         <div className="border-t border-line p-4">
           <AccountForm />

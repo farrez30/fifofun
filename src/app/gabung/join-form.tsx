@@ -3,6 +3,7 @@
 import { useActionState } from 'react'
 import { useFormStatus } from 'react-dom'
 import { type JoinResult, joinHousehold } from './actions'
+import { BUTTON_PRIMARY, CONTROL } from '@/components/field-base'
 
 function Submit() {
   const { pending } = useFormStatus()
@@ -10,7 +11,7 @@ function Submit() {
     <button
       type="submit"
       disabled={pending}
-      className="h-11 w-full rounded-sm bg-accent text-sm font-medium text-paper transition-colors duration-150 hover:bg-accent-strong disabled:opacity-60"
+      className={`w-full ${BUTTON_PRIMARY}`}
     >
       {pending ? 'Memeriksa' : 'Gabung'}
     </button>
@@ -41,7 +42,7 @@ export function JoinForm() {
           aria-describedby={state ? 'join-message' : 'join-hint'}
           aria-invalid={state && !state.ok ? true : undefined}
           placeholder="ABCDE-FGHJK"
-          className="tnum h-11 w-full rounded-sm border border-line bg-surface px-3 font-mono text-base uppercase tracking-widest text-ink placeholder:tracking-widest placeholder:text-ink-faint focus:border-accent"
+          className={`tnum ${CONTROL} font-mono uppercase tracking-widest placeholder:tracking-widest`}
         />
         <p id="join-hint" className="text-xs text-ink-faint">
           Sepuluh karakter. Huruf besar kecil dan tanda hubung tidak masalah.

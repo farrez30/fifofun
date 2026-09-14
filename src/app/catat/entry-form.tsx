@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from 'react'
 import { useFormStatus } from 'react-dom'
-import { CONTROL } from '@/components/field-base'
+import { BUTTON_PRIMARY, CONTROL } from '@/components/field-base'
 import { DirectionMark } from '@/components/marks'
 import { MoneyInput } from '@/components/money-input'
 import { DIRECTION_LABELS, directionOf, type Direction } from '@/lib/ledger/direction'
@@ -77,7 +77,7 @@ export function EntryForm({ accounts, categories, defaults, entryKey }: Props) {
     <form
       action={action}
       noValidate
-      className="space-y-5 border border-line bg-surface p-4 sm:p-5"
+      className="space-y-5 squircle rounded-md bg-surface shadow-xs p-4 sm:p-5"
     >
       {result ? (
         <p
@@ -246,7 +246,7 @@ function Submit() {
     <button
       type="submit"
       disabled={pending}
-      className="h-11 rounded-sm bg-accent px-5 text-sm font-medium text-paper transition-colors duration-150 hover:bg-accent-strong disabled:opacity-50"
+      className={BUTTON_PRIMARY}
     >
       {pending ? 'Menyimpan' : 'Simpan'}
     </button>

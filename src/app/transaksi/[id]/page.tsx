@@ -91,7 +91,7 @@ export default async function TransactionPage({
         <EntrySummary detail={detail} accounts={accounts} />
 
         {row.deletedAt && !split ? (
-          <div className="border border-line bg-sunken p-4">
+          <div className="squircle rounded-md bg-sunken p-4">
             <p className="text-sm font-medium text-ink">Transaksi ini sudah dihapus.</p>
             <p className="mt-1 text-sm text-ink-muted">
               Datanya tetap tersimpan, hanya disembunyikan dari semua hitungan.
