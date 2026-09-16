@@ -1122,6 +1122,28 @@
   }
 
   /*
+    The same cue for the readout marks outside Sankey: a dot on the balance
+    line, an arrival marker, a stacked cost segment. `div[data-readout-label]`
+    picks these out precisely, because every one of them is a plain `<div>`
+    and Sankey's own marks are SVG (`<path>`/`<g>`), already handled above.
+    Brightness rather than a transform, because a segment is a thin tall bar
+    and scaling it from its centre would grow it sideways into its neighbour;
+    brightening reads as "hoverable" regardless of the mark's shape. Focus
+    already gets the ordinary ring from `[tabindex]:focus-visible` above, so
+    this only fills the gap hover had.
+  */
+  @media (hover: hover) {
+    div[data-readout-label] {
+      cursor: pointer;
+      transition: filter 120ms ease-out;
+    }
+
+    div[data-readout-label]:hover {
+      filter: brightness(1.2);
+    }
+  }
+
+  /*
     Liquid Glass, best effort, and an honest account of where the effort stops.
 
     What this reproduces: the frosted sample, the saturation boost that stands

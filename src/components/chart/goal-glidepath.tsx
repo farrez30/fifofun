@@ -276,6 +276,44 @@ export function GoalGlidepath({
               </>
             ) : null}
 
+            {/*
+              A dot per sample year on each curve, the same idiom
+              balance-trend uses for its own line: the sr-only table below
+              already carries every year for a screen reader, and without
+              these the readout could only ever answer for the two arrivals,
+              never for "what about year six". Small and muted rather than
+              styled like the arrivals, so the two curves keep reading as
+              lines and the arrivals stay the loudest thing on the chart.
+            */}
+            {placed
+              .filter(({ point }) => point.invested !== null)
+              .map(({ point, x }) => (
+                <div
+                  key={`invested-${point.year}`}
+                  data-readout-label={`Dengan imbal hasil, ${point.year}`}
+                  data-readout-value={formatIdr(point.invested!)}
+                  tabIndex={0}
+                  role="img"
+                  aria-label={`Dengan imbal hasil, ${point.year}: ${formatIdr(point.invested!)}`}
+                  className="absolute size-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent/50"
+                  style={{ left: `${x}%`, top: `${yAt(point.invested!)}%` }}
+                />
+              ))}
+            {placed
+              .filter(({ point }) => point.idle !== null)
+              .map(({ point, x }) => (
+                <div
+                  key={`idle-${point.year}`}
+                  data-readout-label={`Kalau hanya ditabung, ${point.year}`}
+                  data-readout-value={formatIdr(point.idle!)}
+                  tabIndex={0}
+                  role="img"
+                  aria-label={`Kalau hanya ditabung, ${point.year}: ${formatIdr(point.idle!)}`}
+                  className="absolute size-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-line-strong/50"
+                  style={{ left: `${x}%`, top: `${yAt(point.idle!)}%` }}
+                />
+              ))}
+
             {invested ? (
               <Marker
                 x={xAtMonth(invested.months)}
