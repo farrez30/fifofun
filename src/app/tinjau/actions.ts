@@ -10,6 +10,7 @@ import { resolveTidy } from '@/lib/ledger/tidy'
 import { groupRefusal } from '@/lib/queries/categories'
 import { getRules, getUnconfirmed } from '@/lib/queries/household'
 import { planLedgerTidy } from '@/lib/queries/tidy'
+import { WRITE_FAILED } from '@/lib/actions'
 import { authedUser } from '@/lib/supabase/auth-user'
 import { createClient } from '@/lib/supabase/server'
 
@@ -197,11 +198,12 @@ export async function applyCategory(
       .in('id', ids.slice(start, start + CHUNK))
 
     if (writeError) {
+      console.error('[tinjau] gagal menyimpan kategori', writeError)
       return fail(
         'Gagal menyimpan kategorinya.',
         start === 0
-          ? writeError.message
-          : `${start} transaksi sudah tersimpan sebelum gagal. Ulangi untuk melanjutkan sisanya. ${writeError.message}`,
+          ? WRITE_FAILED
+          : `${start} transaksi sudah tersimpan sebelum gagal. Ulangi untuk melanjutkan sisanya.`,
       )
     }
   }
@@ -234,8 +236,9 @@ export async function applyCategory(
         auto_apply: true,
         hit_count: agree.length,
       })
+      if (ruleError) console.error('[tinjau] gagal membuat aturan', ruleError)
       ruleNote = ruleError
-        ? `Kategorinya tersimpan, tapi aturannya gagal dibuat: ${ruleError.message}`
+        ? 'Kategorinya tersimpan, tapi aturannya gagal dibuat.'
         : 'Impor berikutnya akan mengategorikan pola ini sendiri.'
     }
   }
@@ -315,7 +318,10 @@ export async function categoriseOne(
     })
     .eq('id', parsed.data.transactionId)
 
-  if (error) return fail('Gagal menyimpan kategorinya.', error.message)
+  if (error) {
+    console.error('[tinjau] gagal menyimpan kategori', error)
+    return fail('Gagal menyimpan kategorinya.', WRITE_FAILED)
+  }
 
   updateTag(txTag(householdId))
   return { ok: true, message: `Masuk ke ${category.name as string}.`, applied: 1 }
@@ -340,7 +346,10 @@ export async function deleteRule(
     .delete()
     .eq('id', parsed.data.ruleId)
 
-  if (error) return fail('Gagal menghapus aturannya.', error.message)
+  if (error) {
+    console.error('[tinjau] gagal menghapus aturan', error)
+    return fail('Gagal menghapus aturannya.', WRITE_FAILED)
+  }
 
   updateTag(rulesTag(ctx.householdId))
   return { ok: true, message: 'Aturannya dihapus. Kategori yang sudah tersimpan tidak berubah.' }
@@ -439,9 +448,10 @@ export async function tidyLedger(
         .in('id', slice)
 
       if (error) {
+        console.error('[tinjau] perapian berhenti', error)
         return stop(
           'Perapian berhenti di tengah jalan.',
-          `${written} transaksi sudah dipindahkan. Jalankan lagi untuk melanjutkan sisanya. ${error.message}`,
+          `${written} transaksi sudah dipindahkan. Jalankan lagi untuk melanjutkan sisanya.`,
         )
       }
       written += slice.length
@@ -457,9 +467,10 @@ export async function tidyLedger(
       .in('id', resolved.held.slice(start, start + CHUNK))
 
     if (error) {
+      console.error('[tinjau] penandaan tahan gagal', error)
       return stop(
         'Perpindahannya jadi, penandaannya tidak.',
-        `${written} transaksi dipindahkan, tapi yang kamu tahan gagal ditandai dan akan ditawarkan lagi. ${error.message}`,
+        `${written} transaksi dipindahkan, tapi yang kamu tahan gagal ditandai dan akan ditawarkan lagi.`,
       )
     }
   }

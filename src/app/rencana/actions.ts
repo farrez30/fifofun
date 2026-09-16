@@ -3,7 +3,7 @@
 import { updateTag } from 'next/cache'
 import { planTag } from '@/lib/queries/tags'
 import { z } from 'zod'
-import { SESSION_EXPIRED, context, fail, senField, type ActionResult } from '@/lib/actions'
+import { SESSION_EXPIRED, context, fail, senField, writeFailed, type ActionResult } from '@/lib/actions'
 import {
   LIFESTYLE_TIERS,
   PLAN_BOUNDS,
@@ -132,7 +132,7 @@ export async function savePlan(
     )
     .select('updated_at')
 
-  if (error) return fail('Rencananya gagal disimpan.', error.message)
+  if (error) return writeFailed('rencana', 'Rencananya gagal disimpan.', error)
   if (!data || data.length === 0) {
     return fail('Rencananya tidak tersimpan.', 'Coba muat ulang halaman, lalu simpan lagi.')
   }
@@ -155,7 +155,7 @@ export async function resetPlan(): Promise<ActionResult> {
     .eq('household_id', ctx.householdId)
     .select('id')
 
-  if (error) return fail('Rencananya gagal dihapus.', error.message)
+  if (error) return writeFailed('rencana', 'Rencananya gagal dihapus.', error)
 
   updateTag(planTag(ctx.householdId))
   // Deleting a plan that is not there is the state the caller wanted anyway.

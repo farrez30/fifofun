@@ -33,6 +33,23 @@ export function fail(message: string, detail?: string): ActionResult {
 
 export const SESSION_EXPIRED = 'Sesi kamu sudah berakhir. Masuk lagi lalu ulangi.'
 
+/**
+ * What every write failure says to the reader, whatever actually broke.
+ *
+ * A Postgres or PostgREST error names its own constraint and column, which is
+ * a map of the schema handed to whoever is looking, and not something a reader
+ * can act on anyway. `writeFailed` keeps that message server-side, where it is
+ * still useful, and gives the reader the one sentence `global-error.tsx` already
+ * uses for the same situation.
+ */
+export const WRITE_FAILED =
+  'Coba lagi sebentar lagi. Kalau tetap begini, kejadiannya sudah tercatat di server.'
+
+export function writeFailed(scope: string, message: string, error: { message: string }): ActionResult {
+  console.error(`[${scope}] ${message}`, error)
+  return fail(message, WRITE_FAILED)
+}
+
 /** The signed-in user and the household RLS lets them see, or null for either missing. */
 export async function context() {
   const supabase = await createClient()

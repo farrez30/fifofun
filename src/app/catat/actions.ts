@@ -5,6 +5,7 @@ import { txTag } from '@/lib/queries/tags'
 import { z } from 'zod'
 import {
   SESSION_EXPIRED,
+  WRITE_FAILED,
   context,
   fail,
   hhmmField,
@@ -12,6 +13,7 @@ import {
   optionalUuid,
   positiveSen,
   senField,
+  writeFailed,
   type ActionResult,
 } from '@/lib/actions'
 import { toJakartaInstant } from '@/lib/datetime'
@@ -210,7 +212,7 @@ export async function recordEntry(
         detail: 'Tombol yang ditekan dua kali tidak mencatat dua kali.',
       }
     }
-    return fail('Catatannya gagal disimpan.', error.message)
+    return writeFailed('catat', 'Catatannya gagal disimpan.', error)
   }
 
   revalidateLedger(householdId)
@@ -242,7 +244,7 @@ export async function deleteEntry(
     .is('deleted_at', null)
     .select('id')
 
-  if (error) return fail('Gagal menghapus catatannya.', error.message)
+  if (error) return writeFailed('catat', 'Gagal menghapus catatannya.', error)
   if (!data || data.length === 0) {
     return fail(
       'Catatan itu tidak ditemukan, atau berasal dari bank.',
@@ -319,7 +321,8 @@ export async function adjustBalance(
       .select('id')
       .maybeSingle()
     if (!created) {
-      return fail('Kategori penyesuaian belum ada dan gagal dibuat.', createError?.message)
+      console.error('[catat] kategori penyesuaian gagal dibuat', createError)
+      return fail('Kategori penyesuaian belum ada dan gagal dibuat.', WRITE_FAILED)
     }
     categoryId = created.id as string
   }
@@ -355,7 +358,7 @@ export async function adjustBalance(
     if (error.code === '23505') {
       return { ok: true, message: 'Penyesuaiannya sudah tercatat sebelumnya.' }
     }
-    return fail('Penyesuaiannya gagal disimpan.', error.message)
+    return writeFailed('catat', 'Penyesuaiannya gagal disimpan.', error)
   }
 
   revalidateLedger(householdId)
@@ -445,7 +448,7 @@ export async function mergeDuplicate(
       .eq('id', importedId)
       .eq('household_id', householdId)
       .select('id')
-    if (error) return fail('Gagal memindahkan kategorinya ke baris bank.', error.message)
+    if (error) return writeFailed('catat', 'Gagal memindahkan kategorinya ke baris bank.', error)
   }
 
   const { error: hideError } = await supabase
@@ -455,7 +458,7 @@ export async function mergeDuplicate(
     .eq('household_id', householdId)
     .select('id')
   if (hideError) {
-    return fail('Kategorinya pindah, tapi catatan manualnya gagal dihapus.', hideError.message)
+    return writeFailed('catat', 'Kategorinya pindah, tapi catatan manualnya gagal dihapus.', hideError)
   }
 
   revalidateLedger(householdId)
@@ -490,7 +493,7 @@ export async function keepBoth(
     .eq('duplicate_of', parsed.data.importedId)
     .select('id')
 
-  if (error) return fail('Gagal menyimpan keputusannya.', error.message)
+  if (error) return writeFailed('catat', 'Gagal menyimpan keputusannya.', error)
 
   if (!data || data.length === 0) {
     // Either it was already decided, or the pair never existed. Reading the row

@@ -9,6 +9,7 @@ import {
   fail,
   monthKeyField,
   optionalSen,
+  writeFailed,
   type ActionResult,
 } from '@/lib/actions'
 import { FUND_CASHFLOWS } from '@/lib/ledger/funds'
@@ -94,7 +95,7 @@ export async function setFundTarget(
     .in('cashflow', FUND_CASHFLOWS)
     .select('id')
 
-  if (error) return fail('Targetnya gagal disimpan.', error.message)
+  if (error) return writeFailed('dana', 'Targetnya gagal disimpan.', error)
   if (!data || data.length === 0) return fail('Pos itu tidak bisa diberi target.')
 
   // Fund targets live on category rows, so that is the tag that moved.

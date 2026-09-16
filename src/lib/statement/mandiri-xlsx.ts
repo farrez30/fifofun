@@ -102,7 +102,7 @@ function findLabeled(sheet: Sheet, label: RegExp): string | null {
 
 function requireLabeled(sheet: Sheet, label: RegExp, what: string): string {
   const value = findLabeled(sheet, label)
-  if (value === null) throw new StatementParseError(`Statement is missing ${what}`)
+  if (value === null) throw new StatementParseError(`E-Statement ini tidak mencantumkan ${what}`)
   return value
 }
 
@@ -110,7 +110,7 @@ const PERIOD = /^(\d{1,2}\s+[A-Za-z]{3}\s+\d{4})\s*-\s*(\d{1,2}\s+[A-Za-z]{3}\s+
 
 function parsePeriod(raw: string): { start: CalendarDate; end: CalendarDate } {
   const m = PERIOD.exec(normalise(raw))
-  if (!m) throw new StatementParseError(`Unrecognised statement period: ${JSON.stringify(raw)}`)
+  if (!m) throw new StatementParseError(`Periode ${JSON.stringify(raw)} tidak dikenali`)
   return { start: parseShortDate(m[1]), end: parseShortDate(m[2]) }
 }
 
@@ -159,13 +159,13 @@ function findColumns(sheet: Sheet): Columns {
       }
     }
   }
-  throw new StatementParseError('Could not find the transaction table header')
+  throw new StatementParseError('Tabel transaksinya tidak ditemukan')
 }
 
 const PRODUCT_NAME = /^(Tabungan|Giro|Deposito|Rekening)\b/i
 
 function readHeader(sheet: Sheet, columns: Columns): StatementHeader {
-  const period = parsePeriod(requireLabeled(sheet, /^Periode\/Period$/i, 'a statement period'))
+  const period = parsePeriod(requireLabeled(sheet, /^Periode\/Period$/i, 'periode statement'))
   const issuedRaw = findLabeled(sheet, /^Dicetak pada\/Issued on$/i)
 
   const amount = (label: RegExp, what: string) => parseIdAmount(requireLabeled(sheet, label, what))
@@ -181,18 +181,18 @@ function readHeader(sheet: Sheet, columns: Columns): StatementHeader {
   }
 
   return {
-    accountHolder: requireLabeled(sheet, /^Nama\/Name$/i, 'an account holder'),
+    accountHolder: requireLabeled(sheet, /^Nama\/Name$/i, 'nama pemegang rekening'),
     branch: findLabeled(sheet, /^Cabang\/Branch$/i) ?? '',
     productName,
-    accountNumber: requireLabeled(sheet, /^Nomor Rekening\/Account Number$/i, 'an account number'),
+    accountNumber: requireLabeled(sheet, /^Nomor Rekening\/Account Number$/i, 'nomor rekening'),
     currency: findLabeled(sheet, /^Mata Uang\/Currency$/i) ?? 'IDR',
     periodStart: period.start,
     periodEnd: period.end,
     issuedOn: issuedRaw ? parseShortDate(issuedRaw) : null,
-    openingBalance: amount(/^Saldo Awal\/Initial Balance$/i, 'an opening balance'),
-    totalIn: amount(/^Dana Masuk\/Incoming Transactions$/i, 'an incoming total'),
-    totalOut: amount(/^Dana Keluar\/Outgoing Transactions$/i, 'an outgoing total'),
-    closingBalance: amount(/^Saldo Akhir\/Closing Balance$/i, 'a closing balance'),
+    openingBalance: amount(/^Saldo Awal\/Initial Balance$/i, 'saldo awal'),
+    totalIn: amount(/^Dana Masuk\/Incoming Transactions$/i, 'total dana masuk'),
+    totalOut: amount(/^Dana Keluar\/Outgoing Transactions$/i, 'total dana keluar'),
+    closingBalance: amount(/^Saldo Akhir\/Closing Balance$/i, 'saldo akhir'),
   }
 }
 

@@ -4,7 +4,15 @@ import { revalidatePath, updateTag } from 'next/cache'
 import { cookies } from 'next/headers'
 import { accountsTag, categoriesTag } from '@/lib/queries/tags'
 import { z } from 'zod'
-import { SESSION_EXPIRED, context, fail, isoDateField, senField, type ActionResult } from '@/lib/actions'
+import {
+  SESSION_EXPIRED,
+  context,
+  fail,
+  isoDateField,
+  senField,
+  writeFailed,
+  type ActionResult,
+} from '@/lib/actions'
 import { ICON_NAMES } from '@/components/marks'
 import { ACCOUNT_KEYS, parseIdentifiers, planReorder, twinsOf } from '@/lib/ledger/settings'
 import { ACCOUNT_KINDS, CASHFLOW_LABELS, CASHFLOW_TYPES, type CashflowType } from '@/lib/ledger/types'
@@ -196,7 +204,7 @@ export async function createAccount(
     })
     .select('id')
 
-  if (error) return keyClash(error, values.key) ?? fail('Akunnya gagal disimpan.', error.message)
+  if (error) return keyClash(error, values.key) ?? writeFailed('pengaturan', 'Akunnya gagal disimpan.', error)
 
   revalidateSettings(ctx.householdId)
   return { ok: true, message: `Akun ${values.name} dibuat.` }
@@ -254,7 +262,7 @@ export async function updateAccount(
     .eq('household_id', ctx.householdId)
     .select('id')
 
-  if (error) return keyClash(error, values.key) ?? fail('Akunnya gagal disimpan.', error.message)
+  if (error) return keyClash(error, values.key) ?? writeFailed('pengaturan', 'Akunnya gagal disimpan.', error)
   if (!data || data.length === 0) return fail('Akun itu tidak ditemukan.')
 
   revalidateSettings(ctx.householdId)
@@ -292,7 +300,7 @@ export async function setAccountArchived(
     .eq('household_id', ctx.householdId)
     .select('id')
 
-  if (error) return fail('Akunnya gagal diarsipkan.', error.message)
+  if (error) return writeFailed('pengaturan', 'Akunnya gagal diarsipkan.', error)
   if (!data || data.length === 0) return fail('Akun itu tidak ditemukan.')
 
   revalidateSettings(ctx.householdId)
@@ -353,7 +361,7 @@ async function move(formData: FormData, table: 'accounts' | 'categories'): Promi
       .eq('id', step.id)
       .eq('household_id', ctx.householdId)
       .select('id')
-    if (error) return fail('Urutannya gagal disimpan.', error.message)
+    if (error) return writeFailed('pengaturan', 'Urutannya gagal disimpan.', error)
   }
 
   revalidateSettings(ctx.householdId)
@@ -401,7 +409,7 @@ export async function createCategory(
     if (error.code === '23505') {
       return fail(`Sudah ada kategori ${values.name} di ${CASHFLOW_LABELS[values.cashflow]}.`)
     }
-    return fail('Kategorinya gagal disimpan.', error.message)
+    return writeFailed('pengaturan', 'Kategorinya gagal disimpan.', error)
   }
 
   revalidateSettings(ctx.householdId)
@@ -490,7 +498,7 @@ export async function updateCategory(
     .eq('household_id', ctx.householdId)
     .select('id')
 
-  if (error) return fail('Kategorinya gagal disimpan.', error.message)
+  if (error) return writeFailed('pengaturan', 'Kategorinya gagal disimpan.', error)
   if (!data || data.length === 0) return fail('Kategori itu tidak ditemukan.')
 
   for (const twin of twins) {
@@ -543,7 +551,7 @@ export async function setCategoryArchived(
       .eq('id', row.id)
       .eq('household_id', ctx.householdId)
       .select('id')
-    if (error) return fail('Kategorinya gagal diarsipkan.', error.message)
+    if (error) return writeFailed('pengaturan', 'Kategorinya gagal diarsipkan.', error)
   }
 
   revalidateSettings(ctx.householdId)

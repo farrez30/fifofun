@@ -13,6 +13,7 @@ import { parseMandiriStatement } from '@/lib/statement/mandiri-xlsx'
 import { statementToLedger } from '@/lib/statement/to-ledger'
 import { authedUser } from '@/lib/supabase/auth-user'
 import { createClient } from '@/lib/supabase/server'
+import { WRITE_FAILED } from '@/lib/actions'
 import { readXlsx } from '@/lib/xlsx'
 
 /**
@@ -305,6 +306,7 @@ export async function importStatement(
       // The unique index on (household, file hash) is what makes re-uploading the
       // same statement harmless rather than duplicating it.
       const duplicate = batchError?.code === '23505'
+      if (!duplicate) console.error('[impor] gagal menyimpan berkas impor', batchError)
       return {
         ok: duplicate,
         filename: file.name,
@@ -313,7 +315,7 @@ export async function importStatement(
           : 'Gagal menyimpan berkas impor.',
         detail: duplicate
           ? 'Tidak ada yang berubah. Mengunggah statement yang sama dua kali memang aman.'
-          : batchError?.message,
+          : WRITE_FAILED,
       }
     }
 
@@ -395,11 +397,12 @@ export async function importStatement(
       .select('id, occurred_at, amount, from_account_id, to_account_id')
 
     if (writeError) {
+      console.error('[impor] transaksinya gagal disimpan', writeError)
       return {
         ok: false,
         filename: file.name,
         message: 'Transaksinya gagal disimpan.',
-        detail: writeError.message,
+        detail: WRITE_FAILED,
       }
     }
 

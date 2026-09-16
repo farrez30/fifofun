@@ -69,7 +69,10 @@ export async function authenticate(
     }
 
     const { error } = await supabase.auth.signUp(parsed.data)
-    if (error) return { error: error.message }
+    if (error) {
+      console.error('[login] gagal mendaftarkan akun', error)
+      return { error: 'Akun ini tidak bisa dibuat sekarang. Coba lagi sebentar lagi.' }
+    }
 
     /*
       The invitation is spent at /gabung, not here. Whether sign-up returns a

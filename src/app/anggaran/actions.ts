@@ -9,6 +9,7 @@ import {
   fail,
   monthKeyField,
   optionalSen,
+  writeFailed,
   type ActionResult,
 } from '@/lib/actions'
 import { diffBudgets } from '@/lib/ledger/budget-plan'
@@ -110,7 +111,10 @@ export async function saveBudgets(
       )
       .select('id')
 
-    if (error) return partial(at, diff.upsert.length, error.message)
+    if (error) {
+      console.error('[anggaran] gagal menulis sebagian batch anggaran', error)
+      return partial(at, diff.upsert.length)
+    }
     if ((data?.length ?? 0) !== chunk.length) return partial(at + (data?.length ?? 0), diff.upsert.length)
   }
 
@@ -123,7 +127,7 @@ export async function saveBudgets(
       .eq('period', period.data)
       .in('category_id', chunk)
       .select('id')
-    if (error) return fail('Sebagian anggaran gagal dihapus.', error.message)
+    if (error) return writeFailed('anggaran', 'Sebagian anggaran gagal dihapus.', error)
   }
 
   updateTag(budgetsTag(householdId))
@@ -203,7 +207,7 @@ export async function copyBudgets(
 
   if (error) {
     if (error.code === '23505') return { ok: true, message: 'Sudah disalin sebelumnya.' }
-    return fail('Anggarannya gagal disalin.', error.message)
+    return writeFailed('anggaran', 'Anggarannya gagal disalin.', error)
   }
 
   updateTag(budgetsTag(householdId))
