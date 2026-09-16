@@ -1,6 +1,7 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { SESSION_EXPIRED } from '@/lib/actions'
 import { hashCode, normaliseCode } from '@/lib/invites'
 import { createClient } from '@/lib/supabase/server'
 
@@ -31,7 +32,7 @@ const MESSAGES: Record<string, string> = {
   redeemed: 'Kode itu sudah dipakai. Setiap undangan hanya berlaku sekali.',
   expired: 'Kode itu sudah kedaluwarsa. Minta yang baru ke anggota rumah tangga.',
   already_member: 'Akun ini sudah tergabung di sebuah rumah tangga.',
-  unauthenticated: 'Sesi kamu sudah berakhir. Masuk lagi lalu ulangi.',
+  unauthenticated: SESSION_EXPIRED,
 }
 
 export async function joinHousehold(

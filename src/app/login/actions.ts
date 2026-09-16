@@ -47,7 +47,7 @@ export async function authenticate(
 ): Promise<AuthState> {
   const parsed = readCredentials(formData)
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? 'Periksa kembali isian kamu' }
+    return { error: parsed.error.issues[0]?.message ?? 'Periksa kembali isian kamu.' }
   }
 
   const supabase = await createClient()
@@ -89,7 +89,7 @@ export async function authenticate(
   const { error } = await supabase.auth.signInWithPassword(parsed.data)
   // Deliberately vague: naming which half was wrong tells an attacker which
   // addresses have accounts.
-  if (error) return { error: 'Email atau kata sandi tidak cocok' }
+  if (error) return { error: 'Email atau kata sandi tidak cocok.' }
 
   redirect('/')
 }

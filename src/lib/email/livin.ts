@@ -137,7 +137,7 @@ export function verifySender(check: SenderCheck): SenderVerdict {
   // Exact match or a subdomain, never a suffix match: `notbankmandiri.co.id`
   // ends with the same letters and belongs to somebody else entirely.
   const domainOk = domain === LIVIN_SENDER_DOMAIN || domain.endsWith(`.${LIVIN_SENDER_DOMAIN}`)
-  if (!domainOk) reasons.push(`Pengirim ${domain || 'tidak diketahui'} bukan ${LIVIN_SENDER_DOMAIN}`)
+  if (!domainOk) reasons.push(`Pengirim ${domain || 'tidak diketahui'} bukan ${LIVIN_SENDER_DOMAIN}.`)
 
   const auth = (check.authenticationResults ?? '').toLowerCase()
   for (const mechanism of ['spf', 'dkim', 'dmarc']) {

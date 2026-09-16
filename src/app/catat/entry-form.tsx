@@ -228,7 +228,7 @@ export function EntryForm({ accounts, categories, defaults, entryKey }: Props) {
       <MoneyInput name="amount" label="Nominal" value={amount} onChange={setAmount} />
 
       <div className="space-y-1.5">
-        <FieldLabel htmlFor={ids.note} hint="opsional">
+        <FieldLabel htmlFor={ids.note} hint="Boleh dikosongkan.">
           Catatan
         </FieldLabel>
         <textarea

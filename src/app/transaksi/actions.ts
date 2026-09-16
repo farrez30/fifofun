@@ -11,6 +11,7 @@ import {
   isoDateField,
   optionalUuid,
   positiveSen,
+  writeFailed,
   type ActionResult,
 } from '@/lib/actions'
 import { toJakartaInstant } from '@/lib/datetime'
@@ -231,7 +232,7 @@ export async function updateEntry(
     .eq('household_id', householdId)
     .select('id')
 
-  if (error) return fail('Perubahannya gagal disimpan.', error.message)
+  if (error) return writeFailed('transaksi', 'Perubahannya gagal disimpan.', error)
   if (!data || data.length === 0) return fail('Transaksinya tidak ditemukan.')
 
   revalidateEverywhere(householdId)
@@ -399,7 +400,7 @@ export async function splitEntry(
     .from('transactions')
     .upsert(children, { onConflict: 'household_id,dedupe_key' })
     .select('id')
-  if (childError) return fail('Bagian-bagiannya gagal disimpan.', childError.message)
+  if (childError) return writeFailed('transaksi', 'Bagian-bagiannya gagal disimpan.', childError)
 
   /*
     A bank fee charged for the original belongs to its first part now, which is
@@ -430,7 +431,7 @@ export async function splitEntry(
     .eq('id', parent.id)
     .eq('household_id', householdId)
     .select('id')
-  if (parentError) return fail('Transaksi aslinya gagal disembunyikan.', parentError.message)
+  if (parentError) return writeFailed('transaksi', 'Transaksi aslinya gagal disembunyikan.', parentError)
 
   revalidateEverywhere(householdId)
   return {
@@ -486,7 +487,7 @@ export async function unsplitEntry(
     .eq('household_id', householdId)
     .in('id', childIds)
     .select('id')
-  if (childError) return fail('Bagian-bagiannya gagal disembunyikan.', childError.message)
+  if (childError) return writeFailed('transaksi', 'Bagian-bagiannya gagal disembunyikan.', childError)
 
   // Fees that followed the parts go back to the row they were charged for.
   await supabase
@@ -502,7 +503,7 @@ export async function unsplitEntry(
     .eq('id', id.data)
     .eq('household_id', householdId)
     .select('id')
-  if (error) return fail('Transaksi aslinya gagal dikembalikan.', error.message)
+  if (error) return writeFailed('transaksi', 'Transaksi aslinya gagal dikembalikan.', error)
   if (!data || data.length === 0) return fail('Transaksinya tidak ditemukan.')
 
   revalidateEverywhere(householdId)
@@ -559,7 +560,7 @@ export async function restoreEntry(
     .not('deleted_at', 'is', null)
     .select('id')
 
-  if (error) return fail('Transaksinya gagal dikembalikan.', error.message)
+  if (error) return writeFailed('transaksi', 'Transaksinya gagal dikembalikan.', error)
   if (!data || data.length === 0) {
     return fail('Transaksi itu tidak ditemukan, atau memang tidak terhapus.')
   }

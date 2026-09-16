@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
+import { SESSION_EXPIRED } from '@/lib/actions'
 import { expiryFrom, formatCode, generateCode, hashCode } from '@/lib/invites'
 import { authedUser } from '@/lib/supabase/auth-user'
 import { createClient } from '@/lib/supabase/server'
@@ -46,7 +47,7 @@ async function context() {
 
 export async function issueInvite(): Promise<IssueResult> {
   const ctx = await context()
-  if (!ctx) return { ok: false, message: 'Sesi kamu sudah berakhir. Masuk lagi lalu ulangi.' }
+  if (!ctx) return { ok: false, message: SESSION_EXPIRED }
 
   const code = generateCode()
 
@@ -73,7 +74,7 @@ export async function revokeInvite(
   if (!parsed.success) return { ok: false, message: 'Undangan itu tidak dikenali.' }
 
   const ctx = await context()
-  if (!ctx) return { ok: false, message: 'Sesi kamu sudah berakhir. Masuk lagi lalu ulangi.' }
+  if (!ctx) return { ok: false, message: SESSION_EXPIRED }
 
   /*
     Deleted rather than marked withdrawn. A redeemed invitation is a membership

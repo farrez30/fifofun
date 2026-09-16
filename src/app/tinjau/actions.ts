@@ -10,7 +10,7 @@ import { resolveTidy } from '@/lib/ledger/tidy'
 import { groupRefusal } from '@/lib/queries/categories'
 import { getRules, getUnconfirmed } from '@/lib/queries/household'
 import { planLedgerTidy } from '@/lib/queries/tidy'
-import { WRITE_FAILED } from '@/lib/actions'
+import { SESSION_EXPIRED, WRITE_FAILED } from '@/lib/actions'
 import { authedUser } from '@/lib/supabase/auth-user'
 import { createClient } from '@/lib/supabase/server'
 
@@ -114,7 +114,7 @@ export async function applyCategory(
   }
 
   const ctx = await context()
-  if (!ctx) return fail('Sesi kamu sudah berakhir. Masuk lagi lalu ulangi.')
+  if (!ctx) return fail(SESSION_EXPIRED)
   const { supabase, householdId } = ctx
 
   const { pattern, matchType, categoryId, remember } = parsed.data
@@ -272,7 +272,7 @@ export async function categoriseOne(
   if (!parsed.success) return fail('Transaksi atau kategorinya tidak dikenali.')
 
   const ctx = await context()
-  if (!ctx) return fail('Sesi kamu sudah berakhir. Masuk lagi lalu ulangi.')
+  if (!ctx) return fail(SESSION_EXPIRED)
   const { supabase, householdId } = ctx
 
   const { data: category } = await supabase
@@ -337,7 +337,7 @@ export async function deleteRule(
   if (!parsed.success) return fail('Aturannya tidak dikenali.')
 
   const ctx = await context()
-  if (!ctx) return fail('Sesi kamu sudah berakhir. Masuk lagi lalu ulangi.')
+  if (!ctx) return fail(SESSION_EXPIRED)
 
   // Deleting a rule deliberately leaves the rows it already settled alone. The
   // rule decided how future rows are read; it did not become their category.
@@ -407,7 +407,7 @@ export async function tidyLedger(
   }
 
   const ctx = await context()
-  if (!ctx) return stop('Sesi kamu sudah berakhir. Masuk lagi lalu ulangi.')
+  if (!ctx) return stop(SESSION_EXPIRED)
   const { supabase, householdId } = ctx
 
   const { plan, targets, groups } = await planLedgerTidy(householdId)

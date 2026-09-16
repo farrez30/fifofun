@@ -13,7 +13,7 @@ import { parseMandiriStatement } from '@/lib/statement/mandiri-xlsx'
 import { statementToLedger } from '@/lib/statement/to-ledger'
 import { authedUser } from '@/lib/supabase/auth-user'
 import { createClient } from '@/lib/supabase/server'
-import { WRITE_FAILED } from '@/lib/actions'
+import { SESSION_EXPIRED, WRITE_FAILED } from '@/lib/actions'
 import { readXlsx } from '@/lib/xlsx'
 
 /**
@@ -139,7 +139,7 @@ export async function importStatement(
   try {
     const supabase = await createClient()
     const user = await authedUser(supabase)
-    if (!user) return fail('Sesi kamu sudah berakhir. Masuk lagi lalu ulangi.')
+    if (!user) return fail(SESSION_EXPIRED)
 
     const { data: household } = await supabase
       .from('households')
