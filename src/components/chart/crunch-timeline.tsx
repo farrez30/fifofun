@@ -1,4 +1,4 @@
-import { formatIdr, formatIdrCompact, senToRupiahNumber } from '@/lib/money'
+import { formatIdr, senToRupiahNumber } from '@/lib/money'
 import { DragAxis, DragPin } from './drag-axis'
 import { ChartReadout } from './readout'
 import type { FamilyProjection } from '@/lib/planning/children'
@@ -117,15 +117,20 @@ export function CrunchTimeline({ projection, caption, onBirthYearChange }: Props
                     return (
                       <div
                         key={child.label}
+                        // A floor in px, the same discipline sankey.tsx applies to its own
+                        // ribbons and nodes (Math.max(1, ...) / Math.max(2, ...)): a segment
+                        // proportional to a small cost can round to nothing, reachable by
+                        // keyboard but never by a pointer or a finger.
                         style={{
                           height: `${(senToRupiahNumber(amount) / peakRupiah) * 100}%`,
+                          minHeight: '2px',
                           backgroundColor: CHILD_FILLS[index % CHILD_FILLS.length],
                         }}
                         data-readout-label={`${child.label}, ${year.year}`}
-                        data-readout-value={formatIdrCompact(amount)}
+                        data-readout-value={formatIdr(amount)}
                         tabIndex={0}
                         role="img"
-                        aria-label={`${child.label}, ${year.year}: ${formatIdrCompact(amount)}`}
+                        aria-label={`${child.label}, ${year.year}: ${formatIdr(amount)}`}
                       />
                     )
                   })}

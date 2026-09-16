@@ -73,6 +73,33 @@ memaksa pembaca menahan penjelasan di kepala untuk sesuatu yang belum dilihat.
 - **Sebut ketidaktahuan sebagai ketidaktahuan.** Angka yang tidak bisa dihitung
   ditulis sebagai tidak diketahui, bukan nol.
 
+## Pesan error
+
+- **"Belum bisa" untuk isian, "gagal" untuk tulisan.** "Belum bisa disimpan"
+  berarti yang dikirim tidak terbaca, dan pembacanya sendiri yang bisa
+  memperbaikinya (nominal salah format, tanggal di luar jangkauan). "Gagal
+  disimpan" berarti isiannya sudah benar tapi tulisannya ke server yang tidak
+  jadi, dan pembacanya tidak bisa berbuat apa-apa selain mencoba lagi. Dua
+  kata kerja berbeda untuk dua penyebab berbeda, supaya "coba lagi" dan "isi
+  ulang" tidak tertukar.
+- **Pesan dari server tidak pernah jadi kalimat yang dibaca pengguna.** Sebuah
+  error Postgres membawa nama constraint dan kolom, bukan sesuatu yang bisa
+  ditindaklanjuti siapa pun yang bukan penulis skemanya. `writeFailed()` di
+  `src/lib/actions.ts` mencatat error aslinya ke log server dan mengembalikan
+  satu kalimat tetap ke pembaca. Pengecualian satu-satunya: pesan yang memang
+  ditulis untuk pembaca di titik lemparnya sendiri, seperti `StatementParseError`
+  di `mandiri-xlsx.ts`. Meneruskan `.message` di jalur itu bukan kebocoran,
+  karena kalimatnya sudah berbahasa Indonesia dan memang menjelaskan kenapa
+  sebuah e-Statement ditolak.
+- **`SESSION_EXPIRED` satu tempat, bukan diketik ulang.** Konstanta di
+  `src/lib/actions.ts` dipakai di semua jalur sesi habis, supaya kalimatnya
+  hanya perlu diubah sekali kalau suatu saat perlu diubah.
+
+`src/app/copy.test.ts` menjaga tiga aturan pertama bagian ini secara mekanis
+(dan em dash serta emoji dari bagian atas), atas seluruh `src/app` dan
+`src/components`. Aturan lain di halaman ini tetap penilaian manusia; regex
+tidak bisa membaca apakah sebuah paragraf mendahulukan vonis atau data.
+
 ## Cara memeriksa sendiri
 
 Baca satu panel, lalu tutup. Kalau yang tersisa di kepala cuma "ada peringatan

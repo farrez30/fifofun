@@ -229,17 +229,29 @@ boleh berkaca. Plot, mark, ribbon dan gridline tetap datar dan opaque
 selamanya. Swift Charts milik Apple sendiri datar.
 
 **Readout melayang** (`src/components/chart/readout.tsx`) menggantikan
-`<title>` bawaan browser di Sankey: lambat, butuh mouse diam, tidak
-terjangkau sentuhan atau keyboard-plus-mata sekaligus. Client component kecil
-yang di-portal ke `document.body`, dibaca dari `data-readout-label`/`-value`
-di setiap mark lewat delegasi pointer/fokus — bukan satu listener per mark,
-jadi grafik di baliknya tetap server component. Selalu di luar
-`<figure>`/`<svg>`, karena `e2e/glass.spec.ts` menolak kaca di dalam
-keduanya dan karena readout memang harus mengambang di atas, bukan di dalam,
-gambar yang diberi tahunya. Logika posisi dan pembacaan kontennya murni,
-dipisah ke `readout-logic.ts`, karena fixture e2e di sini statis
-(`renderToStaticMarkup` tanpa script) dan tidak bisa menjalankan React sama
-sekali; wiring-nya dibuktikan langsung di app yang jalan.
+`<title>` bawaan browser di keempat grafik yang punya mark bernilai — Sankey,
+tren saldo, jalan ke tujuan, linimasa biaya anak: lambat, butuh mouse diam,
+tidak terjangkau sentuhan atau keyboard-plus-mata sekaligus. Client component
+kecil yang di-portal ke `document.body`, dibaca dari
+`data-readout-label`/`-value` di setiap mark lewat delegasi pointer/fokus —
+bukan satu listener per mark, jadi tiga dari empat grafik di baliknya tetap
+server component (`goal-glidepath.tsx` sudah `'use client'` sebelum readout,
+karena `DragAxis`-nya). Selalu di luar `<figure>`/`<svg>`, karena
+`e2e/glass.spec.ts` menolak kaca di dalam keduanya dan karena readout memang
+harus mengambang di atas, bukan di dalam, gambar yang diberi tahunya. Logika
+posisi dan pembacaan kontennya murni, dipisah ke `readout-logic.ts`, karena
+fixture e2e di sini statis (`renderToStaticMarkup` tanpa script) dan tidak
+bisa menjalankan React sama sekali; wiring-nya dibuktikan langsung di app
+yang jalan.
+
+Setiap mark yang punya readout juga `tabIndex={0}` dan `role="img"`, dengan
+`aria-label` yang persis `` `${label}: ${value}` `` — angka yang sama yang
+dibaca bubble-nya, dikatakan sekali untuk mata dan sekali untuk telinga.
+`e2e/charts.spec.ts` ("readout melayang") menegakkan kesamaan itu di keempat
+grafik, bukan hanya Sankey. Dua `<title>` bertahan di luar pola ini:
+`waterfall.tsx` dan `spark-card.tsx` memakainya untuk menampilkan teks penuh
+dari label yang di-`truncate`, bukan sebagai tooltip data, jadi bukan hal
+yang sama yang digantikan readout.
 
 **Ujung bar membulat 2px di sisi depan**, meniru `BarMark(cornerRadius:)`.
 Satu bar komposisi bertumpuk (ceiling anggaran di `budget-summary.tsx`)
@@ -319,12 +331,13 @@ Tidak ada satupun jaminan yang diturunkan oleh restyle ini, dan beberapa naik.
 | Kontras di dua skema | `e2e/a11y.spec.ts` |
 | Lantai sentuh, lantai 16px, nol overflow | `e2e/mobile.spec.ts` |
 | Geometri grafik, dan isolasi ribbon lewat keyboard | `e2e/charts.spec.ts` |
-| Setiap mark grafik bernama sama untuk readout dan pembaca layar | `e2e/charts.spec.ts` ("names every ribbon and node…") |
+| Setiap mark di keempat grafik berreadout bernama sama untuk readout dan pembaca layar | `e2e/charts.spec.ts` ("readout melayang") |
 | Posisi dan klem readout, murni tanpa browser | `readout-logic.test.ts` |
 | Sidebar: lebar rail/terbentang, drift shell vs loading, lantai sentuh | `e2e/sidebar.spec.ts` |
 | Halaman tanpa shell lolos CSP dan axe atas build sungguhan | `e2e/pages/pages.spec.ts` (`pnpm test:e2e:pages`) |
 | Fisika gesture: proyeksi, rubber band, lantai tap | `swipe-actions.test.ts`, `use-swipe-tabs.test.ts`, `pull-to-refresh.test.ts` |
-| Skala Tailwind lama tidak diam-diam kembali | `src/app/type-roles.test.ts`, atas seluruh `src/**/*.tsx` |
+| Skala Tailwind lama tidak diam-diam kembali, termasuk ukuran kurung siku | `src/app/type-roles.test.ts`, atas seluruh `src/**/*.tsx` |
+| Lima aturan copywriting.md yang bisa diperiksa pola: em dash, emoji, sapaan, `SESSION_EXPIRED` ditulis ulang, pesan server mentah | `src/app/copy.test.ts`, atas `src/app` dan `src/components` |
 
 **Catatan perkakas: repo ini tidak punya konfigurasi Prettier.** Menjalankan
 `prettier --write` akan memaksakan titik koma dan kutip ganda ke seluruh file
