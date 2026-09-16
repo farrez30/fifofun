@@ -354,7 +354,7 @@ export function CashflowChartView({
                     >
                       {month.label}
                     </span>
-                    <span aria-hidden="true" className="tnum text-[0.5625rem] leading-none text-ink-faint">
+                    <span aria-hidden="true" className="tnum text-caption2 leading-none text-ink-faint">
                       {month.startsYear ? month.year :' '}
                     </span>
                   </div>

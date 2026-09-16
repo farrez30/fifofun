@@ -13,7 +13,12 @@ import { describe, expect, it } from 'vitest'
  * the roles screen by screen, so `text-xs`/`text-sm`/`text-base`/`text-lg`
  * and up reappearing anywhere is either a regression or a component nobody
  * remembered to convert — either way, worth a name rather than a silent
- * merge back into the crowd.
+ * merge back into the crowd. A bracketed size (`text-[0.5625rem]`) is the
+ * same regression wearing a costume the named-scale pattern does not see,
+ * so it is banned by the same rule rather than by a second one; a bracketed
+ * *colour* (`text-[#f00]`) is a different utility that happens to share the
+ * `text-` prefix, which is why the pattern only matches a bracket that looks
+ * like a length.
  *
  * A test rather than an eslint rule for the same reason `globals.test.ts`
  * is: the string a lint rule can see is the one somebody typed, and this
@@ -36,7 +41,7 @@ const ALLOWED: Record<string, string[]> = {
   'src/components/chart/waterfall.tsx': ['text-sm', 'text-xs'],
 }
 
-const BANNED = /\b(?:sm:|lg:)?text-(?:xs|sm|base|lg|xl|[2-9]xl)\b/g
+const BANNED = /\b(?:sm:|lg:)?text-(?:xs|sm|base|lg|xl|[2-9]xl)\b|\btext-\[[\d.]+(?:px|rem|em)\]/g
 
 /** Block comments, then line comments — never a `://` a link happens to carry. */
 function stripComments(source: string): string {

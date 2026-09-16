@@ -133,7 +133,7 @@ export function CrunchTimeline({ projection, caption, onBirthYearChange }: Props
 
                 <span
                   aria-hidden="true"
-                  className={`text-[0.5625rem] tabular-nums ${crunch ? 'font-medium text-over' : 'text-ink-faint'}`}
+                  className={`text-caption2 tabular-nums ${crunch ? 'font-medium text-over' : 'text-ink-faint'}`}
                 >
                   {String(year.year).slice(2)}
                 </span>
