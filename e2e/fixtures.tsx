@@ -1844,6 +1844,12 @@ export const FIXTURES = {
       siblings={SETTINGS_CATEGORIES}
     />
   ),
+  'settings-category-form-locked': (
+    <CategoryForm
+      category={SETTINGS_CATEGORIES.find((row) => row.id === 'cat-wifi')!}
+      siblings={SETTINGS_CATEGORIES}
+    />
+  ),
   'plan-index': (
     <PlanIndex
       sections={[

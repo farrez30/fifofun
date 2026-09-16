@@ -25,10 +25,31 @@ export interface ActionResult {
   detail?: string
   /** How many rows the decision touched. */
   applied?: number
+  /** Which field a rejected submission blames, keyed by its zod path. */
+  fieldErrors?: Record<string, string>
 }
 
 export function fail(message: string, detail?: string): ActionResult {
   return { ok: false, message, detail }
+}
+
+/**
+ * One message per field a submission failed on, first issue wins.
+ *
+ * `firstIssue`/`issues[0]?.message` already carries the same information to
+ * the banner at the top of a form; this is the same list read a second way,
+ * so a field can say what is wrong with it instead of the form saying it once
+ * for everybody. A path like `['note']` becomes `note`; a nested path keeps
+ * only its first segment, since nothing here validates more than one level
+ * deep.
+ */
+export function invalidFields(error: z.ZodError): Record<string, string> {
+  const fields: Record<string, string> = {}
+  for (const issue of error.issues) {
+    const key = String(issue.path[0] ?? '')
+    if (key && !(key in fields)) fields[key] = issue.message
+  }
+  return fields
 }
 
 export const SESSION_EXPIRED = 'Sesi kamu sudah berakhir. Masuk lagi lalu ulangi.'

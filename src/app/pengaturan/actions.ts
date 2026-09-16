@@ -8,6 +8,7 @@ import {
   SESSION_EXPIRED,
   context,
   fail,
+  invalidFields,
   isoDateField,
   senField,
   writeFailed,
@@ -374,7 +375,10 @@ export async function createCategory(
 ): Promise<ActionResult> {
   const parsed = categorySchema.safeParse(readCategory(formData))
   if (!parsed.success) {
-    return fail('Kategorinya belum bisa disimpan.', parsed.error.issues[0]?.message)
+    return {
+      ...fail('Kategorinya belum bisa disimpan.', parsed.error.issues[0]?.message),
+      fieldErrors: invalidFields(parsed.error),
+    }
   }
 
   const ctx = await context()
@@ -426,10 +430,13 @@ export async function updateCategory(
 ): Promise<ActionResult> {
   const parsed = categorySchema.safeParse(readCategory(formData))
   if (!parsed.success || !parsed.data.id) {
-    return fail(
-      'Kategorinya belum bisa disimpan.',
-      parsed.success ? undefined : parsed.error.issues[0]?.message,
-    )
+    return {
+      ...fail(
+        'Kategorinya belum bisa disimpan.',
+        parsed.success ? undefined : parsed.error.issues[0]?.message,
+      ),
+      fieldErrors: parsed.success ? undefined : invalidFields(parsed.error),
+    }
   }
 
   const ctx = await context()

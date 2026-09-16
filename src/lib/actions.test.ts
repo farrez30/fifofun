@@ -1,10 +1,12 @@
 import { describe, expect, it, vi } from 'vitest'
+import { z } from 'zod'
 
 vi.mock('@/lib/supabase/server', () => ({ createClient: async () => ({}) }))
 
 const {
   fail,
   hhmmField,
+  invalidFields,
   isoDateField,
   monthKeyField,
   optionalSen,
@@ -91,5 +93,40 @@ describe('date and id fields', () => {
 describe('fail', () => {
   it('builds a refusal without a detail when none is given', () => {
     expect(fail('Tidak bisa.')).toEqual({ ok: false, message: 'Tidak bisa.', detail: undefined })
+  })
+})
+
+describe('invalidFields', () => {
+  const schema = z.object({
+    name: z.string().min(1, 'Namanya belum diisi.'),
+    amount: z.string().regex(/^\d+$/, 'Nominalnya belum bisa dibaca.'),
+  })
+
+  it('keys each message by the field that failed', () => {
+    const result = schema.safeParse({ name: '', amount: 'abc' })
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(invalidFields(result.error)).toEqual({
+      name: 'Namanya belum diisi.',
+      amount: 'Nominalnya belum bisa dibaca.',
+    })
+  })
+
+  it('keeps only the first issue a field got, not the last', () => {
+    const twoIssues = z.object({ name: z.string().min(1).max(3) })
+    const result = twoIssues.safeParse({ name: '' })
+    expect(result.success).toBe(false)
+    if (result.success) return
+    // An empty string trips both the minimum and, depending on zod's own
+    // order, could trip more than one rule for the same field; whichever it
+    // reports first is the one a reader sees, so that is the one kept.
+    expect(Object.keys(invalidFields(result.error))).toEqual(['name'])
+  })
+
+  it('says nothing about a field that passed', () => {
+    const result = schema.safeParse({ name: 'Wifi', amount: 'abc' })
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(invalidFields(result.error)).toEqual({ amount: 'Nominalnya belum bisa dibaca.' })
   })
 })

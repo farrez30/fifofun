@@ -66,6 +66,8 @@ export function EntryForm({ accounts, categories, defaults, entryKey }: Props) {
     null,
   )
 
+  const fieldErrors = result && !result.ok ? (result.fieldErrors ?? {}) : {}
+
   const allowed = categories.filter((category) => directionOf(category.cashflow) === direction)
   const chosen = allowed.find((category) => category.id === categoryId)
   const byCashflow = new Map<CashflowType, CategoryOption[]>()
@@ -153,7 +155,7 @@ export function EntryForm({ accounts, categories, defaults, entryKey }: Props) {
         control column on a phone.
       */}
       <div className="rows-inset squircle rounded-md bg-surface shadow-xs">
-        <FieldRow htmlFor={ids.category} label="Kategori">
+        <FieldRow htmlFor={ids.category} label="Kategori" invalid={fieldErrors.categoryId}>
           <select
             id={ids.category}
             key={direction}
@@ -162,6 +164,7 @@ export function EntryForm({ accounts, categories, defaults, entryKey }: Props) {
             defaultValue=""
             onChange={(event) => setCategoryId(event.target.value)}
             aria-describedby={chosen?.description ? ids.kamus : undefined}
+            aria-invalid={fieldErrors.categoryId ? true : undefined}
             className={CONTROL_INLINE}
           >
             <option value="" disabled>
@@ -179,7 +182,7 @@ export function EntryForm({ accounts, categories, defaults, entryKey }: Props) {
           </select>
         </FieldRow>
 
-        <FieldRow htmlFor={ids.description} label="Keterangan">
+        <FieldRow htmlFor={ids.description} label="Keterangan" invalid={fieldErrors.description}>
           <input
             id={ids.description}
             type="text"
@@ -187,28 +190,31 @@ export function EntryForm({ accounts, categories, defaults, entryKey }: Props) {
             required
             maxLength={140}
             placeholder="Makan siang"
+            aria-invalid={fieldErrors.description ? true : undefined}
             className={CONTROL_INLINE}
           />
         </FieldRow>
 
-        <FieldRow htmlFor={ids.date} label="Tanggal">
+        <FieldRow htmlFor={ids.date} label="Tanggal" invalid={fieldErrors.date}>
           <input
             id={ids.date}
             type="date"
             name="date"
             required
             defaultValue={defaults.date}
+            aria-invalid={fieldErrors.date ? true : undefined}
             className={CONTROL_INLINE}
           />
         </FieldRow>
 
-        <FieldRow htmlFor={ids.time} label="Jam">
+        <FieldRow htmlFor={ids.time} label="Jam" invalid={fieldErrors.time}>
           <input
             id={ids.time}
             type="time"
             name="time"
             required
             defaultValue={defaults.time}
+            aria-invalid={fieldErrors.time ? true : undefined}
             className={CONTROL_INLINE}
           />
         </FieldRow>

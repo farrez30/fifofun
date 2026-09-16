@@ -73,6 +73,7 @@ export function CategoryForm({ category, cashflow, siblings }: Props) {
 
   const locked = category !== undefined && category.usage > 0
   const twins = twinsOf(flow)
+  const fieldErrors = result && !result.ok ? (result.fieldErrors ?? {}) : {}
 
   return (
     <form action={action} className="space-y-4">
@@ -88,7 +89,7 @@ export function CategoryForm({ category, cashflow, siblings }: Props) {
         has room to carry it.
       */}
       <div className="rows-inset squircle rounded-md bg-surface shadow-xs">
-        <FieldRow htmlFor={ids.name} label="Nama kategori">
+        <FieldRow htmlFor={ids.name} label="Nama kategori" invalid={fieldErrors.name}>
           <input
             id={ids.name}
             name="name"
@@ -97,11 +98,17 @@ export function CategoryForm({ category, cashflow, siblings }: Props) {
             required
             maxLength={60}
             aria-describedby={isLookedUpByName(category?.name ?? '') ? footerIds.name : undefined}
+            aria-invalid={fieldErrors.name ? true : undefined}
             className={CONTROL_INLINE}
           />
         </FieldRow>
 
-        <FieldRow htmlFor={ids.cashflow} label="Cashflow">
+        <FieldRow
+          htmlFor={ids.cashflow}
+          label="Cashflow"
+          hint={locked ? `Terkunci, dipakai ${category?.usage} transaksi.` : undefined}
+          invalid={fieldErrors.cashflow}
+        >
           <select
             id={ids.cashflow}
             name={locked ? undefined : 'cashflow'}
@@ -109,6 +116,7 @@ export function CategoryForm({ category, cashflow, siblings }: Props) {
             disabled={locked}
             onChange={(event) => setFlow(event.target.value as CashflowType)}
             aria-describedby={footerIds.cashflow}
+            aria-invalid={fieldErrors.cashflow ? true : undefined}
             className={`${CONTROL_INLINE} disabled:opacity-60`}
           >
             {CASHFLOW_TYPES.map((option) => (
@@ -120,7 +128,7 @@ export function CategoryForm({ category, cashflow, siblings }: Props) {
           {locked ? <input type="hidden" name="cashflow" value={flow} /> : null}
         </FieldRow>
 
-        <FieldRow htmlFor={ids.description} label="Kamus">
+        <FieldRow htmlFor={ids.description} label="Kamus" invalid={fieldErrors.description}>
           <input
             id={ids.description}
             name="description"
@@ -128,11 +136,12 @@ export function CategoryForm({ category, cashflow, siblings }: Props) {
             maxLength={160}
             placeholder="Satu kalimat"
             aria-describedby={footerIds.description}
+            aria-invalid={fieldErrors.description ? true : undefined}
             className={CONTROL_INLINE}
           />
         </FieldRow>
 
-        <FieldRow htmlFor={ids.parent} label="Kelompok">
+        <FieldRow htmlFor={ids.parent} label="Kelompok" invalid={fieldErrors.parentId}>
           <select
             id={ids.parent}
             name="parentId"
@@ -140,6 +149,7 @@ export function CategoryForm({ category, cashflow, siblings }: Props) {
             disabled={hasChildren || parents.length === 0}
             onChange={(event) => setParentId(event.target.value)}
             aria-describedby={footerIds.parent}
+            aria-invalid={fieldErrors.parentId ? true : undefined}
             className={`${CONTROL_INLINE} disabled:opacity-60`}
           >
             <option value="">Berdiri sendiri</option>
@@ -152,30 +162,35 @@ export function CategoryForm({ category, cashflow, siblings }: Props) {
         </FieldRow>
       </div>
 
-      {/* The one field here that cannot be changed later deserves to say
-          what it means, not only what it is called. */}
-      <div className="space-y-1.5 px-4">
-        {isLookedUpByName(category?.name ?? '') ? (
-          <p id={footerIds.name} className="text-footnote text-ink-muted">
-            Nama ini dicari impor apa adanya. Kalau diganti, baris yang biasanya masuk ke sini
-            akan menunggu di Tinjau tanpa kategori sampai kamu memberinya kategori atau aturan.
-          </p>
+      {/*
+        One block per field, in row order, so a paragraph reads as the row
+        above it explained rather than as one undifferentiated wall of text.
+        The one constraint urgent enough to need answering before anyone
+        scrolls this far — a locked cashflow — moved into the row's own
+        hint above; what stays here is context worth reading, not context
+        worth blocking on.
+      */}
+      <div className="space-y-3 px-4">
+        {isLookedUpByName(category?.name ?? '') || twins.length > 0 ? (
+          <div className="space-y-1">
+            {isLookedUpByName(category?.name ?? '') ? (
+              <p id={footerIds.name} className="text-footnote text-ink-muted">
+                Nama ini dicari impor apa adanya. Kalau diganti, baris yang biasanya masuk ke sini
+                akan menunggu di Tinjau tanpa kategori sampai kamu memberinya kategori atau aturan.
+              </p>
+            ) : null}
+            {twins.length > 0 ? (
+              <p className="text-footnote text-ink-muted">
+                Pos seperti ini berpasangan dengan{' '}
+                {twins.map((twin) => CASHFLOW_LABELS[twin]).join(' atau ')}, dan keduanya diganti
+                nama bersama-sama.
+              </p>
+            ) : null}
+          </div>
         ) : null}
         <p id={footerIds.cashflow} className="text-footnote text-ink-muted">
           {CASHFLOW_HELP[flow]}
         </p>
-        {locked ? (
-          <p className="text-footnote text-ink-muted">
-            Dipakai {category?.usage} transaksi, jadi arahnya terkunci. Buat kategori baru kalau
-            memang butuh arah yang berbeda.
-          </p>
-        ) : null}
-        {twins.length > 0 ? (
-          <p className="text-footnote text-ink-muted">
-            Pos seperti ini berpasangan dengan {twins.map((twin) => CASHFLOW_LABELS[twin]).join(' atau ')}
-            , dan keduanya diganti nama bersama-sama.
-          </p>
-        ) : null}
         <p id={footerIds.description} className="text-footnote text-ink-muted">
           Kalimat ini muncul di bawah pilihan kategori saat mencatat dan meninjau. Tulis aturan
           batasnya, bukan mengulang namanya: kapan sesuatu masuk ke sini, bukan ke pos sebelah.

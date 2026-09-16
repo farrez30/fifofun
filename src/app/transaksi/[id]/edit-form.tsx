@@ -61,6 +61,7 @@ export function EditEntryForm({
   accounts: AccountOption[]
 }) {
   const [result, action] = useActionState<ActionResult | null, FormData>(updateEntry, null)
+  const fieldErrors = result && !result.ok ? (result.fieldErrors ?? {}) : {}
   const ids = {
     category: useId(),
     description: useId(),
@@ -98,7 +99,7 @@ export function EditEntryForm({
         one control per line, like every other row here.
       */}
       <div className="rows-inset squircle rounded-md bg-surface shadow-xs">
-        <FieldRow htmlFor={ids.category} label="Kategori">
+        <FieldRow htmlFor={ids.category} label="Kategori" invalid={fieldErrors.categoryId}>
           <select
             id={ids.category}
             name="categoryId"
@@ -109,6 +110,7 @@ export function EditEntryForm({
             aria-describedby={
               !entry.editable.category || chosen?.description ? ids.kamus : undefined
             }
+            aria-invalid={fieldErrors.categoryId ? true : undefined}
             className={`${CONTROL_INLINE} disabled:opacity-60`}
           >
             {entry.editable.category ? (
@@ -130,36 +132,39 @@ export function EditEntryForm({
           </select>
         </FieldRow>
 
-        <FieldRow htmlFor={ids.description} label="Keterangan">
+        <FieldRow htmlFor={ids.description} label="Keterangan" invalid={fieldErrors.description}>
           <input
             id={ids.description}
             name="description"
             defaultValue={entry.description}
             required
             maxLength={140}
+            aria-invalid={fieldErrors.description ? true : undefined}
             className={CONTROL_INLINE}
           />
         </FieldRow>
 
         {entry.editable.amount ? (
           <>
-            <FieldRow htmlFor={ids.date} label="Tanggal">
+            <FieldRow htmlFor={ids.date} label="Tanggal" invalid={fieldErrors.date}>
               <input
                 id={ids.date}
                 type="date"
                 name="date"
                 defaultValue={entry.date}
                 required
+                aria-invalid={fieldErrors.date ? true : undefined}
                 className={CONTROL_INLINE}
               />
             </FieldRow>
-            <FieldRow htmlFor={ids.time} label="Jam">
+            <FieldRow htmlFor={ids.time} label="Jam" invalid={fieldErrors.time}>
               <input
                 id={ids.time}
                 type="time"
                 name="time"
                 defaultValue={entry.time}
                 required
+                aria-invalid={fieldErrors.time ? true : undefined}
                 className={CONTROL_INLINE}
               />
             </FieldRow>

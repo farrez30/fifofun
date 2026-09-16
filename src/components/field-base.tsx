@@ -153,11 +153,14 @@ export function FieldRow({
   htmlFor,
   label,
   hint,
+  invalid,
   children,
 }: {
   htmlFor: string
   label: string
   hint?: string
+  /** What the server rejected about this field, said where the label already is. */
+  invalid?: string
   children: ReactNode
 }) {
   return (
@@ -165,6 +168,7 @@ export function FieldRow({
       <label htmlFor={htmlFor} className="text-subhead text-ink">
         {label}
         {hint ? <span className="mt-0.5 block text-footnote text-ink-muted">{hint}</span> : null}
+        {invalid ? <span className="mt-0.5 block text-footnote text-over">{invalid}</span> : null}
       </label>
       {children}
     </div>

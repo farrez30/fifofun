@@ -163,7 +163,18 @@ test.describe('formulir kategori', () => {
     const select = page.locator('select[name="cashflow"]')
 
     await expect(select).toBeEnabled()
-    await expect(page.getByText('arahnya terkunci')).toHaveCount(0)
+    await expect(page.getByText('Terkunci', { exact: false })).toHaveCount(0)
+  })
+
+  test('names the lock on the row itself, not only in a footer below it', async ({ page }) => {
+    await open(page, 'settings-category-form-locked')
+
+    // Locked, the select drops its `name` so a disabled field posts nothing;
+    // `getByLabel` still finds it, because the reason now lives inside the
+    // same label as "Cashflow" rather than in a footer wired by id.
+    const select = page.getByLabel('Cashflow', { exact: false })
+    await expect(select).toBeDisabled()
+    await expect(page.locator('label').filter({ hasText: 'Cashflow' })).toContainText('Terkunci')
   })
 
   test('wires the cashflow field to the sentence explaining it', async ({ page }) => {

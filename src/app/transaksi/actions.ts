@@ -8,6 +8,7 @@ import {
   context,
   fail,
   hhmmField,
+  invalidFields,
   isoDateField,
   optionalUuid,
   positiveSen,
@@ -99,7 +100,10 @@ export async function updateEntry(
     toAccountId: formData.get('toAccountId') ?? '',
   })
   if (!parsed.success) {
-    return fail('Perubahannya belum bisa disimpan.', parsed.error.issues[0]?.message)
+    return {
+      ...fail('Perubahannya belum bisa disimpan.', parsed.error.issues[0]?.message),
+      fieldErrors: invalidFields(parsed.error),
+    }
   }
 
   const ctx = await context()

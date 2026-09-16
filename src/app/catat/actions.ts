@@ -9,6 +9,7 @@ import {
   context,
   fail,
   hhmmField,
+  invalidFields,
   isoDateField,
   optionalUuid,
   positiveSen,
@@ -116,7 +117,9 @@ export async function recordEntry(
     description: formData.get('description') ?? '',
     note: formData.get('note') ?? '',
   })
-  if (!parsed.success) return fail('Isiannya belum lengkap.', firstIssue(parsed.error))
+  if (!parsed.success) {
+    return { ...fail('Isiannya belum lengkap.', firstIssue(parsed.error)), fieldErrors: invalidFields(parsed.error) }
+  }
 
   const ctx = await context()
   if (!ctx) return fail(SESSION_EXPIRED)
