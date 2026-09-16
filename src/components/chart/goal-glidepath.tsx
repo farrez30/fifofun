@@ -10,6 +10,7 @@ import {
 import { formatIdr, formatIdrCompact } from '@/lib/money'
 import { nudge } from './axis'
 import { DragAxis, DragPin, slotFraction } from './drag-axis'
+import { ChartReadout } from './readout'
 
 /**
  * A goal from today until it is paid for, drawn twice.
@@ -175,161 +176,165 @@ export function GoalGlidepath({
         <Verdict path={path} />
       </p>
 
-      <div className="grid grid-cols-[3.5rem_1fr] gap-x-2">
-        <div className="relative">
-          {scale.ticks.map((tick) => (
-            <span
-              key={String(tick)}
-              className="absolute right-0 -translate-y-1/2 whitespace-nowrap text-caption2 leading-none text-ink-faint"
-              style={{ top: `${yAt(tick)}%` }}
-            >
-              {formatIdrCompact(tick)}
-            </span>
-          ))}
-        </div>
-
-        <div className="relative h-52">
-          {scale.ticks.map((tick) => (
-            <div
-              key={String(tick)}
-              aria-hidden="true"
-              className={`absolute inset-x-0 h-px ${tick === 0n ? 'bg-line-strong' : 'bg-line'}`}
-              style={{ top: `${yAt(tick)}%` }}
-            />
-          ))}
-
-          <svg
-            viewBox="0 0 100 100"
-            preserveAspectRatio="none"
-            className="absolute inset-0 h-full w-full"
-            aria-hidden="true"
-          >
-            {band ? <polygon points={band} fill="var(--color-under-wash)" /> : null}
-            {/*
-              Dashed and thin against solid and thick. The two curves have to be
-              separable by somebody who cannot separate the two hues, and a
-              legend that only works in colour works for most people rather than
-              for everybody.
-            */}
-            <polyline
-              points={idleLine}
-              fill="none"
-              stroke="var(--color-line-strong)"
-              strokeWidth={1.5}
-              strokeDasharray="5 4"
-              vectorEffect="non-scaling-stroke"
-            />
-            <polyline
-              points={investedLine}
-              fill="none"
-              stroke="var(--color-accent)"
-              strokeWidth={2}
-              strokeLinejoin="round"
-              strokeLinecap="round"
-              vectorEffect="non-scaling-stroke"
-            />
-          </svg>
-
-          {/* The target is a value rather than a gridline, so it is drawn as one
-              of the marks and not as part of the axis. Labelled on the left,
-              which is the one part of the plot both curves are always below. */}
-          <div
-            aria-hidden="true"
-            className="absolute inset-x-0 border-t border-dashed border-accent-strong"
-            style={{ top: `${targetY}%` }}
-          />
-          {/* Dropped when the axis already tops out at the target, which is the
-              common case now that nothing is drawn above it. Naming the same
-              figure twice, a centimetre apart, reads as two different values. */}
-          {scale.top === target ? null : (
-            <span
-              className="absolute left-0 -translate-y-full pb-0.5 text-caption2 leading-none text-accent-strong"
-              style={{ top: `${targetY}%` }}
-            >
-              Target {formatIdrCompact(target)}
-            </span>
-          )}
-
-          {/* Both arrivals sit on the target by definition, so the distance
-              between them along it is the wait the return takes off. Measured
-              off on the chart rather than asserted in a sentence. */}
-          {invested && idle && idle.months > invested.months ? (
-            <>
-              <div
-                data-earned={String(path.monthsEarned ?? 0)}
-                aria-hidden="true"
-                className="absolute h-1.5 border-x-2 border-surface bg-under"
-                style={{
-                  top: `${targetY}%`,
-                  left: `${xAtMonth(invested.months)}%`,
-                  width: `${xAtMonth(idle.months) - xAtMonth(invested.months)}%`,
-                }}
-              />
+      <ChartReadout>
+        <div className="grid grid-cols-[3.5rem_1fr] gap-x-2">
+          <div className="relative">
+            {scale.ticks.map((tick) => (
               <span
-                className="absolute translate-y-1.5 whitespace-nowrap text-caption2 leading-none text-under"
-                style={{ top: `${targetY}%`, left: `${xAtMonth(invested.months) + 1}%` }}
+                key={String(tick)}
+                className="absolute right-0 -translate-y-1/2 whitespace-nowrap text-caption2 leading-none text-ink-faint"
+                style={{ top: `${yAt(tick)}%` }}
               >
-                {spanOf(path.monthsEarned ?? 0)} lebih cepat
+                {formatIdrCompact(tick)}
               </span>
+            ))}
+          </div>
+
+          <div className="relative h-52">
+            {scale.ticks.map((tick) => (
+              <div
+                key={String(tick)}
+                aria-hidden="true"
+                className={`absolute inset-x-0 h-px ${tick === 0n ? 'bg-line-strong' : 'bg-line'}`}
+                style={{ top: `${yAt(tick)}%` }}
+              />
+            ))}
+
+            <svg
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+              className="absolute inset-0 h-full w-full"
+              aria-hidden="true"
+            >
+              {band ? <polygon points={band} fill="var(--color-under-wash)" /> : null}
+              {/*
+                Dashed and thin against solid and thick. The two curves have to be
+                separable by somebody who cannot separate the two hues, and a
+                legend that only works in colour works for most people rather than
+                for everybody.
+              */}
+              <polyline
+                points={idleLine}
+                fill="none"
+                stroke="var(--color-line-strong)"
+                strokeWidth={1.5}
+                strokeDasharray="5 4"
+                vectorEffect="non-scaling-stroke"
+              />
+              <polyline
+                points={investedLine}
+                fill="none"
+                stroke="var(--color-accent)"
+                strokeWidth={2}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                vectorEffect="non-scaling-stroke"
+              />
+            </svg>
+
+            {/* The target is a value rather than a gridline, so it is drawn as one
+                of the marks and not as part of the axis. Labelled on the left,
+                which is the one part of the plot both curves are always below. */}
+            <div
+              aria-hidden="true"
+              className="absolute inset-x-0 border-t border-dashed border-accent-strong"
+              style={{ top: `${targetY}%` }}
+            />
+            {/* Dropped when the axis already tops out at the target, which is the
+                common case now that nothing is drawn above it. Naming the same
+                figure twice, a centimetre apart, reads as two different values. */}
+            {scale.top === target ? null : (
+              <span
+                className="absolute left-0 -translate-y-full pb-0.5 text-caption2 leading-none text-accent-strong"
+                style={{ top: `${targetY}%` }}
+              >
+                Target {formatIdrCompact(target)}
+              </span>
+            )}
+
+            {/* Both arrivals sit on the target by definition, so the distance
+                between them along it is the wait the return takes off. Measured
+                off on the chart rather than asserted in a sentence. */}
+            {invested && idle && idle.months > invested.months ? (
+              <>
+                <div
+                  data-earned={String(path.monthsEarned ?? 0)}
+                  aria-hidden="true"
+                  className="absolute h-1.5 border-x-2 border-surface bg-under"
+                  style={{
+                    top: `${targetY}%`,
+                    left: `${xAtMonth(invested.months)}%`,
+                    width: `${xAtMonth(idle.months) - xAtMonth(invested.months)}%`,
+                  }}
+                />
+                <span
+                  className="absolute translate-y-1.5 whitespace-nowrap text-caption2 leading-none text-under"
+                  style={{ top: `${targetY}%`, left: `${xAtMonth(invested.months) + 1}%` }}
+                >
+                  {spanOf(path.monthsEarned ?? 0)} lebih cepat
+                </span>
+              </>
+            ) : null}
+
+            {invested ? (
+              <Marker
+                x={xAtMonth(invested.months)}
+                y={targetY}
+                tone="bg-accent"
+                label="Dengan imbal hasil"
+                value={`${invested.year}, setelah ${spanOf(invested.months)}`}
+                tag="arrival-invested"
+              />
+            ) : null}
+            {idle ? (
+              <Marker
+                x={xAtMonth(idle.months)}
+                y={targetY}
+                tone="bg-line-strong"
+                label="Kalau hanya ditabung"
+                value={`${idle.year}, setelah ${spanOf(idle.months)}`}
+                tag="arrival-idle"
+              />
+            ) : null}
+          </div>
+
+          <span />
+          <div className="relative mt-1.5 h-3">
+            {points.map((point, index) => {
+              const last = index === points.length - 1
+              if (index % labelEvery !== 0 && !last) return null
+              // Two labels landing on each other at the right hand end is worse
+              // than one of them being dropped.
+              if (!last && points.length - 1 - index < labelEvery / 2) return null
+              const pct = xAt(index)
+              return (
+                <span
+                  key={point.year}
+                  aria-hidden="true"
+                  className="absolute top-0 whitespace-nowrap tabular-nums text-caption2 leading-none text-ink-faint"
+                  style={{ left: `${pct}%`, transform: nudge(pct) }}
+                >
+                  {index === 0 ? point.year : `'${String(point.year).slice(2)}`}
+                </span>
+              )
+            })}
+          </div>
+
+          {onYearsChange ? (
+            <>
+              <span />
+              <DragAxis values={points.map((point) => point.year)} className="h-9 w-full">
+                <DragPin
+                  value={currentYear + years}
+                  onChange={(year) => onYearsChange(Math.max(1, year - currentYear))}
+                  label="Tahun target tercapai"
+                  format={(year) => String(year)}
+                />
+              </DragAxis>
             </>
           ) : null}
-
-          {invested ? (
-            <Marker
-              x={xAtMonth(invested.months)}
-              y={targetY}
-              tone="bg-accent"
-              title={`Tercapai ${invested.year}, setelah ${spanOf(invested.months)}`}
-              tag="arrival-invested"
-            />
-          ) : null}
-          {idle ? (
-            <Marker
-              x={xAtMonth(idle.months)}
-              y={targetY}
-              tone="bg-line-strong"
-              title={`Kalau hanya didiamkan, tercapai ${idle.year}`}
-              tag="arrival-idle"
-            />
-          ) : null}
         </div>
-
-        <span />
-        <div className="relative mt-1.5 h-3">
-          {points.map((point, index) => {
-            const last = index === points.length - 1
-            if (index % labelEvery !== 0 && !last) return null
-            // Two labels landing on each other at the right hand end is worse
-            // than one of them being dropped.
-            if (!last && points.length - 1 - index < labelEvery / 2) return null
-            const pct = xAt(index)
-            return (
-              <span
-                key={point.year}
-                aria-hidden="true"
-                className="absolute top-0 whitespace-nowrap tabular-nums text-caption2 leading-none text-ink-faint"
-                style={{ left: `${pct}%`, transform: nudge(pct) }}
-              >
-                {index === 0 ? point.year : `'${String(point.year).slice(2)}`}
-              </span>
-            )
-          })}
-        </div>
-
-        {onYearsChange ? (
-          <>
-            <span />
-            <DragAxis values={points.map((point) => point.year)} className="h-9 w-full">
-              <DragPin
-                value={currentYear + years}
-                onChange={(year) => onYearsChange(Math.max(1, year - currentYear))}
-                label="Tahun target tercapai"
-                format={(year) => String(year)}
-              />
-            </DragAxis>
-          </>
-        ) : null}
-      </div>
+      </ChartReadout>
 
       {onYearsChange ? (
         <p className="mt-1 text-footnote text-ink-muted">
@@ -374,19 +379,25 @@ function Marker({
   x,
   y,
   tone,
-  title,
+  label,
+  value,
   tag,
 }: {
   x: number
   y: number
   tone: string
-  title: string
+  label: string
+  value: string
   tag: string
 }) {
   return (
     <div
       data-mark={tag}
-      title={title}
+      data-readout-label={label}
+      data-readout-value={value}
+      tabIndex={0}
+      role="img"
+      aria-label={`${label}: ${value}`}
       className={`absolute size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-surface ${tone}`}
       style={{ left: `${x}%`, top: `${y}%` }}
     />

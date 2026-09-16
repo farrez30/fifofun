@@ -77,7 +77,7 @@ test.describe('linimasa biaya anak', () => {
   test('gives every year of the projection a visible column', async ({ page }) => {
     await open(page, 'crunch')
     await expectMarksToRender(page)
-    expect(await page.locator('[title*="Anak pertama"]').count()).toBeGreaterThan(0)
+    expect(await page.locator('[aria-label*="Anak pertama"]').count()).toBeGreaterThan(0)
   })
 })
 
@@ -378,8 +378,8 @@ test.describe('penanda tahun lahir', () => {
         const box = pin.getBoundingClientRect()
         const centre = box.left + box.width / 2
         const label = pin.getAttribute('aria-valuenow')
-        const column = [...document.querySelectorAll('[title]')].find((node) =>
-          node.getAttribute('title')?.includes(`, ${label}:`),
+        const column = [...document.querySelectorAll('[aria-label]')].find((node) =>
+          node.getAttribute('aria-label')?.includes(`, ${label}:`),
         )
         if (!column) return null
         const target = column.getBoundingClientRect()
@@ -1166,33 +1166,6 @@ test.describe('aliran uang', () => {
       .toEqual({ focusedComesForward: true, everyOtherGoesBack: true })
   })
 
-  /*
-    `ChartReadout` itself needs no test here: this harness renders a fixture
-    with `renderToStaticMarkup` and no script tag at all (see e2e/render.ts),
-    so a client component's event handlers never attach and its `useState`
-    never runs. That is also why the isolation tests above work — they lean
-    on native `:hover`/`:focus-visible`, not on React. The readout's own
-    positioning logic is pure and lives in `readout-logic.ts`, tested there
-    with vitest; its wiring is confirmed against the running app, not a
-    static fixture. What this harness can and does check is that every mark
-    actually carries what the readout and a screen reader both read from.
-  */
-  test('names every ribbon and node for the readout and for a screen reader alike', async ({
-    page,
-  }) => {
-    await open(page, 'sankey-real')
-
-    for (const mark of await page.locator('[data-readout-label]').all()) {
-      const label = await mark.getAttribute('data-readout-label')
-      const value = await mark.getAttribute('data-readout-value')
-      const accessibleName = await mark.getAttribute('aria-label')
-      expect(label?.length).toBeGreaterThan(0)
-      expect(value?.length).toBeGreaterThan(0)
-      // The same two facts, said once for the eye and once for the ear.
-      expect(accessibleName).toBe(`${label}: ${value}`)
-    }
-  })
-
   test('never writes one label across another', async ({ page }) => {
     await open(page, 'sankey-real')
     await expectNoLabelOverlap(page)
@@ -1241,6 +1214,55 @@ test.describe('aliran uang', () => {
       .locator('svg text')
       .evaluateAll((nodes) => nodes.map((node) => node.textContent ?? ''))
     expect(third.some((label) => label.startsWith('Makan/minum'))).toBe(true)
+  })
+})
+
+/*
+  `ChartReadout` itself needs no test here: this harness renders a fixture
+  with `renderToStaticMarkup` and no script tag at all (see e2e/render.ts),
+  so a client component's event handlers never attach and its `useState`
+  never runs. That is also why the isolation tests above work — they lean
+  on native `:hover`/`:focus-visible`, not on React. The readout's own
+  positioning logic is pure and lives in `readout-logic.ts`, tested there
+  with vitest; its wiring is confirmed against the running app, not a
+  static fixture. What this harness can and does check is that every chart
+  wired to `ChartReadout` carries what the readout and a screen reader both
+  read from, and that none of them left the native tooltip it replaced.
+*/
+test.describe('readout melayang', () => {
+  const CHARTS_WITH_READOUT = [
+    'sankey-real',
+    'balance-trend',
+    'balance-trend-long',
+    'glidepath',
+    'glidepath-soon',
+    'crunch-interactive',
+  ]
+
+  test('names every mark for the readout and for a screen reader alike', async ({ page }) => {
+    for (const fixture of CHARTS_WITH_READOUT) {
+      await open(page, fixture)
+
+      const marks = await page.locator('[data-readout-label]').all()
+      expect(marks.length).toBeGreaterThan(0)
+
+      for (const mark of marks) {
+        const label = await mark.getAttribute('data-readout-label')
+        const value = await mark.getAttribute('data-readout-value')
+        const accessibleName = await mark.getAttribute('aria-label')
+        expect(label?.length).toBeGreaterThan(0)
+        expect(value?.length).toBeGreaterThan(0)
+        // The same two facts, said once for the eye and once for the ear.
+        expect(accessibleName).toBe(`${label}: ${value}`)
+      }
+    }
+  })
+
+  test('never leaves the native tooltip a readout replaced', async ({ page }) => {
+    for (const fixture of CHARTS_WITH_READOUT) {
+      await open(page, fixture)
+      await expect(page.locator('figure [title]')).toHaveCount(0)
+    }
   })
 })
 

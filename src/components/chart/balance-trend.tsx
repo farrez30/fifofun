@@ -3,6 +3,7 @@ import { buildBalanceTrend, type TrendPoint } from '@/lib/ledger/trend'
 import type { MonthlySeries } from '@/lib/ledger/monthly'
 import { formatIdr, formatIdrCompact } from '@/lib/money'
 import { nudge } from './axis'
+import { ChartReadout } from './readout'
 
 /**
  * The balance at the end of each month, drawn as one line.
@@ -94,104 +95,110 @@ export function BalanceTrend({ series, caption }: Props) {
         . Terendah {formatIdrCompact(low.balance)} di {labelFor(low, null)}.
       </p>
 
-      <div className="grid grid-cols-[3.5rem_1fr] gap-x-2">
-        <div className="relative">
-          {scale.ticks.map((tick) => (
-            <span
-              key={String(tick)}
-              className="absolute right-0 -translate-y-1/2 whitespace-nowrap text-caption2 leading-none text-ink-faint"
-              style={{ top: `${yAt(tick)}%` }}
-            >
-              {formatIdrCompact(tick)}
-            </span>
-          ))}
-        </div>
-
-        <div className="relative h-44">
-          {scale.ticks.map((tick) => (
-            <div
-              key={String(tick)}
-              aria-hidden="true"
-              className={`absolute inset-x-0 h-px ${tick === 0n ? 'bg-line-strong' : 'bg-line'}`}
-              style={{ top: `${yAt(tick)}%` }}
-            />
-          ))}
-
-          {/*
-            The plot stretches to whatever width it is given, so the drawing has
-            no fixed aspect and the viewBox is just percentages. Everything that
-            must not stretch with it, the stroke and every dot, is either told
-            not to scale or drawn as its own element on top.
-          */}
-          <svg
-            viewBox="0 0 100 100"
-            preserveAspectRatio="none"
-            className="absolute inset-0 h-full w-full"
-            aria-hidden="true"
-          >
-            <polyline
-              points={line}
-              fill="none"
-              stroke="var(--color-accent)"
-              strokeWidth={2}
-              strokeLinejoin="round"
-              strokeLinecap="round"
-              vectorEffect="non-scaling-stroke"
-            />
-          </svg>
-
-          {points.map((point, index) => {
-            const lowest = point.month === low.month
-            const called = lowest || index === points.length - 1
-            /*
-              Two years of months put a dot every ten pixels. At the ordinary
-              size they touch and the line disappears behind its own markers, so
-              past a year they shrink and lose their outline. Every month keeps
-              its dot rather than being dropped, because the dot is what carries
-              the figure on hover.
-            */
-            const size = called
-              ? 'h-2.5 w-2.5 border border-surface'
-              : dense
-                ? 'h-1 w-1'
-                : 'h-1.5 w-1.5 border border-surface'
-            return (
-              <div
-                key={point.month}
-                data-point={point.month}
-                title={`${labelFor(point, null)}: ${formatIdr(point.balance)}`}
-                className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full ${size} ${
-                  lowest ? 'bg-warn' : 'bg-accent'
-                }`}
-                style={{ left: `${xAt(index)}%`, top: `${yAt(point.balance)}%` }}
-              />
-            )
-          })}
-        </div>
-
-        <span />
-        {/* One label per month is unreadable past a year of data. The ends carry
-            the range and every January carries the year, which is the least that
-            still lets a reader place any point on the line. */}
-        <div className="relative mt-1.5 h-3">
-          {points.map((point, index) => {
-            const previous = index === 0 ? null : points[index - 1]
-            const turned = !previous || previous.month.slice(0, 4) !== point.month.slice(0, 4)
-            if (!turned && index !== points.length - 1) return null
-            const pct = xAt(index)
-            return (
+      <ChartReadout>
+        <div className="grid grid-cols-[3.5rem_1fr] gap-x-2">
+          <div className="relative">
+            {scale.ticks.map((tick) => (
               <span
-                key={point.month}
-                aria-hidden="true"
-                className="absolute top-0 whitespace-nowrap text-caption2 leading-none text-ink-faint"
-                style={{ left: `${pct}%`, transform: nudge(pct) }}
+                key={String(tick)}
+                className="absolute right-0 -translate-y-1/2 whitespace-nowrap text-caption2 leading-none text-ink-faint"
+                style={{ top: `${yAt(tick)}%` }}
               >
-                {labelFor(point, previous)}
+                {formatIdrCompact(tick)}
               </span>
-            )
-          })}
+            ))}
+          </div>
+
+          <div className="relative h-44">
+            {scale.ticks.map((tick) => (
+              <div
+                key={String(tick)}
+                aria-hidden="true"
+                className={`absolute inset-x-0 h-px ${tick === 0n ? 'bg-line-strong' : 'bg-line'}`}
+                style={{ top: `${yAt(tick)}%` }}
+              />
+            ))}
+
+            {/*
+              The plot stretches to whatever width it is given, so the drawing has
+              no fixed aspect and the viewBox is just percentages. Everything that
+              must not stretch with it, the stroke and every dot, is either told
+              not to scale or drawn as its own element on top.
+            */}
+            <svg
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+              className="absolute inset-0 h-full w-full"
+              aria-hidden="true"
+            >
+              <polyline
+                points={line}
+                fill="none"
+                stroke="var(--color-accent)"
+                strokeWidth={2}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+                vectorEffect="non-scaling-stroke"
+              />
+            </svg>
+
+            {points.map((point, index) => {
+              const lowest = point.month === low.month
+              const called = lowest || index === points.length - 1
+              /*
+                Two years of months put a dot every ten pixels. At the ordinary
+                size they touch and the line disappears behind its own markers, so
+                past a year they shrink and lose their outline. Every month keeps
+                its dot rather than being dropped, because the dot is what carries
+                the figure on hover.
+              */
+              const size = called
+                ? 'h-2.5 w-2.5 border border-surface'
+                : dense
+                  ? 'h-1 w-1'
+                  : 'h-1.5 w-1.5 border border-surface'
+              return (
+                <div
+                  key={point.month}
+                  data-point={point.month}
+                  data-readout-label={labelFor(point, null)}
+                  data-readout-value={formatIdr(point.balance)}
+                  tabIndex={0}
+                  role="img"
+                  aria-label={`${labelFor(point, null)}: ${formatIdr(point.balance)}`}
+                  className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full ${size} ${
+                    lowest ? 'bg-warn' : 'bg-accent'
+                  }`}
+                  style={{ left: `${xAt(index)}%`, top: `${yAt(point.balance)}%` }}
+                />
+              )
+            })}
+          </div>
+
+          <span />
+          {/* One label per month is unreadable past a year of data. The ends carry
+              the range and every January carries the year, which is the least that
+              still lets a reader place any point on the line. */}
+          <div className="relative mt-1.5 h-3">
+            {points.map((point, index) => {
+              const previous = index === 0 ? null : points[index - 1]
+              const turned = !previous || previous.month.slice(0, 4) !== point.month.slice(0, 4)
+              if (!turned && index !== points.length - 1) return null
+              const pct = xAt(index)
+              return (
+                <span
+                  key={point.month}
+                  aria-hidden="true"
+                  className="absolute top-0 whitespace-nowrap text-caption2 leading-none text-ink-faint"
+                  style={{ left: `${pct}%`, transform: nudge(pct) }}
+                >
+                  {labelFor(point, previous)}
+                </span>
+              )
+            })}
+          </div>
         </div>
-      </div>
+      </ChartReadout>
 
       {cropped ? (
         <p className="mt-3 text-footnote text-ink-muted">

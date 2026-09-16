@@ -1,5 +1,6 @@
 import { formatIdr, formatIdrCompact, senToRupiahNumber } from '@/lib/money'
 import { DragAxis, DragPin } from './drag-axis'
+import { ChartReadout } from './readout'
 import type { FamilyProjection } from '@/lib/planning/children'
 
 /**
@@ -78,12 +79,13 @@ export function CrunchTimeline({ projection, caption, onBirthYearChange }: Props
         </span>
       </figcaption>
 
-      <div
-        className="relative overflow-x-auto pb-1"
-        tabIndex={0}
-        role="region"
-        aria-label="Linimasa biaya anak, bisa digeser ke samping"
-      >
+      <ChartReadout>
+        <div
+          className="relative overflow-x-auto pb-1"
+          tabIndex={0}
+          role="region"
+          aria-label="Linimasa biaya anak, bisa digeser ke samping"
+        >
         {/*
           The columns and the markers share one width box.
 
@@ -119,7 +121,11 @@ export function CrunchTimeline({ projection, caption, onBirthYearChange }: Props
                           height: `${(senToRupiahNumber(amount) / peakRupiah) * 100}%`,
                           backgroundColor: CHILD_FILLS[index % CHILD_FILLS.length],
                         }}
-                        title={`${child.label}, ${year.year}: ${formatIdrCompact(amount)}`}
+                        data-readout-label={`${child.label}, ${year.year}`}
+                        data-readout-value={formatIdrCompact(amount)}
+                        tabIndex={0}
+                        role="img"
+                        aria-label={`${child.label}, ${year.year}: ${formatIdrCompact(amount)}`}
                       />
                     )
                   })}
@@ -150,7 +156,8 @@ export function CrunchTimeline({ projection, caption, onBirthYearChange }: Props
             </DragAxis>
           ) : null}
         </div>
-      </div>
+        </div>
+      </ChartReadout>
 
       {onBirthYearChange ? (
         <p className="mt-1 text-footnote text-ink-muted">
