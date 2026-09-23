@@ -56,10 +56,13 @@
     already happened once: it passed on a laptop for months and failed on CI.
     So IBM Plex stays, demoted from the identity to the anchor, and every
     machine without SF renders one face this repository has actually measured.
+
+    The var() is the face `layout.tsx` serves; the literal name after it is
+    what the fixture harness injects, where that variable is never set.
   */
   --font-sans:
     -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display',
-    'IBM Plex Sans', system-ui, sans-serif;
+    var(--font-plex-sans, 'IBM Plex Sans'), system-ui, sans-serif;
 
   /*
     Figures, and a deliberate divergence from Apple.
@@ -72,7 +75,8 @@
     divergence rather than an oversight.
   */
   --font-mono:
-    'IBM Plex Mono', ui-monospace, 'SF Mono', SFMono-Regular, monospace;
+    var(--font-plex-mono, 'IBM Plex Mono'), ui-monospace, 'SF Mono', SFMono-Regular,
+    monospace;
 
   /*
     Apple's real corner radii. Every one of them is a continuous corner on

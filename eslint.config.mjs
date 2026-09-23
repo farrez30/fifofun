@@ -156,6 +156,10 @@ const eslintConfig = defineConfig([
               message: 'Fonts are declared once in src/app/layout.tsx.',
             },
             {
+              name: 'next/font/local',
+              message: 'Fonts are declared once in src/app/layout.tsx.',
+            },
+            {
               name: 'lucide-react',
               message:
                 'lucide is the default icon set of generated interfaces. This project uses Phosphor.',

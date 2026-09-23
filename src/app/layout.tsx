@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { cookies, headers } from 'next/headers'
-import { IBM_Plex_Mono, IBM_Plex_Sans } from 'next/font/google'
+import localFont from 'next/font/local'
 import { ProgressiveWebApp } from '@/components/pwa'
 import { SkipLink } from '@/components/skip-link'
 import './globals.css'
@@ -18,24 +18,32 @@ import './globals.css'
   Plex Mono stays the money face outright, because a column of Rupiah has to
   keep the same advance width everywhere and only a monospace promises that.
 
-  The two `variable` names below are declared and then never referenced, which
-  looks like a mistake and is not. `next/font` registers these under their real
-  family names, so `globals.css` can simply say `'IBM Plex Sans'` and get them,
-  and it has to: the Playwright harness injects its own `@font-face` under those
-  same literal names, and a stack built out of `var(--font-plex-sans)` would
-  resolve to nothing in a fixture and quietly measure the wrong font. The
-  declarations stay because they are what makes Next emit the faces at all.
+  Served from the same @fontsource files `e2e/render.ts` embeds, not fetched
+  from Google at build time. The build used to download the CSS and the faces
+  from fonts.googleapis.com, and one bad response from there failed CI with
+  code that had built fine a minute earlier on another runner.
+
+  `next/font/local` names the family after the variable here rather than
+  `'IBM Plex Sans'`, so `globals.css` reaches it through `--font-plex-sans`
+  with the literal name as the var() fallback. That fallback is what the
+  Playwright harness hits: it injects its own `@font-face` under the literal
+  names and never runs the Next build, so the variable is simply unset there.
 */
-const sans = IBM_Plex_Sans({
-  subsets: ['latin'],
-  weight: ['400', '500', '600'],
+const plexSans = localFont({
+  src: [
+    { path: '../../node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-400-normal.woff2', weight: '400' },
+    { path: '../../node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-500-normal.woff2', weight: '500' },
+    { path: '../../node_modules/@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-600-normal.woff2', weight: '600' },
+  ],
   variable: '--font-plex-sans',
   display: 'swap',
 })
 
-const mono = IBM_Plex_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500'],
+const plexMono = localFont({
+  src: [
+    { path: '../../node_modules/@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-400-normal.woff2', weight: '400' },
+    { path: '../../node_modules/@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-500-normal.woff2', weight: '500' },
+  ],
   variable: '--font-plex-mono',
   display: 'swap',
 })
@@ -170,7 +178,7 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
       lang="id"
       data-theme={await appearance()}
       data-sidebar={await sidebar()}
-      className={`${sans.variable} ${mono.variable}`}
+      className={`${plexSans.variable} ${plexMono.variable}`}
     >
       <body className="min-h-dvh antialiased">
         {/* Keyboard users reach the content without tabbing the whole nav.
