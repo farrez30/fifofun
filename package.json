@@ -35,7 +35,7 @@
     "postgres": "^3.4.9",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "react-hook-form": "^7.85.0",
+    "react-hook-form": "^7.88.0",
     "tailwind-merge": "^3.6.0",
     "zod": "^4.4.3"
   },
