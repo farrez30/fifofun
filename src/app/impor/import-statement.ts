@@ -8,7 +8,7 @@ import { ruleAgreesWithDirection } from '@/lib/ledger/direction'
 import { firstMatch, type Rule } from '@/lib/ledger/rules'
 import { DEFAULT_CATEGORY_BY_KIND } from '@/lib/ledger/seed-data'
 import { parseMandiriStatement, StatementParseError } from '@/lib/statement/mandiri-xlsx'
-import { statementToLedger } from '@/lib/statement/to-ledger'
+import { statementToLedger, WALLET_ACCOUNT_KEYS } from '@/lib/statement/to-ledger'
 import { authedUser } from '@/lib/supabase/auth-user'
 import { createClient } from '@/lib/supabase/server'
 import { SESSION_EXPIRED, WRITE_FAILED } from '@/lib/actions'
@@ -342,14 +342,7 @@ export async function importStatement(formData: FormData): Promise<ImportReport>
         accounts: {
           bankAccountId: 'mandiri',
           cashAccountId: 'cash',
-          wallets: {
-            GoPay: 'gopay',
-            DANA: 'dana',
-            ShopeePay: 'shopeepay',
-            OVO: 'ovo',
-            LinkAja: 'linkaja',
-            'e-Money': 'emoney',
-          },
+          wallets: WALLET_ACCOUNT_KEYS,
         },
       },
     )
@@ -435,16 +428,20 @@ export async function importStatement(formData: FormData): Promise<ImportReport>
       // than failing the whole import.
       const unmappedTransfer =
         entry.cashflow === 'transfer' && (!fromAccountId || !toAccountId)
+      const cashflow = unmappedTransfer ? 'spending' : (rule?.cashflow ?? entry.cashflow)
 
       return {
         household_id: household.id,
         occurred_at: entry.occurredAt.toISOString(),
         description: entry.description,
         amount: entry.amount.toString(),
-        cashflow: unmappedTransfer ? 'spending' : (rule?.cashflow ?? entry.cashflow),
+        cashflow,
+        // Looked up under the cashflow the row is actually written with. Under
+        // the classifier's own, an own top-up to a wallet with no account here
+        // went in as spending filed under the transfer category Antar Account.
         category_id:
           rule?.categoryId ??
-          (fallbackName ? (categoryByName.get(`${entry.cashflow} ${fallbackName}`) ?? null) : null),
+          (fallbackName ? (categoryByName.get(`${cashflow} ${fallbackName}`) ?? null) : null),
         from_account_id: fromAccountId,
         to_account_id: toAccountId,
         source: 'xlsx',

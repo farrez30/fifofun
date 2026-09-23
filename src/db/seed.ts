@@ -70,7 +70,7 @@ async function main(): Promise<void> {
   const { db, schema } = await import('./client')
   const { readXlsx } = await import('@/lib/xlsx')
   const { parseMandiriStatement } = await import('@/lib/statement/mandiri-xlsx')
-  const { statementToLedger } = await import('@/lib/statement/to-ledger')
+  const { statementToLedger, WALLET_ACCOUNT_KEYS } = await import('@/lib/statement/to-ledger')
   const { SEED_ACCOUNTS, SEED_CATEGORIES, SEED_RULES, DEFAULT_CATEGORY_BY_KIND } = await import(
     '@/lib/ledger/seed-data'
   )
@@ -293,14 +293,7 @@ async function main(): Promise<void> {
     accounts: {
       bankAccountId: 'mandiri',
       cashAccountId: 'cash',
-      wallets: {
-        GoPay: 'gopay',
-        DANA: 'dana',
-        ShopeePay: 'shopeepay',
-        OVO: 'ovo',
-        LinkAja: 'linkaja',
-        'e-Money': 'emoney',
-      },
+      wallets: WALLET_ACCOUNT_KEYS,
     },
   }
 

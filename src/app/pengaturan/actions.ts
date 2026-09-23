@@ -2,7 +2,7 @@
 
 import { revalidatePath, updateTag } from 'next/cache'
 import { cookies } from 'next/headers'
-import { accountsTag, categoriesTag } from '@/lib/queries/tags'
+import { accountsTag, categoriesTag, txTag } from '@/lib/queries/tags'
 import { z } from 'zod'
 import {
   SESSION_EXPIRED,
@@ -16,6 +16,7 @@ import {
 } from '@/lib/actions'
 import { ICON_NAMES } from '@/components/marks'
 import { ACCOUNT_KEYS, parseIdentifiers, planReorder, twinsOf } from '@/lib/ledger/settings'
+import { describeBackfill, planWalletBackfill, type BackfillRow } from '@/lib/ledger/wallet-backfill'
 import { ACCOUNT_KINDS, CASHFLOW_LABELS, CASHFLOW_TYPES, type CashflowType } from '@/lib/ledger/types'
 
 /**
@@ -266,14 +267,117 @@ export async function updateAccount(
   if (error) return keyClash(error, values.key) ?? writeFailed('pengaturan', 'Akunnya gagal disimpan.', error)
   if (!data || data.length === 0) return fail('Akun itu tidak ditemukan.')
 
+  const backfill =
+    values.kind === 'bank' && identifiers.values.length > 0
+      ? await backfillWalletTopUps(ctx.supabase, ctx.householdId, current.id, identifiers.values, rows)
+      : undefined
+
   revalidateSettings(ctx.householdId)
+  const details = [
+    current.openingBalance === values.openingBalance.toString()
+      ? undefined
+      : 'Saldo awal menggeser saldo akun ini di semua bulan. Koreksi untuk dompet yang sudah berjalan dicatat lewat Sesuaikan saldo di Ringkasan.',
+    backfill,
+  ].filter(Boolean)
   return {
     ok: true,
     message: `Akun ${values.name} disimpan.`,
-    detail:
-      current.openingBalance === values.openingBalance.toString()
-        ? undefined
-        : 'Saldo awal menggeser saldo akun ini di semua bulan. Koreksi untuk dompet yang sudah berjalan dicatat lewat Sesuaikan saldo di Ringkasan.',
+    detail: details.length > 0 ? details.join(' ') : undefined,
+  }
+}
+
+/** Rows read per request while looking for old top-ups; PostgREST's own default cap. */
+const BACKFILL_PAGE = 1000
+/** Ids per update, the same chunk the review queue writes in. */
+const BACKFILL_CHUNK = 100
+
+/**
+ * Turns this bank account's old payments to the household's own wallets into
+ * the transfers they were, now that the wallet numbers are known.
+ *
+ * `wallet-backfill.ts` decides which rows move; this reads and writes them.
+ * Only rows the import filed as spending and paid to no account are read,
+ * and every update repeats that condition, so a row somebody changed between
+ * the read and the write is skipped rather than overwritten.
+ *
+ * The account itself is already saved when this runs, so a failure here is
+ * reported as a sentence under Simpan, never as the save failing.
+ */
+async function backfillWalletTopUps(
+  supabase: SupabaseLike,
+  householdId: string,
+  bankAccountId: string,
+  own: string[],
+  accounts: AccountRecord[],
+): Promise<string | undefined> {
+  try {
+    const categories = await categoriesOf(supabase, householdId)
+    const categoryName = new Map(categories.map((category) => [category.id, category.name]))
+    const antarAccount =
+      categories.find((c) => c.cashflow === 'transfer' && c.name === 'Antar Account' && !c.archivedAt)?.id ?? null
+
+    const rows: BackfillRow[] = []
+    for (let offset = 0; ; offset += BACKFILL_PAGE) {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('id, raw_description, category_id, category_locked_at, split_of')
+        .eq('household_id', householdId)
+        .eq('from_account_id', bankAccountId)
+        .eq('source', 'xlsx')
+        .eq('cashflow', 'spending')
+        .is('to_account_id', null)
+        .is('deleted_at', null)
+        // Every wallet biller line starts this way; the planner does the rest.
+        .ilike('raw_description', 'Pembayaran %')
+        .order('id')
+        .range(offset, offset + BACKFILL_PAGE - 1)
+      if (error) throw error
+      const page = (data ?? []) as Record<string, unknown>[]
+      for (const row of page) {
+        rows.push({
+          id: row.id as string,
+          rawDescription: (row.raw_description as string | null) ?? null,
+          categoryName: row.category_id ? (categoryName.get(row.category_id as string) ?? null) : null,
+          categoryLockedAt: (row.category_locked_at as string | null) ?? null,
+          splitOf: (row.split_of as string | null) ?? null,
+        })
+      }
+      if (page.length < BACKFILL_PAGE) break
+    }
+
+    const walletAccounts = new Map(
+      accounts.filter((a) => a.key && !a.archivedAt).map((a) => [a.key as string, a.id]),
+    )
+    const plan = planWalletBackfill(rows, own, walletAccounts)
+
+    const confirmedAt = new Date().toISOString()
+    let moved = 0
+    for (const move of plan.moves) {
+      for (let i = 0; i < move.ids.length; i += BACKFILL_CHUNK) {
+        const { data, error } = await supabase
+          .from('transactions')
+          .update({
+            cashflow: 'transfer',
+            to_account_id: move.accountId,
+            category_id: antarAccount,
+            needs_review: false,
+            confirmed_at: confirmedAt,
+          })
+          .in('id', move.ids.slice(i, i + BACKFILL_CHUNK))
+          .eq('household_id', householdId)
+          .eq('cashflow', 'spending')
+          .is('to_account_id', null)
+          .select('id')
+        if (error) throw error
+        moved += data?.length ?? 0
+      }
+    }
+
+    if (moved > 0) updateTag(txTag(householdId))
+    return describeBackfill({ ...plan, count: moved })
+  } catch (error) {
+    console.error('[pengaturan] top-up e-wallet lama gagal diperbarui', error)
+    return 'Nomornya tersimpan, tapi transaksi lama belum ikut diperbarui. Simpan akun ini sekali lagi untuk mencoba ulang.'
   }
 }
 

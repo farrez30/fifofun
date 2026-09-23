@@ -17,6 +17,20 @@ import type { ParsedStatement, StatementRow } from './mandiri-xlsx'
  *    income. Counting it would inflate every income figure in the app.
  */
 
+/**
+ * Which account key each wallet the classifier names is filed under. The
+ * import, the seed script and the settings backfill all read this one table,
+ * so a wallet recognised in one place is recognised in all three.
+ */
+export const WALLET_ACCOUNT_KEYS: Record<string, string> = {
+  GoPay: 'gopay',
+  DANA: 'dana',
+  ShopeePay: 'shopeepay',
+  OVO: 'ovo',
+  LinkAja: 'linkaja',
+  'e-Money': 'emoney',
+}
+
 export interface AccountMap {
   /** The account this statement belongs to. */
   bankAccountId: string

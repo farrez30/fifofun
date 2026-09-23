@@ -28,7 +28,8 @@ vi.mock('@/lib/statement/mandiri-xlsx', async (importActual) => ({
 }))
 
 const statementToLedger = vi.fn()
-vi.mock('@/lib/statement/to-ledger', () => ({
+vi.mock('@/lib/statement/to-ledger', async (importActual) => ({
+  WALLET_ACCOUNT_KEYS: (await importActual<typeof import('@/lib/statement/to-ledger')>()).WALLET_ACCOUNT_KEYS,
   statementToLedger: (...args: unknown[]) => statementToLedger(...args),
 }))
 
@@ -260,6 +261,42 @@ describe('importStatement', () => {
       ['imports:h1', { expire: 0 }],
       ['rules:h1', { expire: 0 }],
     ])
+  })
+
+  it('files an own top-up to a wallet with no account as spending, not under a transfer category', async () => {
+    parseMandiriStatement.mockReturnValue({
+      ...VALID_STATEMENT,
+      rows: [{ description: 'Pembayaran GoPay Customer\n085800000001' }],
+    })
+    statementToLedger.mockReturnValue({
+      entries: [
+        {
+          id: 'e1',
+          occurredAt: new Date('2026-03-02T02:00:00Z'),
+          description: 'GoPay',
+          amount: 50_000_00n,
+          cashflow: 'transfer',
+          fromAccountId: 'mandiri',
+          toAccountId: 'gopay',
+        },
+      ],
+      classifications: [{ kind: 'wallet-topup' }],
+      passThroughIds: [],
+      review: [],
+      walletCoverage: { seen: 1, matchedOwn: 1 },
+    })
+    stub.queue('households', { data: { id: 'h1' } })
+    // No GoPay account, so the transfer has nowhere to land.
+    stub.queue('accounts', { data: [BANK] })
+    stub.queue('categories', { data: [{ id: 'cat-antar', name: 'Antar Account', cashflow: 'transfer' }] })
+    stub.queue('categorization_rules', { data: [] })
+    stub.queue('import_batches', { data: { id: 'batch1' } })
+    stub.queue('transactions', { data: [] })
+
+    await importStatement(formWith(statementFile()))
+
+    const [written] = stub.callsOn('transactions')[0].payload as Record<string, unknown>[]
+    expect(written).toMatchObject({ cashflow: 'spending', category_id: null, needs_review: true })
   })
 
   it('leaves the cache alone when nothing was saved', async () => {

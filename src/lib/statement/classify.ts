@@ -1,4 +1,4 @@
-import type { StatementRow } from './mandiri-xlsx'
+import { splitLines, type StatementRow } from './mandiri-xlsx'
 
 /**
  * Turns a bank statement row into bank-level semantics: what kind of movement
@@ -376,13 +376,9 @@ export function classify(row: StatementRow, options: ClassifyOptions = {}): Clas
   }
 
   // --- Wallet top-ups and biller payments -------------------------------
-  // Declared at the bottom with the other lookup tables, and read here only
-  // once a statement is being classified, long after the module is evaluated.
-  // eslint-disable-next-line @typescript-eslint/no-use-before-define
-  const wallet = WALLET_BILLERS.find((entry) => entry.match.test(first))
-  if (wallet) {
-    const destination = wallet.extract(second)
-    const isOwn = matchesOwn(destination, own)
+  const payment = walletPayment(first, second, own)
+  if (payment) {
+    const { wallet, destination, isOwn } = payment
     return make({
       kind: isOwn ? 'wallet-topup' : 'transfer-out',
       channel: 'biller',
@@ -463,3 +459,30 @@ const WALLET_BILLERS = [
     extract: (line: string) => digitsOnly(line),
   },
 ] as const
+
+/**
+ * The wallet a row pays into, the number it went to, and whether that number
+ * is one of the household's own. The one place that decides it, for the
+ * import and for rows re-read later alike.
+ */
+function walletPayment(first: string, second: string, own: string[]) {
+  const wallet = WALLET_BILLERS.find((entry) => entry.match.test(first))
+  if (!wallet) return null
+  const destination = wallet.extract(second)
+  return { wallet, destination, isOwn: matchesOwn(destination, own) }
+}
+
+/**
+ * Which of the household's own wallets a stored bank row topped up, by label,
+ * or null.
+ *
+ * For rows imported before the wallet's number was known: they went in as a
+ * payment to somebody else, and `raw_description` still holds the two lines
+ * the import judged them by.
+ */
+export function ownWalletTopUp(rawDescription: string, own: string[]): string | null {
+  if (own.length === 0) return null
+  const [first = '', second = ''] = splitLines(rawDescription)
+  const payment = walletPayment(first, second, own)
+  return payment?.isOwn ? payment.wallet.label : null
+}

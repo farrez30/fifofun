@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createSupabaseStub } from '@/test/supabase-stub'
+import { argsFor, createSupabaseStub } from '@/test/supabase-stub'
 
 /**
  * What settings will and will not let happen.
@@ -195,6 +195,77 @@ describe('updateAccount', () => {
     // The key stays put, which is the entire reason renaming is safe.
     expect(patch.name).toBe('Rekening Gaji')
     expect(patch.key).toBe('mandiri')
+  })
+})
+
+describe('updateAccount, with e-wallet numbers', () => {
+  const BANK_ID = '00000000-0000-4000-8000-0000000000a1'
+  const GOPAY_ID = '00000000-0000-4000-8000-0000000000a2'
+  const ANTAR_ACCOUNT = { id: '00000000-0000-4000-8000-0000000000c9', name: 'Antar Account', cashflow: 'transfer', sort_order: 9, archived_at: null }
+  const OWN_TOP_UP = {
+    id: '00000000-0000-4000-8000-0000000000t1',
+    raw_description: 'Pembayaran GoPay Customer\n085800000001',
+    category_id: '00000000-0000-4000-8000-0000000000c3',
+    category_locked_at: null,
+    split_of: null,
+  }
+  const SOMEONE_ELSE = { ...OWN_TOP_UP, id: '00000000-0000-4000-8000-0000000000t2', raw_description: 'Pembayaran GoPay Customer\n08567800000' }
+
+  function save(identifiers: string) {
+    return updateAccount(null, form({ ...ACCOUNT_FIELDS, id: BANK_ID, ownIdentifiers: identifiers }))
+  }
+
+  it('turns old own top-ups into transfers to the wallet account, and says so', async () => {
+    household()
+    stub.queue('accounts', { data: ACCOUNTS }, { data: [{ id: BANK_ID }] })
+    stub.queue('categories', { data: [...CATEGORIES, ANTAR_ACCOUNT] })
+    stub.queue('transactions', { data: [OWN_TOP_UP, SOMEONE_ELSE] }, { data: [{ id: OWN_TOP_UP.id }] })
+
+    const result = await save('085800000001')
+
+    expect(result.ok).toBe(true)
+    expect(result.detail).toContain('1 transaksi lama ke GoPay')
+
+    const [read, write] = stub.callsOn('transactions')
+    // Only what the import filed as spending paid to nobody, from this bank.
+    expect(argsFor(read, 'eq')).toEqual(
+      expect.arrayContaining([['from_account_id', BANK_ID], ['source', 'xlsx'], ['cashflow', 'spending']]),
+    )
+    expect(argsFor(read, 'is')).toEqual(expect.arrayContaining([['to_account_id', null], ['deleted_at', null]]))
+
+    expect(write.payload).toMatchObject({
+      cashflow: 'transfer',
+      to_account_id: GOPAY_ID,
+      category_id: ANTAR_ACCOUNT.id,
+      needs_review: false,
+    })
+    expect(argsFor(write, 'in')).toEqual([['id', [OWN_TOP_UP.id]]])
+    // Repeated on the write, so a row changed since the read is skipped.
+    expect(argsFor(write, 'eq')).toEqual(expect.arrayContaining([['cashflow', 'spending']]))
+    expect(argsFor(write, 'is')).toEqual([['to_account_id', null]])
+  })
+
+  it('does not look at transactions when no number is saved', async () => {
+    household()
+    stub.queue('accounts', { data: ACCOUNTS }, { data: [{ id: BANK_ID }] })
+
+    const result = await save('')
+
+    expect(result.ok).toBe(true)
+    expect(stub.callsOn('transactions')).toHaveLength(0)
+  })
+
+  it('keeps the save when the backfill fails, and says what did not happen', async () => {
+    household()
+    stub.queue('accounts', { data: ACCOUNTS }, { data: [{ id: BANK_ID }] })
+    stub.queue('categories', { data: CATEGORIES })
+    stub.queue('transactions', { data: null, error: { message: 'boom' } })
+
+    const result = await save('085800000001')
+
+    expect(result.ok).toBe(true)
+    expect(result.message).toBe('Akun Bank Mandiri disimpan.')
+    expect(result.detail).toContain('transaksi lama belum ikut diperbarui')
   })
 })
 

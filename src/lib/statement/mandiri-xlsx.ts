@@ -210,7 +210,8 @@ function readNo(sheet: Sheet, row: number, dateCol: number): number | null {
   return null
 }
 
-function splitLines(description: string): string[] {
+/** A cell's text as the lines the bank printed, whitespace collapsed, blanks dropped. */
+export function splitLines(description: string): string[] {
   return description
     .replace(/\r\n/g, '\n')
     .split('\n')

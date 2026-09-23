@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { parseIdAmount } from '@/lib/money'
 import type { StatementRow } from './mandiri-xlsx'
-import { classify, normalisePhone } from './classify'
+import { classify, normalisePhone, ownWalletTopUp } from './classify'
 
 /**
  * Fixtures reproduce real description shapes observed across 1,591 statement
@@ -260,5 +260,33 @@ describe('normalisePhone', () => {
     expect(normalisePhone('081200000001')).toBe('081200000001')
     expect(normalisePhone('6281200000001')).toBe('081200000001')
     expect(normalisePhone('+62 812-0000-0001')).toBe('081200000001')
+  })
+})
+
+describe('ownWalletTopUp', () => {
+  // The same rows the import sees, as `raw_description` stores them.
+  const OWN_NUMBER = ['085800000001']
+
+  it('names the wallet when the number behind the biller prefix is the household own', () => {
+    expect(ownWalletTopUp('Pembayaran GoPay Customer\n085800000001', OWN_NUMBER)).toBe('GoPay')
+    expect(ownWalletTopUp('Pembayaran Danatopup\n89508085800000001', OWN_NUMBER)).toBe('DANA')
+    expect(ownWalletTopUp('Pembayaran ShopeePay\n893085800000001', OWN_NUMBER)).toBe('ShopeePay')
+  })
+
+  it('reads the description the way the statement printed it, stray whitespace and all', () => {
+    expect(ownWalletTopUp('  Pembayaran GoPay Customer \r\n\n 0858 0000 0001 ', OWN_NUMBER)).toBe('GoPay')
+  })
+
+  it('leaves a payment to somebody else wallet alone', () => {
+    expect(ownWalletTopUp('Pembayaran GoPay Customer\n08567800000', OWN_NUMBER)).toBeNull()
+  })
+
+  it('does not mistake shopping at Shopee, or the fee row, for a top-up', () => {
+    expect(ownWalletTopUp('Pembayaran Shopee Indonesia\n896085800000001', OWN_NUMBER)).toBeNull()
+    expect(ownWalletTopUp('Biaya transaksi bank\nPembayaran GoPay Customer\n085800000001', OWN_NUMBER)).toBeNull()
+  })
+
+  it('knows nothing without a number to compare against', () => {
+    expect(ownWalletTopUp('Pembayaran GoPay Customer\n085800000001', [])).toBeNull()
   })
 })
