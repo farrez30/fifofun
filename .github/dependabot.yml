@@ -19,6 +19,11 @@ updates:
       tooling:
         patterns: ['eslint*', 'typescript', 'vitest', '@vitest/*', 'tsx', 'dotenv']
         update-types: ['minor', 'patch']
+    ignore:
+      # Types follow the runtime, and the runtime is Node 22 (.nvmrc, engines).
+      # A newer major types APIs that do not exist when the code actually runs.
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
     commit-message:
       prefix: 'chore'
 
