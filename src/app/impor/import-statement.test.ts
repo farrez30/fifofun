@@ -2,12 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createSupabaseStub } from '@/test/supabase-stub'
 
 /**
- * The failure paths `useOffline` (next.config.ts) turns into an endless
- * replay if they escape as a throw instead of a report: `importStatement`
- * has to answer every one of these with an `ImportReport`, never let one
- * fall through to the caller. What matters here is which stage the message
- * names and whether it tells the truth about what is already saved, not the
- * statement parsing itself, which mandiri-xlsx.test.ts already covers.
+ * The failure paths that would otherwise escape the route as a bare 500:
+ * `importStatement` has to answer every one of these with an `ImportReport`,
+ * never let one fall through to the caller. What matters here is which stage
+ * the message names and whether it tells the truth about what is already
+ * saved, not the statement parsing itself, which mandiri-xlsx.test.ts
+ * already covers.
  */
 
 const stub = createSupabaseStub()
@@ -15,10 +15,12 @@ const stubFrom = stub.client.from
 
 let createClientImpl: () => Promise<unknown> = async () => stub.client
 vi.mock('@/lib/supabase/server', () => ({ createClient: () => createClientImpl() }))
-vi.mock('next/cache', () => ({ updateTag: vi.fn() }))
+const revalidateTag = vi.fn()
+vi.mock('next/cache', () => ({ revalidateTag: (...args: unknown[]) => revalidateTag(...args) }))
 
 const parseMandiriStatement = vi.fn()
-vi.mock('@/lib/statement/mandiri-xlsx', () => ({
+vi.mock('@/lib/statement/mandiri-xlsx', async (importActual) => ({
+  StatementParseError: (await importActual<typeof import('@/lib/statement/mandiri-xlsx')>()).StatementParseError,
   parseMandiriStatement: (...args: unknown[]) => parseMandiriStatement(...args),
 }))
 
@@ -29,7 +31,7 @@ vi.mock('@/lib/statement/to-ledger', () => ({
 
 vi.mock('@/lib/xlsx', () => ({ readXlsx: vi.fn(() => ({})) }))
 
-const { importStatement } = await import('./actions')
+const { importStatement } = await import('./import-statement')
 
 const VALID_STATEMENT = {
   header: {
@@ -73,7 +75,7 @@ beforeEach(() => {
 
 describe('importStatement', () => {
   it('rejects a file with no ZIP magic the same way it always has', async () => {
-    const result = await importStatement(null, formWith(statementFile([0, 0, 0, 0])))
+    const result = await importStatement(formWith(statementFile([0, 0, 0, 0])))
 
     expect(result).toEqual({
       ok: false,
@@ -84,12 +86,31 @@ describe('importStatement', () => {
     expect(parseMandiriStatement).not.toHaveBeenCalled()
   })
 
+  it('passes the parser own sentence through, but not what the ZIP reader throws', async () => {
+    const { StatementParseError } = await import('@/lib/statement/mandiri-xlsx')
+    stub.queue('households', { data: { id: 'h1' } })
+    parseMandiriStatement.mockImplementation(() => {
+      throw new StatementParseError('Kolom saldo tidak ditemukan.')
+    })
+    const parser = await importStatement(formWith(statementFile()))
+
+    stub.queue('households', { data: { id: 'h1' } })
+    parseMandiriStatement.mockImplementation(() => {
+      throw new Error('invalid zip data')
+    })
+    const zip = await importStatement(formWith(statementFile()))
+
+    expect(parser.detail).toBe('Kolom saldo tidak ditemukan.')
+    expect(zip.message).toBe('Berkasnya tidak bisa dibaca sebagai e-Statement Mandiri.')
+    expect(zip.detail).not.toMatch(/zip data/)
+  })
+
   it('reports the "memeriksa sesi" stage, not a throw, when the client cannot be created', async () => {
     createClientImpl = async () => {
       throw new Error('ECONNREFUSED')
     }
 
-    const result = await importStatement(null, formWith(statementFile()))
+    const result = await importStatement(formWith(statementFile()))
 
     expect(result.ok).toBe(false)
     expect(result.message).toBe('Impor berhenti saat memeriksa sesi.')
@@ -105,7 +126,7 @@ describe('importStatement', () => {
       throw new Error('unexpected shape')
     })
 
-    const result = await importStatement(null, formWith(statementFile()))
+    const result = await importStatement(formWith(statementFile()))
 
     expect(result.ok).toBe(false)
     expect(result.message).toBe('Impor berhenti saat mencocokkan.')
@@ -133,7 +154,7 @@ describe('importStatement', () => {
       return stubFrom(table)
     }) as typeof stub.client.from
 
-    const result = await importStatement(null, formWith(statementFile()))
+    const result = await importStatement(formWith(statementFile()))
 
     expect(result.ok).toBe(false)
     expect(result.message).toBe('Impor berhenti saat menyimpan.')
@@ -148,9 +169,26 @@ describe('importStatement', () => {
     stub.queue('import_batches', { data: { id: 'batch1' } })
     stub.queue('transactions', { data: [] })
 
-    const result = await importStatement(null, formWith(statementFile()))
+    const result = await importStatement(formWith(statementFile()))
 
     expect(result.ok).toBe(true)
     expect(result.message).toBe('0 transaksi masuk, dan saldonya cocok sampai ke sen terakhir.')
+    // Expired outright: the form refreshes straight after, and a stale ledger
+    // there would read as an import that saved nothing.
+    expect(revalidateTag.mock.calls).toEqual([
+      ['tx:h1', { expire: 0 }],
+      ['imports:h1', { expire: 0 }],
+      ['rules:h1', { expire: 0 }],
+    ])
+  })
+
+  it('leaves the cache alone when nothing was saved', async () => {
+    createClientImpl = async () => {
+      throw new Error('ECONNREFUSED')
+    }
+
+    await importStatement(formWith(statementFile()))
+
+    expect(revalidateTag).not.toHaveBeenCalled()
   })
 })

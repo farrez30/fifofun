@@ -231,16 +231,17 @@ hanya hidup di produksi benar-benar hidup.
 ## Batas yang berlaku di produksi tapi tidak di lokal
 
 **Ukuran unggahan.** Vercel menolak body permintaan di atas 4,5MB di edge,
-sebelum kode mana pun berjalan. `serverActions.bodySizeLimit` diset `4mb` agar
-tetap di bawahnya, dan batas milik aksi impor sendiri diset 3MB agar pesan
-kesalahan yang muncul adalah pesan tentang statement, bukan kesalahan transport.
-Statement Mandiri sungguhan berukuran sekitar 45KB, jadi ketiga angka ini jauh
-di atas kebutuhan; yang penting adalah urutannya, dan urutan itu akan rusak
-kalau salah satunya diubah sendirian.
+sebelum kode mana pun berjalan. Impor e-Statement lewat route handler
+`/impor/unggah`, bukan Server Action, dan route itu menolak body di atas 3MB
+dari `Content-Length` sebelum membacanya, supaya pesan yang muncul adalah pesan
+tentang statement, bukan halaman error dari edge. Statement Mandiri sungguhan
+berukuran sekitar 45KB. Server Action lain hanya membawa beberapa field, jadi
+`serverActions.bodySizeLimit` dibiarkan di default 1MB.
 
-**Durasi fungsi.** Paket Hobby memutus fungsi di 60 detik. Tidak ada di aplikasi
-ini yang mendekatinya, termasuk impor, tapi ini yang akan pertama kali terkena
-kalau suatu saat ada pekerjaan batch.
+**Durasi fungsi.** Paket Hobby memutus fungsi di 60 detik; route impor
+menuliskannya sebagai `maxDuration`. Tidak ada di aplikasi ini yang
+mendekatinya, termasuk impor. Kalau suatu saat terjadi, klien menerima 504 dan
+menampilkannya sebagai "Server berhenti sebelum impornya selesai".
 
 **Rate limit Telegram.** Jendela geser di route Telegram disimpan di memori
 instance, jadi ia ikut hilang setiap kali instance-nya didaur ulang. Itu rem,

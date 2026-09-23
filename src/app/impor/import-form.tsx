@@ -2,11 +2,12 @@
 
 import { useActionState, useEffect, useRef, useState } from 'react'
 import { useFormStatus } from 'react-dom'
-import { useOffline } from 'next/offline'
+import { useRouter } from 'next/navigation'
 import { BUTTON_PRIMARY } from '@/components/field-base'
 import { formatIdr } from '@/lib/money'
-import { importStatement, type ImportReport } from './actions'
-import { waitPhase, withDeadline, type WaitPhase } from './wait'
+import type { ImportReport } from './import-statement'
+import { uploadStatement } from './upload'
+import { waitPhase, type WaitPhase } from './wait'
 
 /**
  * The upload form.
@@ -17,21 +18,16 @@ import { waitPhase, withDeadline, type WaitPhase } from './wait'
  * also the accuracy check on manual bookkeeping, so what it found matters as
  * much as whether it worked.
  *
- * The wait itself gets an honest ending. `experimental.useOffline` holds a
- * failed request pending and retries it without a deadline of its own, which
- * looks identical to a slow server from a form that only ever renders
- * `pending`. Past ninety seconds this stops waiting and says so, and the
- * status line beneath the button explains what a still-changing label cannot.
+ * The upload goes through `upload.ts` rather than a Server Action, which says
+ * why. The wait gets an honest ending there too: one attempt, a real deadline,
+ * and a sentence for each way it can fail. The status line beneath the button
+ * covers the stretch before that, which a still-changing label cannot.
  */
-
-/** After this, the deadline below wins and the form stops waiting on its own. */
-const DEADLINE_MS = 90_000
 
 const WAIT_MESSAGE: Record<Exclude<WaitPhase, 'checking'>, string> = {
   slow: 'Masih berjalan, biasanya selesai di bawah sepuluh detik.',
   stalled:
     'Lebih lama dari biasanya. Kalau halaman ini dimuat ulang, impor yang sudah tersimpan tidak akan ganda.',
-  offline: 'Koneksi terputus. Berkas dikirim ulang begitu jaringan kembali, jangan tutup halaman ini.',
 }
 
 function Submit({ hasFile }: { hasFile: boolean }) {
@@ -52,7 +48,6 @@ function Submit({ hasFile }: { hasFile: boolean }) {
 /** The extra line under the button, once the wait has gone on long enough to say more. */
 function WaitStatus() {
   const { pending } = useFormStatus()
-  const offline = useOffline()
   const [elapsedMs, setElapsedMs] = useState(0)
 
   useEffect(() => {
@@ -74,7 +69,7 @@ function WaitStatus() {
   }, [pending])
 
   if (!pending) return null
-  const phase = waitPhase(elapsedMs, offline)
+  const phase = waitPhase(elapsedMs)
   if (phase === 'checking') return null
 
   return (
@@ -90,16 +85,14 @@ function WaitStatus() {
  * finished report looks like. The real page never passes it.
  */
 export function ImportForm({ initialReport = null }: { initialReport?: ImportReport | null } = {}) {
-  const [report, action] = useActionState<ImportReport | null, FormData>(
-    (previous, formData) =>
-      withDeadline(importStatement(previous, formData), DEADLINE_MS, () => ({
-        ok: false,
-        message: 'Server belum menjawab setelah 90 detik.',
-        detail:
-          'Buka Tinjau untuk memeriksa apakah transaksinya sudah masuk. Mengunggah berkas yang sama lagi aman, tidak akan digandakan.',
-      })),
-    initialReport,
-  )
+  const router = useRouter()
+  const [report, action] = useActionState<ImportReport | null, FormData>(async (_previous, formData) => {
+    const result = await uploadStatement(formData.get('statement'))
+    // The route expired the ledger's cache tags; this is what makes the rest
+    // of the app pick that up without a manual reload.
+    if (result.ok) router.refresh()
+    return result
+  }, initialReport)
   const [filename, setFilename] = useState<string | null>(null)
   const [dragging, setDragging] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -149,7 +142,7 @@ export function ImportForm({ initialReport = null }: { initialReport?: ImportRep
             className="sr-only"
           />
           <p className="mt-2 text-subhead text-ink-muted">
-            atau seret berkasnya ke sini. Format .xlsx dari Livin&apos;, maksimal 10 MB.
+            atau seret berkasnya ke sini. Format .xlsx dari Livin&apos;, maksimal 3 MB.
           </p>
           {filename ? (
             <p className="mt-3 inline-block rounded-sm border border-line bg-sunken px-3 py-1.5 tnum font-mono text-footnote text-ink">

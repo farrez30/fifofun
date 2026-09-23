@@ -6,11 +6,12 @@ import { FIXTURE_DIR } from './render'
  * The report an import leaves behind, in both directions.
  *
  * `importStatement` used to let an unexpected throw escape to the global
- * error boundary, and `experimental.useOffline` (next.config.ts) replays a
- * failed Server Action forever with no message of its own. Both failure
- * modes look identical from the button: `pending` stays true. What this
- * checks is the report those failures now produce instead of silence, and
- * that the panel showing it is still usable on a phone.
+ * error boundary, and as a Server Action it rode `experimental.useOffline`,
+ * which replayed a failed upload forever with no message of its own. Both
+ * looked identical from the button: `pending` stayed true. What this checks
+ * is the report those failures now produce instead of silence, and that the
+ * panel showing it is still usable on a phone. How each failure becomes a
+ * report is unit-tested in src/app/impor/upload.test.ts.
  */
 
 async function open(page: import('@playwright/test').Page, fixture: string) {

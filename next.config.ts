@@ -47,30 +47,19 @@ const nextConfig: NextConfig = {
       Holds a failed navigation or Server Action pending instead of throwing, and
       retries it once the connection returns.
 
-      Genuinely safe for a dropped connection, where the retried request never
-      reached the server the first time. Not the whole story for the import
-      flow specifically: a function killed mid-response (the platform's own
-      timeout, see docs/deploy.md) looks identical to a dropped connection from
-      here and gets replayed the same way, except the first attempt may already
-      have written. The replay itself stays harmless either way, because an
-      import is idempotent by file hash, but "harmless" and "never reached the
-      server" are different claims; src/app/impor/actions.ts and its
-      client-side deadline in wait.ts are what actually answer the second one.
+      Safe for the small forms that use it: a dropped connection means the
+      request never arrived, and the replay is the first real attempt. Not safe
+      for uploads, which is why the statement import is a route handler with a
+      plain fetch (src/app/impor/upload.ts). The replay resends the same body
+      with no cap, so a file that changed on disk after it was picked failed
+      identically forever and the form flickered "Koneksi terputus" until its
+      deadline.
+
+      No `serverActions.bodySizeLimit` either, for the same reason: it was
+      raised to 4mb only for the import, and every action left is a few
+      fields, so the 1MB default is the tighter and truer bound.
     */
     useOffline: true,
-
-    serverActions: {
-      /*
-        The default is 1MB, which is below the cap the import action enforces
-        for itself: a file between the two would be rejected by the framework
-        before the action ran, with a message that says nothing about
-        statements. Vercel refuses a request body over 4.5MB at the edge no
-        matter what is configured here, so this sits just under that and the
-        action's own limit sits under this. A real Mandiri statement is around
-        45KB.
-      */
-      bodySizeLimit: '4mb',
-    },
   },
 
   async headers() {

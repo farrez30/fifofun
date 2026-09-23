@@ -1,7 +1,5 @@
-'use server'
-
 import { createHash } from 'node:crypto'
-import { updateTag } from 'next/cache'
+import { revalidateTag } from 'next/cache'
 import { importsTag, rulesTag, txTag } from '@/lib/queries/tags'
 import { formatIdr } from '@/lib/money'
 import { toJakartaInstant } from '@/lib/datetime'
@@ -9,7 +7,7 @@ import { findLikelyDuplicates } from '@/lib/ledger/conflicts'
 import { ruleAgreesWithDirection } from '@/lib/ledger/direction'
 import { firstMatch, type Rule } from '@/lib/ledger/rules'
 import { DEFAULT_CATEGORY_BY_KIND } from '@/lib/ledger/seed-data'
-import { parseMandiriStatement } from '@/lib/statement/mandiri-xlsx'
+import { parseMandiriStatement, StatementParseError } from '@/lib/statement/mandiri-xlsx'
 import { statementToLedger } from '@/lib/statement/to-ledger'
 import { authedUser } from '@/lib/supabase/auth-user'
 import { createClient } from '@/lib/supabase/server'
@@ -27,6 +25,12 @@ import { readXlsx } from '@/lib/xlsx'
  * is to be right. Refusing costs the user a second attempt; accepting costs them
  * a figure they will trust and should not.
  *
+ * Called from the route handler in `unggah/route.ts`, not as a Server Action.
+ * A Server Action upload rides `experimental.useOffline`, which replays any
+ * rejected fetch forever with the same body; a file that changed on disk after
+ * it was picked rejects the same way every time, and the form flickered
+ * "Koneksi terputus" without end. A plain fetch fails once and says so.
+ *
  * The second is that every write goes through PostgREST rather than Drizzle.
  * Drizzle connects as the database owner and bypasses row level security
  * entirely, which is correct for a seed script run from a laptop and completely
@@ -38,11 +42,12 @@ import { readXlsx } from '@/lib/xlsx'
 /**
  * A statement is a few hundred kilobytes. This is generous and still bounded.
  *
- * It has to stay under `serverActions.bodySizeLimit`, or a file between the two
- * is rejected by the framework and the caller sees a transport error instead of
- * the message below.
+ * It has to stay under Vercel's 4.5MB request cap, or a file between the two
+ * is refused at the edge and the caller sees an HTML error page instead of the
+ * message below. The route checks the same number against Content-Length
+ * before it reads the body at all.
  */
-const MAX_UPLOAD_BYTES = 3 * 1024 * 1024
+export const MAX_UPLOAD_BYTES = 3 * 1024 * 1024
 
 /** Every .xlsx is a ZIP, and every ZIP starts with these four bytes. */
 const ZIP_MAGIC = [0x50, 0x4b, 0x03, 0x04]
@@ -80,14 +85,11 @@ function fail(message: string, detail?: string): ImportReport {
 }
 
 /**
- * Where an unexpected throw can land, in the order the action reaches them.
+ * Where an unexpected throw can land, in the order the import reaches them.
  *
- * `useOffline` (next.config.ts) replays a Server Action whose fetch rejects,
- * forever, on the assumption stated there that a replay is always safe because
- * the request never reached the server. That holds for a dropped connection
- * and not for a function killed mid-response: the import may already have run.
- * The stage is what lets the message tell the two apart, so the reader knows
- * whether uploading again is a fresh attempt or a duplicate check.
+ * The stage is what lets the message say whether anything is already saved,
+ * so the reader knows whether uploading again is a fresh attempt or a
+ * duplicate check.
  */
 type Stage = 'memeriksa sesi' | 'membaca berkas' | 'mencocokkan' | 'menyimpan' | 'merapikan'
 
@@ -105,10 +107,7 @@ function isoDate(date: { year: number; month: number; day: number }): string {
   return `${date.year}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`
 }
 
-export async function importStatement(
-  _previous: ImportReport | null,
-  formData: FormData,
-): Promise<ImportReport> {
+export async function importStatement(formData: FormData): Promise<ImportReport> {
   const file = formData.get('statement')
   if (!(file instanceof File) || file.size === 0) {
     return fail('Pilih satu berkas e-Statement lebih dulu.')
@@ -157,7 +156,11 @@ export async function importStatement(
     } catch (error) {
       return fail(
         'Berkasnya tidak bisa dibaca sebagai e-Statement Mandiri.',
-        error instanceof Error ? error.message : undefined,
+        // Only the parser's own sentences, which are written for the reader.
+        // What the ZIP and XML layers throw ("invalid zip data") is not.
+        error instanceof StatementParseError
+          ? error.message
+          : "Isinya tidak berbentuk spreadsheet .xlsx yang utuh. Unduh ulang e-Statement-nya dari Livin', lalu coba lagi.",
       )
     }
 
@@ -423,10 +426,13 @@ export async function importStatement(
       updateRuleHitCounts(supabase, rules, ruleHits),
     ])
 
-    // Rules too: the import bumps hit counts on the ones it applied.
-    updateTag(txTag(household.id))
-    updateTag(importsTag(household.id))
-    updateTag(rulesTag(household.id))
+    // Rules too: the import bumps hit counts on the ones it applied. Expired
+    // outright rather than 'max': the form refreshes straight after, and a
+    // stale ledger there would read as an import that saved nothing.
+    // `updateTag` would do this, but it is Server-Action-only.
+    revalidateTag(txTag(household.id), { expire: 0 })
+    revalidateTag(importsTag(household.id), { expire: 0 })
+    revalidateTag(rulesTag(household.id), { expire: 0 })
 
     return {
       ok: true,

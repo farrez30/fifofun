@@ -23,7 +23,7 @@ import { describe, expect, it } from 'vitest'
  * `reconcile()`), and flagging a message nobody sees would be noise, not a
  * fix.
  *
- * One named exception: `impor/actions.ts` passes a caught error's own
+ * One named exception: `impor/import-statement.ts` passes a caught error's own
  * `.message` into the reader-facing detail when a .xlsx fails to parse. That
  * message is written in Indonesian at the throw site (`mandiri-xlsx.ts`'s
  * `StatementParseError`), so passing it through is the point, not a leak —
@@ -31,7 +31,7 @@ import { describe, expect, it } from 'vitest'
  */
 
 const SCOPE = ['src/app', 'src/components']
-const ALLOWED_RAW_ERROR_MESSAGE = new Set(['src/app/impor/actions.ts'])
+const ALLOWED_RAW_ERROR_MESSAGE = new Set(['src/app/impor/import-statement.ts'])
 
 const EM_DASH = /—/
 const EMOJI = /\p{Extended_Pictographic}/u
