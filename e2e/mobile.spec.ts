@@ -552,6 +552,44 @@ test('the swipe stands aside once a form has work in it', async ({ page }) => {
   expect(verdicts.outsideAnyForm, 'nothing outside a form is affected').toBe(false)
 })
 
+test('the Lainnya sheet opens against the bottom of the screen on a scrolled page', async ({ page }) => {
+  /*
+    `.material` says `position: relative`, which beat the user agent's `fixed`
+    for a modal dialog, and the top layer turned it into `absolute` against the
+    document. On a page scrolled past the top the sheet landed where the page
+    had been, floating mid-screen with content showing beneath it. Nothing
+    caught it because every other check here looks at an unscrolled page.
+
+    The fixture is static, so the test opens the dialog itself.
+  */
+  await open(page, 'shell-over-chart.html')
+  await page.evaluate(() => {
+    document.body.style.minHeight = '4000px'
+    window.scrollTo(0, 1500)
+    document.querySelector<HTMLDialogElement>('dialog.sheet')!.showModal()
+  })
+  await page.evaluate(() =>
+    Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => undefined))),
+  )
+
+  const sheet = await page.evaluate(() => {
+    const dialog = document.querySelector<HTMLDialogElement>('dialog.sheet')!
+    const rows = dialog.querySelectorAll('li')
+    return {
+      position: getComputedStyle(dialog).position,
+      bottom: dialog.getBoundingClientRect().bottom,
+      lastRow: rows[rows.length - 1].getBoundingClientRect().bottom,
+      viewport: window.innerHeight,
+    }
+  })
+
+  expect(sheet.position).toBe('fixed')
+  // Bleeds past the edge by design, so the spring's overshoot shows no scrim.
+  expect(sheet.bottom).toBeGreaterThanOrEqual(sheet.viewport)
+  // And the padding that pays for the bleed keeps every row on the screen.
+  expect(sheet.lastRow).toBeLessThanOrEqual(sheet.viewport)
+})
+
 for (const scheme of ['light', 'dark'] as const) {
   test(`every fixture passes axe at phone width in ${scheme} mode`, async ({ page }) => {
     await page.emulateMedia({ colorScheme: scheme })

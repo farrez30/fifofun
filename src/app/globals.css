@@ -1400,6 +1400,14 @@
     bug before this line, not a hypothetical one.
   */
   .sheet {
+    /*
+      Fixed, restated. A modal dialog is `position: fixed` only by user agent
+      style, and `.material` above says `relative`, which wins. The top layer
+      then computes that to `absolute` against the document, so a sheet opened
+      on a scrolled page landed wherever the page had been at the top, with
+      content showing below it instead of the tab bar.
+    */
+    position: fixed;
     max-height: 88dvh;
     transform: translateY(0);
     opacity: 1;

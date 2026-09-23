@@ -355,8 +355,11 @@ export function MobileTabs({ current, email, review }: Props) {
         /* Focusable, so opening can park focus on the dialog itself; see the
            opener. Negative, so tabbing never returns here. */
         tabIndex={-1}
-        /* A dialog centres itself. `mt-auto mb-0` drops it to the bottom edge,
-           where the hand that opened it already is. */
+        /* A dialog centres itself. `mt-auto` drops it to the bottom edge,
+           where the hand that opened it already is. No `mb-0` and no
+           `p-0`: a utility outranks `.sheet[open]`, and zeroing the bottom
+           margin and padding there cancelled the bleed that hides the
+           spring's overshoot, or hid the last rows under the screen edge. */
         /*
           `material-thick`, not `material`. A sheet covers the page rather than
           floating over a strip of it, so it obscures where a bar reports; the
@@ -367,7 +370,7 @@ export function MobileTabs({ current, email, review }: Props) {
           the height clamp, the presentation spring and the bleed that keeps the
           overshoot from showing scrim underneath.
         */
-        className="material material-thick sheet mx-auto mb-0 mt-auto w-full max-w-none rounded-t-xl border-t p-0 text-ink backdrop:bg-scrim sm:hidden"
+        className="material material-thick sheet mx-auto mt-auto w-full max-w-none rounded-t-xl border-t px-0 pt-0 text-ink backdrop:bg-scrim sm:hidden"
         /* A click that lands on the dialog itself landed on the backdrop: every
            child covers its own area. */
         onClick={(event) => {
