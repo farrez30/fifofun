@@ -13,6 +13,13 @@ import { authedUser } from '@/lib/supabase/auth-user'
 import { createClient } from '@/lib/supabase/server'
 import { SESSION_EXPIRED, WRITE_FAILED } from '@/lib/actions'
 import { readXlsx } from '@/lib/xlsx'
+import {
+  decryptWorkbook,
+  isCompoundFile,
+  isEncryptedWorkbook,
+  UnsupportedWorkbookError,
+  WrongPasswordError,
+} from '@/lib/xlsx/encrypted'
 
 /**
  * Importing a statement.
@@ -52,6 +59,12 @@ export const MAX_UPLOAD_BYTES = 3 * 1024 * 1024
 /** Every .xlsx is a ZIP, and every ZIP starts with these four bytes. */
 const ZIP_MAGIC = [0x50, 0x4b, 0x03, 0x04]
 
+/** Excel caps a workbook password at 255 characters. */
+const MAX_PASSWORD_LENGTH = 255
+
+const PASSWORD_IS_NOT_KEPT =
+  'Kata sandinya hanya dipakai untuk membuka berkas ini di server, lalu dibuang. Tidak disimpan dan tidak dicatat.'
+
 export interface ImportIssue {
   kind: string
   /** Absent where the mismatch is in a total rather than in one row. */
@@ -71,6 +84,11 @@ export interface ImportReport {
   needsReview?: number
   /** Manual entries that look like rows this statement just brought in. */
   duplicatesSuspected?: number
+  /**
+   * The file is password-protected, and the form should ask for the password
+   * and send the same file again. Set on a wrong password too.
+   */
+  needsPassword?: boolean
   /** Which part of settings has to be filled in before this can work. */
   needsSettings?: 'akun'
   /** Payments to e-wallets that could not be recognised as the household own. */
@@ -122,8 +140,11 @@ export async function importStatement(formData: FormData): Promise<ImportReport>
 
   const bytes = new Uint8Array(await file.arrayBuffer())
 
-  // The extension is a claim by whoever uploaded; the first four bytes are not.
-  if (!ZIP_MAGIC.every((byte, index) => bytes[index] === byte)) {
+  // The extension is a claim by whoever uploaded; the first bytes are not. An
+  // OLE container is let through: a password-protected .xlsx is one, and it
+  // is opened below, once the session is known to be real.
+  const zip = ZIP_MAGIC.every((byte, index) => bytes[index] === byte)
+  if (!zip && !isCompoundFile(bytes)) {
     return fail(
       'Berkas ini bukan .xlsx.',
       'Sebuah .xlsx sebenarnya arsip ZIP, dan berkas ini tidak diawali penanda ZIP. Kalau yang kamu punya PDF, gunakan menu impor PDF.',
@@ -150,9 +171,58 @@ export async function importStatement(formData: FormData): Promise<ImportReport>
     }
 
     stage = 'membaca berkas'
+
+    /*
+      A password-protected .xlsx, as Mandiri sends from August 2026. Opened
+      only here, after the session check: every attempt costs a hundred
+      thousand hash rounds, and that is not something to hand out to anyone
+      who can reach the route.
+    */
+    let workbook: Uint8Array = bytes
+    if (!zip) {
+      if (!isEncryptedWorkbook(bytes)) {
+        return fail(
+          'Berkas ini format .xls lama, bukan .xlsx.',
+          "Buka di Excel, pilih Simpan Sebagai, lalu pilih Buku Kerja Excel (.xlsx). Atau unduh ulang e-Statement-nya dari Livin' dalam format .xlsx.",
+        )
+      }
+      const password = formData.get('password')
+      if (typeof password !== 'string' || password.length === 0) {
+        return {
+          ...fail(
+            'Berkas ini dikunci kata sandi.',
+            `Ketik kata sandi e-Statement-nya, lalu impor lagi. ${PASSWORD_IS_NOT_KEPT}`,
+          ),
+          filename: file.name,
+          needsPassword: true,
+        }
+      }
+      const wrongPassword: ImportReport = {
+        ...fail(
+          'Kata sandinya belum cocok.',
+          'Periksa huruf besar-kecilnya, lalu impor lagi. Kata sandinya sama dengan yang diminta Excel saat membuka berkas ini.',
+        ),
+        filename: file.name,
+        needsPassword: true,
+      }
+      if (password.length > MAX_PASSWORD_LENGTH) return wrongPassword
+      try {
+        workbook = decryptWorkbook(bytes, password)
+      } catch (error) {
+        if (error instanceof WrongPasswordError) return wrongPassword
+        if (error instanceof UnsupportedWorkbookError) {
+          return fail(
+            'Kunci berkas ini belum bisa dibuka di sini.',
+            'Buka di Excel dengan kata sandinya, hapus kata sandinya (File, Info, Proteksi Buku Kerja, Enkripsi dengan Kata Sandi, kosongkan), simpan, lalu unggah lagi.',
+          )
+        }
+        throw error
+      }
+    }
+
     let statement
     try {
-      statement = parseMandiriStatement(readXlsx(bytes))
+      statement = parseMandiriStatement(readXlsx(workbook))
     } catch (error) {
       return fail(
         'Berkasnya tidak bisa dibaca sebagai e-Statement Mandiri.',

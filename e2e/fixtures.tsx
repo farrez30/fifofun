@@ -1535,6 +1535,22 @@ export const FIXTURES = {
       }
     />
   ),
+  // A password-protected statement, as Mandiri sends from August 2026: the
+  // form asks for the password under the same file.
+  'impor-minta-kata-sandi': (
+    <ImportForm
+      initialReport={
+        {
+          ok: false,
+          needsPassword: true,
+          filename: 'e-Statement_01 Agu 2026-31 Agu 2026.xlsx',
+          message: 'Berkas ini dikunci kata sandi.',
+          detail:
+            'Ketik kata sandi e-Statement-nya, lalu impor lagi. Kata sandinya hanya dipakai untuk membuka berkas ini di server, lalu dibuang. Tidak disimpan dan tidak dicatat.',
+        } satisfies ImportReport
+      }
+    />
+  ),
   'impor-laporan-sukses': (
     <ImportForm
       initialReport={

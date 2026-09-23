@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from 'react'
 import { useFormStatus } from 'react-dom'
 import { useRouter } from 'next/navigation'
-import { BUTTON_PRIMARY } from '@/components/field-base'
+import { BUTTON_PRIMARY, CONTROL } from '@/components/field-base'
 import { formatIdr } from '@/lib/money'
 import type { ImportReport } from './import-statement'
 import { uploadStatement } from './upload'
@@ -86,13 +86,23 @@ function WaitStatus() {
  */
 export function ImportForm({ initialReport = null }: { initialReport?: ImportReport | null } = {}) {
   const router = useRouter()
+  /*
+    The file behind a password prompt. React clears the form once an action
+    settles, file input included, so without this the reader would be asked
+    for the password and then for the file all over again.
+  */
+  const lockedFile = useRef<File | null>(null)
   const [report, action] = useActionState<ImportReport | null, FormData>(async (_previous, formData) => {
-    const result = await uploadStatement(formData.get('statement'))
+    const picked = formData.get('statement')
+    const file = picked instanceof File && picked.size > 0 ? picked : lockedFile.current
+    const result = await uploadStatement(file, { password: formData.get('password') })
+    lockedFile.current = result.needsPassword ? file : null
     // The route expired the ledger's cache tags; this is what makes the rest
     // of the app pick that up without a manual reload.
     if (result.ok) router.refresh()
     return result
   }, initialReport)
+  const needsPassword = report?.needsPassword === true
   const [filename, setFilename] = useState<string | null>(null)
   const [dragging, setDragging] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -137,7 +147,7 @@ export function ImportForm({ initialReport = null }: { initialReport?: ImportRep
             name="statement"
             type="file"
             accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            required
+            required={!needsPassword}
             onChange={(event) => setFilename(event.target.files?.[0]?.name ?? null)}
             className="sr-only"
           />
@@ -150,6 +160,29 @@ export function ImportForm({ initialReport = null }: { initialReport?: ImportRep
             </p>
           ) : null}
         </div>
+
+        {needsPassword ? (
+          <div className="space-y-1.5">
+            <label htmlFor="statement-password" className="block text-subhead font-medium text-ink">
+              Kata sandi berkas
+            </label>
+            <input
+              id="statement-password"
+              name="password"
+              type="password"
+              // Not the app's own password, so the browser should not offer it.
+              autoComplete="off"
+              required
+              autoFocus
+              aria-describedby="statement-password-hint"
+              className={CONTROL}
+            />
+            <p id="statement-password-hint" className="text-footnote text-ink-faint">
+              Yang diminta Excel saat membuka berkas ini. Dipakai sekali untuk membukanya, tidak
+              disimpan.
+            </p>
+          </div>
+        ) : null}
 
         <Submit hasFile={filename !== null} />
         <WaitStatus />

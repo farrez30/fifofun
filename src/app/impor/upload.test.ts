@@ -50,6 +50,17 @@ describe('uploadStatement', () => {
     expect(new Uint8Array(await sent.arrayBuffer())).toEqual(new Uint8Array([0x50, 0x4b, 0x03, 0x04]))
   })
 
+  it('sends the password only when there is one', async () => {
+    fetchMock.mockResolvedValue(Response.json({ ok: true, message: 'masuk' }))
+
+    await uploadStatement(statement(), { password: 'rahasia' })
+    await uploadStatement(statement(), { password: '' })
+    await uploadStatement(statement())
+
+    const sent = fetchMock.mock.calls.map(([, init]) => (init?.body as FormData).get('password'))
+    expect(sent).toEqual(['rahasia', null, null])
+  })
+
   it('says the file could not be read when the disk refuses it, without a request', async () => {
     const locked = statement()
     locked.arrayBuffer = () => Promise.reject(new DOMException('changed', 'NotReadableError'))

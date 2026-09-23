@@ -1,4 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { SESSION_EXPIRED } from '@/lib/actions'
+import { readXlsx } from '@/lib/xlsx'
+import { ENCRYPTED_WORKBOOK, ENCRYPTED_WORKBOOK_PASSWORD } from '@/lib/xlsx/fixtures/encrypted-workbook'
 import { createSupabaseStub } from '@/test/supabase-stub'
 
 /**
@@ -103,6 +106,83 @@ describe('importStatement', () => {
     expect(parser.detail).toBe('Kolom saldo tidak ditemukan.')
     expect(zip.message).toBe('Berkasnya tidak bisa dibaca sebagai e-Statement Mandiri.')
     expect(zip.detail).not.toMatch(/zip data/)
+  })
+
+  describe('a password-protected statement', () => {
+    // Synthetic; see src/lib/xlsx/encrypted.test.ts.
+    const encrypted = () => new File([new Uint8Array(ENCRYPTED_WORKBOOK)], 'agustus.xlsx')
+
+    function formWithPassword(file: File, password?: string): FormData {
+      const data = formWith(file)
+      if (password !== undefined) data.append('password', password)
+      return data
+    }
+
+    it('asks for the password instead of calling it "not an .xlsx"', async () => {
+      stub.queue('households', { data: { id: 'h1' } })
+
+      const result = await importStatement(formWithPassword(encrypted()))
+
+      expect(result).toMatchObject({
+        ok: false,
+        needsPassword: true,
+        filename: 'agustus.xlsx',
+        message: 'Berkas ini dikunci kata sandi.',
+      })
+      expect(readXlsx).not.toHaveBeenCalled()
+    })
+
+    it('asks again, saying so, when the password is wrong', async () => {
+      stub.queue('households', { data: { id: 'h1' } })
+
+      const result = await importStatement(formWithPassword(encrypted(), 'salah'))
+
+      expect(result).toMatchObject({ ok: false, needsPassword: true, message: 'Kata sandinya belum cocok.' })
+      expect(readXlsx).not.toHaveBeenCalled()
+    })
+
+    it('opens it with the right password and imports the plain workbook inside', async () => {
+      stub.queue('households', { data: { id: 'h1' } })
+      stub.queue('accounts', { data: [BANK] })
+      stub.queue('categories', { data: [] })
+      stub.queue('categorization_rules', { data: [] })
+      stub.queue('import_batches', { data: { id: 'batch1' } })
+      stub.queue('transactions', { data: [] })
+
+      const result = await importStatement(formWithPassword(encrypted(), ENCRYPTED_WORKBOOK_PASSWORD))
+
+      expect(result.ok).toBe(true)
+      const [workbook] = vi.mocked(readXlsx).mock.calls[0] as [Uint8Array]
+      expect([...workbook.subarray(0, 4)]).toEqual([0x50, 0x4b, 0x03, 0x04])
+    })
+
+    it('does not spend a single hash round before the session is known', async () => {
+      stub.setUser(null)
+
+      const result = await importStatement(formWithPassword(encrypted(), ENCRYPTED_WORKBOOK_PASSWORD))
+
+      expect(result.message).toBe(SESSION_EXPIRED)
+      expect(readXlsx).not.toHaveBeenCalled()
+    })
+
+    it('never echoes the password back in the report', async () => {
+      stub.queue('households', { data: { id: 'h1' } })
+      const secret = 'kata-sandi-rahasia-sekali'
+
+      const result = await importStatement(formWithPassword(encrypted(), secret))
+
+      expect(JSON.stringify(result)).not.toContain(secret)
+    })
+
+    it('names a legacy .xls for what it is', async () => {
+      stub.queue('households', { data: { id: 'h1' } })
+      const legacy = new Uint8Array(1024)
+      legacy.set([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1])
+
+      const result = await importStatement(formWith(new File([legacy], 'lama.xls')))
+
+      expect(result.message).toBe('Berkas ini format .xls lama, bukan .xlsx.')
+    })
   })
 
   it('reports the "memeriksa sesi" stage, not a throw, when the client cannot be created', async () => {

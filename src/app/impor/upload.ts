@@ -73,7 +73,7 @@ function isReport(value: unknown): value is ImportReport {
 
 export async function uploadStatement(
   file: FormDataEntryValue | null,
-  { timeoutMs = DEADLINE_MS }: { timeoutMs?: number } = {},
+  { timeoutMs = DEADLINE_MS, password }: { timeoutMs?: number; password?: FormDataEntryValue | null } = {},
 ): Promise<ImportReport> {
   if (!(file instanceof File) || file.size === 0) return UPLOAD_FAILURES.noFile
 
@@ -86,6 +86,9 @@ export async function uploadStatement(
 
   const body = new FormData()
   body.append('statement', copy)
+  // Only for a file the server already said is locked. Sent over the same
+  // HTTPS request as the file and used for nothing but opening it.
+  if (typeof password === 'string' && password.length > 0) body.append('password', password)
 
   let response: Response
   try {
