@@ -1,24 +1,35 @@
 version: 2
 
+# Minor and patch bumps arrive as one pull request a week and merge themselves
+# once CI passes (.github/workflows/dependabot-auto-merge.yml). Majors stay
+# separate and wait for a person, because a major is where things break.
+# Security updates are not affected by any of this: GitHub opens those as soon
+# as an advisory lands, schedule or not.
+
 updates:
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: weekly
       day: monday
+    # A release this young has not had time to be pulled for being broken or
+    # compromised. Same idea as pnpm's minimumReleaseAge, one step earlier.
+    cooldown:
+      default-days: 3
     open-pull-requests-limit: 5
-    # One pull request per group rather than per package. Twenty separate bumps
-    # a week get ignored, which is worse than not knowing.
     groups:
+      # First match wins, so every minor and patch lands here regardless of
+      # the groups below.
+      minor-dan-patch:
+        patterns: ['*']
+        update-types: ['minor', 'patch']
+      # Majors that have to move together, or the lockfile is half upgraded.
       next:
         patterns: ['next', '@next/*', 'react', 'react-dom', 'eslint-config-next']
       supabase:
         patterns: ['@supabase/*']
       drizzle:
         patterns: ['drizzle-orm', 'drizzle-kit']
-      tooling:
-        patterns: ['eslint*', 'typescript', 'vitest', '@vitest/*', 'tsx', 'dotenv']
-        update-types: ['minor', 'patch']
     ignore:
       # Types follow the runtime, and the runtime is Node 22 (.nvmrc, engines).
       # A newer major types APIs that do not exist when the code actually runs.
@@ -31,5 +42,8 @@ updates:
     directory: /
     schedule:
       interval: monthly
+    groups:
+      actions:
+        patterns: ['*']
     commit-message:
       prefix: 'chore'

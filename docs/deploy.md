@@ -247,6 +247,26 @@ menampilkannya sebagai "Server berhenti sebelum impornya selesai".
 instance, jadi ia ikut hilang setiap kali instance-nya didaur ulang. Itu rem,
 bukan jaminan; gerbang sebenarnya tetap allowlist.
 
+## Pembaruan dependensi
+
+Dependabot membuka satu PR per minggu (Senin) untuk semua kenaikan minor dan
+patch, setelah versi barunya berumur minimal 3 hari. PR itu masuk sendiri
+begitu CI lolos, lewat `.github/workflows/dependabot-auto-merge.yml`. Kenaikan
+major tetap PR terpisah dan menunggu direview. Security update dari GitHub
+datang di luar jadwal ini, begitu advisory-nya terbit.
+
+Auto-merge bergantung pada pengaturan yang tidak ada di repo, jadi ditulis di
+sini:
+
+- **Settings → General → Allow auto-merge** menyala.
+- **Branch protection di `main`** mewajibkan enam check: keempat job di
+  `ci.yml`, plus CodeQL dan Secret scan dari `security.yml`. Tanpa aturan ini
+  `gh pr merge --auto` langsung menggabungkan PR tanpa menunggu tes, jadi
+  aturan ini jangan dihapus selama workflow auto-merge masih ada. Kalau nama
+  job di CI diganti, daftar check wajibnya ikut diganti.
+- `enforce_admins` dimatikan, supaya pemilik repo tetap bisa push langsung ke
+  `main`.
+
 ## Rollback
 
 Deployments → pilih deploy yang baik sebelumnya → **Promote to Production**.

@@ -1,0 +1,33 @@
+name: Dependabot auto-merge
+
+on: pull_request
+
+# Nothing here merges anything. `gh pr merge --auto` only arms the merge; GitHub
+# performs it once the required checks on main pass, and never if one fails.
+# Without branch protection requiring those checks, --auto would merge on the
+# spot, so the protection rule on main is part of this workflow, not optional.
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  enable:
+    name: Enable auto-merge
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # The author, not the branch name: anyone can push a branch called
+    # dependabot/*, only Dependabot opens a pull request as itself.
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+
+    steps:
+      - id: meta
+        uses: dependabot/fetch-metadata@v3
+
+      # For a group this is the largest bump inside it, so one major in a
+      # group keeps the whole pull request waiting for a person.
+      - if: steps.meta.outputs.update-type != 'version-update:semver-major'
+        run: gh pr merge --auto --squash --delete-branch "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
