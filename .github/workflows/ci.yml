@@ -89,7 +89,7 @@ jobs:
       - name: Browser tests at phone width
         run: pnpm exec playwright test --config playwright.mobile.config.ts
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-report
@@ -128,7 +128,7 @@ jobs:
       - name: Page tests
         run: pnpm test:e2e:pages
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-report-pages
