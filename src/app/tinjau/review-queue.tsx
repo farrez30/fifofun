@@ -5,7 +5,6 @@ import { useFormStatus } from 'react-dom'
 import { AccountMark, CashflowChip, DirectionMark } from '@/components/marks'
 import { SignedMoney } from '@/components/money'
 import { formatJakarta, formatMonthKey } from '@/lib/datetime'
-import { formatIdrCompact } from '@/lib/money'
 import {
   DIRECTION_LABELS,
   directionOf,
@@ -21,7 +20,7 @@ import { CONTROL } from '@/components/field-base'
 import { queueHref, type QueueOptions } from './query'
 import { applyCategory, categoriseOne, type ActionResult } from './actions'
 import { subtractSettled } from './optimistic'
-import type { QueueSummary } from './summary'
+import { topShareSentence, type QueueSummary } from './summary'
 import { CaretDown } from '@phosphor-icons/react/dist/ssr/CaretDown'
 import { ListChecks } from '@phosphor-icons/react/dist/ssr/ListChecks'
 import { Unavailable } from '@/components/unavailable'
@@ -94,7 +93,10 @@ export function ReviewQueue({ groups, categories, accounts, remaining, options }
     )
   }
 
-  const covered = groups.slice(0, 10).reduce((sum, group) => sum + group.total, 0n)
+  // Only when the order is by size: sorted by time, the first ten are merely
+  // the newest, and how much of the queue they hold says nothing.
+  const topShare =
+    options.kelompok === 'lawan' && options.urut === 'nominal' ? topShareSentence(groups, 10) : null
   const out = groups.filter((group) => group.direction === 'out').length
   const incoming = groups.length - out
   const byName = new Map(accounts.map((account) => [account.id, account]))
@@ -132,9 +134,7 @@ export function ReviewQueue({ groups, categories, accounts, remaining, options }
 
         <p className="mt-2 text-subhead text-ink-muted">
           Terkumpul jadi {groups.length} kelompok: {out} keluar, {incoming} masuk.
-          {options.kelompok === 'lawan'
-            ? ` Sepuluh teratas saja sudah mencakup ${formatIdrCompact(covered)}.`
-            : ''}
+          {topShare ? ` ${topShare}` : ''}
         </p>
 
         {shown.unseen > 0 ? (

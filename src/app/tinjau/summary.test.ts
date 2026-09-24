@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { summariseQueue } from './summary'
+import { summariseQueue, topShareSentence } from './summary'
 
 function group(overrides: Partial<Parameters<typeof summariseQueue>[1][number]> = {}) {
   return {
@@ -57,5 +57,33 @@ describe('summariseQueue', () => {
   it('never goes negative when groups somehow outnumber pending', () => {
     const out = summariseQueue(1, [group({ count: 3 })])
     expect(out.unseen).toBe(0)
+  })
+})
+
+describe('topShareSentence', () => {
+  const out = (total: bigint) => ({ total, direction: 'out' as const })
+  const inn = (total: bigint) => ({ total, direction: 'in' as const })
+
+  it('says each direction on its own, never one figure for both', () => {
+    // Top two: 60 of 100 out, 30 of 40 in. Summed, that would be "90",
+    // which is neither.
+    const sentence = topShareSentence([out(60n), inn(30n), out(40n), inn(10n)], 2)
+    expect(sentence).toBe('Sepuluh teratas saja sudah mencakup 60% uang keluar dan 75% uang masuk yang menunggu.')
+  })
+
+  it('leaves out a direction the top groups do not touch', () => {
+    expect(topShareSentence([out(60n), out(30n), inn(10n), out(10n)], 2)).toBe(
+      'Sepuluh teratas saja sudah mencakup 90% uang keluar yang menunggu.',
+    )
+  })
+
+  it('stays quiet when the queue is no longer than the top itself', () => {
+    expect(topShareSentence([out(60n), inn(30n)], 10)).toBeNull()
+  })
+
+  it('ignores groups that move money between the household own accounts', () => {
+    expect(topShareSentence([{ total: 500n, direction: 'neither' as const }, out(10n), out(10n)], 2)).toBe(
+      'Sepuluh teratas saja sudah mencakup 50% uang keluar yang menunggu.',
+    )
   })
 })

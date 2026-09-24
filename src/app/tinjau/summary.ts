@@ -66,5 +66,42 @@ export function summariseQueue(
   }
 }
 
+/**
+ * How much of the waiting money the first `n` groups already hold, said per
+ * direction, or null when there is nothing worth saying.
+ *
+ * This used to be one rupiah figure for the top ten groups, which summed
+ * money going out with money coming in: the same mistake the headline above
+ * was rewritten to stop making, in the sentence right under it. A share per
+ * direction keeps the point (a few groups settle most of the queue) without
+ * adding two things that do not add up.
+ *
+ * Null when the queue has `n` groups or fewer, since "the top ten cover all
+ * of it" tells nobody anything.
+ */
+export function topShareSentence(
+  groups: readonly Pick<ReviewGroup, 'total' | 'direction'>[],
+  n: number,
+): string | null {
+  if (groups.length <= n) return null
+
+  const parts: string[] = []
+  for (const [direction, words] of [
+    ['out', 'uang keluar'],
+    ['in', 'uang masuk'],
+  ] as const) {
+    const all = groups.filter((group) => group.direction === direction)
+    const total = all.reduce((sum, group) => sum + group.total, 0n)
+    const covered = groups
+      .slice(0, n)
+      .filter((group) => group.direction === direction)
+      .reduce((sum, group) => sum + group.total, 0n)
+    if (total === 0n || covered === 0n) continue
+    parts.push(`${(covered * 100n) / total}% ${words}`)
+  }
+
+  return parts.length > 0 ? `Sepuluh teratas saja sudah mencakup ${parts.join(' dan ')} yang menunggu.` : null
+}
+
 /** For direction-typed subtraction elsewhere: the two keys a summary tracks. */
 export type SummaryDirection = Extract<Direction, 'in' | 'out'>
