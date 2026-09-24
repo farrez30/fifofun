@@ -258,7 +258,7 @@ export async function importStatement(formData: FormData): Promise<ImportReport>
 
     const { data: accounts } = await supabase
       .from('accounts')
-      .select('id, name, key, own_identifiers')
+      .select('id, name, key, own_identifiers, reference')
       .eq('household_id', household.id)
       .is('archived_at', null)
 
@@ -310,6 +310,19 @@ export async function importStatement(formData: FormData): Promise<ImportReport>
         .filter((row) => row.key)
         .map((row) => [row.key as string, row.id as string]),
     )
+    /*
+      The household's other accounts by number, for transfers between them.
+      These are matched by id rather than by key, because an account the
+      statement never feeds (a second bank, the old Mandiri account) has no
+      import key to be found by; the ids go into the same lookup so the rows
+      below resolve both kinds the same way.
+    */
+    const byNumber: Record<string, string> = {}
+    for (const row of accounts ?? []) {
+      if (!row.reference || row.key === 'mandiri') continue
+      byNumber[row.reference as string] = row.id as string
+      idByKey.set(row.id as string, row.id as string)
+    }
     // Keyed by cashflow and name together, because that is what the unique index
     // is. Two categories may share a name across cashflows, and a map keyed on the
     // name alone silently keeps whichever row came back last.
@@ -338,11 +351,13 @@ export async function importStatement(formData: FormData): Promise<ImportReport>
       statement,
       {
         ownIdentifiers,
+        ownAccounts: Object.keys(byNumber),
         employerNames: [],
         accounts: {
           bankAccountId: 'mandiri',
           cashAccountId: 'cash',
           wallets: WALLET_ACCOUNT_KEYS,
+          byNumber,
         },
       },
     )

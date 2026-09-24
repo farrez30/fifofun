@@ -45,6 +45,8 @@ export interface AccountRow {
   key: string | null
   institution: string | null
   ownIdentifiers: string[]
+  /** The account's own number, digits only, for recognising transfers to and from it. */
+  reference: string | null
   openingBalanceAt: Date | null
   sortOrder: number
   archivedAt: Date | null
@@ -119,7 +121,7 @@ export async function getAccounts(
   let query = supabase
     .from('accounts')
     .select(
-      'id, name, kind, opening_balance, opening_balance_at, key, institution, own_identifiers, sort_order, archived_at',
+      'id, name, kind, opening_balance, opening_balance_at, key, institution, own_identifiers, reference, sort_order, archived_at',
     )
     .eq('household_id', householdId)
     .order('sort_order')
@@ -137,6 +139,7 @@ export async function getAccounts(
     key: (row.key as string | null) ?? null,
     institution: (row.institution as string | null) ?? null,
     ownIdentifiers: (row.own_identifiers as string[] | null) ?? [],
+    reference: (row.reference as string | null) ?? null,
     openingBalanceAt: row.opening_balance_at ? new Date(row.opening_balance_at as string) : null,
     sortOrder: (row.sort_order as number) ?? 0,
     archivedAt: row.archived_at ? new Date(row.archived_at as string) : null,

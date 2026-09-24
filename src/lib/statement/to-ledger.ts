@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import type { CashflowType, LedgerEntry } from '@/lib/ledger/types'
 import type { Classification, TransactionKind } from './classify'
-import { classify, type ClassifyOptions } from './classify'
+import { accountNumber, classify, type ClassifyOptions } from './classify'
 import type { ParsedStatement, StatementRow } from './mandiri-xlsx'
 
 /**
@@ -38,6 +38,8 @@ export interface AccountMap {
   cashAccountId?: string
   /** Wallet name (as classified) to ledger account id, e.g. GoPay -> "gopay". */
   wallets?: Record<string, string>
+  /** Account number (digits only) to ledger account id, for own-account transfers. */
+  byNumber?: Record<string, string>
 }
 
 export interface ConversionOptions extends ClassifyOptions {
@@ -95,6 +97,7 @@ export const CASHFLOW_BY_KIND: Record<TransactionKind, CashflowType> = {
   bonus: 'income',
   refund: 'income',
   'transfer-in': 'income',
+  'own-transfer': 'transfer',
   'qris-payment': 'spending',
   'ecommerce-card': 'spending',
   // Paying a biller is paying a bill: electricity, water, broadband, road tax.
@@ -130,6 +133,10 @@ function walletAccountFor(
   classification: Classification,
   accounts: AccountMap,
 ): string | undefined {
+  if (classification.kind === 'own-transfer') {
+    const number = classification.counterparty.account
+    return number ? accounts.byNumber?.[accountNumber(number)] : undefined
+  }
   const name = classification.counterparty.name
   if (!name) return undefined
   return accounts.wallets?.[name] ?? accounts.wallets?.[name.toLowerCase()]

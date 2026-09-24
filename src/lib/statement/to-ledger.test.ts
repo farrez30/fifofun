@@ -260,3 +260,21 @@ describe('wallet coverage', () => {
     expect(walletCoverage.matchedOwn).toBe(0)
   })
 })
+
+describe('transfers between own accounts', () => {
+  it('files money from an own account as a transfer from that account, not income', () => {
+    const { entries } = statementToLedger(
+      statement([
+        row({
+          at: '2026-03-05T02:00:00.000Z',
+          lines: ['Transfer BI Fast', 'Dari BANK JAGO', 'BUDI SANTOSO 103000000001'],
+          in: '60.100,00',
+          balance: '1.060.100,00',
+        }),
+      ]),
+      { ...OPTIONS, ownAccounts: ['103000000001'], accounts: { ...OPTIONS.accounts, byNumber: { '103000000001': 'jago' } } },
+    )
+
+    expect(entries[0]).toMatchObject({ cashflow: 'transfer', fromAccountId: 'jago', toAccountId: 'mandiri' })
+  })
+})

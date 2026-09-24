@@ -198,40 +198,61 @@ describe('updateAccount', () => {
   })
 })
 
-describe('updateAccount, with e-wallet numbers', () => {
+describe('own money moved between accounts, on save', () => {
   const BANK_ID = '00000000-0000-4000-8000-0000000000a1'
   const GOPAY_ID = '00000000-0000-4000-8000-0000000000a2'
+  const JAGO_ID = '00000000-0000-4000-8000-0000000000a5'
   const ANTAR_ACCOUNT = { id: '00000000-0000-4000-8000-0000000000c9', name: 'Antar Account', cashflow: 'transfer', sort_order: 9, archived_at: null }
+  const PENYESUAIAN = { id: '00000000-0000-4000-8000-0000000000c8', name: 'Penyesuaian Income', cashflow: 'income', sort_order: 8, archived_at: null }
+
+  /** What the backfill reads for itself: numbers live on the accounts. */
+  function backfillAccounts(extra: Record<string, unknown>[] = []) {
+    return [
+      { id: BANK_ID, name: 'Bank Mandiri', key: 'mandiri', reference: null, own_identifiers: ['085800000001'], archived_at: null },
+      { id: GOPAY_ID, name: 'GoPay', key: 'gopay', reference: null, own_identifiers: [], archived_at: null },
+      ...extra,
+    ]
+  }
+
   const OWN_TOP_UP = {
-    id: '00000000-0000-4000-8000-0000000000t1',
+    id: '00000000-0000-4000-8000-0000000000e1',
+    cashflow: 'spending',
     raw_description: 'Pembayaran GoPay Customer\n085800000001',
     category_id: '00000000-0000-4000-8000-0000000000c3',
     category_locked_at: null,
     split_of: null,
   }
-  const SOMEONE_ELSE = { ...OWN_TOP_UP, id: '00000000-0000-4000-8000-0000000000t2', raw_description: 'Pembayaran GoPay Customer\n08567800000' }
+  const SOMEONE_ELSE = { ...OWN_TOP_UP, id: '00000000-0000-4000-8000-0000000000e2', raw_description: 'Pembayaran GoPay Customer\n08567800000' }
+  const FROM_JAGO = {
+    id: '00000000-0000-4000-8000-0000000000e3',
+    cashflow: 'income',
+    raw_description: 'Transfer BI Fast\nDari BANK JAGO\nBUDI SANTOSO 103000000001\ntransfer back',
+    category_id: PENYESUAIAN.id,
+    category_locked_at: null,
+    split_of: null,
+  }
 
-  function save(identifiers: string) {
+  function saveBank(identifiers: string) {
     return updateAccount(null, form({ ...ACCOUNT_FIELDS, id: BANK_ID, ownIdentifiers: identifiers }))
   }
 
   it('turns old own top-ups into transfers to the wallet account, and says so', async () => {
     household()
-    stub.queue('accounts', { data: ACCOUNTS }, { data: [{ id: BANK_ID }] })
+    stub.queue('accounts', { data: ACCOUNTS }, { data: [{ id: BANK_ID }] }, { data: backfillAccounts() })
     stub.queue('categories', { data: [...CATEGORIES, ANTAR_ACCOUNT] })
     stub.queue('transactions', { data: [OWN_TOP_UP, SOMEONE_ELSE] }, { data: [{ id: OWN_TOP_UP.id }] })
 
-    const result = await save('085800000001')
+    const result = await saveBank('085800000001')
 
     expect(result.ok).toBe(true)
-    expect(result.detail).toContain('1 transaksi lama ke GoPay')
+    expect(result.detail).toContain('1 transaksi lama dengan GoPay ternyata pindah dana')
 
     const [read, write] = stub.callsOn('transactions')
-    // Only what the import filed as spending paid to nobody, from this bank.
-    expect(argsFor(read, 'eq')).toEqual(
-      expect.arrayContaining([['from_account_id', BANK_ID], ['source', 'xlsx'], ['cashflow', 'spending']]),
-    )
-    expect(argsFor(read, 'is')).toEqual(expect.arrayContaining([['to_account_id', null], ['deleted_at', null]]))
+    // Only rows the import left with one side empty, and only imported ones.
+    expect(argsFor(read, 'eq')).toEqual(expect.arrayContaining([['source', 'xlsx']]))
+    expect(argsFor(read, 'or')).toEqual([
+      ['and(cashflow.eq.spending,to_account_id.is.null),and(cashflow.eq.income,from_account_id.is.null)'],
+    ])
 
     expect(write.payload).toMatchObject({
       cashflow: 'transfer',
@@ -245,11 +266,63 @@ describe('updateAccount, with e-wallet numbers', () => {
     expect(argsFor(write, 'is')).toEqual([['to_account_id', null]])
   })
 
-  it('does not look at transactions when no number is saved', async () => {
+  it('gives old income from a new own account its source, as soon as the account is created', async () => {
+    household()
+    stub.queue(
+      'accounts',
+      { data: ACCOUNTS },
+      { data: [{ id: JAGO_ID }] },
+      { data: backfillAccounts([{ id: JAGO_ID, name: 'Bank Jago', key: null, reference: '103000000001', own_identifiers: [], archived_at: null }]) },
+    )
+    stub.queue('categories', { data: [...CATEGORIES, ANTAR_ACCOUNT, PENYESUAIAN] })
+    stub.queue('transactions', { data: [FROM_JAGO] }, { data: [{ id: FROM_JAGO.id }] })
+
+    const result = await createAccount(
+      null,
+      form({ ...ACCOUNT_FIELDS, name: 'Bank Jago', key: '', institution: 'Bank Jago', reference: '1030-0000-0001' }),
+    )
+
+    expect(result.ok).toBe(true)
+    expect(result.detail).toContain('1 transaksi lama dengan Bank Jago ternyata pindah dana')
+    // Stored as digits, however it was typed.
+    expect((stub.callsOn('accounts')[1].payload as Record<string, unknown>).reference).toBe('103000000001')
+
+    const write = stub.callsOn('transactions')[1]
+    expect(write.payload).toMatchObject({ cashflow: 'transfer', from_account_id: JAGO_ID, category_id: ANTAR_ACCOUNT.id })
+    expect(argsFor(write, 'eq')).toEqual(expect.arrayContaining([['cashflow', 'income']]))
+    expect(argsFor(write, 'is')).toEqual([['from_account_id', null]])
+  })
+
+  it('refuses a number another account already holds', async () => {
+    household()
+    stub.queue('accounts', {
+      data: ACCOUNTS.map((account) => (account.id === GOPAY_ID ? { ...account, reference: '103000000001' } : account)),
+    })
+
+    const result = await createAccount(
+      null,
+      form({ ...ACCOUNT_FIELDS, name: 'Bank Jago', key: '', reference: '103000000001' }),
+    )
+
+    expect(result.ok).toBe(false)
+    expect(result.message).toBe('Nomor rekening 103000000001 sudah dipakai akun GoPay.')
+    expect(stub.callsOn('accounts')).toHaveLength(1)
+  })
+
+  it('refuses a number that is not one, before touching anything', async () => {
+    const letters = await createAccount(null, form({ ...ACCOUNT_FIELDS, name: 'Bank Jago', key: '', reference: 'rek jago' }))
+    const short = await createAccount(null, form({ ...ACCOUNT_FIELDS, name: 'Bank Jago', key: '', reference: '123' }))
+
+    expect(letters.detail).toBe('Tulis nomor rekeningnya dengan angka saja.')
+    expect(short.detail).toBe('Nomor rekening biasanya 6 sampai 20 digit.')
+    expect(stub.calls).toHaveLength(0)
+  })
+
+  it('does not look at transactions when there is no number to go on', async () => {
     household()
     stub.queue('accounts', { data: ACCOUNTS }, { data: [{ id: BANK_ID }] })
 
-    const result = await save('')
+    const result = await saveBank('')
 
     expect(result.ok).toBe(true)
     expect(stub.callsOn('transactions')).toHaveLength(0)
@@ -257,11 +330,11 @@ describe('updateAccount, with e-wallet numbers', () => {
 
   it('keeps the save when the backfill fails, and says what did not happen', async () => {
     household()
-    stub.queue('accounts', { data: ACCOUNTS }, { data: [{ id: BANK_ID }] })
+    stub.queue('accounts', { data: ACCOUNTS }, { data: [{ id: BANK_ID }] }, { data: backfillAccounts() })
     stub.queue('categories', { data: CATEGORIES })
     stub.queue('transactions', { data: null, error: { message: 'boom' } })
 
-    const result = await save('085800000001')
+    const result = await saveBank('085800000001')
 
     expect(result.ok).toBe(true)
     expect(result.message).toBe('Akun Bank Mandiri disimpan.')

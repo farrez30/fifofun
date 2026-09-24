@@ -25,6 +25,8 @@ export type TransactionKind =
   | 'wallet-withdrawal'
   | 'transfer-out'
   | 'transfer-in'
+  /** A transfer to or from another account the household holds, by number. */
+  | 'own-transfer'
   | 'salary'
   | 'bonus'
   | 'cash-withdrawal'
@@ -92,6 +94,12 @@ export interface ClassifyOptions {
    */
   ownIdentifiers?: string[]
   /**
+   * Account numbers of the household's other accounts (a second bank, an
+   * e-wallet's BI Fast number). A transfer whose counterparty prints one of
+   * these moves the household's own money; it is neither income nor spending.
+   */
+  ownAccounts?: string[]
+  /**
    * Institutions whose incoming transfers are salary rather than a refund.
    * Per-user configuration: with none set, an employer transfer is reported as
    * an ordinary incoming transfer rather than guessed at as salary.
@@ -147,6 +155,17 @@ function matchesOwn(candidate: string, own: string[]): boolean {
   })
 }
 
+/** Digits only, so "1170-0069-42973" and "1170006942973" are one account. */
+export function accountNumber(raw: string): string {
+  return digitsOnly(raw)
+}
+
+function isOwnAccount(candidate: string | null, own: string[]): boolean {
+  if (!candidate) return false
+  const target = accountNumber(candidate)
+  return target !== '' && own.some((number) => accountNumber(number) === target)
+}
+
 /**
  * Splits "SITI RAHAYU 1230000000002" into a name and an account number.
  * The name is capped at 20 characters by the bank, so a name of exactly that
@@ -186,6 +205,7 @@ const ACCOUNT_FEE = /^Biaya (administrasi|gagal transaksi)/i
 
 export function classify(row: StatementRow, options: ClassifyOptions = {}): Classification {
   const own = options.ownIdentifiers ?? []
+  const ownAccounts = options.ownAccounts ?? []
   const employers = options.employerNames ?? []
   const [first = '', second = '', third = '', fourth = ''] = row.lines
   const direction = base(row).direction
@@ -283,12 +303,15 @@ export function classify(row: StatementRow, options: ClassifyOptions = {}): Clas
   // --- Intra-Mandiri transfers -----------------------------------------
   if (/^Transfer (ke|dari) BANK MANDIRI$/i.test(first)) {
     const outgoing = /ke/i.test(first.split(' ')[1] ?? '')
+    const counterparty = splitNameAndAccount(second, TRANSFER_NAME_LIMIT)
+    const ownAccount = isOwnAccount(counterparty.account, ownAccounts)
     return make({
-      kind: outgoing ? 'transfer-out' : 'transfer-in',
+      kind: ownAccount ? 'own-transfer' : outgoing ? 'transfer-out' : 'transfer-in',
       channel: 'intrabank',
-      counterparty: splitNameAndAccount(second, TRANSFER_NAME_LIMIT),
+      counterparty,
       note: third || null,
-      ruleId: outgoing ? 'intrabank.out' : 'intrabank.in',
+      ownFunds: ownAccount,
+      ruleId: ownAccount ? 'intrabank.own' : outgoing ? 'intrabank.out' : 'intrabank.in',
     })
   }
 
@@ -361,15 +384,18 @@ export function classify(row: StatementRow, options: ClassifyOptions = {}): Clas
     const incoming = /^Dari\b/i.test(second) || /dari/i.test(first)
     const bank = stripPrefix(second, /^(Dari|Ke)\s*/i)
     // Shape: "Transfer BI Fast" / "Dari <BANK>" / "<NAME> <account>" / "<note>"
+    const counterparty = {
+      ...splitNameAndAccount(third, TRANSFER_NAME_LIMIT),
+      institution: bank || null,
+    }
+    const ownAccount = isOwnAccount(counterparty.account, ownAccounts)
     return make({
-      kind: incoming ? 'transfer-in' : 'transfer-out',
+      kind: ownAccount ? 'own-transfer' : incoming ? 'transfer-in' : 'transfer-out',
       channel: 'bifast',
-      counterparty: {
-        ...splitNameAndAccount(third, TRANSFER_NAME_LIMIT),
-        institution: bank || null,
-      },
+      counterparty,
       note: fourth || null,
-      ruleId: incoming ? 'bifast.in' : 'bifast.out',
+      ownFunds: ownAccount,
+      ruleId: ownAccount ? 'bifast.own' : incoming ? 'bifast.in' : 'bifast.out',
       // The bank name is occasionally blank in the source data.
       confidence: bank ? 'high' : 'medium',
     })
@@ -485,4 +511,39 @@ export function ownWalletTopUp(rawDescription: string, own: string[]): string | 
   const [first = '', second = ''] = splitLines(rawDescription)
   const payment = walletPayment(first, second, own)
   return payment?.isOwn ? payment.wallet.label : null
+}
+
+/**
+ * The account number of the household's own account a stored bank row moved
+ * money to or from, or null.
+ *
+ * The same reading `classify` gives a statement row, for rows imported before
+ * that account's number was known. Only the lines and the direction matter
+ * to the transfer branches, so the rest of the row is filler.
+ */
+export function ownAccountTransfer(
+  rawDescription: string,
+  direction: 'in' | 'out',
+  ownAccounts: string[],
+): string | null {
+  if (ownAccounts.length === 0) return null
+  const lines = splitLines(rawDescription)
+  const classification = classify(
+    {
+      no: null,
+      sheetRow: 0,
+      occurredAt: new Date(0),
+      date: { year: 1970, month: 1, day: 1 },
+      hasTime: false,
+      description: rawDescription,
+      lines,
+      amountIn: direction === 'in' ? 1n : 0n,
+      amountOut: direction === 'out' ? 1n : 0n,
+      balanceAfter: 0n,
+    },
+    { ownAccounts },
+  )
+  return classification.kind === 'own-transfer' && classification.counterparty.account
+    ? accountNumber(classification.counterparty.account)
+    : null
 }

@@ -53,6 +53,7 @@ async function Settings() {
       ? account.openingBalanceAt.toISOString().slice(0, 10)
       : '',
     ownIdentifiers: account.ownIdentifiers.join('\n'),
+    reference: account.reference ?? '',
     archived: account.archivedAt !== null,
     usage: usage.accounts[account.id] ?? 0,
   }))

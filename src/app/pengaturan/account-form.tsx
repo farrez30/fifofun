@@ -38,6 +38,7 @@ export function AccountForm({ account }: { account?: AccountView }) {
     key: useId(),
     at: useId(),
     identifiers: useId(),
+    reference: useId(),
   }
 
   const [kind, setKind] = useState<AccountKind>(account?.kind ?? 'ewallet')
@@ -116,6 +117,24 @@ export function AccountForm({ account }: { account?: AccountView }) {
             ))}
           </select>
         </FieldRow>
+
+        {kind !== 'cash' ? (
+          <FieldRow
+            htmlFor={ids.reference}
+            label="Nomor rekening"
+            hint="Transfer dengan nomor ini dicatat sebagai pindah dana."
+          >
+            <input
+              id={ids.reference}
+              name="reference"
+              defaultValue={account?.reference ?? ''}
+              inputMode="numeric"
+              autoComplete="off"
+              maxLength={40}
+              className={`${CONTROL_INLINE} tnum`}
+            />
+          </FieldRow>
+        ) : null}
 
         <FieldRow htmlFor={ids.at} label="Per tanggal" hint="Boleh dikosongkan.">
           <input

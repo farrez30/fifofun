@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { parseIdAmount } from '@/lib/money'
 import type { StatementRow } from './mandiri-xlsx'
-import { classify, normalisePhone, ownWalletTopUp } from './classify'
+import { classify, normalisePhone, ownAccountTransfer, ownWalletTopUp } from './classify'
 
 /**
  * Fixtures reproduce real description shapes observed across 1,591 statement
@@ -288,5 +288,48 @@ describe('ownWalletTopUp', () => {
 
   it('knows nothing without a number to compare against', () => {
     expect(ownWalletTopUp('Pembayaran GoPay Customer\n085800000001', [])).toBeNull()
+  })
+})
+
+describe('transfers between the household own accounts', () => {
+  const ACCOUNTS = ['103000000001', '1170000000009']
+
+  it('recognises an intrabank transfer from an own account by its number', () => {
+    const c = classify(
+      row(['Transfer dari BANK MANDIRI', 'BUDI SANTOSO 1170000000009', 'pindah saldo'], '231.941,00', 'in'),
+      { ownAccounts: ACCOUNTS },
+    )
+    expect(c.kind).toBe('own-transfer')
+    expect(c.ownFunds).toBe(true)
+    expect(c.direction).toBe('in')
+    expect(c.counterparty.account).toBe('1170000000009')
+  })
+
+  it('recognises BI Fast both ways', () => {
+    const inbound = classify(
+      row(['Transfer BI Fast', 'Dari BANK JAGO', 'BUDI SANTOSO 103000000001', 'transfer back'], '60.100,00', 'in'),
+      { ownAccounts: ACCOUNTS },
+    )
+    const outbound = classify(
+      row(['Transfer BI Fast', 'Ke BANK JAGO', 'BUDI SANTOSO 103000000001'], '45.000,00', 'out'),
+      { ownAccounts: ACCOUNTS },
+    )
+    expect([inbound.kind, inbound.direction]).toEqual(['own-transfer', 'in'])
+    expect([outbound.kind, outbound.direction]).toEqual(['own-transfer', 'out'])
+  })
+
+  it('keeps a transfer from anybody else as income, however similar the name', () => {
+    const c = classify(
+      row(['Transfer dari BANK MANDIRI', 'BUDI SANTOSO 1160000000001', 'hadiah'], '300.000,00', 'in'),
+      { ownAccounts: ACCOUNTS },
+    )
+    expect(c.kind).toBe('transfer-in')
+  })
+
+  it('reads a stored row the same way', () => {
+    const raw = 'Transfer BI Fast\nDari BANK JAGO\nBUDI SANTOSO 103000000001'
+    expect(ownAccountTransfer(raw, 'in', ACCOUNTS)).toBe('103000000001')
+    expect(ownAccountTransfer(raw, 'in', ['999999999'])).toBeNull()
+    expect(ownAccountTransfer(raw, 'in', [])).toBeNull()
   })
 })

@@ -33,6 +33,8 @@ export interface AccountView {
   openingBalanceAt: string
   /** One number per line. */
   ownIdentifiers: string
+  /** Digits only, or empty. */
+  reference: string
   archived: boolean
   /** How many transactions have this account on either side. */
   usage: number

@@ -330,6 +330,7 @@ export const DEFAULT_CATEGORY_BY_KIND: Record<string, string> = {
   'bank-fee': 'Biaya Bank',
   'wallet-topup': 'Antar Account',
   'wallet-withdrawal': 'Antar Account',
+  'own-transfer': 'Antar Account',
   'cash-withdrawal': 'Antar Account',
   unknown: 'Other spending',
 }

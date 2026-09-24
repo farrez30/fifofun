@@ -16,7 +16,8 @@ import {
 } from '@/lib/actions'
 import { ICON_NAMES } from '@/components/marks'
 import { ACCOUNT_KEYS, parseIdentifiers, planReorder, twinsOf } from '@/lib/ledger/settings'
-import { describeBackfill, planWalletBackfill, type BackfillRow } from '@/lib/ledger/wallet-backfill'
+import { describeBackfill, planOwnMoneyBackfill, type BackfillRow } from '@/lib/ledger/own-money-backfill'
+import { accountNumber } from '@/lib/statement/classify'
 import { ACCOUNT_KINDS, CASHFLOW_LABELS, CASHFLOW_TYPES, type CashflowType } from '@/lib/ledger/types'
 
 /**
@@ -61,6 +62,15 @@ const accountSchema = z.object({
   key: z.enum(ACCOUNT_KEYS).or(z.literal('')),
   openingBalance: senField,
   openingBalanceAt: isoDateField.or(z.literal('')),
+  /** Digits, spaces and dashes as a person types them; stored as digits only. */
+  reference: z
+    .string()
+    .trim()
+    .refine((value) => value === '' || /^[\d\s.-]+$/.test(value), 'Tulis nomor rekeningnya dengan angka saja.')
+    .refine((value) => {
+      const digits = accountNumber(value).length
+      return value === '' || (digits >= 6 && digits <= 20)
+    }, 'Nomor rekening biasanya 6 sampai 20 digit.'),
 })
 
 const categorySchema = z.object({
@@ -118,12 +128,13 @@ interface AccountRecord {
   sortOrder: number
   archivedAt: string | null
   openingBalance: string
+  reference: string | null
 }
 
 async function accountsOf(supabase: SupabaseLike, householdId: string): Promise<AccountRecord[]> {
   const { data } = await supabase
     .from('accounts')
-    .select('id, name, kind, key, sort_order, archived_at, opening_balance')
+    .select('id, name, kind, key, sort_order, archived_at, opening_balance, reference')
     .eq('household_id', householdId)
     .order('sort_order')
     .order('name')
@@ -136,7 +147,21 @@ async function accountsOf(supabase: SupabaseLike, householdId: string): Promise<
     sortOrder: Number(row.sort_order ?? 0),
     archivedAt: (row.archived_at as string | null) ?? null,
     openingBalance: String(row.opening_balance ?? '0'),
+    reference: (row.reference as string | null) ?? null,
   }))
+}
+
+/**
+ * The refusal when another account already holds this number. Two accounts
+ * with one number would leave a transfer with two places it could have come
+ * from, and the import has no way to choose.
+ */
+function referenceClash(accounts: AccountRecord[], reference: string, exceptId?: string): ActionResult | null {
+  if (reference === '') return null
+  const owner = accounts.find((row) => row.id !== exceptId && row.reference === reference)
+  return owner
+    ? fail(`Nomor rekening ${reference} sudah dipakai akun ${owner.name}.`, 'Satu nomor rekening, satu akun.')
+    : null
 }
 
 interface CategoryRecord {
@@ -183,6 +208,7 @@ export async function createAccount(
   if (!ctx) return fail(SESSION_EXPIRED)
 
   const values = parsed.data
+  const reference = accountNumber(values.reference)
   const existing = await accountsOf(ctx.supabase, ctx.householdId)
   if (existing.some((row) => sameName(row.name, values.name))) {
     return fail(
@@ -190,6 +216,8 @@ export async function createAccount(
       'Nama akun dipakai untuk membedakan saldo di tabel, jadi dua akun bernama sama akan terbaca sebagai satu.',
     )
   }
+  const clash = referenceClash(existing, reference)
+  if (clash) return clash
 
   const { error } = await ctx.supabase
     .from('accounts')
@@ -202,14 +230,19 @@ export async function createAccount(
       opening_balance: values.openingBalance.toString(),
       opening_balance_at: values.openingBalanceAt || null,
       own_identifiers: values.kind === 'bank' ? identifiers.values : [],
+      reference: reference || null,
       sort_order: existing.length + 1,
     })
     .select('id')
 
   if (error) return keyClash(error, values.key) ?? writeFailed('pengaturan', 'Akunnya gagal disimpan.', error)
 
+  // A new account with a number may be the other side of transfers already
+  // imported as income or spending.
+  const backfill = reference ? await backfillOwnMoney(ctx.supabase, ctx.householdId) : undefined
+
   revalidateSettings(ctx.householdId)
-  return { ok: true, message: `Akun ${values.name} dibuat.` }
+  return { ok: true, message: `Akun ${values.name} dibuat.`, detail: backfill }
 }
 
 export async function updateAccount(
@@ -235,6 +268,9 @@ export async function updateAccount(
   if (rows.some((row) => row.id !== values.id && sameName(row.name, values.name))) {
     return fail(`Sudah ada akun bernama ${values.name}.`)
   }
+  const reference = accountNumber(values.reference)
+  const clash = referenceClash(rows, reference, values.id)
+  if (clash) return clash
 
   /*
     The statement importer files every bank-side row against the account
@@ -259,6 +295,7 @@ export async function updateAccount(
       opening_balance: values.openingBalance.toString(),
       opening_balance_at: values.openingBalanceAt || null,
       own_identifiers: values.kind === 'bank' ? identifiers.values : [],
+      reference: reference || null,
     })
     .eq('id', values.id)
     .eq('household_id', ctx.householdId)
@@ -268,8 +305,8 @@ export async function updateAccount(
   if (!data || data.length === 0) return fail('Akun itu tidak ditemukan.')
 
   const backfill =
-    values.kind === 'bank' && identifiers.values.length > 0
-      ? await backfillWalletTopUps(ctx.supabase, ctx.householdId, current.id, identifiers.values, rows)
+    reference || (values.kind === 'bank' && identifiers.values.length > 0)
+      ? await backfillOwnMoney(ctx.supabase, ctx.householdId)
       : undefined
 
   revalidateSettings(ctx.householdId)
@@ -286,32 +323,42 @@ export async function updateAccount(
   }
 }
 
-/** Rows read per request while looking for old top-ups; PostgREST's own default cap. */
+/** Rows read per request while looking for old own-money rows; PostgREST's own default cap. */
 const BACKFILL_PAGE = 1000
 /** Ids per update, the same chunk the review queue writes in. */
 const BACKFILL_CHUNK = 100
 
 /**
- * Turns this bank account's old payments to the household's own wallets into
- * the transfers they were, now that the wallet numbers are known.
+ * Turns old imported rows that moved money between the household's own
+ * accounts into the transfers they were, now that the numbers are known.
  *
- * `wallet-backfill.ts` decides which rows move; this reads and writes them.
- * Only rows the import filed as spending and paid to no account are read,
- * and every update repeats that condition, so a row somebody changed between
- * the read and the write is skipped rather than overwritten.
+ * `own-money-backfill.ts` decides which rows move; this reads and writes
+ * them. Only rows the import left with one side empty are read (spending
+ * paid to nobody, income from nobody), and every update repeats that
+ * condition, so a row somebody changed between the read and the write is
+ * skipped rather than overwritten.
+ *
+ * Household-wide rather than per account: the numbers that decide it live on
+ * several accounts at once (wallet phones on the bank, an account number on
+ * each account), and whichever of them was just saved, the answer depends on
+ * all of them.
  *
  * The account itself is already saved when this runs, so a failure here is
  * reported as a sentence under Simpan, never as the save failing.
  */
-async function backfillWalletTopUps(
-  supabase: SupabaseLike,
-  householdId: string,
-  bankAccountId: string,
-  own: string[],
-  accounts: AccountRecord[],
-): Promise<string | undefined> {
+async function backfillOwnMoney(supabase: SupabaseLike, householdId: string): Promise<string | undefined> {
   try {
-    const categories = await categoriesOf(supabase, householdId)
+    const [{ data: accountRows, error: accountError }, categories] = await Promise.all([
+      supabase
+        .from('accounts')
+        .select('id, name, key, reference, own_identifiers, archived_at')
+        .eq('household_id', householdId),
+      categoriesOf(supabase, householdId),
+    ])
+    if (accountError) throw accountError
+    const live = ((accountRows ?? []) as Record<string, unknown>[]).filter((row) => !row.archived_at)
+    const bank = live.find((row) => row.key === 'mandiri')
+
     const categoryName = new Map(categories.map((category) => [category.id, category.name]))
     const antarAccount =
       categories.find((c) => c.cashflow === 'transfer' && c.name === 'Antar Account' && !c.archivedAt)?.id ?? null
@@ -320,15 +367,11 @@ async function backfillWalletTopUps(
     for (let offset = 0; ; offset += BACKFILL_PAGE) {
       const { data, error } = await supabase
         .from('transactions')
-        .select('id, raw_description, category_id, category_locked_at, split_of')
+        .select('id, cashflow, raw_description, category_id, category_locked_at, split_of')
         .eq('household_id', householdId)
-        .eq('from_account_id', bankAccountId)
         .eq('source', 'xlsx')
-        .eq('cashflow', 'spending')
-        .is('to_account_id', null)
+        .or('and(cashflow.eq.spending,to_account_id.is.null),and(cashflow.eq.income,from_account_id.is.null)')
         .is('deleted_at', null)
-        // Every wallet biller line starts this way; the planner does the rest.
-        .ilike('raw_description', 'Pembayaran %')
         .order('id')
         .range(offset, offset + BACKFILL_PAGE - 1)
       if (error) throw error
@@ -336,6 +379,7 @@ async function backfillWalletTopUps(
       for (const row of page) {
         rows.push({
           id: row.id as string,
+          direction: row.cashflow === 'income' ? 'in' : 'out',
           rawDescription: (row.raw_description as string | null) ?? null,
           categoryName: row.category_id ? (categoryName.get(row.category_id as string) ?? null) : null,
           categoryLockedAt: (row.category_locked_at as string | null) ?? null,
@@ -345,28 +389,41 @@ async function backfillWalletTopUps(
       if (page.length < BACKFILL_PAGE) break
     }
 
-    const walletAccounts = new Map(
-      accounts.filter((a) => a.key && !a.archivedAt).map((a) => [a.key as string, a.id]),
-    )
-    const plan = planWalletBackfill(rows, own, walletAccounts)
+    const plan = planOwnMoneyBackfill(rows, {
+      walletNumbers: ((bank?.own_identifiers as string[] | null) ?? []).filter(Boolean),
+      walletAccounts: new Map(live.filter((row) => row.key).map((row) => [row.key as string, row.id as string])),
+      // The statement's own account never counts: the bank does not print a
+      // transfer to itself, and matching one would empty the row's other side.
+      accountsByNumber: new Map(
+        live
+          .filter((row) => row.reference && row.id !== bank?.id)
+          .map((row) => [row.reference as string, { id: row.id as string, name: row.name as string }]),
+      ),
+    })
 
     const confirmedAt = new Date().toISOString()
     let moved = 0
     for (const move of plan.moves) {
+      // Money out gains its destination; money in gains its source. The
+      // side being filled is the side that must still be empty.
+      const [side, was] =
+        move.side === 'to'
+          ? (['to_account_id', 'spending'] as const)
+          : (['from_account_id', 'income'] as const)
       for (let i = 0; i < move.ids.length; i += BACKFILL_CHUNK) {
         const { data, error } = await supabase
           .from('transactions')
           .update({
             cashflow: 'transfer',
-            to_account_id: move.accountId,
+            [side]: move.accountId,
             category_id: antarAccount,
             needs_review: false,
             confirmed_at: confirmedAt,
           })
           .in('id', move.ids.slice(i, i + BACKFILL_CHUNK))
           .eq('household_id', householdId)
-          .eq('cashflow', 'spending')
-          .is('to_account_id', null)
+          .eq('cashflow', was)
+          .is(side, null)
           .select('id')
         if (error) throw error
         moved += data?.length ?? 0
@@ -376,7 +433,7 @@ async function backfillWalletTopUps(
     if (moved > 0) updateTag(txTag(householdId))
     return describeBackfill({ ...plan, count: moved })
   } catch (error) {
-    console.error('[pengaturan] top-up e-wallet lama gagal diperbarui', error)
+    console.error('[pengaturan] transaksi lama antar akun sendiri gagal diperbarui', error)
     return 'Nomornya tersimpan, tapi transaksi lama belum ikut diperbarui. Simpan akun ini sekali lagi untuk mencoba ulang.'
   }
 }
@@ -710,6 +767,7 @@ function readAccount(formData: FormData) {
     key: formData.get('key') ?? '',
     openingBalance: formData.get('openingBalance') ?? '0',
     openingBalanceAt: formData.get('openingBalanceAt') ?? '',
+    reference: formData.get('reference') ?? '',
   }
 }
 
