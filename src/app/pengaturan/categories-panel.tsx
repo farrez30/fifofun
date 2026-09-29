@@ -1,12 +1,13 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useState, useTransition, type ReactNode } from 'react'
 import { CategoryMark } from '@/components/marks'
+import { DragHandle, ReorderScope, useReorderRow } from '@/components/reorder'
 import { formatIdr } from '@/lib/money'
-import { LOOKED_UP_NAMES, isLookedUpByName } from '@/lib/ledger/settings'
+import { LOOKED_UP_NAMES, arrangeRows, isLookedUpByName } from '@/lib/ledger/settings'
 import { CASHFLOW_LABELS, CASHFLOW_TYPES, type CashflowType } from '@/lib/ledger/types'
 import type { ActionResult } from '@/lib/actions'
-import { moveCategory, setCategoryArchived } from './actions'
+import { reorderCategories, setCategoryArchived } from './actions'
 import { CategoryForm } from './category-form'
 
 /**
@@ -40,8 +41,31 @@ export interface CategoryView {
 
 export function CategoriesPanel({ categories }: { categories: CategoryView[] }) {
   const [editing, setEditing] = useState<string | null>(null)
-  const live = categories.filter((category) => !category.archived)
-  const archived = categories.filter((category) => category.archived)
+
+  // A drop shows at once and is put back if the server refuses it.
+  const [shown, setShown] = useState(categories)
+  const [seen, setSeen] = useState(categories)
+  if (categories !== seen) {
+    setSeen(categories)
+    setShown(categories)
+  }
+  const [status, setStatus] = useState<ActionResult | null>(null)
+  const [, startTransition] = useTransition()
+
+  function reorder(ids: string[]) {
+    const arranged = arrangeRows(shown, ids)
+    if (!arranged) return
+    setShown(arranged)
+    setStatus(null)
+    startTransition(async () => {
+      const result = await reorderCategories(ids)
+      setStatus(result)
+      if (!result.ok) setShown(seen)
+    })
+  }
+
+  const live = shown.filter((category) => !category.archived)
+  const archived = shown.filter((category) => category.archived)
 
   /*
     Each group followed by what is inside it, so the list on screen reads the
@@ -66,6 +90,8 @@ export function CategoriesPanel({ categories }: { categories: CategoryView[] }) 
     rows: arranged(live.filter((category) => category.cashflow === cashflow)),
   })).filter((group) => group.rows.length > 0)
 
+  const reorderable = { onReorder: reorder, onDragStart: () => setEditing(null) }
+
   return (
     <section aria-labelledby="kategori" className="scroll-mt-8">
       <h2 id="kategori" className="text-title3 font-semibold tracking-title3 text-ink">
@@ -86,6 +112,7 @@ export function CategoriesPanel({ categories }: { categories: CategoryView[] }) 
               editing={editing}
               onToggle={(id) => setEditing(editing === id ? null : id)}
               caption={`Kategori bercashflow ${CASHFLOW_LABELS[group.cashflow]}`}
+              {...reorderable}
             />
           </div>
         ))}
@@ -103,6 +130,18 @@ export function CategoriesPanel({ categories }: { categories: CategoryView[] }) 
           </div>
         ) : null}
       </div>
+
+      {status ? (
+        <p role="status" className={`mt-3 text-footnote ${status.ok ? 'text-under' : 'text-over'}`}>
+          {status.message}
+          {status.detail ? <span className="text-ink-muted"> {status.detail}</span> : null}
+        </p>
+      ) : null}
+
+      <p className="mt-3 text-footnote text-ink-muted">
+        Seret pegangan di kiri untuk mengubah urutan. Kelompok berpindah bersama isinya, dan isi
+        sebuah kelompok hanya bisa diurutkan di dalam kelompok itu.
+      </p>
 
       <p className="mt-3 text-footnote text-ink-muted">
         Cashflow menentukan arah uang dan ikut tersimpan di setiap transaksi bersama sisi akunnya,
@@ -142,19 +181,65 @@ export function CategoriesPanel({ categories }: { categories: CategoryView[] }) 
   )
 }
 
-function Table({
-  rows,
-  siblings,
-  editing,
-  onToggle,
-  caption,
-}: {
+/** One block per top-level row, so the rule under it falls between blocks. */
+const BODY = 'border-b border-line last:border-0'
+
+/** A group's members, under the group's own card, with the tier's inset rule above them. */
+const NESTED_LIST =
+  "rows-inset relative before:absolute before:top-0 before:right-0 before:left-7 before:h-px before:bg-line before:content-['']"
+
+interface TableProps {
   rows: CategoryView[]
   siblings: CategoryView[]
   editing: string | null
   onToggle: (id: string) => void
   caption: string
-}) {
+  /** Absent for the archived list, which has no order to change. */
+  onReorder?: (ids: string[]) => void
+  onDragStart?: () => void
+}
+
+/*
+  Every run of siblings is its own scope: the groups and standalone rows under
+  one heading, and then the members of each group. A group is drawn as one
+  block (a tbody of its own, or a list item holding its members) so it moves
+  with everything inside it. Folding the members away while a group was lifted
+  was tried first: the table shrank under the pointer and the lifted row jumped
+  out from under the finger by the height of every member above it.
+*/
+function Table({ rows, siblings, editing, onToggle, caption, onReorder, onDragStart }: TableProps) {
+  const inList = new Set(rows.map((row) => row.id))
+  const top = rows.filter((row) => !row.parentId || !inList.has(row.parentId))
+  const membersOf = (id: string) => rows.filter((row) => row.parentId === id)
+  const names = Object.fromEntries(rows.map((row) => [row.id, row.name]))
+  const topSortable = Boolean(onReorder) && top.length > 1
+
+  const common = (category: CategoryView) => ({
+    category,
+    siblings,
+    isGroup: siblings.some((row) => row.parentId === category.id),
+    open: editing === category.id,
+    onToggle: () => onToggle(category.id),
+  })
+
+  function scope(ids: string[], children: ReactNode) {
+    if (!onReorder || ids.length < 2) return children
+    return (
+      <ReorderScope ids={ids} names={names} onReorder={onReorder} onDragStart={onDragStart}>
+        {children}
+      </ReorderScope>
+    )
+  }
+
+  function members(row: CategoryView, draw: (member: CategoryView, sortable: boolean) => ReactNode) {
+    const list = membersOf(row.id)
+    const sortable = Boolean(onReorder) && list.length > 1
+    return scope(
+      list.map((member) => member.id),
+      list.map((member) => draw(member, sortable)),
+    )
+  }
+
   return (
     <>
       {/* One list per cashflow group, so this runs six times on the settings
@@ -163,18 +248,32 @@ function Table({
         aria-label={caption}
         className="mt-2 rows-inset squircle rounded-md bg-surface shadow-xs sm:hidden"
       >
-        {rows.map((category, index) => (
-          <Card
-            key={category.id}
-            category={category}
-            siblings={siblings}
-            isGroup={siblings.some((row) => row.parentId === category.id)}
-            first={index === 0}
-            last={index === rows.length - 1}
-            open={editing === category.id}
-            onToggle={() => onToggle(category.id)}
-          />
-        ))}
+        {scope(
+          top.map((row) => row.id),
+          top.map((row) => {
+            const inner =
+              membersOf(row.id).length > 0 ? (
+                <ul className={NESTED_LIST}>
+                  {members(row, (member, sortable) =>
+                    sortable ? (
+                      <SortableCard key={member.id} {...common(member)} />
+                    ) : (
+                      <Card key={member.id} {...common(member)} />
+                    ),
+                  )}
+                </ul>
+              ) : null
+            return topSortable ? (
+              <SortableCard key={row.id} {...common(row)}>
+                {inner}
+              </SortableCard>
+            ) : (
+              <Card key={row.id} {...common(row)}>
+                {inner}
+              </Card>
+            )
+          }),
+        )}
       </ul>
 
       <div className="relative mt-2 hidden overflow-x-auto squircle rounded-md bg-surface shadow-xs sm:block">
@@ -183,6 +282,9 @@ function Table({
         <caption className="sr-only">{caption}</caption>
         <thead>
           <tr className="border-b border-line text-left text-caption1 uppercase tracking-wide text-ink-faint">
+            <th scope="col" className="w-0 py-2 pl-2 font-medium">
+              <span className="sr-only">Urutan</span>
+            </th>
             <th scope="col" className="px-4 py-2 font-medium">
               Kategori
             </th>
@@ -190,32 +292,38 @@ function Table({
               Transaksi
             </th>
             <th scope="col" className="px-4 py-2 font-medium">
-              Urutan
-            </th>
-            <th scope="col" className="px-4 py-2 font-medium">
               Aksi
             </th>
           </tr>
         </thead>
-        <tbody>
-          {rows.map((category, index) => (
-            <Row
-              key={category.id}
-              category={category}
-              siblings={siblings}
-              isGroup={siblings.some((row) => row.parentId === category.id)}
-              first={index === 0}
-              last={index === rows.length - 1}
-              open={editing === category.id}
-              onToggle={() => onToggle(category.id)}
-            />
-          ))}
-        </tbody>
+        {scope(
+          top.map((row) => row.id),
+          top.map((row) => {
+            const inner = members(row, (member, sortable) =>
+              sortable ? (
+                <SortableRow key={member.id} {...common(member)} />
+              ) : (
+                <Row key={member.id} {...common(member)} />
+              ),
+            )
+            return topSortable ? (
+              <SortableBody key={row.id} {...common(row)}>
+                {inner}
+              </SortableBody>
+            ) : (
+              <tbody key={row.id} className={BODY}>
+                <Row {...common(row)} />
+                {inner}
+              </tbody>
+            )
+          }),
+        )}
       </table>
       </div>
     </>
   )
 }
+
 
 /** "Rp121.000 · tgl 5" for a bill with a schedule, null otherwise. */
 function billSummary(category: CategoryView): string | null {
@@ -227,29 +335,71 @@ function billSummary(category: CategoryView): string | null {
   return parts.length > 0 ? parts.join(' · ') : null
 }
 
+interface RowProps {
+  category: CategoryView
+  /** The whole household, so the edit form can offer the groups it may join. */
+  siblings: CategoryView[]
+  /** Something rolls up into this one, so it takes no transactions of its own. */
+  isGroup: boolean
+  open: boolean
+  onToggle: () => void
+  /**
+   * Present when the row can be dragged. A group row carries only the handle:
+   * the block around it is what moves.
+   */
+  reorder?: Pick<Reorder, 'handle'> & Partial<Reorder>
+}
+
+type Reorder = ReturnType<typeof useReorderRow>
+
+function SortableRow(props: Omit<RowProps, 'reorder'>) {
+  return <Row {...props} reorder={useReorderRow(props.category.id)} />
+}
+
+function SortableCard({ children, ...props }: Omit<RowProps, 'reorder'> & { children?: ReactNode }) {
+  return (
+    <Card {...props} reorder={useReorderRow(props.category.id)}>
+      {children}
+    </Card>
+  )
+}
+
+function SortableBody({ children, ...props }: Omit<RowProps, 'reorder'> & { children: ReactNode }) {
+  return (
+    <Body {...props} reorder={useReorderRow(props.category.id)}>
+      {children}
+    </Body>
+  )
+}
+
+function Body({ children, reorder, ...props }: RowProps & { children: ReactNode }) {
+  return (
+    <tbody ref={reorder?.ref} style={reorder?.style} className={`${BODY} ${reorder?.liftClass ?? ''}`}>
+      <Row {...props} reorder={reorder ? { handle: reorder.handle } : undefined} />
+      {children}
+    </tbody>
+  )
+}
+
 /** One category as a card, for a screen the table does not fit on. */
 function Card({
   category,
   siblings,
   isGroup,
-  first,
-  last,
   open,
   onToggle,
-}: {
-  category: CategoryView
-  siblings: CategoryView[]
-  isGroup: boolean
-  first: boolean
-  last: boolean
-  open: boolean
-  onToggle: () => void
-}) {
+  reorder,
+  children,
+}: RowProps & { children?: ReactNode }) {
   return (
-    /* The indent is the tier: a category that rolls up into another sits
-       under it here the same way it does in the table. */
-    <li className={`py-3 pr-3 ${category.parentId ? 'pl-7' : 'pl-3'}`}>
-      <div className="flex items-center justify-between gap-3">
+    <li ref={reorder?.ref} style={reorder?.style} className={reorder?.liftClass}>
+      {/* The indent is the tier: a category that rolls up into another sits
+          under it here the same way it does in the table. */}
+      <div className={`py-3 pr-3 ${category.parentId ? 'pl-7' : 'pl-3'} ${reorder ? '-ml-2' : ''}`}>
+      <div className="flex items-center justify-between gap-1">
+        {reorder ? (
+          <DragHandle label={`Pindahkan ${category.name}`} handle={reorder.handle} />
+        ) : null}
         <span className="min-w-0 flex-1 text-subhead text-ink">
           <CategoryMark
             name={category.name}
@@ -293,12 +443,6 @@ function Card({
           {open ? 'Tutup' : 'Ubah'}
         </button>
         <ArchiveButton category={category} />
-        {category.archived ? null : (
-          <div className="flex gap-2">
-            <MoveButton id={category.id} direction="up" name={category.name} disabled={first} />
-            <MoveButton id={category.id} direction="down" name={category.name} disabled={last} />
-          </div>
-        )}
       </div>
 
       {open ? (
@@ -306,33 +450,25 @@ function Card({
           <CategoryForm category={category} siblings={siblings} />
         </div>
       ) : null}
+      </div>
+      {children}
     </li>
   )
 }
 
-function Row({
-
-  category,
-  siblings,
-  isGroup,
-  first,
-  last,
-  open,
-  onToggle,
-}: {
-  category: CategoryView
-  /** The whole household, so the edit form can offer the groups it may join. */
-  siblings: CategoryView[]
-  /** Something rolls up into this one, so it takes no transactions of its own. */
-  isGroup: boolean
-  first: boolean
-  last: boolean
-  open: boolean
-  onToggle: () => void
-}) {
+function Row({ category, siblings, isGroup, open, onToggle, reorder }: RowProps) {
   return (
     <>
-      <tr className="border-b border-line last:border-0">
+      <tr
+        ref={reorder?.ref}
+        style={reorder?.style}
+        className={`border-b border-line last:border-0 ${reorder?.liftClass ?? ''}`}
+      >
+        <td className="w-0 py-1 pl-2">
+          {reorder ? (
+            <DragHandle label={`Pindahkan ${category.name}`} handle={reorder.handle} />
+          ) : null}
+        </td>
         <th
           scope="row"
           className={`py-2.5 pr-4 text-left font-normal text-ink ${
@@ -366,21 +502,6 @@ function Row({
           {category.usage}
         </td>
         <td className="whitespace-nowrap px-4 py-2.5">
-          {category.archived ? (
-            <span className="text-footnote text-ink-faint">tidak diurutkan</span>
-          ) : (
-            <div className="flex gap-1">
-              <MoveButton id={category.id} direction="up" name={category.name} disabled={first} />
-              <MoveButton
-                id={category.id}
-                direction="down"
-                name={category.name}
-                disabled={last}
-              />
-            </div>
-          )}
-        </td>
-        <td className="whitespace-nowrap px-4 py-2.5">
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -403,42 +524,6 @@ function Row({
         </tr>
       ) : null}
     </>
-  )
-}
-
-function MoveButton({
-  id,
-  direction,
-  name,
-  disabled,
-}: {
-  id: string
-  direction: 'up' | 'down'
-  name: string
-  disabled: boolean
-}) {
-  const [result, action] = useActionState<ActionResult | null, FormData>(moveCategory, null)
-
-  return (
-    <form action={action}>
-      <input type="hidden" name="id" value={id} />
-      <input type="hidden" name="direction" value={direction} />
-      <button
-        type="submit"
-        disabled={disabled}
-        aria-label={`${direction === 'up' ? 'Naikkan' : 'Turunkan'} ${name}`}
-        className="h-9 w-9 rounded-sm border border-line text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken disabled:opacity-30"
-      >
-        <span aria-hidden="true">{direction === 'up' ? '↑' : '↓'}</span>
-      </button>
-      {/* A refused reorder used to do nothing at all: the arrow moved no row
-          and said no word. */}
-      {result && !result.ok ? (
-        <span role="status" className="ml-2 text-footnote text-over">
-          {result.message}
-        </span>
-      ) : null}
-    </form>
   )
 }
 

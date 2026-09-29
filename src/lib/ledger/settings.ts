@@ -191,29 +191,57 @@ export interface Reorder {
 }
 
 /**
- * One row swapped with its neighbour, as the smallest set of writes that does it.
+ * One stretch of the list put in a new order, as the smallest set of writes
+ * that does it.
  *
- * Renumbering the whole list would be simpler to write and would send fifty
- * updates through PostgREST to move one row by one place. Two rows change; the
- * rest are already in the right order relative to each other.
+ * A drag reorders one run of siblings (the accounts, or the categories under
+ * one heading). Those rows keep the places in the whole list they already
+ * held and are dealt back into them in the new order, so nothing outside the
+ * run moves and only the rows whose number actually changes are written.
  *
- * The positions are recomputed from the list order rather than from the stored
- * numbers, because a household migrated from before `sort_order` existed has
- * fifty rows all numbered zero, and swapping two zeroes changes nothing.
+ * When the run's numbers collide the positions are recomputed from the list
+ * order instead, because a household migrated from before `sort_order`
+ * existed has fifty rows all numbered zero, and reshuffling zeroes changes
+ * nothing.
+ *
+ * Null when `ids` is not exactly a reordering of rows in the list: a repeated
+ * id, or one that is not there, means the screen and the database disagree,
+ * and guessing which one is right is how a list ends up scrambled.
  */
-export function planReorder(
-  rows: Sortable[],
-  id: string,
-  direction: 'up' | 'down',
-): Reorder[] {
-  const index = rows.findIndex((row) => row.id === id)
-  if (index === -1) return []
+export function planArrange(rows: Sortable[], ids: string[]): Reorder[] | null {
+  const order = arrangeRows(rows, ids)
+  if (order === null) return null
+  const stored = new Map(rows.map((row) => [row.id, row.sortOrder]))
 
-  const target = direction === 'up' ? index - 1 : index + 1
-  if (target < 0 || target >= rows.length) return []
+  // The run already owns distinct numbers: deal those back out and nothing
+  // else is touched. Years of moves leave the numbers sparse (0, 29, 31, 35),
+  // and renumbering all seventy-odd categories to move one took ten seconds.
+  const numbers = rows.filter((row) => ids.includes(row.id)).map((row) => row.sortOrder)
+  if (new Set(numbers).size === numbers.length) {
+    return ids
+      .map((id, index) => ({ id, sortOrder: numbers[index] }))
+      .filter((step) => stored.get(step.id) !== step.sortOrder)
+  }
 
-  return [
-    { id: rows[index].id, sortOrder: target + 1 },
-    { id: rows[target].id, sortOrder: index + 1 },
-  ]
+  return order
+    .map((row, index) => ({ id: row.id, sortOrder: index + 1 }))
+    .filter((step) => stored.get(step.id) !== step.sortOrder)
+}
+
+/**
+ * The whole list with one run dealt back into its own places in a new order.
+ * The screen uses this to show a drop before the server has answered, so
+ * what it shows and what gets written cannot disagree.
+ */
+export function arrangeRows<T extends { id: string }>(rows: T[], ids: string[]): T[] | null {
+  if (new Set(ids).size !== ids.length) return null
+  const byId = new Map(rows.map((row) => [row.id, row]))
+  const slots = rows.flatMap((row, index) => (ids.includes(row.id) ? [index] : []))
+  if (slots.length !== ids.length) return null
+
+  const order = [...rows]
+  slots.forEach((slot, step) => {
+    order[slot] = byId.get(ids[step])!
+  })
+  return order
 }

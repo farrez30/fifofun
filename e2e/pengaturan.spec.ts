@@ -36,16 +36,22 @@ test.describe('akun', () => {
     await expect(rows).toHaveCount(4)
     await expect(rows.last()).toContainText('OVO lama')
     await expect(rows.last()).toContainText('(arsip)')
-    await expect(rows.last()).toContainText('tidak diurutkan')
+    // Out of the order: no handle to drag it by.
+    await expect(rows.last().getByRole('button', { name: /^Pindahkan/ })).toHaveCount(0)
     await expect(rows.last().getByRole('button', { name: 'Pakai lagi' })).toBeVisible()
   })
 
-  test('cannot move the first row up or the last live row down', async ({ page }) => {
+  test('gives every live account a handle named for it, big enough for a finger', async ({ page }) => {
     await open(page, 'settings-accounts')
+    const table = page.locator('table')
 
-    await expect(page.getByRole('button', { name: 'Naikkan Bank Mandiri' })).toBeDisabled()
-    await expect(page.getByRole('button', { name: 'Turunkan GoPay' })).toBeDisabled()
-    await expect(page.getByRole('button', { name: 'Turunkan Bank Mandiri' })).toBeEnabled()
+    for (const name of ['Bank Mandiri', 'GoPay']) {
+      const handle = table.getByRole('button', { name: `Pindahkan ${name}` })
+      await expect(handle).toBeVisible()
+      const box = await handle.boundingBox()
+      expect(box!.width).toBeGreaterThanOrEqual(44)
+      expect(box!.height).toBeGreaterThanOrEqual(44)
+    }
   })
 
   test('draws every account with its own mark', async ({ page }) => {
@@ -105,6 +111,30 @@ test.describe('kategori', () => {
     // The pot and the way out of it are two rows with one name, and the funds
     // panel pairs them by that name.
     expect(await page.getByRole('rowheader', { name: /Tabungan/ }).count()).toBe(2)
+  })
+
+  test('offers a handle only where there is something to reorder against', async ({ page }) => {
+    await open(page, 'settings-categories')
+    const table = page.locator('table').filter({ hasText: 'Makan/minum' })
+
+    // Two members of one group: both can move, inside that group.
+    await expect(table.getByRole('button', { name: 'Pindahkan Makan/minum' })).toBeVisible()
+    await expect(table.getByRole('button', { name: 'Pindahkan Kopi' })).toBeVisible()
+    // The only row under its heading has nowhere to go.
+    await expect(page.getByRole('button', { name: 'Pindahkan Gaji' })).toHaveCount(0)
+  })
+
+  test('keeps a group and its members in one block, so they move together', async ({ page }) => {
+    await open(page, 'settings-categories')
+    const table = page.locator('table').filter({ hasText: 'Makan/minum' })
+    const block = table.locator('tbody').filter({ hasText: 'Makan & Minum' })
+
+    await expect(block).toHaveCount(1)
+    await expect(block).toContainText('Makan/minum')
+    await expect(block).toContainText('Kopi')
+    // On a phone the members are a list inside the group's own item.
+    const card = page.locator('ul[aria-label^="Kategori bercashflow Spending"] > li').filter({ hasText: 'Makan & Minum' })
+    await expect(card.locator('ul > li')).toHaveCount(2)
   })
 
   test('reads each category kamus out beside its name', async ({ page }) => {

@@ -25,7 +25,8 @@ const {
   createAccount,
   updateAccount,
   setAccountArchived,
-  moveAccount,
+  reorderAccounts,
+  reorderCategories,
   createCategory,
   updateCategory,
   setCategoryArchived,
@@ -367,12 +368,12 @@ describe('setAccountArchived', () => {
   })
 })
 
-describe('moveAccount', () => {
-  it('moves only the two neighbours that swap', async () => {
+describe('reorderAccounts', () => {
+  it('writes only the rows whose place changed', async () => {
     household()
     stub.queue('accounts', { data: ACCOUNTS }, { data: [{ id: '00000000-0000-4000-8000-0000000000a2' }] }, { data: [{ id: '00000000-0000-4000-8000-0000000000a1' }] })
 
-    const result = await moveAccount(null, form({ id: '00000000-0000-4000-8000-0000000000a2', direction: 'up' }))
+    const result = await reorderAccounts(['00000000-0000-4000-8000-0000000000a2', '00000000-0000-4000-8000-0000000000a1'])
 
     expect(result.ok).toBe(true)
     const writes = stub.callsOn('accounts').slice(1)
@@ -381,21 +382,77 @@ describe('moveAccount', () => {
     expect((writes[1].payload as Record<string, unknown>).sort_order).toBe(2)
   })
 
-  it('refuses to move an archived row', async () => {
+  it('refuses an order that leaves a live account out, as a stale screen would send', async () => {
+    household()
+    stub.queue('accounts', { data: [...ACCOUNTS, { ...ACCOUNTS[1], id: '00000000-0000-4000-8000-0000000000a4', name: 'OVO', sort_order: 4 }] })
+
+    const result = await reorderAccounts(['00000000-0000-4000-8000-0000000000a2', '00000000-0000-4000-8000-0000000000a1'])
+    expect(result.message).toBe('Urutannya tidak disimpan.')
+    expect(stub.callsOn('accounts')).toHaveLength(1)
+  })
+
+  it('refuses an archived account, which has no place in the order', async () => {
     household()
     stub.queue('accounts', { data: ACCOUNTS })
 
-    const result = await moveAccount(null, form({ id: '00000000-0000-4000-8000-0000000000a3', direction: 'up' }))
+    const result = await reorderAccounts(['00000000-0000-4000-8000-0000000000a3', '00000000-0000-4000-8000-0000000000a2', '00000000-0000-4000-8000-0000000000a1'])
     expect(result.ok).toBe(false)
     expect(stub.callsOn('accounts')).toHaveLength(1)
   })
 
-  it('says nothing happened at the end of the list', async () => {
+  it('refuses anything that is not a list of ids, before touching anything', async () => {
+    const result = await reorderAccounts(['a1', 'a2'])
+    expect(result.ok).toBe(false)
+    expect(stub.calls).toHaveLength(0)
+  })
+
+  it('says nothing changed when the order is the same', async () => {
     household()
     stub.queue('accounts', { data: ACCOUNTS })
 
-    const result = await moveAccount(null, form({ id: '00000000-0000-4000-8000-0000000000a1', direction: 'up' }))
-    expect(result).toEqual({ ok: true, message: 'Sudah di ujung.' })
+    const result = await reorderAccounts(['00000000-0000-4000-8000-0000000000a1', '00000000-0000-4000-8000-0000000000a2'])
+    expect(result).toEqual({ ok: true, message: 'Urutannya tidak berubah.' })
+  })
+})
+
+describe('reorderCategories', () => {
+  const C3 = '00000000-0000-4000-8000-0000000000c3'
+  const G = '00000000-0000-4000-8000-0000000000d1'
+  const M1 = '00000000-0000-4000-8000-0000000000d2'
+  const M2 = '00000000-0000-4000-8000-0000000000d3'
+  const TREE = [
+    { id: C3, name: 'Belanja', cashflow: 'spending', parent_id: null, sort_order: 1, archived_at: null },
+    { id: G, name: 'Makan & Minum', cashflow: 'spending', parent_id: null, sort_order: 2, archived_at: null },
+    { id: M1, name: 'Makan/minum', cashflow: 'spending', parent_id: G, sort_order: 3, archived_at: null },
+    { id: M2, name: 'Jajan', cashflow: 'spending', parent_id: G, sort_order: 4, archived_at: null },
+  ]
+
+  it('reorders the members of one group among themselves', async () => {
+    household()
+    stub.queue('categories', { data: TREE }, { data: [{ id: M2 }] }, { data: [{ id: M1 }] })
+
+    const result = await reorderCategories([M2, M1])
+
+    expect(result.ok).toBe(true)
+    const writes = stub.callsOn('categories').slice(1).map((call) => call.payload)
+    expect(writes).toEqual([{ sort_order: 3 }, { sort_order: 4 }])
+  })
+
+  it('refuses to mix a member in among the groups', async () => {
+    household()
+    stub.queue('categories', { data: TREE })
+
+    const result = await reorderCategories([C3, M1, G])
+    expect(result.ok).toBe(false)
+    expect(stub.callsOn('categories')).toHaveLength(1)
+  })
+
+  it('refuses categories from another cashflow in the same run', async () => {
+    household()
+    stub.queue('categories', { data: [...TREE, ...CATEGORIES] })
+
+    const result = await reorderCategories([G, C3, '00000000-0000-4000-8000-0000000000c1'])
+    expect(result.ok).toBe(false)
   })
 })
 

@@ -1,20 +1,23 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useState, useTransition, type ReactNode } from 'react'
 import { AccountMark } from '@/components/marks'
-import { ACCOUNT_KEY_LABELS, type AccountKey } from '@/lib/ledger/settings'
+import { DragHandle, ReorderScope, useReorderRow } from '@/components/reorder'
+import { ACCOUNT_KEY_LABELS, arrangeRows, type AccountKey } from '@/lib/ledger/settings'
 import { formatIdr } from '@/lib/money'
 import type { ActionResult } from '@/lib/actions'
 import type { AccountKind } from '@/lib/ledger/types'
-import { moveAccount, setAccountArchived } from './actions'
+import { reorderAccounts, setAccountArchived } from './actions'
 import { AccountForm } from './account-form'
 
 /**
  * Every account, including the ones put away.
  *
  * The order is a decision rather than an accident, because it is the order the
- * balances table and every account picker use, so it is editable here with two
- * buttons rather than by drag, which is a gesture a keyboard does not have.
+ * balances table and every account picker use, so each live row has a handle
+ * to drag it by. The handle works from the keyboard as well (see
+ * `components/reorder`), which is what the pair of arrow buttons it replaced
+ * was there to guarantee.
  *
  * Archived rows stay listed at the bottom instead of disappearing. A household
  * that archives the wrong wallet needs to be able to find it again, and an
@@ -42,8 +45,39 @@ export interface AccountView {
 
 export function AccountsPanel({ accounts }: { accounts: AccountView[] }) {
   const [editing, setEditing] = useState<string | null>(null)
-  const live = accounts.filter((account) => !account.archived)
-  const archived = accounts.filter((account) => account.archived)
+
+  // A drop shows at once and is put back if the server refuses it.
+  const [shown, setShown] = useState(accounts)
+  const [seen, setSeen] = useState(accounts)
+  if (accounts !== seen) {
+    setSeen(accounts)
+    setShown(accounts)
+  }
+  const [status, setStatus] = useState<ActionResult | null>(null)
+  const [, startTransition] = useTransition()
+
+  const live = shown.filter((account) => !account.archived)
+  const archived = shown.filter((account) => account.archived)
+  const ids = live.map((account) => account.id)
+  const names = Object.fromEntries(live.map((account) => [account.id, account.name]))
+
+  function reorder(next: string[]) {
+    const arranged = arrangeRows(shown, next)
+    if (!arranged) return
+    setShown(arranged)
+    setStatus(null)
+    startTransition(async () => {
+      const result = await reorderAccounts(next)
+      setStatus(result)
+      if (!result.ok) setShown(seen)
+    })
+  }
+
+  const scope = (children: ReactNode) => (
+    <ReorderScope ids={ids} names={names} onReorder={reorder} onDragStart={() => setEditing(null)}>
+      {children}
+    </ReorderScope>
+  )
 
   return (
     <section aria-labelledby="akun" className="scroll-mt-8">
@@ -65,12 +99,20 @@ export function AccountsPanel({ accounts }: { accounts: AccountView[] }) {
         hidden one cannot be submitted, and only the visible one is reachable.
       */}
       <ul aria-label="Akun" className="mt-3 rows-inset squircle rounded-md bg-surface shadow-xs sm:hidden">
-        {[...live, ...archived].map((account, index) => (
+        {scope(
+          live.map((account) => (
+            <SortableCard
+              key={account.id}
+              account={account}
+              open={editing === account.id}
+              onToggle={() => setEditing(editing === account.id ? null : account.id)}
+            />
+          )),
+        )}
+        {archived.map((account) => (
           <Card
             key={account.id}
             account={account}
-            first={index === 0}
-            last={index === live.length - 1}
             open={editing === account.id}
             onToggle={() => setEditing(editing === account.id ? null : account.id)}
           />
@@ -83,6 +125,9 @@ export function AccountsPanel({ accounts }: { accounts: AccountView[] }) {
           <caption className="sr-only">Akun beserta kunci impor dan urutannya</caption>
           <thead>
             <tr className="border-b border-line text-left text-caption1 uppercase tracking-wide text-ink-faint">
+              <th scope="col" className="w-0 py-2 pl-2 font-medium">
+                <span className="sr-only">Urutan</span>
+              </th>
               <th scope="col" className="px-4 py-2 font-medium">
                 Akun
               </th>
@@ -96,20 +141,25 @@ export function AccountsPanel({ accounts }: { accounts: AccountView[] }) {
                 Transaksi
               </th>
               <th scope="col" className="px-4 py-2 font-medium">
-                Urutan
-              </th>
-              <th scope="col" className="px-4 py-2 font-medium">
                 Aksi
               </th>
             </tr>
           </thead>
           <tbody>
-            {[...live, ...archived].map((account, index) => (
+            {scope(
+              live.map((account) => (
+                <SortableRow
+                  key={account.id}
+                  account={account}
+                  open={editing === account.id}
+                  onToggle={() => setEditing(editing === account.id ? null : account.id)}
+                />
+              )),
+            )}
+            {archived.map((account) => (
               <Row
                 key={account.id}
                 account={account}
-                first={index === 0}
-                last={index === live.length - 1}
                 open={editing === account.id}
                 onToggle={() => setEditing(editing === account.id ? null : account.id)}
               />
@@ -118,7 +168,15 @@ export function AccountsPanel({ accounts }: { accounts: AccountView[] }) {
         </table>
       </div>
 
+      {status ? (
+        <p role="status" className={`mt-2 text-footnote ${status.ok ? 'text-under' : 'text-over'}`}>
+          {status.message}
+          {status.detail ? <span className="text-ink-muted"> {status.detail}</span> : null}
+        </p>
+      ) : null}
+
       <p className="mt-2 text-footnote text-ink-muted">
+        Seret pegangan di kiri untuk mengubah urutan akun di tabel saldo dan setiap pilihan akun.
         Kunci impor menghubungkan baris e-statement dan pesan bot Telegram ke akun ini, jadi
         namanya bebas diganti tanpa memutus impor. Yang tidak boleh pindah diam-diam adalah
         kuncinya.
@@ -134,22 +192,33 @@ export function AccountsPanel({ accounts }: { accounts: AccountView[] }) {
   )
 }
 
-function Row({
-  account,
-  first,
-  last,
-  open,
-  onToggle,
-}: {
+interface RowProps {
   account: AccountView
-  first: boolean
-  last: boolean
   open: boolean
   onToggle: () => void
-}) {
+  /** Live rows only: an archived account has no place in the order. */
+  reorder?: ReturnType<typeof useReorderRow>
+}
+
+function SortableRow(props: Omit<RowProps, 'reorder'>) {
+  return <Row {...props} reorder={useReorderRow(props.account.id)} />
+}
+
+function SortableCard(props: Omit<RowProps, 'reorder'>) {
+  return <Card {...props} reorder={useReorderRow(props.account.id)} />
+}
+
+function Row({ account, open, onToggle, reorder }: RowProps) {
   return (
     <>
-      <tr className="border-b border-line last:border-0">
+      <tr
+        ref={reorder?.ref}
+        style={reorder?.style}
+        className={`border-b border-line last:border-0 ${reorder?.liftClass ?? ''}`}
+      >
+        <td className="w-0 py-1 pl-2">
+          {reorder ? <DragHandle label={`Pindahkan ${account.name}`} handle={reorder.handle} /> : null}
+        </td>
         <th scope="row" className="whitespace-nowrap px-4 py-2.5 text-left font-normal text-ink">
           <AccountMark name={account.name} kind={account.kind} />
           {account.archived ? (
@@ -173,16 +242,6 @@ function Row({
         </td>
         <td className="tnum whitespace-nowrap px-4 py-2.5 text-right font-mono text-ink-muted">
           {account.usage}
-        </td>
-        <td className="whitespace-nowrap px-4 py-2.5">
-          {account.archived ? (
-            <span className="text-footnote text-ink-faint">tidak diurutkan</span>
-          ) : (
-            <div className="flex gap-1">
-              <MoveButton id={account.id} direction="up" name={account.name} disabled={first} />
-              <MoveButton id={account.id} direction="down" name={account.name} disabled={last} />
-            </div>
-          )}
         </td>
         <td className="whitespace-nowrap px-4 py-2.5">
           <div className="flex flex-wrap gap-2">
@@ -211,22 +270,15 @@ function Row({
 }
 
 /** One account as a card, for a screen the table does not fit on. */
-function Card({
-  account,
-  first,
-  last,
-  open,
-  onToggle,
-}: {
-  account: AccountView
-  first: boolean
-  last: boolean
-  open: boolean
-  onToggle: () => void
-}) {
+function Card({ account, open, onToggle, reorder }: RowProps) {
   return (
-    <li className="p-3">
-      <div className="flex items-baseline justify-between gap-3">
+    <li
+      ref={reorder?.ref}
+      style={reorder?.style}
+      className={`p-3 ${reorder ? 'pl-1' : ''} ${reorder?.liftClass ?? ''}`}
+    >
+      <div className="flex items-center justify-between gap-1">
+        {reorder ? <DragHandle label={`Pindahkan ${account.name}`} handle={reorder.handle} /> : null}
         <span className="min-w-0 flex-1 text-subhead text-ink">
           <AccountMark name={account.name} kind={account.kind} />
           {account.archived ? <span className="ml-2 text-footnote text-ink-faint">(arsip)</span> : null}
@@ -263,12 +315,6 @@ function Card({
           {open ? 'Tutup' : 'Ubah'}
         </button>
         <ArchiveButton account={account} />
-        {account.archived ? null : (
-          <div className="flex gap-2">
-            <MoveButton id={account.id} direction="up" name={account.name} disabled={first} />
-            <MoveButton id={account.id} direction="down" name={account.name} disabled={last} />
-          </div>
-        )}
       </div>
 
       {open ? (
@@ -277,43 +323,6 @@ function Card({
         </div>
       ) : null}
     </li>
-  )
-}
-
-function MoveButton({
-
-  id,
-  direction,
-  name,
-  disabled,
-}: {
-  id: string
-  direction: 'up' | 'down'
-  name: string
-  disabled: boolean
-}) {
-  const [result, action] = useActionState<ActionResult | null, FormData>(moveAccount, null)
-
-  return (
-    <form action={action}>
-      <input type="hidden" name="id" value={id} />
-      <input type="hidden" name="direction" value={direction} />
-      <button
-        type="submit"
-        disabled={disabled}
-        aria-label={`${direction === 'up' ? 'Naikkan' : 'Turunkan'} ${name}`}
-        className="h-9 w-9 rounded-sm border border-line text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken disabled:opacity-30"
-      >
-        <span aria-hidden="true">{direction === 'up' ? '↑' : '↓'}</span>
-      </button>
-      {/* A refused reorder used to do nothing at all: the arrow moved no row
-          and said no word. */}
-      {result && !result.ok ? (
-        <span role="status" className="ml-2 text-footnote text-over">
-          {result.message}
-        </span>
-      ) : null}
-    </form>
   )
 }
 

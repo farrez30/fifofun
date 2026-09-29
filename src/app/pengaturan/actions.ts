@@ -16,7 +16,7 @@ import {
   type ActionResult,
 } from '@/lib/actions'
 import { ICON_NAMES } from '@/components/marks'
-import { ACCOUNT_KEYS, parseIdentifiers, planReorder, twinsOf } from '@/lib/ledger/settings'
+import { ACCOUNT_KEYS, parseIdentifiers, planArrange, twinsOf } from '@/lib/ledger/settings'
 import { describeBackfill, planOwnMoneyBackfill, type BackfillRow } from '@/lib/ledger/own-money-backfill'
 import { accountNumber } from '@/lib/statement/classify'
 import { ACCOUNT_KINDS, CASHFLOW_LABELS, CASHFLOW_TYPES, type CashflowType } from '@/lib/ledger/types'
@@ -501,44 +501,67 @@ export async function setAccountArchived(
   }
 }
 
-export async function moveAccount(
-  _previous: ActionResult | null,
-  formData: FormData,
-): Promise<ActionResult> {
-  return move(formData, 'accounts')
-}
+/*
+  A drag sends the whole run of siblings in its new order, not "row X moved
+  two places", because that is what the person saw when they let go. The run
+  has to be exactly what is on their screen: every live row of that list and
+  nothing from another one. A stale tab, or a request written by hand, gets a
+  refusal rather than a best guess at what was meant.
+*/
+const reorderIds = z.array(z.uuid()).min(2).max(500)
 
-export async function moveCategory(
-  _previous: ActionResult | null,
-  formData: FormData,
-): Promise<ActionResult> {
-  return move(formData, 'categories')
-}
+const STALE_ORDER = 'Urutannya tidak disimpan.'
+const STALE_ORDER_DETAIL = 'Daftarnya sudah berubah sejak halaman ini dibuka. Muat ulang, lalu coba lagi.'
 
-async function move(formData: FormData, table: 'accounts' | 'categories'): Promise<ActionResult> {
-  const id = z.uuid().safeParse(formData.get('id'))
-  const direction = z.enum(['up', 'down']).safeParse(formData.get('direction'))
-  if (!id.success || !direction.success) return fail('Barisnya tidak ditemukan.')
+export async function reorderAccounts(ids: string[]): Promise<ActionResult> {
+  const parsed = reorderIds.safeParse(ids)
+  if (!parsed.success) return fail('Urutannya tidak bisa dibaca.')
 
   const ctx = await context()
   if (!ctx) return fail(SESSION_EXPIRED)
 
-  const rows =
-    table === 'accounts'
-      ? await accountsOf(ctx.supabase, ctx.householdId)
-      : await categoriesOf(ctx.supabase, ctx.householdId)
+  const live = (await accountsOf(ctx.supabase, ctx.householdId)).filter((row) => row.archivedAt === null)
+  if (!sameMembers(live.map((row) => row.id), parsed.data)) return fail(STALE_ORDER, STALE_ORDER_DETAIL)
 
-  const target = rows.find((row) => row.id === id.data)
-  if (!target) return fail('Barisnya tidak ditemukan.')
-  if (target.archivedAt !== null) {
-    return fail('Baris yang diarsipkan tidak punya urutan.', 'Pakai lagi dulu kalau mau diurutkan.')
-  }
+  return arrange(ctx, 'accounts', live, parsed.data)
+}
 
+export async function reorderCategories(ids: string[]): Promise<ActionResult> {
+  const parsed = reorderIds.safeParse(ids)
+  if (!parsed.success) return fail('Urutannya tidak bisa dibaca.')
+
+  const ctx = await context()
+  if (!ctx) return fail(SESSION_EXPIRED)
+
+  const live = (await categoriesOf(ctx.supabase, ctx.householdId)).filter(
+    (row) => row.archivedAt === null,
+  )
+  // One heading, or one group's members: the same cashflow and the same parent.
+  const first = live.find((row) => row.id === parsed.data[0])
+  const run = first
+    ? live.filter((row) => row.cashflow === first.cashflow && row.parentId === first.parentId)
+    : []
+  if (!sameMembers(run.map((row) => row.id), parsed.data)) return fail(STALE_ORDER, STALE_ORDER_DETAIL)
+
+  return arrange(ctx, 'categories', live, parsed.data)
+}
+
+function sameMembers(expected: string[], sent: string[]): boolean {
+  const wanted = new Set(expected)
+  return expected.length === sent.length && sent.every((id) => wanted.has(id))
+}
+
+async function arrange(
+  ctx: NonNullable<Awaited<ReturnType<typeof context>>>,
+  table: 'accounts' | 'categories',
   // Archived rows are not in the list a person is looking at, so they must not
   // be in the list the positions are computed from either.
-  const live = rows.filter((row) => row.archivedAt === null)
-  const plan = planReorder(live, id.data, direction.data)
-  if (plan.length === 0) return { ok: true, message: 'Sudah di ujung.' }
+  live: { id: string; sortOrder: number }[],
+  ids: string[],
+): Promise<ActionResult> {
+  const plan = planArrange(live, ids)
+  if (plan === null) return fail(STALE_ORDER, STALE_ORDER_DETAIL)
+  if (plan.length === 0) return { ok: true, message: 'Urutannya tidak berubah.' }
 
   for (const step of plan) {
     const { error } = await ctx.supabase

@@ -7,7 +7,7 @@ import {
   isLookedUpByName,
   optionGroups,
   parseIdentifiers,
-  planReorder,
+  planArrange,
   twinsOf,
 } from './settings'
 import { SEED_ACCOUNTS } from './seed-data'
@@ -106,44 +106,78 @@ describe('isLookedUpByName', () => {
   })
 })
 
-describe('planReorder', () => {
+describe('planArrange', () => {
   const rows = [
     { id: 'a', sortOrder: 1 },
     { id: 'b', sortOrder: 2 },
     { id: 'c', sortOrder: 3 },
+    { id: 'd', sortOrder: 4 },
   ]
 
-  it('moves only the two neighbours that actually swap', () => {
-    expect(planReorder(rows, 'b', 'up')).toEqual([
-      { id: 'b', sortOrder: 1 },
-      { id: 'a', sortOrder: 2 },
-    ])
-  })
-
-  it('moves down as the mirror of moving up', () => {
-    expect(planReorder(rows, 'b', 'down')).toEqual([
-      { id: 'b', sortOrder: 3 },
+  it('writes only the rows whose place changed', () => {
+    // c dragged above b: a and d are untouched.
+    expect(planArrange(rows, ['a', 'c', 'b', 'd'])).toEqual([
       { id: 'c', sortOrder: 2 },
+      { id: 'b', sortOrder: 3 },
     ])
   })
 
-  it('does nothing at either end of the list', () => {
-    expect(planReorder(rows, 'a', 'up')).toEqual([])
-    expect(planReorder(rows, 'c', 'down')).toEqual([])
+  it('moves a row from the bottom to the top in one step', () => {
+    expect(planArrange(rows, ['d', 'a', 'b', 'c'])).toEqual([
+      { id: 'd', sortOrder: 1 },
+      { id: 'a', sortOrder: 2 },
+      { id: 'b', sortOrder: 3 },
+      { id: 'c', sortOrder: 4 },
+    ])
   })
 
-  it('does nothing for a row that is not in the list', () => {
-    expect(planReorder(rows, 'z', 'up')).toEqual([])
+  it('reorders one run of siblings inside the places it already holds', () => {
+    // b and d are the two members of one group; x sits between them in the
+    // whole list and must not move when they swap.
+    const mixed = [
+      { id: 'b', sortOrder: 1 },
+      { id: 'x', sortOrder: 2 },
+      { id: 'd', sortOrder: 3 },
+    ]
+    expect(planArrange(mixed, ['d', 'b'])).toEqual([
+      { id: 'd', sortOrder: 1 },
+      { id: 'b', sortOrder: 3 },
+    ])
+  })
+
+  it('keeps sparse numbers and touches only the run', () => {
+    // What years of moves leave behind. Moving c to the top must not renumber
+    // x, which belongs to another run and sits between them.
+    const sparse = [
+      { id: 'a', sortOrder: 10 },
+      { id: 'x', sortOrder: 15 },
+      { id: 'b', sortOrder: 20 },
+      { id: 'c', sortOrder: 30 },
+    ]
+    expect(planArrange(sparse, ['c', 'a', 'b'])).toEqual([
+      { id: 'c', sortOrder: 10 },
+      { id: 'a', sortOrder: 20 },
+      { id: 'b', sortOrder: 30 },
+    ])
+  })
+
+  it('writes nothing when the order is what it already was', () => {
+    expect(planArrange(rows, ['b', 'c'])).toEqual([])
+  })
+
+  it('refuses an id that is not in the list, or one sent twice', () => {
+    expect(planArrange(rows, ['a', 'z'])).toBeNull()
+    expect(planArrange(rows, ['a', 'a'])).toBeNull()
   })
 
   it('numbers from the list order, not from whatever is stored', () => {
     // Every row at zero is what a household migrated from before sort_order
-    // existed looks like. Swapping two zeroes has to still change the order.
+    // existed looks like. Reordering zeroes has to still change the order.
     const flat = [
       { id: 'a', sortOrder: 0 },
       { id: 'b', sortOrder: 0 },
     ]
-    expect(planReorder(flat, 'b', 'up')).toEqual([
+    expect(planArrange(flat, ['b', 'a'])).toEqual([
       { id: 'b', sortOrder: 1 },
       { id: 'a', sortOrder: 2 },
     ])
