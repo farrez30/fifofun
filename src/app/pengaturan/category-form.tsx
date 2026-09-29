@@ -4,6 +4,7 @@ import { useActionState, useId, useState } from 'react'
 import { useFormStatus } from 'react-dom'
 import { BUTTON_PRIMARY, CONTROL, CONTROL_INLINE, FieldRow } from '@/components/field-base'
 import { CategoryMark, ICONS, ICON_NAMES } from '@/components/marks'
+import { MoneyInput } from '@/components/money-input'
 import { PRESET_HUES, categoryHue } from '@/lib/ledger/palette'
 import { isLookedUpByName, twinsOf } from '@/lib/ledger/settings'
 import {
@@ -30,6 +31,9 @@ import type { CategoryView } from './categories-panel'
  * decided, so changing it after the fact would leave rows the balance check
  * refuses. Locked, it is still submitted, because a disabled select posts
  * nothing and the row has to keep the value it already had.
+ *
+ * A bill also carries what it costs and the day it is due. Both fields exist
+ * only while the cashflow reads Tagihan, so nothing else can post them.
  */
 
 interface Props {
@@ -46,7 +50,14 @@ export function CategoryForm({ category, cashflow, siblings }: Props) {
     null,
   )
 
-  const ids = { name: useId(), cashflow: useId(), hue: useId(), parent: useId(), description: useId() }
+  const ids = {
+    name: useId(),
+    cashflow: useId(),
+    hue: useId(),
+    parent: useId(),
+    description: useId(),
+    dueDay: useId(),
+  }
   const footerIds = {
     name: useId(),
     cashflow: useId(),
@@ -59,6 +70,7 @@ export function CategoryForm({ category, cashflow, siblings }: Props) {
   const [icon, setIcon] = useState(category?.icon ?? '')
   const [hue, setHue] = useState(category?.hue ?? '')
   const [parentId, setParentId] = useState(category?.parentId ?? '')
+  const [billAmount, setBillAmount] = useState(() => BigInt(category?.billAmount || '0'))
 
   /*
     A group can only be a category of the same cashflow that is not already
@@ -203,6 +215,39 @@ export function CategoryForm({ category, cashflow, siblings }: Props) {
               : 'Kalau dimasukkan ke sebuah kelompok, angkanya ikut dijumlahkan di baris kelompok itu pada Laporan, dan bisa dibuka satu per satu di sana.'}
         </p>
       </div>
+
+      {flow === 'bills' ? (
+        <div className="space-y-3">
+          <div className="rows-inset squircle rounded-md bg-surface shadow-xs">
+            <FieldRow
+              htmlFor={ids.dueDay}
+              label="Jatuh tempo"
+              hint="Tanggal tiap bulan"
+              invalid={fieldErrors.billDueDay}
+            >
+              <input
+                id={ids.dueDay}
+                type="number"
+                name="billDueDay"
+                min={1}
+                max={31}
+                inputMode="numeric"
+                defaultValue={category?.billDueDay ?? ''}
+                placeholder="Tidak ada"
+                aria-invalid={fieldErrors.billDueDay ? true : undefined}
+                className={`${CONTROL_INLINE} tnum font-mono`}
+              />
+            </FieldRow>
+          </div>
+          <MoneyInput
+            label="Nominal per bulan"
+            value={billAmount}
+            onChange={setBillAmount}
+            name="billAmount"
+            note="Kosongkan kalau berubah-ubah; beranda lalu memakai median pembayaran yang sudah tercatat. Tanggal 31 berarti hari terakhir bulan itu."
+          />
+        </div>
+      ) : null}
 
       <fieldset>
         <legend className="text-subhead font-medium text-ink">Ikon</legend>

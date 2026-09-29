@@ -59,6 +59,13 @@ month, so a first figure is chosen with the evidence in front of it. Savings
 pots work from either end: a deadline gives the monthly figure it needs, and a
 monthly figure gives the month it arrives.
 
+**Knows when a bill is late.** A recurring bill is a category of its own, and
+can carry what it costs and the day of the month it falls due. Whether it was
+paid is still read from the ledger, never ticked by hand; the stated amount
+replaces the median of past payments, and the due day lets an unpaid bill say
+how many days late it is instead of waiting for the month to end. Ending a bill
+archives it, so the months it was paid keep their totals.
+
 ## Correctness
 
 Money is stored as `bigint` in sen. Never floats. Statement reconciliation

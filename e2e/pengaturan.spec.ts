@@ -177,6 +177,16 @@ test.describe('formulir kategori', () => {
     await expect(page.locator('label').filter({ hasText: 'Cashflow' })).toContainText('Terkunci')
   })
 
+  test('asks a bill what it costs and when it is due, and nothing else', async ({ page }) => {
+    await open(page, 'settings-category-form-locked')
+    await expect(page.getByLabel('Jatuh tempo', { exact: false })).toHaveValue('5')
+    await expect(page.locator('input[name="billAmount"]')).toHaveValue('27195000')
+
+    await open(page, 'settings-category-form')
+    await expect(page.locator('input[name="billDueDay"]')).toHaveCount(0)
+    await expect(page.locator('input[name="billAmount"]')).toHaveCount(0)
+  })
+
   test('wires the cashflow field to the sentence explaining it', async ({ page }) => {
     await open(page, 'settings-category-form')
 

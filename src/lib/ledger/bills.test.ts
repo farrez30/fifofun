@@ -190,4 +190,82 @@ describe('reviewBills', () => {
     )
     expect(review.total).toBe(0n)
   })
+
+  describe('with an amount and a due day set', () => {
+    it('quotes the stated amount over the median, and says which it is', () => {
+      const review = reviewBills(
+        [entry('2026-01', 'Wifi', idr('271.950,00')), entry('2026-02', 'Wifi', idr('271.950,00'))],
+        '2026-03',
+        { schedule: { Wifi: { amount: idr('416.000,00'), dueDay: null } } },
+      )
+      expect(review.bills[0]).toMatchObject({ usual: idr('416.000,00'), usualSource: 'set' })
+      expect(review.outstanding).toBe(idr('416.000,00'))
+    })
+
+    it('keeps the median when only the date is stated', () => {
+      const review = reviewBills([entry('2026-02', 'Wifi', idr('271.950,00'))], '2026-03', {
+        schedule: { Wifi: { amount: null, dueDay: 10 } },
+      })
+      expect(review.bills[0]).toMatchObject({ usual: idr('271.950,00'), usualSource: 'median', dueDay: 10 })
+    })
+
+    it('asks about a bill set up this month even though nothing was ever paid', () => {
+      // Without a schedule this is the dormant case above. Stating an amount
+      // is the household saying the bill is real.
+      const review = reviewBills([], '2026-03', {
+        known: ['Biznet'],
+        schedule: { Biznet: { amount: idr('278.000,00'), dueDay: 5 } },
+      })
+      expect(review.bills[0]).toMatchObject({ state: 'due', usual: idr('278.000,00') })
+      expect(review.due).toHaveLength(1)
+    })
+
+    it('never lets a scheduled bill go dormant, however long it has been quiet', () => {
+      const review = reviewBills([entry('2025-09', 'Listrik', idr('500.000,00'))], '2026-03', {
+        schedule: { Listrik: { amount: null, dueDay: 20 } },
+      })
+      expect(review.bills[0].state).toBe('due')
+    })
+
+    it('counts days late only once the due date has passed', () => {
+      const options = (today: string) => ({
+        known: ['Wifi'],
+        schedule: { Wifi: { amount: idr('271.950,00'), dueDay: 5 } },
+        today,
+      })
+      expect(reviewBills([], '2026-03', options('2026-03-05')).bills[0].overdueDays).toBeNull()
+      expect(reviewBills([], '2026-03', options('2026-03-08')).bills[0].overdueDays).toBe(3)
+      // Looking back at a month that ended unpaid keeps counting.
+      expect(reviewBills([], '2026-03', options('2026-04-05')).bills[0].overdueDays).toBe(31)
+    })
+
+    it('reads a 31st as the last day of a shorter month', () => {
+      const review = reviewBills([], '2026-02', {
+        known: ['Kos'],
+        schedule: { Kos: { amount: idr('1.500.000,00'), dueDay: 31 } },
+        today: '2026-03-01',
+      })
+      expect(review.bills[0].overdueDays).toBe(1)
+    })
+
+    it('never calls a paid bill late', () => {
+      const review = reviewBills([entry('2026-03', 'Wifi', idr('271.950,00'))], '2026-03', {
+        schedule: { Wifi: { amount: null, dueDay: 1 } },
+        today: '2026-03-28',
+      })
+      expect(review.bills[0]).toMatchObject({ state: 'paid', overdueDays: null })
+    })
+
+    it('puts the one due soonest first, ahead of a larger one due later or on no date', () => {
+      const review = reviewBills([], '2026-03', {
+        known: ['Kos', 'Wifi', 'Listrik'],
+        schedule: {
+          Kos: { amount: idr('1.500.000,00'), dueDay: 25 },
+          Wifi: { amount: idr('271.950,00'), dueDay: 5 },
+          Listrik: { amount: idr('2.000.000,00'), dueDay: null },
+        },
+      })
+      expect(review.bills.map((bill) => bill.category)).toEqual(['Wifi', 'Kos', 'Listrik'])
+    })
+  })
 })

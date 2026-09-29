@@ -464,6 +464,62 @@ describe('createCategory', () => {
     expect(result.ok).toBe(false)
     expect(stub.calls).toHaveLength(0)
   })
+
+  it('stores a bill with the amount it costs and the day it is due', async () => {
+    household()
+    stub.queue('categories', { data: CATEGORIES }, { data: [{ id: '00000000-0000-4000-8000-0000000000c5' }] })
+
+    const result = await createCategory(
+      null,
+      form({ ...CATEGORY_FIELDS, name: 'Biznet', cashflow: 'bills', billAmount: '27800000', billDueDay: '5' }),
+    )
+
+    expect(result.ok).toBe(true)
+    const payload = stub.callsOn('categories')[1].payload as Record<string, unknown>
+    expect(payload.bill_amount).toBe('27800000')
+    expect(payload.bill_due_day).toBe(5)
+  })
+
+  it('stores a bill with neither half stated as nulls', async () => {
+    household()
+    stub.queue('categories', { data: CATEGORIES }, { data: [{ id: '00000000-0000-4000-8000-0000000000c5' }] })
+
+    // A MoneyInput left empty posts '0', which means "not stated", not a free bill.
+    const result = await createCategory(
+      null,
+      form({ ...CATEGORY_FIELDS, name: 'Listrik', cashflow: 'bills', billAmount: '0', billDueDay: '' }),
+    )
+
+    expect(result.ok).toBe(true)
+    const payload = stub.callsOn('categories')[1].payload as Record<string, unknown>
+    expect(payload.bill_amount).toBeNull()
+    expect(payload.bill_due_day).toBeNull()
+  })
+
+  it('drops a schedule posted for something that is not a bill', async () => {
+    household()
+    stub.queue('categories', { data: CATEGORIES }, { data: [{ id: '00000000-0000-4000-8000-0000000000c5' }] })
+
+    const result = await createCategory(
+      null,
+      form({ ...CATEGORY_FIELDS, name: 'Kopi', cashflow: 'spending', billAmount: '5000000', billDueDay: '10' }),
+    )
+
+    expect(result.ok).toBe(true)
+    const payload = stub.callsOn('categories')[1].payload as Record<string, unknown>
+    expect(payload.bill_amount).toBeNull()
+    expect(payload.bill_due_day).toBeNull()
+  })
+
+  it.each(['0', '32', '1.5', 'lima'])('refuses %s as a due day, before touching anything', async (day) => {
+    const result = await createCategory(
+      null,
+      form({ ...CATEGORY_FIELDS, name: 'Listrik', cashflow: 'bills', billDueDay: day }),
+    )
+    expect(result.ok).toBe(false)
+    expect(result.fieldErrors?.billDueDay).toBe('Tanggal jatuh tempo antara 1 dan 31.')
+    expect(stub.calls).toHaveLength(0)
+  })
 })
 
 describe('updateCategory', () => {
@@ -523,6 +579,29 @@ describe('updateCategory', () => {
       form({ ...CATEGORY_FIELDS, id: '00000000-0000-4000-8000-0000000000c3', name: 'Belanja', cashflow: 'bills' }),
     )
     expect(result.ok).toBe(true)
+  })
+
+  it('changes a bill amount and clears its due day', async () => {
+    household()
+    const bills = [...CATEGORIES, { id: '00000000-0000-4000-8000-0000000000c6', name: 'Internet', cashflow: 'bills', sort_order: 5, archived_at: null }]
+    stub.queue('categories', { data: bills }, { data: [{ id: '00000000-0000-4000-8000-0000000000c6' }] })
+
+    const result = await updateCategory(
+      null,
+      form({
+        ...CATEGORY_FIELDS,
+        id: '00000000-0000-4000-8000-0000000000c6',
+        name: 'Internet',
+        cashflow: 'bills',
+        billAmount: '41600000',
+        billDueDay: '',
+      }),
+    )
+
+    expect(result.ok).toBe(true)
+    const payload = stub.callsOn('categories')[1].payload as Record<string, unknown>
+    expect(payload.bill_amount).toBe('41600000')
+    expect(payload.bill_due_day).toBeNull()
   })
 })
 

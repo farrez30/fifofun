@@ -68,6 +68,10 @@ export interface CategoryRow {
   plannedMonthly: bigint | null
   /** The same intention as basis points of typical income. */
   plannedShareBp: number | null
+  /** What a bill costs each month, in sen. Only bills carry one. */
+  billAmount: bigint | null
+  /** Day of the month a bill is due, 1 to 31. */
+  billDueDay: number | null
   /** Phosphor icon name, or null to fall back to the cashflow's own. */
   icon: string | null
   /** Stored hue 0 to 359, or null to fall back to the palette. */
@@ -158,7 +162,7 @@ export async function getCategories(
   let query = supabase
     .from('categories')
     .select(
-      'id, name, cashflow, parent_id, opening_balance, target_amount, target_month, planned_monthly, planned_share_bp, icon, color, description, sort_order, archived_at',
+      'id, name, cashflow, parent_id, opening_balance, target_amount, target_month, planned_monthly, planned_share_bp, bill_amount, bill_due_day, icon, color, description, sort_order, archived_at',
     )
     .eq('household_id', householdId)
     // Ordered by the household's own arrangement, with the name as the
@@ -184,6 +188,8 @@ export async function getCategories(
     targetMonth: (row.target_month as string | null) ?? null,
     plannedMonthly: row.planned_monthly === null ? null : toBigInt(row.planned_monthly),
     plannedShareBp: (row.planned_share_bp as number | null) ?? null,
+    billAmount: row.bill_amount === null ? null : toBigInt(row.bill_amount),
+    billDueDay: (row.bill_due_day as number | null) ?? null,
     icon: (row.icon as string | null) ?? null,
     hue: parseHue(row.color),
     description: (row.description as string | null) ?? null,

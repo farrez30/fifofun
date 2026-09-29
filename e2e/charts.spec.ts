@@ -330,6 +330,26 @@ test.describe('tagihan rutin', () => {
     // costs leaves the reader to go and look it up.
     await expect(spotify).toContainText('Rp104.900')
   })
+
+  test('says how late a bill is, and whether its amount was stated or guessed', async ({ page }) => {
+    await open(page, 'bills')
+
+    // Due on the 5th, looked at on the 20th, with the amount set in Pengaturan.
+    const rent = page.locator('tbody tr', { hasText: 'Bayar Kontrakan' })
+    await expect(rent).toContainText('lewat 15 hari')
+    await expect(rent).toContainText('Rp1.500.000')
+    await expect(rent).toContainText('ditetapkan')
+
+    // Only the date was set, so the amount stays the median and is not
+    // dressed up as a promise.
+    const spotify = page.locator('tbody tr', { hasText: 'Langganan Spotify' })
+    await expect(spotify).toContainText('lewat 12 hari')
+    await expect(spotify).not.toContainText('ditetapkan')
+
+    // Paid, so its date is shown plainly rather than as late.
+    await expect(page.locator('tbody tr', { hasText: 'Wifi' })).toContainText('tgl 31')
+    await expect(page.getByText('2 sudah lewat jatuh tempo', { exact: false })).toBeVisible()
+  })
 })
 
 test.describe('piutang', () => {

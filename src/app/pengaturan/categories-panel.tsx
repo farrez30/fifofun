@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from 'react'
 import { CategoryMark } from '@/components/marks'
+import { formatIdr } from '@/lib/money'
 import { LOOKED_UP_NAMES, isLookedUpByName } from '@/lib/ledger/settings'
 import { CASHFLOW_LABELS, CASHFLOW_TYPES, type CashflowType } from '@/lib/ledger/types'
 import type { ActionResult } from '@/lib/actions'
@@ -29,6 +30,10 @@ export interface CategoryView {
   hue: string
   /** One sentence saying what belongs here, or empty for none. */
   description: string
+  /** A bill's monthly amount as sen digits, or empty when none was set. */
+  billAmount: string
+  /** A bill's due day as text, or empty. */
+  billDueDay: string
   archived: boolean
   usage: number
 }
@@ -212,6 +217,16 @@ function Table({
   )
 }
 
+/** "Rp121.000 · tgl 5" for a bill with a schedule, null otherwise. */
+function billSummary(category: CategoryView): string | null {
+  if (category.cashflow !== 'bills') return null
+  const parts = [
+    category.billAmount ? formatIdr(BigInt(category.billAmount)) : null,
+    category.billDueDay ? `tgl ${category.billDueDay}` : null,
+  ].filter(Boolean)
+  return parts.length > 0 ? parts.join(' · ') : null
+}
+
 /** One category as a card, for a screen the table does not fit on. */
 function Card({
   category,
@@ -251,6 +266,10 @@ function Card({
 
       {category.description ? (
         <p className="mt-1 text-footnote text-ink-muted">{category.description}</p>
+      ) : null}
+
+      {billSummary(category) ? (
+        <p className="tnum mt-1 text-footnote text-ink-muted">{billSummary(category)}</p>
       ) : null}
 
       {isLookedUpByName(category.name) || isGroup ? (
@@ -335,6 +354,11 @@ function Row({
           {category.description ? (
             <span className="mt-0.5 block text-footnote font-normal text-ink-muted">
               {category.description}
+            </span>
+          ) : null}
+          {billSummary(category) ? (
+            <span className="tnum mt-0.5 block text-footnote font-normal text-ink-muted">
+              {billSummary(category)}
             </span>
           ) : null}
         </th>

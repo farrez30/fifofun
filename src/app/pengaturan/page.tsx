@@ -66,6 +66,8 @@ async function Settings() {
     icon: category.icon ?? '',
     hue: category.hue === null ? '' : String(category.hue),
     description: category.description ?? '',
+    billAmount: category.billAmount === null ? '' : category.billAmount.toString(),
+    billDueDay: category.billDueDay === null ? '' : String(category.billDueDay),
     archived: category.archivedAt !== null,
     usage: usage.categories[category.id] ?? 0,
   }))

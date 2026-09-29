@@ -8,6 +8,7 @@ import {
   jsonb,
   pgEnum,
   pgTable,
+  smallint,
   text,
   timestamp,
   uniqueIndex,
@@ -146,6 +147,15 @@ export const categories = pgTable(
     plannedMonthly: bigint('planned_monthly', { mode: 'bigint' }),
     /** The same intention as a share of typical income, in basis points (1250 = 12,5%). */
     plannedShareBp: integer('planned_share_bp'),
+    /**
+     * What a recurring bill costs each month, in sen, and the day of the month
+     * it is due. Only bills carry either. The spreadsheet kept both on its
+     * Setup sheet; without them the ledger could only guess the amount from
+     * past payments and had no idea a bill was late until the month ended.
+     */
+    billAmount: bigint('bill_amount', { mode: 'bigint' }),
+    /** 1 to 31. A 31 in a shorter month means its last day. */
+    billDueDay: smallint('bill_due_day'),
     icon: text('icon'),
     color: text('color'),
     /**

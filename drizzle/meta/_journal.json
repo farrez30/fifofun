@@ -78,6 +78,13 @@
       "when": 1788254327080,
       "tag": "0010_category_descriptions",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790652626926,
+      "tag": "0011_bill_schedule",
+      "breakpoints": true
     }
   ]
 }

@@ -197,7 +197,17 @@ const BILLS = reviewBills(
     ledgerRow('2025-09-01', 'Langganan DanceFitMe', idr('49.000,00'), 'bills'),
   ],
   '2026-03',
-  { known: ['Bayar Kontrakan', 'Aeropolis Gym & Pool'] },
+  {
+    known: ['Bayar Kontrakan', 'Aeropolis Gym & Pool'],
+    // One bill with both halves stated and one with only a date, both late on
+    // the 20th, so the set-versus-median label and the lateness are drawn.
+    schedule: {
+      'Bayar Kontrakan': { amount: idr('1.500.000,00'), dueDay: 5 },
+      'Langganan Spotify': { amount: null, dueDay: 8 },
+      Wifi: { amount: idr('271.950,00'), dueDay: 31 },
+    },
+    today: '2026-03-20',
+  },
 )
 
 const RECEIVABLES = reviewReceivables(
@@ -825,18 +835,18 @@ const SETTINGS_ACCOUNTS: AccountView[] = [
 ]
 
 const SETTINGS_CATEGORIES: CategoryView[] = [
-  { id: 'cat-gaji', name: 'Gaji', cashflow: 'income', parentId: '', icon: 'Briefcase', hue: '0', description: 'Gaji rutin dari pekerjaan utama.', archived: false, usage: 24 },
+  { id: 'cat-gaji', name: 'Gaji', cashflow: 'income', parentId: '', icon: 'Briefcase', hue: '0', description: 'Gaji rutin dari pekerjaan utama.', billAmount: '', billDueDay: '', archived: false, usage: 24 },
   // A group and the two things inside it, so the indent and the "kelompok"
   // note are both drawn.
-  { id: 'cat-makan-group', name: 'Makan & Minum', cashflow: 'spending', parentId: '', icon: 'ForkKnife', hue: '137', description: 'Semua yang masuk mulut.', archived: false, usage: 0 },
-  { id: 'cat-makan', name: 'Makan/minum', cashflow: 'spending', parentId: 'cat-makan-group', icon: 'ForkKnife', hue: '137', description: 'Makanan yang mengenyangkan sebagai makan utama.', archived: false, usage: 612 },
+  { id: 'cat-makan-group', name: 'Makan & Minum', cashflow: 'spending', parentId: '', icon: 'ForkKnife', hue: '137', description: 'Semua yang masuk mulut.', billAmount: '', billDueDay: '', archived: false, usage: 0 },
+  { id: 'cat-makan', name: 'Makan/minum', cashflow: 'spending', parentId: 'cat-makan-group', icon: 'ForkKnife', hue: '137', description: 'Makanan yang mengenyangkan sebagai makan utama.', billAmount: '', billDueDay: '', archived: false, usage: 612 },
   // Nothing filed under it yet, so its cashflow is still free to move. Also
   // the row with no kamus, so the blank case is drawn.
-  { id: 'cat-kopi', name: 'Kopi', cashflow: 'spending', parentId: 'cat-makan-group', icon: '', hue: '', description: '', archived: false, usage: 0 },
-  { id: 'cat-wifi', name: 'Wifi', cashflow: 'bills', parentId: '', icon: 'WifiHigh', hue: '210', description: 'Internet rumah.', archived: false, usage: 12 },
-  { id: 'cat-tabungan', name: 'Tabungan', cashflow: 'invest_savings', parentId: '', icon: 'PiggyBank', hue: '300', description: 'Menyisihkan uang ke tabungan umum.', archived: false, usage: 9 },
-  { id: 'cat-tabungan-keluar', name: 'Tabungan', cashflow: 'from_asset', parentId: '', icon: 'PiggyBank', hue: '300', description: 'Mengambil kembali uang dari tabungan umum.', archived: false, usage: 2 },
-  { id: 'cat-lama', name: 'Langganan lama', cashflow: 'bills', parentId: '', icon: 'Receipt', hue: '', description: '', archived: true, usage: 5 },
+  { id: 'cat-kopi', name: 'Kopi', cashflow: 'spending', parentId: 'cat-makan-group', icon: '', hue: '', description: '', billAmount: '', billDueDay: '', archived: false, usage: 0 },
+  { id: 'cat-wifi', name: 'Wifi', cashflow: 'bills', parentId: '', icon: 'WifiHigh', hue: '210', description: 'Internet rumah.', billAmount: '27195000', billDueDay: '5', archived: false, usage: 12 },
+  { id: 'cat-tabungan', name: 'Tabungan', cashflow: 'invest_savings', parentId: '', icon: 'PiggyBank', hue: '300', description: 'Menyisihkan uang ke tabungan umum.', billAmount: '', billDueDay: '', archived: false, usage: 9 },
+  { id: 'cat-tabungan-keluar', name: 'Tabungan', cashflow: 'from_asset', parentId: '', icon: 'PiggyBank', hue: '300', description: 'Mengambil kembali uang dari tabungan umum.', billAmount: '', billDueDay: '', archived: false, usage: 2 },
+  { id: 'cat-lama', name: 'Langganan lama', cashflow: 'bills', parentId: '', icon: 'Receipt', hue: '', description: '', billAmount: '', billDueDay: '', archived: true, usage: 5 },
 ]
 
 /*

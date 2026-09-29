@@ -10,6 +10,7 @@ import {
   fail,
   invalidFields,
   isoDateField,
+  optionalSen,
   senField,
   writeFailed,
   type ActionResult,
@@ -83,7 +84,30 @@ const categorySchema = z.object({
   parentId: z.uuid().or(z.literal('')),
   /** One sentence saying what belongs here; empty removes it. */
   description: z.string().trim().max(160, 'Kamusnya cukup satu kalimat, maksimal 160 huruf.'),
+  /** What a bill costs each month. Empty or zero means not stated. */
+  billAmount: optionalSen,
+  billDueDay: z
+    .string()
+    .trim()
+    .refine(
+      (value) => value === '' || (/^\d{1,2}$/.test(value) && Number(value) >= 1 && Number(value) <= 31),
+      'Tanggal jatuh tempo antara 1 dan 31.',
+    )
+    .transform((value) => (value === '' ? null : Number(value))),
 })
+
+/**
+ * The two bill columns as they are written. Anything that is not a bill gets
+ * nulls, whatever the form sent: switching a category away from Tagihan must
+ * not leave a due date behind that the database would refuse anyway.
+ */
+function billColumns(values: z.infer<typeof categorySchema>) {
+  const isBill = values.cashflow === 'bills'
+  return {
+    bill_amount: isBill && values.billAmount !== null ? values.billAmount.toString() : null,
+    bill_due_day: isBill ? values.billDueDay : null,
+  }
+}
 
 /**
  * Why a group cannot be the one that was asked for.
@@ -566,6 +590,7 @@ export async function createCategory(
       icon: values.icon || null,
       color: values.hue === null ? null : String(values.hue),
       description: values.description || null,
+      ...billColumns(values),
       sort_order: rows.length + 1,
     })
     .select('id')
@@ -661,6 +686,7 @@ export async function updateCategory(
       icon: values.icon || null,
       color: values.hue === null ? null : String(values.hue),
       description: values.description || null,
+      ...billColumns(values),
     })
     .eq('id', current.id)
     .eq('household_id', ctx.householdId)
@@ -781,6 +807,8 @@ function readCategory(formData: FormData) {
     hue: formData.get('hue') ?? '',
     parentId: formData.get('parentId') ?? '',
     description: formData.get('description') ?? '',
+    billAmount: formData.get('billAmount') ?? '',
+    billDueDay: formData.get('billDueDay') ?? '',
   }
 }
 

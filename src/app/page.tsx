@@ -184,6 +184,12 @@ async function Dashboard({ akun }: { akun: string }) {
       ended: categories
         .filter((c) => c.cashflow === 'bills' && c.archivedAt !== null)
         .map((c) => c.name),
+      schedule: Object.fromEntries(
+        categories
+          .filter((c) => c.cashflow === 'bills')
+          .map((c) => [c.name, { amount: c.billAmount, dueDay: c.billDueDay }]),
+      ),
+      today: formatJakarta(new Date(), 'iso-date'),
     },
   )
 

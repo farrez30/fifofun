@@ -1,3 +1,4 @@
+import { daysInMonth } from '@/lib/datetime'
 import { median } from '@/lib/planning/lifestyle'
 import { monthKeyOf, monthKeyToString } from './monthly'
 import type { LedgerEntry } from './types'
@@ -19,6 +20,11 @@ import type { LedgerEntry } from './types'
  * Being derived also means an unpaid bill can say something useful about itself.
  * The usual amount comes from the same history, so "Wifi belum dibayar" arrives
  * with the roughly Rp272 ribu it is going to cost.
+ *
+ * What the history cannot know is a bill set up this month, or the day one
+ * falls due. Those two the household states once, on the category, the way the
+ * Setup sheet held them. A stated amount beats the median; a stated day lets an
+ * unpaid bill say how late it is instead of waiting for the month to end.
  */
 
 export type BillState = 'paid' | 'due' | 'dormant'
@@ -28,8 +34,14 @@ export interface BillStatus {
   state: BillState
   /** What was actually paid this month, or zero where nothing was. */
   paid: bigint
-  /** The median of the months this bill was paid in, or zero with no history. */
+  /** The amount the household set, else the median of the months it was paid in, else zero. */
   usual: bigint
+  /** Where `usual` came from, because a stated figure and a guess read differently. */
+  usualSource: 'set' | 'median'
+  /** Day of the month it is due, or null when none was set. */
+  dueDay: number | null
+  /** Days past its due date while still unpaid, or null when it is not late. */
+  overdueDays: number | null
   /** How many of the months looked at carried a payment. */
   paidMonths: number
   monthsSeen: number
@@ -82,6 +94,12 @@ function monthsUpTo(earliest: string, period: string): string[] {
   return keys
 }
 
+/** What the household stated about a bill. Either half may be missing. */
+export interface BillSchedule {
+  amount: bigint | null
+  dueDay: number | null
+}
+
 export interface BillsOptions {
   /**
    * Categories to report even when they have never been paid, so a bill set up
@@ -98,6 +116,24 @@ export interface BillsOptions {
    * that made it dormant never expire.
    */
   ended?: string[]
+  /** Stated amounts and due days, by category name. */
+  schedule?: Record<string, BillSchedule>
+  /**
+   * Today as `YYYY-MM-DD` in Jakarta, for lateness. Passed in rather than read
+   * from the clock so the same ledger always gives the same answer in a test.
+   */
+  today?: string
+}
+
+/** The date a bill falls due in a month. A 31st in a shorter month is its last day. */
+function dueDateOf(period: string, dueDay: number): string {
+  const [year, month] = period.split('-').map(Number)
+  const day = Math.min(dueDay, daysInMonth(year, month))
+  return `${period}-${String(day).padStart(2, '0')}`
+}
+
+function daysBetween(from: string, to: string): number {
+  return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000)
 }
 
 export function reviewBills(
@@ -151,18 +187,31 @@ export function reviewBills(
         .pop()
 
       const monthsSinceLast = lastPaid ? monthsBetween(lastPaid, period) : null
+      const stated = options.schedule?.[category]
+      // A bill somebody gave an amount or a date to is one they still expect.
+      // Only archiving ends it; a quiet stretch in the ledger does not.
+      const scheduled = Boolean(stated && (stated.amount !== null || stated.dueDay !== null))
       const state: BillState =
         paid > 0n
           ? 'paid'
-          : monthsSinceLast === null || monthsSinceLast > DORMANT_AFTER
+          : !scheduled && (monthsSinceLast === null || monthsSinceLast > DORMANT_AFTER)
             ? 'dormant'
             : 'due'
+
+      const dueDay = stated?.dueDay ?? null
+      const late =
+        state === 'due' && dueDay !== null && options.today
+          ? daysBetween(dueDateOf(period, dueDay), options.today)
+          : 0
 
       return {
         category,
         state,
         paid,
-        usual: amounts.length > 0 ? median(amounts) : 0n,
+        usual: stated?.amount ?? (amounts.length > 0 ? median(amounts) : 0n),
+        usualSource: stated?.amount ? 'set' : 'median',
+        dueDay,
+        overdueDays: late > 0 ? late : null,
         paidMonths: amounts.length,
         monthsSeen: months.length,
         monthsSinceLast,
@@ -186,11 +235,19 @@ export function reviewBills(
  * Unpaid first, and within that the expensive ones, because that is the order
  * somebody with a finite balance needs to decide in. Dormant bills sink to the
  * bottom rather than disappearing, so cancelling one stays visible.
+ *
+ * Among the unpaid, a known due date outranks size: the one due on the 5th is
+ * the one to deal with before the one due on the 20th, whatever each costs.
  */
 const RANK: Record<BillState, number> = { due: 0, paid: 1, dormant: 2 }
 
 function byUrgency(a: BillStatus, b: BillStatus): number {
   if (RANK[a.state] !== RANK[b.state]) return RANK[a.state] - RANK[b.state]
+  if (a.state === 'due' && a.dueDay !== b.dueDay) {
+    if (a.dueDay === null) return 1
+    if (b.dueDay === null) return -1
+    return a.dueDay - b.dueDay
+  }
   const left = a.state === 'paid' ? a.paid : a.usual
   const right = b.state === 'paid' ? b.paid : b.usual
   if (left !== right) return right > left ? 1 : -1
