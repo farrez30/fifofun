@@ -46,7 +46,15 @@ export function AccountForm({ account }: { account?: AccountView }) {
   const [key, setKey] = useState(account?.key ?? '')
 
   return (
-    <form action={action} className="space-y-4">
+    /*
+      React resets a form after its action finishes, and a controlled select
+      survives that only on screen: the DOM falls back to the first option
+      while state keeps the saved one. The form stays open after a save, so a
+      second press would post "Income" and "Berdiri sendiri" (or the wrong
+      import key) without anyone touching them. What is shown is already what
+      was saved, so there is nothing to reset.
+    */
+    <form action={action} onReset={(event) => event.preventDefault()} className="space-y-4">
       {account ? <input type="hidden" name="id" value={account.id} /> : null}
 
       {/*

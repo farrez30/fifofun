@@ -88,7 +88,15 @@ export function CategoryForm({ category, cashflow, siblings }: Props) {
   const fieldErrors = result && !result.ok ? (result.fieldErrors ?? {}) : {}
 
   return (
-    <form action={action} className="space-y-4">
+    /*
+      React resets a form after its action finishes, and a controlled select
+      survives that only on screen: the DOM falls back to the first option
+      while state keeps the saved one. The form stays open after a save, so a
+      second press would post "Income" and "Berdiri sendiri" (or the wrong
+      import key) without anyone touching them. What is shown is already what
+      was saved, so there is nothing to reset.
+    */
+    <form action={action} onReset={(event) => event.preventDefault()} className="space-y-4">
       {category ? <input type="hidden" name="id" value={category.id} /> : null}
 
       {/*
@@ -222,7 +230,7 @@ export function CategoryForm({ category, cashflow, siblings }: Props) {
             <FieldRow
               htmlFor={ids.dueDay}
               label="Jatuh tempo"
-              hint="Tanggal tiap bulan"
+              hint="Tanggal tiap bulan; 31 berarti akhir bulan"
               invalid={fieldErrors.billDueDay}
             >
               <input
@@ -244,7 +252,7 @@ export function CategoryForm({ category, cashflow, siblings }: Props) {
             value={billAmount}
             onChange={setBillAmount}
             name="billAmount"
-            note="Kosongkan kalau berubah-ubah; beranda lalu memakai median pembayaran yang sudah tercatat. Tanggal 31 berarti hari terakhir bulan itu."
+            note="Kosongkan kalau berubah-ubah; beranda lalu memakai median pembayaran yang sudah tercatat."
           />
         </div>
       ) : null}
