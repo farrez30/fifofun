@@ -888,6 +888,18 @@
     background-color: var(--color-accent-wash);
     color: var(--color-ink);
   }
+
+  /*
+    A native select's popup is drawn by the operating system, and Chromium on
+    Windows draws it light even under `color-scheme: dark`, while the options
+    still inherit the white ink of the dark theme: white on white. Giving the
+    options their background from the same token pair as their text keeps the
+    two agreeing whatever the popup decides to be.
+  */
+  :where(option, optgroup) {
+    background-color: var(--color-surface);
+    color: var(--color-ink);
+  }
 }
 
 @layer components {
