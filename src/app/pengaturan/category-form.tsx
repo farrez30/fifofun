@@ -82,7 +82,12 @@ export function CategoryForm({ category, cashflow, siblings }: Props) {
   */
   const hasChildren = siblings.some((row) => row.parentId === category?.id)
   const parents = siblings.filter(
-    (row) => row.cashflow === flow && row.parentId === '' && row.id !== category?.id,
+    (row) =>
+      row.cashflow === flow &&
+      row.parentId === '' &&
+      row.id !== category?.id &&
+      // Archived is retired as a group too; kept only while it is the saved one.
+      (!row.archived || row.id === parentId),
   )
 
   const locked = category !== undefined && category.usage > 0

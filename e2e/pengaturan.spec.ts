@@ -217,6 +217,13 @@ test.describe('formulir kategori', () => {
     await expect(page.locator('input[name="billAmount"]')).toHaveCount(0)
   })
 
+  test('never offers an archived category as a group', async ({ page }) => {
+    // Langganan lama is an archived bill with no group of its own, exactly
+    // the shape the Kelompok list used to offer beside the live ones.
+    await open(page, 'settings-category-form-locked')
+    await expect(page.locator('select[name="parentId"] option', { hasText: 'Langganan lama' })).toHaveCount(0)
+  })
+
   test('wires the cashflow field to the sentence explaining it', async ({ page }) => {
     await open(page, 'settings-category-form')
 
