@@ -23,7 +23,7 @@ test.describe('laporan impor', () => {
   test('names the stage a failure stopped at, and whether anything saved', async ({ page }) => {
     await open(page, 'impor-laporan-gagal')
 
-    const panel = page.getByRole('status')
+    const panel = page.getByRole('region', { name: 'Laporan impor' })
     await expect(panel).toContainText('Impor berhenti saat menyimpan.')
     await expect(panel).toContainText('Mengunggah berkas yang sama lagi aman')
   })
@@ -31,7 +31,7 @@ test.describe('laporan impor', () => {
   test('still shows the full success report', async ({ page }) => {
     await open(page, 'impor-laporan-sukses')
 
-    const panel = page.getByRole('status')
+    const panel = page.getByRole('region', { name: 'Laporan impor' })
     await expect(panel).toContainText('42 transaksi masuk')
     await expect(page.getByText('Perlu ditinjau')).toBeVisible()
   })

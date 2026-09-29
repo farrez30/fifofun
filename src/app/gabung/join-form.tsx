@@ -4,6 +4,7 @@ import { useActionState } from 'react'
 import { useFormStatus } from 'react-dom'
 import { type JoinResult, joinHousehold } from './actions'
 import { BUTTON_PRIMARY, CONTROL } from '@/components/field-base'
+import { useActionToast } from '@/components/use-action-toast'
 
 function Submit() {
   const { pending } = useFormStatus()
@@ -19,7 +20,10 @@ function Submit() {
 }
 
 export function JoinForm() {
-  const [state, action] = useActionState<JoinResult | null, FormData>(joinHousehold, null)
+  const [state, action, pending] = useActionState<JoinResult | null, FormData>(joinHousehold, null)
+  // Only the wait is a toast. A refused code is the field's own error and
+  // stays beside it, where the input's aria-describedby already points.
+  useActionToast(null, pending, 'Memeriksa kode…')
 
   return (
     <form action={action} className="space-y-4" noValidate>

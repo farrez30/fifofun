@@ -9,6 +9,7 @@ import type { ActionResult } from '@/lib/actions'
 import type { AccountKind } from '@/lib/ledger/types'
 import { reorderAccounts, setAccountArchived } from './actions'
 import { AccountForm } from './account-form'
+import { useActionToast, withToast } from '@/components/use-action-toast'
 
 /**
  * Every account, including the ones put away.
@@ -53,7 +54,6 @@ export function AccountsPanel({ accounts }: { accounts: AccountView[] }) {
     setSeen(accounts)
     setShown(accounts)
   }
-  const [status, setStatus] = useState<ActionResult | null>(null)
   const [, startTransition] = useTransition()
 
   const live = shown.filter((account) => !account.archived)
@@ -65,11 +65,9 @@ export function AccountsPanel({ accounts }: { accounts: AccountView[] }) {
     const arranged = arrangeRows(shown, next)
     if (!arranged) return
     setShown(arranged)
-    setStatus(null)
     startTransition(async () => {
-      const result = await reorderAccounts(next)
-      setStatus(result)
-      if (!result.ok) setShown(seen)
+      const result = await withToast(reorderAccounts(next), 'Menyimpan urutan…').catch(() => null)
+      if (!result?.ok) setShown(seen)
     })
   }
 
@@ -168,12 +166,6 @@ export function AccountsPanel({ accounts }: { accounts: AccountView[] }) {
         </table>
       </div>
 
-      {status ? (
-        <p role="status" className={`mt-2 text-footnote ${status.ok ? 'text-under' : 'text-over'}`}>
-          {status.message}
-          {status.detail ? <span className="text-ink-muted"> {status.detail}</span> : null}
-        </p>
-      ) : null}
 
       <p className="mt-2 text-footnote text-ink-muted">
         Seret pegangan di kiri untuk mengubah urutan akun di tabel saldo dan setiap pilihan akun.
@@ -327,7 +319,8 @@ function Card({ account, open, onToggle, reorder }: RowProps) {
 }
 
 function ArchiveButton({ account }: { account: AccountView }) {
-  const [result, action] = useActionState<ActionResult | null, FormData>(setAccountArchived, null)
+  const [result, action, pending] = useActionState<ActionResult | null, FormData>(setAccountArchived, null)
+  useActionToast(result, pending)
 
   return (
     <form action={action} className="flex items-center gap-2">
@@ -339,11 +332,6 @@ function ArchiveButton({ account }: { account: AccountView }) {
       >
         {account.archived ? 'Pakai lagi' : 'Arsipkan'}
       </button>
-      {result ? (
-        <span role="status" className={`text-footnote ${result.ok ? 'text-under' : 'text-over'}`}>
-          {result.message}
-        </span>
-      ) : null}
     </form>
   )
 }

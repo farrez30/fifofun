@@ -3,6 +3,7 @@ import { cookies, headers } from 'next/headers'
 import localFont from 'next/font/local'
 import { ProgressiveWebApp } from '@/components/pwa'
 import { SkipLink } from '@/components/skip-link'
+import { Toaster } from '@/components/toaster'
 import './globals.css'
 
 /*
@@ -186,6 +187,7 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
             now — see skip-link.tsx. */}
         <SkipLink />
         {children}
+        <Toaster />
         <ProgressiveWebApp />
       </body>
     </html>

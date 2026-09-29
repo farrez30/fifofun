@@ -1570,3 +1570,32 @@
     pointer-events: none;
   }
 }
+
+/*
+  Toasts (components/toaster.tsx).
+
+  Outside every layer on purpose. sonner's own sheet is unlayered, and an
+  unlayered rule beats a layered one whatever its specificity, so these
+  overrides would lose from inside `@layer components`. They map sonner's
+  variables onto the theme's tokens: a toast is chrome floating over content,
+  so it takes the regular material, its edge and its elevation, and its text
+  is ink like every other label on glass.
+*/
+[data-sonner-toaster][data-sonner-theme] {
+  --normal-bg: var(--color-material-regular);
+  --normal-bg-hover: var(--color-material-regular);
+  --normal-border: var(--color-material-edge);
+  --normal-border-hover: var(--color-material-edge);
+  --normal-text: var(--color-ink);
+  --border-radius: var(--radius-md);
+  font-family: inherit;
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-styled='true'] {
+  box-shadow: var(--shadow-specular), var(--shadow-md);
+  font-family: inherit;
+}
+
+[data-sonner-toaster] [data-sonner-toast] [data-description] {
+  color: var(--color-ink-muted);
+}

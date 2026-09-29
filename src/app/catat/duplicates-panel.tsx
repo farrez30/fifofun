@@ -5,6 +5,7 @@ import { useFormStatus } from 'react-dom'
 import { keepBoth, mergeDuplicate } from './actions'
 import type { DuplicateView } from './duplicates-view'
 import type { ActionResult } from '@/lib/actions'
+import { useActionToast } from '@/components/use-action-toast'
 
 /**
  * Manual entries that look like rows the bank later reported.
@@ -15,22 +16,6 @@ import type { ActionResult } from '@/lib/actions'
  * is reconciled against; what moves across is the category and the note, which
  * are the parts only a person knew.
  */
-
-function Result({ result }: { result: ActionResult | null }) {
-  if (!result) return null
-  return (
-    <p
-      role="status"
-      aria-live="polite"
-      className={`mt-2 border px-3 py-2 text-subhead text-ink ${
-        result.ok ? 'border-under/40 bg-under-wash' : 'border-over/40 bg-over-wash'
-      }`}
-    >
-      {result.message}
-      {result.detail ? <span className="mt-0.5 block text-ink-muted">{result.detail}</span> : null}
-    </p>
-  )
-}
 
 function Action({
   label,
@@ -59,8 +44,10 @@ function Action({
 }
 
 export function DuplicatesPanel({ pairs }: { pairs: DuplicateView[] }) {
-  const [mergeResult, merge] = useActionState<ActionResult | null, FormData>(mergeDuplicate, null)
-  const [keepResult, keep] = useActionState<ActionResult | null, FormData>(keepBoth, null)
+  const [mergeResult, merge, mergePending] = useActionState<ActionResult | null, FormData>(mergeDuplicate, null)
+  useActionToast(mergeResult, mergePending, 'Menggabungkan…')
+  const [keepResult, keep, keepPending] = useActionState<ActionResult | null, FormData>(keepBoth, null)
+  useActionToast(keepResult, keepPending)
 
   if (pairs.length === 0) return null
 
@@ -81,8 +68,6 @@ export function DuplicatesPanel({ pairs }: { pairs: DuplicateView[] }) {
         keduanya tetap terhitung.
       </p>
 
-      <Result result={mergeResult} />
-      <Result result={keepResult} />
 
       <ul className="mt-3 space-y-3">
         {pairs.map((pair) => (

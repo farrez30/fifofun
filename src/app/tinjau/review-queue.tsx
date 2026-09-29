@@ -24,6 +24,7 @@ import { topShareSentence, type QueueSummary } from './summary'
 import { CaretDown } from '@phosphor-icons/react/dist/ssr/CaretDown'
 import { ListChecks } from '@phosphor-icons/react/dist/ssr/ListChecks'
 import { Unavailable } from '@/components/unavailable'
+import { withToast } from '@/components/use-action-toast'
 
 /**
  * The categorisation queue.
@@ -198,7 +199,10 @@ function GroupCard({
   settling: boolean
   onSettle: (key: string) => void
 }) {
-  const [result, action] = useActionState<ActionResult | null, FormData>(applyCategory, null)
+  const [, action] = useActionState<ActionResult | null, FormData>(
+    (previous, formData) => withToast(applyCategory(previous, formData)),
+    null,
+  )
   const [pattern, setPattern] = useState(group.pattern)
   const [matchType, setMatchType] = useState<MatchType>(group.matchType)
 
@@ -278,24 +282,6 @@ function GroupCard({
 
       {open ? (
         <div id={`${headingId}-isi`} className="border-t border-line px-4 py-4">
-          {result?.ok ? (
-            <p className="mb-3 border border-under/40 bg-under-wash px-3 py-2 text-subhead text-ink">
-              {result.message}
-              {result.detail ? (
-                <span className="mt-0.5 block text-ink-muted">{result.detail}</span>
-              ) : null}
-            </p>
-          ) : null}
-
-          {result && !result.ok ? (
-            <p className="mb-3 border border-over/40 bg-over-wash px-3 py-2 text-subhead text-ink">
-              {result.message}
-              {result.detail ? (
-                <span className="mt-0.5 block text-ink-muted">{result.detail}</span>
-              ) : null}
-            </p>
-          ) : null}
-
           <div className="mb-4">
             <p className="text-footnote text-ink-faint">
               Contoh keterangannya
@@ -513,7 +499,10 @@ function SingleRows({
   settled: readonly string[]
   onSettleOne: (id: string) => void
 }) {
-  const [result, action] = useActionState<ActionResult | null, FormData>(categoriseOne, null)
+  const [, action] = useActionState<ActionResult | null, FormData>(
+    (previous, formData) => withToast(categoriseOne(previous, formData)),
+    null,
+  )
 
   return (
     <details
@@ -528,13 +517,6 @@ function SingleRows({
           className="size-4 shrink-0 text-ink-faint transition-transform duration-150 group-open:rotate-180"
         />
       </summary>
-
-      {result ? (
-        <p className={`mt-2 text-subhead ${result.ok ? 'text-under' : 'text-over'}`}>
-          {result.message}
-          {result.detail ? <span className="mt-0.5 block text-ink-muted">{result.detail}</span> : null}
-        </p>
-      ) : null}
 
       <ul className="mt-2 space-y-2">
         {entries.map((entry) => {

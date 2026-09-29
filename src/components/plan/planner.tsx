@@ -27,6 +27,7 @@ import { PlanIndex, type PlanSection } from './plan-index'
 import { RatioPanel } from './ratio-panel'
 import { Section } from './field'
 import { useReservedHeight, useStuck } from '@/components/use-stuck'
+import { useActionToast } from '@/components/use-action-toast'
 
 
 /**
@@ -98,6 +99,7 @@ export function Planner({ history, observedIncome, snapshot, currentYear, saved 
   const [variant, setVariant] = useState<HouseholdVariant>('compact')
 
   const [result, action, pending] = useActionState<ActionResult | null, FormData>(savePlan, null)
+  useActionToast(result, pending, 'Menyimpan rencana…')
 
   const [sentinel, stuck] = useStuck<HTMLDivElement>()
   const dock = useRef<HTMLDivElement>(null)

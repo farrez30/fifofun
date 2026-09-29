@@ -93,6 +93,8 @@ const chromeFiles = [
   'src/components/pull-to-refresh.tsx',
   'src/components/chart/drag-axis.tsx',
   'src/components/chart/readout.tsx',
+  // A toast floats over content for a few seconds, the way the readout does.
+  'src/components/toaster.tsx',
 ]
 
 /* The two files that have to name a colour rather than a token: a web app

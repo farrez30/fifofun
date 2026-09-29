@@ -4,6 +4,7 @@ import { useActionState } from 'react'
 import { useFormStatus } from 'react-dom'
 import { type AuthState, authenticate } from './actions'
 import { BUTTON_PRIMARY, BUTTON_QUIET, CONTROL } from '@/components/field-base'
+import { useActionToast } from '@/components/use-action-toast'
 
 const EMPTY: AuthState = {}
 
@@ -38,7 +39,9 @@ function Submit({
 }
 
 export function LoginForm() {
-  const [state, action] = useActionState(authenticate, EMPTY)
+  const [state, action, pending] = useActionState(authenticate, EMPTY)
+  // Only the wait is a toast; see the comment on the message below.
+  useActionToast(null, pending, 'Memproses…')
 
   return (
     <form action={action} className="space-y-4" noValidate>

@@ -8,6 +8,7 @@ import type { ActionResult } from '@/lib/actions'
 import { BUTTON_QUIET } from '@/components/field-base'
 import { NotePencil } from '@phosphor-icons/react/dist/ssr/NotePencil'
 import { Unavailable } from '@/components/unavailable'
+import { useActionToast } from '@/components/use-action-toast'
 
 /**
  * The last ten rows a person typed here.
@@ -30,7 +31,8 @@ export interface RecentEntry {
 }
 
 export function RecentEntries({ rows }: { rows: RecentEntry[] }) {
-  const [result, action] = useActionState<ActionResult | null, FormData>(deleteEntry, null)
+  const [result, action, pending] = useActionState<ActionResult | null, FormData>(deleteEntry, null)
+  useActionToast(result, pending, 'Menghapus…')
 
   if (rows.length === 0) {
     return (
@@ -42,18 +44,6 @@ export function RecentEntries({ rows }: { rows: RecentEntry[] }) {
 
   return (
     <div className="space-y-2">
-      {result ? (
-        <p
-          role="status"
-          aria-live="polite"
-          className={`border px-3 py-2 text-subhead text-ink ${
-            result.ok ? 'border-under/40 bg-under-wash' : 'border-over/40 bg-over-wash'
-          }`}
-        >
-          {result.message}
-          {result.detail ? <span className="mt-0.5 block text-ink-muted">{result.detail}</span> : null}
-        </p>
-      ) : null}
 
       {/* Six columns, every one of them nowrap. The delete form is its own
           form per row, so both trees can be rendered: the hidden one is not

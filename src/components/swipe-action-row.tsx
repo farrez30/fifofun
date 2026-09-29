@@ -6,6 +6,7 @@ import { deleteEntry } from '@/app/catat/actions'
 import { claimsDrag, releaseVerdict, trayOffset } from '@/components/swipe-actions'
 import { TRAY, Velocity, release, translateOf } from '@/components/spring'
 import type { ActionResult } from '@/lib/actions'
+import { withToast } from '@/components/use-action-toast'
 
 /**
  * Swipe a ledger card left and its actions slide out from under it — the
@@ -243,7 +244,10 @@ export function SwipeActionRow({ actions, children }: Props) {
  * the tray only shows this where `editableFields` says removal is real.
  */
 export function TrayDelete({ id, description }: { id: string; description: string }) {
-  const [, action] = useActionState<ActionResult | null, FormData>(deleteEntry, null)
+  const [, action] = useActionState<ActionResult | null, FormData>(
+    (previous, formData) => withToast(deleteEntry(previous, formData), 'Menghapus…'),
+    null,
+  )
 
   return (
     <form action={action} className="flex">

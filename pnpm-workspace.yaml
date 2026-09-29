@@ -10,3 +10,6 @@ allowBuilds:
 # stop reading audits at all, and that habit is the real risk.
 overrides:
   esbuild: '>=0.25.0'
+
+patchedDependencies:
+  sonner@2.0.8: patches/sonner@2.0.8.patch

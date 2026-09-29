@@ -6,6 +6,7 @@ import { deleteEntry } from '@/app/catat/actions'
 import { BUTTON_QUIET } from '@/components/field-base'
 import type { ActionResult } from '@/lib/actions'
 import { restoreEntry, unsplitEntry } from '../actions'
+import { useActionToast } from '@/components/use-action-toast'
 
 /**
  * The two irreversible-looking things on this page, neither of which is.
@@ -21,7 +22,8 @@ import { restoreEntry, unsplitEntry } from '../actions'
  */
 
 export function DeleteEntryButton({ id }: { id: string }) {
-  const [result, action] = useActionState<ActionResult | null, FormData>(deleteEntry, null)
+  const [result, action, pending] = useActionState<ActionResult | null, FormData>(deleteEntry, null)
+  useActionToast(result, pending, 'Menghapus…')
 
   return (
     <details className="squircle rounded-md bg-surface shadow-xs p-4">
@@ -35,47 +37,31 @@ export function DeleteEntryButton({ id }: { id: string }) {
             page shipped, so the button always answered "tidak dikenali". */}
         <input type="hidden" name="transactionId" value={id} />
         <Submit label="Ya, hapus" pendingLabel="Menghapus" />
-        {result ? (
-          <p role="status" className={`text-subhead ${result.ok ? 'text-under' : 'text-over'}`}>
-            {result.message}
-            {result.detail ? <span className="text-ink-muted"> {result.detail}</span> : null}
-          </p>
-        ) : null}
       </form>
     </details>
   )
 }
 
 export function RestoreEntryButton({ id }: { id: string }) {
-  const [result, action] = useActionState<ActionResult | null, FormData>(restoreEntry, null)
+  const [result, action, pending] = useActionState<ActionResult | null, FormData>(restoreEntry, null)
+  useActionToast(result, pending, 'Mengembalikan…')
 
   return (
     <form action={action} className="mt-3 flex flex-wrap items-center gap-3">
       <input type="hidden" name="id" value={id} />
       <Submit label="Kembalikan transaksi ini" pendingLabel="Mengembalikan" />
-      {result ? (
-        <p role="status" className={`text-subhead ${result.ok ? 'text-under' : 'text-over'}`}>
-          {result.message}
-          {result.detail ? <span className="text-ink-muted"> {result.detail}</span> : null}
-        </p>
-      ) : null}
     </form>
   )
 }
 
 export function UnsplitButton({ id }: { id: string }) {
-  const [result, action] = useActionState<ActionResult | null, FormData>(unsplitEntry, null)
+  const [result, action, pending] = useActionState<ActionResult | null, FormData>(unsplitEntry, null)
+  useActionToast(result, pending, 'Menggabungkan…')
 
   return (
     <form action={action} className="flex flex-wrap items-center gap-3">
       <input type="hidden" name="id" value={id} />
       <Submit label="Gabungkan kembali" pendingLabel="Menggabungkan" />
-      {result ? (
-        <p role="status" className={`text-subhead ${result.ok ? 'text-under' : 'text-over'}`}>
-          {result.message}
-          {result.detail ? <span className="text-ink-muted"> {result.detail}</span> : null}
-        </p>
-      ) : null}
     </form>
   )
 }

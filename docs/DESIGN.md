@@ -221,6 +221,29 @@ bukan daftar grouped — pasangan label-kiri di sel selebar itu tidak terbaca.
 Keduanya tetap memakai resep bersama `field-base.tsx` (`CONTROL`, `SEGMENTED`
 untuk pemilih mode) dan peran Dynamic Type yang sama dengan form lain.
 
+**Umpan balik aksi lewat toast.** Setiap simpan menampilkan satu toast
+"Menyimpan…" yang berganti di tempat (id yang sama) menjadi berhasil atau
+gagal; yang gagal bertahan sampai ditutup. Form memakai `useActionToast`
+(`components/use-action-toast.ts`) atau, bila komponennya hilang begitu
+berhasil (kelompok Tinjau, hapus dari tray geser, simpan urutan),
+`withToast` yang membungkus aksinya sendiri. Toast adalah chrome yang
+melayang di atas konten, jadi memakai material `regular`, elevasi `md`, dan
+ikon Phosphor, bukan ikon bawaan sonner. Pesan yang hanya menggemakan
+`result.message` di samping tombol dihapus agar pembaca layar tidak
+mendengarnya dua kali. Yang tetap inline: error per field, error login dan
+kode undangan (terikat ke field lewat `aria-describedby`), kode undangan
+yang hanya tampil sekali, dan laporan impor (kini region "Laporan impor",
+bukan live region kedua). sonner menyuntikkan `<style>` tanpa nonce yang
+ditolak CSP produksi; panggilan itu dibuang lewat
+`patches/sonner@2.0.8.patch` dan stylesheet-nya diimpor statis.
+
+**Urutan akun dan kategori lewat pegangan seret.** Satu pegangan di kiri
+baris (`components/reorder.tsx`, @dnd-kit) menggantikan pasangan tombol
+panah; ia juga jalan dari keyboard (Spasi, panah, Spasi, Escape) dengan
+pengumuman berbahasa Indonesia. Kelompok kategori digambar sebagai satu blok
+(`tbody` sendiri di tabel, `li` berisi daftar anggota di ponsel) sehingga
+kepala kelompok berpindah bersama isinya.
+
 ## 5. Grafik
 
 Kaca menyentuh tepat tiga hal, dan tidak satupun adalah mark: bingkai grafik
@@ -335,6 +358,7 @@ Tidak ada satupun jaminan yang diturunkan oleh restyle ini, dan beberapa naik.
 | Posisi dan klem readout, murni tanpa browser | `readout-logic.test.ts` |
 | Sidebar: lebar rail/terbentang, drift shell vs loading, lantai sentuh | `e2e/sidebar.spec.ts` |
 | Halaman tanpa shell lolos CSP dan axe atas build sungguhan | `e2e/pages/pages.spec.ts` (`pnpm test:e2e:pages`) |
+| sonner tetap tanpa suntikan `<style>` setelah upgrade | `src/components/use-action-toast.test.ts` ("sonner patch") |
 | Fisika gesture: proyeksi, rubber band, lantai tap | `swipe-actions.test.ts`, `use-swipe-tabs.test.ts`, `pull-to-refresh.test.ts` |
 | Skala Tailwind lama tidak diam-diam kembali, termasuk ukuran kurung siku | `src/app/type-roles.test.ts`, atas seluruh `src/**/*.tsx` |
 | Lima aturan copywriting.md yang bisa diperiksa pola: em dash, emoji, sapaan, `SESSION_EXPIRED` ditulis ulang, pesan server mentah | `src/app/copy.test.ts`, atas `src/app` dan `src/components` |

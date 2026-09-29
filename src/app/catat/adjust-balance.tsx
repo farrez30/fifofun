@@ -9,6 +9,7 @@ import { formatIdr } from '@/lib/money'
 import type { AccountKind } from '@/lib/ledger/types'
 import { adjustBalance } from './actions'
 import type { ActionResult } from '@/lib/actions'
+import { useActionToast } from '@/components/use-action-toast'
 
 /**
  * Correcting a balance the app got right and reality did not.
@@ -180,7 +181,7 @@ export function AdjustBalanceForm({ row }: { row: BalanceRow }) {
   const [touched, setTouched] = useState(false)
   const [clientId, setClientId] = useState(row.entryKey)
 
-  const [result, action] = useActionState<ActionResult | null, FormData>(
+  const [result, action, pending] = useActionState<ActionResult | null, FormData>(
     async (previous, formData) => {
       const outcome = await adjustBalance(previous, formData)
       if (outcome.ok) {
@@ -192,6 +193,7 @@ export function AdjustBalanceForm({ row }: { row: BalanceRow }) {
     },
     null,
   )
+  useActionToast(result, pending)
 
   const computed = BigInt(row.closingSen)
   const delta = actual - computed
@@ -271,18 +273,6 @@ export function AdjustBalanceForm({ row }: { row: BalanceRow }) {
 
       <Submit disabled={!touched || delta === 0n} />
 
-      {result ? (
-        <p
-          role="status"
-          aria-live="polite"
-          className={`border px-3 py-2 text-subhead text-ink ${
-            result.ok ? 'border-under/40 bg-under-wash' : 'border-over/40 bg-over-wash'
-          }`}
-        >
-          {result.message}
-          {result.detail ? <span className="mt-0.5 block text-ink-muted">{result.detail}</span> : null}
-        </p>
-      ) : null}
     </form>
   )
 }

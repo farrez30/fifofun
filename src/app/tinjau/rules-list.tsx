@@ -4,6 +4,7 @@ import { useActionState } from 'react'
 import { MATCH_LABELS, type MatchType } from '@/lib/ledger/rules'
 import type { RuleRow } from '@/lib/queries/household'
 import { deleteRule, type ActionResult } from './actions'
+import { useActionToast } from '@/components/use-action-toast'
 
 /**
  * The rules the household has taught the app.
@@ -14,7 +15,8 @@ import { deleteRule, type ActionResult } from './actions'
  */
 
 export function RulesList({ rules }: { rules: RuleRow[] }) {
-  const [result, action] = useActionState<ActionResult | null, FormData>(deleteRule, null)
+  const [result, action, pending] = useActionState<ActionResult | null, FormData>(deleteRule, null)
+  useActionToast(result, pending, 'Menghapus aturan…')
 
   if (rules.length === 0) {
     return (
@@ -26,9 +28,6 @@ export function RulesList({ rules }: { rules: RuleRow[] }) {
 
   return (
     <div>
-      {result ? (
-        <p className={`mb-2 text-subhead ${result.ok ? 'text-under' : 'text-over'}`}>{result.message}</p>
-      ) : null}
 
       <ul className="space-y-2">
         {rules.map((rule) => (

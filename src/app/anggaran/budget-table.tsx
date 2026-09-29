@@ -13,6 +13,7 @@ import type { MonthPace } from '@/lib/ledger/pace'
 import type { ActionResult } from '@/lib/actions'
 import { copyBudgets, saveBudgets } from './actions'
 import { BudgetSummary } from './budget-summary'
+import { useActionToast } from '@/components/use-action-toast'
 
 /**
  * A month of budgets, decided as one set.
@@ -30,7 +31,8 @@ import { BudgetSummary } from './budget-summary'
  */
 
 export function BudgetTable({ plan }: { plan: BudgetPlanView }) {
-  const [result, action] = useActionState<ActionResult | null, FormData>(saveBudgets, null)
+  const [result, action, pending] = useActionState<ActionResult | null, FormData>(saveBudgets, null)
+  useActionToast(result, pending)
   const label = formatMonthKey(plan.period)
 
   /*
@@ -181,12 +183,6 @@ export function BudgetTable({ plan }: { plan: BudgetPlanView }) {
           </p>
         </div>
 
-        {result ? (
-          <p role="status" className={`text-subhead ${result.ok ? 'text-under' : 'text-over'}`}>
-            {result.message}
-            {result.detail ? <span className="text-ink-muted"> {result.detail}</span> : null}
-          </p>
-        ) : null}
       </form>
 
       {plan.canCopy ? <CopyForm period={plan.period} from={plan.previous} /> : null}
@@ -514,7 +510,8 @@ function BudgetCell({
 }
 
 function CopyForm({ period, from }: { period: string; from: string }) {
-  const [result, action] = useActionState<ActionResult | null, FormData>(copyBudgets, null)
+  const [result, action, pending] = useActionState<ActionResult | null, FormData>(copyBudgets, null)
+  useActionToast(result, pending)
 
   return (
     <form action={action} className="flex flex-wrap items-center gap-3">
@@ -524,12 +521,6 @@ function CopyForm({ period, from }: { period: string; from: string }) {
         tone="quiet"
         label={`Salin anggaran ${formatMonthKey(from)} ke kategori yang masih kosong`}
       />
-      {result ? (
-        <p role="status" className={`text-subhead ${result.ok ? 'text-under' : 'text-over'}`}>
-          {result.message}
-          {result.detail ? <span className="text-ink-muted"> {result.detail}</span> : null}
-        </p>
-      ) : null}
     </form>
   )
 }

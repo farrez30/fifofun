@@ -4,6 +4,7 @@ import { useActionState } from 'react'
 import { useFormStatus } from 'react-dom'
 import { INVITE_TTL_DAYS, stateOf, type InviteRow, type InviteState } from '@/lib/invites'
 import { type IssueResult, issueInvite, revokeInvite } from './actions'
+import { useActionToast } from '@/components/use-action-toast'
 
 /**
  * The list of invitations, and the one moment a code is readable.
@@ -67,8 +68,11 @@ interface Props {
 }
 
 export function InvitesPanel({ invites, now }: Props) {
-  const [issued, issue] = useActionState<IssueResult | null>(issueInvite, null)
-  const [revoked, revoke] = useActionState<IssueResult | null, FormData>(revokeInvite, null)
+  const [issued, issue, issuing] = useActionState<IssueResult | null>(issueInvite, null)
+  const [revoked, revoke, revoking] = useActionState<IssueResult | null, FormData>(revokeInvite, null)
+  // The code itself stays on the page: it is shown once and never again.
+  useActionToast(issued, issuing, 'Membuat kode…')
+  useActionToast(revoked, revoking, 'Membatalkan undangan…')
 
   const at = new Date(now)
   const rows: (InviteRow & { state: InviteState })[] = invites.map((invite) => {
@@ -108,16 +112,6 @@ export function InvitesPanel({ invites, now }: Props) {
               menyimpannya. Kalau hilang, batalkan undangannya lalu buat yang baru.
             </p>
           </div>
-        ) : null}
-
-        {issued && !issued.ok ? (
-          <p
-            role="status"
-            aria-live="polite"
-            className="mt-4 rounded-sm border border-over/30 bg-over-wash px-3 py-2 text-subhead text-over"
-          >
-            {issued.message}
-          </p>
         ) : null}
       </div>
 
@@ -162,16 +156,6 @@ export function InvitesPanel({ invites, now }: Props) {
             ))}
           </ul>
         )}
-
-        {revoked && !revoked.ok ? (
-          <p
-            role="status"
-            aria-live="polite"
-            className="border-t border-line px-4 py-3 text-subhead text-over"
-          >
-            {revoked.message}
-          </p>
-        ) : null}
       </div>
     </div>
   )

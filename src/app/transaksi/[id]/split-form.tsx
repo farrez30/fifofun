@@ -10,6 +10,7 @@ import { formatIdr } from '@/lib/money'
 import type { ActionResult } from '@/lib/actions'
 import { splitEntry } from '../actions'
 import type { CategoryOption } from './edit-form'
+import { useActionToast } from '@/components/use-action-toast'
 
 /**
  * One purchase, several categories.
@@ -42,7 +43,8 @@ export function SplitForm({
   amount: string
   categories: CategoryOption[]
 }) {
-  const [result, action] = useActionState<ActionResult | null, FormData>(splitEntry, null)
+  const [result, action, pending] = useActionState<ActionResult | null, FormData>(splitEntry, null)
+  useActionToast(result, pending, 'Memecah…')
   const [parts, setParts] = useState<Part[]>([EMPTY, EMPTY])
 
   const total = BigInt(amount || '0')
@@ -144,12 +146,6 @@ export function SplitForm({
 
       <div className="flex flex-wrap items-center gap-3">
         <Submit disabled={blocker !== null} />
-        {result ? (
-          <p role="status" className={`text-subhead ${result.ok ? 'text-under' : 'text-over'}`}>
-            {result.message}
-            {result.detail ? <span className="text-ink-muted"> {result.detail}</span> : null}
-          </p>
-        ) : null}
       </div>
 
       <p className="text-footnote text-ink-muted">

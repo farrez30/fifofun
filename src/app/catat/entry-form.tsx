@@ -10,6 +10,7 @@ import { CASHFLOW_LABELS, type CashflowType } from '@/lib/ledger/types'
 import { AccountChips, type AccountOption } from './account-chips'
 import { recordEntry } from './actions'
 import type { ActionResult } from '@/lib/actions'
+import { useActionToast } from '@/components/use-action-toast'
 
 /**
  * Typing a transaction the bank never saw.
@@ -52,7 +53,7 @@ export function EntryForm({ accounts, categories, defaults, entryKey }: Props) {
   const [clientId, setClientId] = useState(entryKey)
   const [categoryId, setCategoryId] = useState('')
 
-  const [result, action] = useActionState<ActionResult | null, FormData>(
+  const [result, action, pending] = useActionState<ActionResult | null, FormData>(
     async (previous, formData) => {
       const outcome = await recordEntry(previous, formData)
       if (outcome.ok) {
@@ -65,6 +66,7 @@ export function EntryForm({ accounts, categories, defaults, entryKey }: Props) {
     },
     null,
   )
+  useActionToast(result, pending)
 
   const fieldErrors = result && !result.ok ? (result.fieldErrors ?? {}) : {}
 
@@ -86,18 +88,6 @@ export function EntryForm({ accounts, categories, defaults, entryKey }: Props) {
 
   return (
     <form action={action} noValidate className="space-y-5">
-      {result ? (
-        <p
-          role="status"
-          aria-live="polite"
-          className={`border px-3 py-2 text-subhead text-ink ${
-            result.ok ? 'border-under/40 bg-under-wash' : 'border-over/40 bg-over-wash'
-          }`}
-        >
-          {result.message}
-          {result.detail ? <span className="mt-0.5 block text-ink-muted">{result.detail}</span> : null}
-        </p>
-      ) : null}
 
       <input type="hidden" name="clientId" value={clientId} />
 

@@ -10,6 +10,7 @@ import { ACCOUNT_KIND_LABELS } from '@/lib/ledger/direction'
 import type { ActionResult } from '@/lib/actions'
 import { createAccount, updateAccount } from './actions'
 import type { AccountView } from './accounts-panel'
+import { useActionToast } from '@/components/use-action-toast'
 
 /**
  * One account, as the six things about it that can be decided.
@@ -26,10 +27,11 @@ import type { AccountView } from './accounts-panel'
  */
 
 export function AccountForm({ account }: { account?: AccountView }) {
-  const [result, action] = useActionState<ActionResult | null, FormData>(
+  const [result, action, pending] = useActionState<ActionResult | null, FormData>(
     account ? updateAccount : createAccount,
     null,
   )
+  useActionToast(result, pending)
 
   const ids = {
     name: useId(),
@@ -196,12 +198,6 @@ export function AccountForm({ account }: { account?: AccountView }) {
 
       <div className="flex flex-wrap items-center gap-3">
         <Submit label={account ? 'Simpan akun' : 'Tambah akun'} />
-        {result ? (
-          <p role="status" className={`text-subhead ${result.ok ? 'text-under' : 'text-over'}`}>
-            {result.message}
-            {result.detail ? <span className="text-ink-muted"> {result.detail}</span> : null}
-          </p>
-        ) : null}
       </div>
     </form>
   )

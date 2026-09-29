@@ -74,11 +74,8 @@ export function HouseholdInputs({
     <p role="status" className="text-footnote text-ink-muted">
       {pending ? (
         'Menyimpan.'
-      ) : result ? (
-        <>
-          <span className={result.ok ? 'text-under' : 'text-over'}>{result.message}</span>
-          {result.detail ? <span className="text-ink-faint"> {result.detail}</span> : null}
-        </>
+      ) : result && !result.ok ? (
+        <span className="text-over">Belum tersimpan.</span>
       ) : dirty ? (
         'Belum disimpan.'
       ) : savedIncome === null ? (

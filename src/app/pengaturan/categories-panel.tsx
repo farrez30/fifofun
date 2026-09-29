@@ -9,6 +9,7 @@ import { CASHFLOW_LABELS, CASHFLOW_TYPES, type CashflowType } from '@/lib/ledger
 import type { ActionResult } from '@/lib/actions'
 import { reorderCategories, setCategoryArchived } from './actions'
 import { CategoryForm } from './category-form'
+import { useActionToast, withToast } from '@/components/use-action-toast'
 
 /**
  * Every category, grouped by the direction it points.
@@ -49,18 +50,15 @@ export function CategoriesPanel({ categories }: { categories: CategoryView[] }) 
     setSeen(categories)
     setShown(categories)
   }
-  const [status, setStatus] = useState<ActionResult | null>(null)
   const [, startTransition] = useTransition()
 
   function reorder(ids: string[]) {
     const arranged = arrangeRows(shown, ids)
     if (!arranged) return
     setShown(arranged)
-    setStatus(null)
     startTransition(async () => {
-      const result = await reorderCategories(ids)
-      setStatus(result)
-      if (!result.ok) setShown(seen)
+      const result = await withToast(reorderCategories(ids), 'Menyimpan urutan…').catch(() => null)
+      if (!result?.ok) setShown(seen)
     })
   }
 
@@ -131,12 +129,6 @@ export function CategoriesPanel({ categories }: { categories: CategoryView[] }) 
         ) : null}
       </div>
 
-      {status ? (
-        <p role="status" className={`mt-3 text-footnote ${status.ok ? 'text-under' : 'text-over'}`}>
-          {status.message}
-          {status.detail ? <span className="text-ink-muted"> {status.detail}</span> : null}
-        </p>
-      ) : null}
 
       <p className="mt-3 text-footnote text-ink-muted">
         Seret pegangan di kiri untuk mengubah urutan. Kelompok berpindah bersama isinya, dan isi
@@ -528,7 +520,8 @@ function Row({ category, siblings, isGroup, open, onToggle, reorder }: RowProps)
 }
 
 function ArchiveButton({ category }: { category: CategoryView }) {
-  const [result, action] = useActionState<ActionResult | null, FormData>(setCategoryArchived, null)
+  const [result, action, pending] = useActionState<ActionResult | null, FormData>(setCategoryArchived, null)
+  useActionToast(result, pending)
 
   return (
     <form action={action} className="flex items-center gap-2">
@@ -540,11 +533,6 @@ function ArchiveButton({ category }: { category: CategoryView }) {
       >
         {category.archived ? 'Pakai lagi' : 'Arsipkan'}
       </button>
-      {result ? (
-        <span role="status" className={`text-footnote ${result.ok ? 'text-under' : 'text-over'}`}>
-          {result.message}
-        </span>
-      ) : null}
     </form>
   )
 }

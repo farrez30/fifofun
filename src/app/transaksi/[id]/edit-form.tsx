@@ -10,6 +10,7 @@ import type { Editable } from '@/lib/ledger/edit'
 import { optionGroups } from '@/lib/ledger/settings'
 import type { ActionResult } from '@/lib/actions'
 import { updateEntry } from '../actions'
+import { useActionToast } from '@/components/use-action-toast'
 
 /**
  * The decisions about a transaction that can be revisited.
@@ -60,7 +61,8 @@ export function EditEntryForm({
   categories: CategoryOption[]
   accounts: AccountOption[]
 }) {
-  const [result, action] = useActionState<ActionResult | null, FormData>(updateEntry, null)
+  const [result, action, pending] = useActionState<ActionResult | null, FormData>(updateEntry, null)
+  useActionToast(result, pending)
   const fieldErrors = result && !result.ok ? (result.fieldErrors ?? {}) : {}
   const ids = {
     category: useId(),
@@ -251,12 +253,6 @@ export function EditEntryForm({
 
       <div className="flex flex-wrap items-center gap-3">
         <Submit />
-        {result ? (
-          <p role="status" className={`text-subhead ${result.ok ? 'text-under' : 'text-over'}`}>
-            {result.message}
-            {result.detail ? <span className="text-ink-muted"> {result.detail}</span> : null}
-          </p>
-        ) : null}
       </div>
     </form>
   )

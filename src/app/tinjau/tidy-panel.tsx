@@ -10,6 +10,7 @@ import { HOLD } from '@/lib/ledger/tidy'
 import type { CashflowType } from '@/lib/ledger/types'
 import { tidyLedger, type ActionResult } from './actions'
 import type { CategoryOption } from './review-queue'
+import { withToast } from '@/components/use-action-toast'
 
 /**
  * Putting old rows where today's rules say they belong.
@@ -87,23 +88,11 @@ function Submit({ label, disabled = false }: { label: string; disabled?: boolean
   )
 }
 
-function Reply({ result }: { result: ActionResult }) {
-  return (
-    <p
-      role="status"
-      aria-live="polite"
-      className={`mt-2 border px-3 py-2 text-subhead text-ink ${
-        result.ok ? 'border-under/40 bg-under-wash' : 'border-over/40 bg-over-wash'
-      }`}
-    >
-      {result.message}
-      {result.detail ? <span className="mt-0.5 block text-ink-muted">{result.detail}</span> : null}
-    </p>
-  )
-}
-
 export function TidyPanel({ view, categories }: { view: TidyView; categories: CategoryOption[] }) {
-  const [result, run] = useActionState<ActionResult | null, FormData>(tidyLedger, null)
+  const [, run] = useActionState<ActionResult | null, FormData>(
+    (previous, formData) => withToast(tidyLedger(previous, formData), 'Merapikan…'),
+    null,
+  )
   const [agreed, setAgreed] = useState(false)
   // The largest move starts open, the way the review queue opens its first
   // group: a panel that opens to nothing asks somebody to guess where to click.
@@ -117,7 +106,7 @@ export function TidyPanel({ view, categories }: { view: TidyView; categories: Ca
     return { in: of('in'), out: of('out'), neither: of('neither') }
   }, [categories])
 
-  if (view.count === 0 && !result) return null
+  if (view.count === 0) return null
 
   const live = new Set(view.moves.flatMap((move) => move.entries.map((entry) => entry.id)))
   const held = Object.entries(choices).filter(
@@ -160,7 +149,6 @@ export function TidyPanel({ view, categories }: { view: TidyView; categories: Ca
                 open={open === move.key}
                 onToggle={() => setOpen(open === move.key ? null : move.key)}
                 run={run}
-                result={result?.scope === move.key ? result : null}
               />
             </li>
           ))}
@@ -214,8 +202,6 @@ export function TidyPanel({ view, categories }: { view: TidyView; categories: Ca
         <Submit label="Rapikan semua" disabled={!agreed || view.count === 0} />
       </form>
 
-      {/* A reply to one move is shown under that move; everything else lands here. */}
-      {result && (!result.scope || result.scope === 'semua') ? <Reply result={result} /> : null}
     </section>
   )
 }
@@ -237,7 +223,6 @@ function Move({
   open,
   onToggle,
   run,
-  result,
 }: {
   move: TidyMoveView
   options: OptionsByDirection
@@ -246,7 +231,6 @@ function Move({
   open: boolean
   onToggle: () => void
   run: (formData: FormData) => void
-  result: ActionResult | null
 }) {
   const bodyId = `pindahan-${move.key}`
   const moving = move.entries.filter((entry) => choices[entry.id] !== HOLD).length
@@ -328,8 +312,6 @@ function Move({
               }
             />
           </form>
-
-          {result ? <Reply result={result} /> : null}
         </div>
       ) : null}
     </div>

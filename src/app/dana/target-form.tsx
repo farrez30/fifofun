@@ -9,6 +9,7 @@ import { formatIdrCompact } from '@/lib/money'
 import { normaliseShare } from '@/lib/money/input'
 import type { ActionResult } from '@/lib/actions'
 import { setFundTarget } from './actions'
+import { useActionToast } from '@/components/use-action-toast'
 
 /**
  * The two figures in this feature a person decides.
@@ -57,7 +58,8 @@ export function TargetForm({
   income,
   asOf,
 }: Props) {
-  const [result, action] = useActionState<ActionResult | null, FormData>(setFundTarget, null)
+  const [result, action, pending] = useActionState<ActionResult | null, FormData>(setFundTarget, null)
+  useActionToast(result, pending)
   const [mode, setMode] = useState<Mode>(plannedMonthly === '' && plannedShareBp === '' ? 'tenggat' : 'setoran')
 
   const [amount, setAmount] = useState(() => BigInt(target === '' ? '0' : target))
@@ -181,12 +183,6 @@ export function TargetForm({
         )}
       </p>
 
-      {result ? (
-        <p className={`mt-1 ${result.ok ? 'text-under' : 'text-over'}`}>
-          {result.message}
-          {result.detail ? <span className="text-ink-faint"> {result.detail}</span> : null}
-        </p>
-      ) : null}
     </details>
   )
 }

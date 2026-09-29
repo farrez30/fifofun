@@ -8,6 +8,7 @@ import { formatIdr } from '@/lib/money'
 import type { ImportReport } from './import-statement'
 import { uploadStatement } from './upload'
 import { waitPhase, type WaitPhase } from './wait'
+import { useActionToast } from '@/components/use-action-toast'
 
 /**
  * The upload form.
@@ -92,7 +93,7 @@ export function ImportForm({ initialReport = null }: { initialReport?: ImportRep
     for the password and then for the file all over again.
   */
   const lockedFile = useRef<File | null>(null)
-  const [report, action] = useActionState<ImportReport | null, FormData>(async (_previous, formData) => {
+  const [report, action, pending] = useActionState<ImportReport | null, FormData>(async (_previous, formData) => {
     const picked = formData.get('statement')
     const file = picked instanceof File && picked.size > 0 ? picked : lockedFile.current
     const result = await uploadStatement(file, { password: formData.get('password') })
@@ -102,6 +103,7 @@ export function ImportForm({ initialReport = null }: { initialReport?: ImportRep
     if (result.ok) router.refresh()
     return result
   }, initialReport)
+  useActionToast(report, pending, 'Mengimpor dan mencocokkan…')
   const needsPassword = report?.needsPassword === true
   const [filename, setFilename] = useState<string | null>(null)
   const [dragging, setDragging] = useState(false)
@@ -195,9 +197,10 @@ export function ImportForm({ initialReport = null }: { initialReport?: ImportRep
 
 function Report({ report }: { report: ImportReport }) {
   return (
-    <div
-      role="status"
-      aria-live="polite"
+    /* A landmark rather than a live region: the toast already announced the
+       headline, and this is the detail somebody navigates to afterwards. */
+    <section
+      aria-label="Laporan impor"
       className={`border p-4 ${
         report.ok ? 'border-under/40 bg-under-wash' : 'border-over/40 bg-over-wash'
       }`}
@@ -294,7 +297,7 @@ function Report({ report }: { report: ImportReport }) {
           ) : null}
         </div>
       ) : null}
-    </div>
+    </section>
   )
 }
 
