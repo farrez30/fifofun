@@ -10,6 +10,11 @@ allowBuilds:
 # stop reading audits at all, and that habit is the real risk.
 overrides:
   esbuild: '>=0.25.0'
+  # eslint's minimatch chain still resolves brace-expansion releases with the
+  # recursion and quadratic-time DoS advisories (GHSA, Sep 2026). Lint-time
+  # only, never shipped, but kept green for the same reason as esbuild above.
+  brace-expansion@1: '^1.1.21'
+  brace-expansion@5: '^5.0.12'
 
 patchedDependencies:
   sonner@2.0.8: patches/sonner@2.0.8.patch
