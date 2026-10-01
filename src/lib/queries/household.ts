@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { accountsTag, budgetsTag, categoriesTag, importsTag, planTag, rulesTag, txTag } from '@/lib/queries/tags'
 import { parseHue } from '@/lib/ledger/palette'
 import type { AccountKind, CashflowType, EntrySource, LedgerEntry } from '@/lib/ledger/types'
+import type { AdjustmentRow } from '@/lib/ledger/adjustments'
 import {
   childPlansFromJson,
   isKnownFramework,
@@ -507,6 +508,34 @@ export async function getRules(householdId: string): Promise<RuleRow[]> {
       hitCount: (row.hit_count as number) ?? 0,
     }
   })
+}
+
+/**
+ * Every balance correction `catat` wrote, with the moment it was written,
+ * which is what orders two corrections booked at the same minute. Uncached
+ * like every other read a balance depends on.
+ */
+export async function getAdjustments(householdId: string): Promise<AdjustmentRow[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('id, occurred_at, created_at, amount, cashflow, from_account_id, to_account_id, note')
+    .eq('household_id', householdId)
+    .is('deleted_at', null)
+    .eq('source', 'manual')
+    .in('cashflow', ['income', 'spending'])
+    .like('description', 'Penyesuaian saldo %')
+  if (error || !data) return []
+
+  return data.map((row) => ({
+    id: row.id as string,
+    accountId: ((row.from_account_id ?? row.to_account_id) as string | null) ?? '',
+    occurredAt: new Date(row.occurred_at as string),
+    createdAt: new Date(row.created_at as string),
+    amount: toBigInt(row.amount),
+    cashflow: row.cashflow as AdjustmentRow['cashflow'],
+    note: (row.note as string | null) ?? null,
+  }))
 }
 
 export interface UnconfirmedRow {

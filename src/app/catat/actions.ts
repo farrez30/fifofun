@@ -19,6 +19,7 @@ import {
 } from '@/lib/actions'
 import { toJakartaInstant } from '@/lib/datetime'
 import { planMerge } from '@/lib/ledger/conflicts'
+import { findStaleAdjustments } from '@/lib/ledger/adjustments'
 import {
   adjustmentFor,
   adjustmentNote,
@@ -26,12 +27,13 @@ import {
   manualDedupeKey,
   sidesFor,
   withinDateBounds,
+  type Adjustment,
 } from '@/lib/ledger/manual'
 import { computeAccountMovements } from '@/lib/ledger/monthly'
 import { validateEntry, type CashflowType } from '@/lib/ledger/types'
 import { formatIdr } from '@/lib/money'
 import { groupRefusal } from '@/lib/queries/categories'
-import { getAccounts, getAllTransactions } from '@/lib/queries/household'
+import { getAccounts, getAdjustments, getAllTransactions } from '@/lib/queries/household'
 
 /**
  * The first write path in this app that creates a ledger row from a form.
@@ -263,6 +265,31 @@ export async function deleteEntry(
   }
 }
 
+/** The category a correction is filed under, made on first use. Null if it could not be. */
+async function adjustmentCategory(
+  supabase: NonNullable<Awaited<ReturnType<typeof context>>>['supabase'],
+  householdId: string,
+  adjustment: Pick<Adjustment, 'cashflow' | 'categoryName'>,
+): Promise<string | null> {
+  const { data: existing } = await supabase
+    .from('categories')
+    .select('id')
+    .eq('household_id', householdId)
+    .eq('cashflow', adjustment.cashflow)
+    .eq('name', adjustment.categoryName)
+    .is('archived_at', null)
+    .maybeSingle()
+  if (existing) return existing.id as string
+
+  const { data: created, error } = await supabase
+    .from('categories')
+    .insert({ household_id: householdId, name: adjustment.categoryName, cashflow: adjustment.cashflow })
+    .select('id')
+    .maybeSingle()
+  if (!created) console.error('[catat] kategori penyesuaian gagal dibuat', error)
+  return (created?.id as string | undefined) ?? null
+}
+
 export async function adjustBalance(
   _previous: ActionResult | null,
   formData: FormData,
@@ -301,34 +328,8 @@ export async function adjustBalance(
     return { ok: true, message: 'Saldonya sudah sama. Tidak ada yang ditulis.' }
   }
 
-  let categoryId: string | null = null
-  const { data: existing } = await supabase
-    .from('categories')
-    .select('id')
-    .eq('household_id', householdId)
-    .eq('cashflow', adjustment.cashflow)
-    .eq('name', adjustment.categoryName)
-    .is('archived_at', null)
-    .maybeSingle()
-
-  if (existing) {
-    categoryId = existing.id as string
-  } else {
-    const { data: created, error: createError } = await supabase
-      .from('categories')
-      .insert({
-        household_id: householdId,
-        name: adjustment.categoryName,
-        cashflow: adjustment.cashflow,
-      })
-      .select('id')
-      .maybeSingle()
-    if (!created) {
-      console.error('[catat] kategori penyesuaian gagal dibuat', createError)
-      return fail('Kategori penyesuaian belum ada dan gagal dibuat.', WRITE_FAILED)
-    }
-    categoryId = created.id as string
-  }
+  const categoryId = await adjustmentCategory(supabase, householdId, adjustment)
+  if (!categoryId) return fail('Kategori penyesuaian belum ada dan gagal dibuat.', WRITE_FAILED)
 
   const [year, month, day] = input.date.split('-').map(Number)
   // Late in the day, so the correction lands after whatever it is correcting.
@@ -370,6 +371,69 @@ export async function adjustBalance(
     message: `Saldo ${account.name} ${adjustment.delta < 0n ? 'dikurangi' : 'ditambah'} ${formatIdr(size)}.`,
     detail: 'Tercatat sebagai transaksi penyesuaian, bukan perubahan saldo awal.',
     applied: 1,
+  }
+}
+
+/**
+ * Brings every stale balance correction back onto the balance the household
+ * said was real (src/lib/ledger/adjustments.ts says why they go stale).
+ *
+ * Everything is recomputed here from the database; the page only asks. A
+ * correction the balance no longer needs is hidden rather than kept at zero,
+ * since the ledger refuses a zero amount and an empty row explains nothing.
+ */
+export async function recomputeAdjustments(): Promise<ActionResult> {
+  const ctx = await context()
+  if (!ctx) return fail(SESSION_EXPIRED)
+  const { supabase, householdId } = ctx
+
+  const [accounts, transactions, adjustments] = await Promise.all([
+    getAccounts(householdId, { includeArchived: true }),
+    getAllTransactions(householdId),
+    getAdjustments(householdId),
+  ])
+  const openings = new Map(accounts.map((account) => [account.id, account.openingBalance]))
+  const stale = findStaleAdjustments(transactions, adjustments, openings)
+  if (stale.length === 0) return { ok: true, message: 'Semua penyesuaian saldo sudah pas.' }
+
+  const names = new Map(accounts.map((account) => [account.id, account.name]))
+  const now = new Date().toISOString()
+  for (const row of stale) {
+    const name = names.get(row.accountId) ?? 'akun'
+    let write: Record<string, string | null> = { deleted_at: now }
+    if (row.amount > 0n) {
+      const kind = adjustmentFor(0n, row.cashflow === 'income' ? 1n : -1n)
+      const categoryId = kind ? await adjustmentCategory(supabase, householdId, kind) : null
+      if (!categoryId) return fail('Kategori penyesuaian belum ada dan gagal dibuat.', WRITE_FAILED)
+      const signed = row.cashflow === 'income' ? row.amount : -row.amount
+      const sides = sidesFor(row.cashflow, { accountId: row.accountId })
+      write = {
+        amount: row.amount.toString(),
+        cashflow: row.cashflow,
+        category_id: categoryId,
+        from_account_id: sides.fromAccountId,
+        to_account_id: sides.toAccountId,
+        note: adjustmentNote(name, row.actual - signed, row.actual),
+      }
+    }
+
+    const { error } = await supabase
+      .from('transactions')
+      .update(write)
+      .eq('id', row.id)
+      .eq('household_id', householdId)
+      .eq('source', 'manual')
+      .select('id')
+    if (error) return writeFailed('catat', `Penyesuaian saldo ${name} gagal dihitung ulang.`, error)
+  }
+
+  revalidateLedger(householdId)
+  const touched = [...new Set(stale.map((row) => names.get(row.accountId) ?? 'akun'))]
+  return {
+    ok: true,
+    message: `${stale.length} penyesuaian saldo dihitung ulang.`,
+    detail: `Saldo ${touched.join(', ')} kembali ke angka yang kamu catat waktu itu.`,
+    applied: stale.length,
   }
 }
 

@@ -1,4 +1,4 @@
-import { formatIdr } from '@/lib/money'
+import { formatIdr, parseIdAmount } from '@/lib/money'
 import { ACCOUNT_RULES, type CashflowType, type EntryProblem } from './types'
 
 /**
@@ -87,8 +87,40 @@ export function adjustmentFor(computed: bigint, actual: bigint): Adjustment | nu
     : { delta, cashflow: 'income', categoryName: 'Penyesuaian Income' }
 }
 
+/*
+  The note is also the record of what the household said the balance really
+  was, which is what lets a correction be recomputed when an import later adds
+  rows before it (see adjustments.ts). Sen are written out whenever there are
+  any, so reading it back loses nothing.
+*/
+function noteAmount(sen: bigint): string {
+  return formatIdr(sen, { decimals: sen % 100n !== 0n })
+}
+
 export function adjustmentNote(accountName: string, computed: bigint, actual: bigint): string {
-  return `Penyesuaian saldo ${accountName}: tercatat ${formatIdr(computed)}, sebenarnya ${formatIdr(actual)}.`
+  return `Penyesuaian saldo ${accountName}: tercatat ${noteAmount(computed)}, sebenarnya ${noteAmount(actual)}.`
+}
+
+export interface AdjustmentClaim {
+  /** What the ledger said when the correction was made. */
+  recorded: bigint
+  /** What the household said the balance really was. */
+  actual: bigint
+  /** False for notes written before sen were kept, which are good to the rupiah. */
+  exact: boolean
+}
+
+const NOTE_SHAPE = /tercatat (-?Rp[\d.]+(?:,\d{1,2})?), sebenarnya (-?Rp[\d.]+(?:,\d{1,2})?)\./
+
+/** The figures `adjustmentNote` wrote, or null when the note was edited past reading. */
+export function readAdjustmentNote(note: string | null): AdjustmentClaim | null {
+  const match = note ? NOTE_SHAPE.exec(note) : null
+  if (!match) return null
+  return {
+    recorded: parseIdAmount(match[1]),
+    actual: parseIdAmount(match[2]),
+    exact: match[2].includes(','),
+  }
 }
 
 /** The key that makes a double-tapped save harmless. */

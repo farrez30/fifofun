@@ -39,6 +39,7 @@ import {
 } from '@/lib/ledger/monthly'
 import {
   getAccounts,
+  getAdjustments,
   getAllTransactions,
   getBudgets,
   getCategories,
@@ -48,6 +49,8 @@ import {
 } from '@/lib/queries/household'
 import { getUser } from '@/lib/supabase/server'
 import { DashboardSkeleton } from './skeleton'
+import { RecomputeAdjustments } from './recompute-adjustments'
+import { findStaleAdjustments } from '@/lib/ledger/adjustments'
 import { Receipt } from '@phosphor-icons/react/dist/ssr/Receipt'
 import { BUTTON_PRIMARY } from '@/components/field-base'
 import { Unavailable } from '@/components/unavailable'
@@ -106,7 +109,7 @@ async function Dashboard({ akun }: { akun: string }) {
     redirect('/gabung')
   }
 
-  const [accounts, categories, transactions, openingBalance, printed] = await Promise.all([
+  const [accounts, categories, transactions, openingBalance, printed, adjustments] = await Promise.all([
     getAccounts(household.id),
     /*
       Archived ones too. Every use of this list here is a lookup — the hue and
@@ -119,6 +122,7 @@ async function Dashboard({ akun }: { akun: string }) {
     getAllTransactions(household.id),
     getOpeningBalance(household.id),
     getLatestClosingBalance(household.id),
+    getAdjustments(household.id),
   ])
 
   if (transactions.length === 0) return <EmptyState />
@@ -130,6 +134,14 @@ async function Dashboard({ akun }: { akun: string }) {
   const previous = series.length > 1 ? series[series.length - 2] : undefined
   const movements = computeAccountMovements(transactions, accounts)
   const overdrawn = findOverdrawnAccounts(movements)
+  const accountName = new Map(accounts.map((account) => [account.id, account.name]))
+  // Archived accounts are left out: their opening balance is not in this list.
+  const staleAdjustments = findStaleAdjustments(
+    transactions,
+    adjustments.filter((row) => accountName.has(row.accountId)),
+    new Map(accounts.map((account) => [account.id, account.openingBalance])),
+  )
+  const staleAccounts = new Set(staleAdjustments.map((row) => row.accountId))
   const stalled = findStalledAccounts(movements)
   const needsReview = transactions.filter((tx) => tx.needsReview).length
 
@@ -324,7 +336,7 @@ async function Dashboard({ akun }: { akun: string }) {
         </StatCarousel>
       </section>
 
-      {overdrawn.length > 0 || needsReview > 0 ? (
+      {overdrawn.length > 0 || staleAdjustments.length > 0 || needsReview > 0 ? (
         <section
           aria-labelledby="perlu-perhatian"
           className="border border-warn/40 bg-warn-wash p-4"
@@ -349,8 +361,44 @@ async function Dashboard({ akun }: { akun: string }) {
                   ))}
                 </p>
                 <p className="mt-0.5 text-ink-muted">
-                  Saldo negatif selalu berarti ada pencatatan yang salah.
+                  {overdrawn.every((account) => staleAccounts.has(account.accountId))
+                    ? 'Penyebabnya penyesuaian saldo yang sudah basi, di bawah ini.'
+                    : (
+                      <>
+                        Saldo negatif berarti ada uang masuk yang tidak tercatat. Kalau uangnya
+                        sudah ada sebelum catatan dimulai, isi saldo awalnya di{' '}
+                        <Link href="/pengaturan" className="text-accent underline underline-offset-2">
+                          Pengaturan
+                        </Link>
+                        ; kalau tidak, cocokkan saldonya di{' '}
+                        <Link href="/catat" className="text-accent underline underline-offset-2">
+                          Catat
+                        </Link>
+                        .
+                      </>
+                    )}
                 </p>
+              </div>
+            ) : null}
+
+            {staleAdjustments.length > 0 ? (
+              <div>
+                <p className="text-ink">
+                  {staleAdjustments.length} penyesuaian saldo sudah basi:{' '}
+                  {staleAdjustments.map((row, index) => (
+                    <span key={row.id}>
+                      {index > 0 ? ', ' : ''}
+                      {accountName.get(row.accountId)} {formatJakarta(row.occurredAt, 'date')} jatuh di{' '}
+                      <Money sen={row.landsAt} />, seharusnya <Money sen={row.actual} />
+                    </span>
+                  ))}
+                </p>
+                <p className="mt-0.5 text-ink-muted">
+                  Ada mutasi yang masuk belakangan dengan tanggal sebelum penyesuaian itu, jadi
+                  selisih yang dulu dicatat tidak pas lagi. Hitung ulang mengembalikan saldonya ke
+                  angka yang kamu catat waktu itu.
+                </p>
+                <RecomputeAdjustments />
               </div>
             ) : null}
 

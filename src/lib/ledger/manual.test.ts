@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   adjustmentFor,
   adjustmentNote,
+  readAdjustmentNote,
   describeProblem,
   manualDedupeKey,
   sidesFor,
@@ -115,6 +116,32 @@ describe('adjustmentNote', () => {
     expect(adjustmentNote('GoPay', 903_679_500n, 120_000_00n)).toBe(
       'Penyesuaian saldo GoPay: tercatat Rp9.036.795, sebenarnya Rp120.000.',
     )
+  })
+
+  it('keeps the sen when there are any, so the claim can be read back exactly', () => {
+    expect(adjustmentNote('Tokocrypto', 17_000_000n, 511_916n)).toBe(
+      'Penyesuaian saldo Tokocrypto: tercatat Rp170.000, sebenarnya Rp5.119,16.',
+    )
+  })
+})
+
+describe('readAdjustmentNote', () => {
+  it('reads back what adjustmentNote wrote', () => {
+    expect(readAdjustmentNote(adjustmentNote('blu', -1_928_700n, 840_535n))).toEqual({
+      recorded: -1_928_700n,
+      actual: 840_535n,
+      exact: true,
+    })
+    expect(readAdjustmentNote(adjustmentNote('GoPay', 613_448_100n, 0n))).toEqual({
+      recorded: 613_448_100n,
+      actual: 0n,
+      exact: false,
+    })
+  })
+
+  it('has nothing for a note somebody rewrote', () => {
+    expect(readAdjustmentNote('saldo dicek manual')).toBeNull()
+    expect(readAdjustmentNote(null)).toBeNull()
   })
 })
 

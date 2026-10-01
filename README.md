@@ -82,6 +82,11 @@ covering 1,591 transactions. All 23 reconcile exactly, and all 1,591 classify
 with no unrecognised rows and no disagreement with the bank's own debit and
 credit columns.
 
+A balance correction ("the wallet really held Rp41.148 on 23 August") is kept
+as a claim, not as a frozen difference. When a later import adds rows dated
+before it, the dashboard says which corrections no longer land on their claim
+and recomputes them in one step, instead of letting a wallet drift negative.
+
 ## Status
 
 In daily use against a real household ledger. The domain layer and the
