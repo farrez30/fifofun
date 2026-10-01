@@ -221,7 +221,9 @@ export function EntryForm({ accounts, categories, defaults, entryKey }: Props) {
         </div>
       ) : null}
 
-      <MoneyInput name="amount" label="Nominal" value={amount} onChange={setAmount} />
+      {/* Sen allowed: a bank row like Rp121.252,29 only pairs with its manual
+          copy on the exact amount, and a rounded one would be counted twice. */}
+      <MoneyInput name="amount" label="Nominal" value={amount} onChange={setAmount} decimals />
 
       <div className="space-y-1.5">
         <FieldLabel htmlFor={ids.note} hint="Boleh dikosongkan.">
