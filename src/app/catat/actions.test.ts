@@ -95,6 +95,16 @@ describe('recordEntry', () => {
     expect(result.message).toBe('Rp50.000 tercatat ke Wifi.')
   })
 
+  it('says the sen back when there are any', async () => {
+    stub.queue('households', { data: HOUSEHOLD })
+    stub.queue('categories', { data: { id: CATEGORY, name: 'Google Workspace', cashflow: 'bills' } })
+    stub.queue('accounts', { data: [{ id: ACCOUNT }] })
+    stub.queue('transactions', { data: null })
+
+    const result = await recordEntry(null, entryForm({ amount: '12125229' }))
+    expect(result.message).toBe('Rp121.252,29 tercatat ke Google Workspace.')
+  })
+
   it('puts an income category on the destination side', async () => {
     stub.queue('households', { data: HOUSEHOLD })
     stub.queue('categories', { data: { id: CATEGORY, name: 'Gaji', cashflow: 'income' } })

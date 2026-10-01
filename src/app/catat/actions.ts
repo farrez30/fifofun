@@ -223,7 +223,7 @@ export async function recordEntry(
   revalidateLedger(householdId)
   return {
     ok: true,
-    message: `${formatIdr(input.amount)} tercatat ke ${category.name as string}.`,
+    message: `${formatIdr(input.amount, { decimals: input.amount % 100n !== 0n })} tercatat ke ${category.name as string}.`,
     applied: 1,
   }
 }
