@@ -100,6 +100,15 @@ describe('import defaults', () => {
     expect(disagreements).toEqual([])
   })
 
+  it('never files an import as a balance correction', () => {
+    // A Naturally Plus payout landed in Penyesuaian Income in Sep 2026 and was
+    // counted by the restatement as a correction someone made.
+    const corrections = Object.entries(DEFAULT_CATEGORY_BY_KIND)
+      .filter(([, name]) => name.startsWith('Penyesuaian'))
+      .map(([kind, name]) => `${kind} -> ${name}`)
+    expect(corrections).toEqual([])
+  })
+
   it('never falls back to a group', () => {
     // A group holds nothing, so an import landing on one would either be
     // refused or split the group's own total away from its children's.

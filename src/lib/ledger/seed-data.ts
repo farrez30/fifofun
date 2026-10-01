@@ -321,8 +321,11 @@ export const SEED_RULES: SeedRule[] = [
 export const DEFAULT_CATEGORY_BY_KIND: Record<string, string> = {
   salary: 'Gaji',
   bonus: 'Other Income',
-  refund: 'Penyesuaian Income',
-  'transfer-in': 'Penyesuaian Income',
+  // Not Penyesuaian Income: that one is for balance corrections only, and the
+  // restatement counts everything in it as one. Money arriving with no rule
+  // waits in Other Income for a person to say what it was.
+  refund: 'Other Income',
+  'transfer-in': 'Other Income',
   'transfer-out': 'Other spending',
   'qris-payment': 'Other spending',
   'ecommerce-card': 'Other spending',
