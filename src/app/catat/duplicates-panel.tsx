@@ -71,7 +71,7 @@ export function DuplicatesPanel({ pairs }: { pairs: DuplicateView[] }) {
 
       <ul className="mt-3 space-y-3">
         {pairs.map((pair) => (
-          <li key={pair.manualId} className="squircle rounded-md bg-surface shadow-xs">
+          <li key={pair.manualId} className="@container squircle rounded-md bg-surface shadow-xs">
             {/*
               Stacked rather than side by side, and still a comparison. The two
               amounts stay on one right edge one above the other, which is what
@@ -80,7 +80,7 @@ export function DuplicatesPanel({ pairs }: { pairs: DuplicateView[] }) {
             */}
             <ul
               aria-label={`Catatan manual dan baris bank untuk ${pair.manual.description}`}
-              className="divide-y divide-line sm:hidden"
+              className="divide-y divide-line @3xl:hidden"
             >
               {(
                 [
@@ -117,7 +117,7 @@ export function DuplicatesPanel({ pairs }: { pairs: DuplicateView[] }) {
 
 
             <div
-              className="relative hidden overflow-x-auto sm:block"
+              className="relative hidden overflow-x-auto @3xl:block"
               tabIndex={0}
               role="region"
               aria-label={`Catatan manual dan baris bank untuk ${pair.manual.description}`}

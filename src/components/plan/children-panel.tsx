@@ -87,7 +87,7 @@ export function ChildrenPanel({
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <NumberField
           label="Jumlah anak"
           value={plans.length}
@@ -108,7 +108,7 @@ export function ChildrenPanel({
         /* The fields stay. Dragging is the faster way to find an arrangement and
            typing is the only way to enter one you already know, so neither can
            replace the other. Both write to the same state. */
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {plans.map((plan, index) => (
             <NumberField
               key={index}
@@ -134,7 +134,7 @@ export function ChildrenPanel({
 
       {plans.length > 0 ? (
         <>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <Figure
               label="Total sampai anak terakhir mandiri"
               value={formatIdrCompact(family.totalNominal)}

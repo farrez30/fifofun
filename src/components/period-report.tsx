@@ -145,7 +145,7 @@ export function PeriodReport({ summary, raw, categories, accounts, ledgerSize }:
   return (
     <div className="space-y-6">
       <form method="get" className="squircle rounded-md bg-surface shadow-xs p-4">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <label>
             <span className={LABEL}>Dari tanggal</span>
             <input type="date" name="dari" defaultValue={value(raw, 'dari')} className={CONTROL} />
@@ -266,7 +266,7 @@ export function PeriodReport({ summary, raw, categories, accounts, ledgerSize }:
         )}
 
         {summary.matched > 0 ? (
-          <dl className="mt-4 grid gap-3 sm:grid-cols-3">
+          <dl className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="squircle rounded-md bg-sunken p-3">
               <dt className="text-footnote text-ink-faint">Masuk</dt>
               <dd className="tnum mt-1 font-mono text-title3 tracking-title3 text-under">{formatIdr(summary.inflow)}</dd>

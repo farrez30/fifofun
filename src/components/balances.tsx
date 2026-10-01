@@ -69,11 +69,11 @@ export function Balances({
   }))
 
   return (
-    <div className="space-y-4">
+    <div className="@container space-y-4">
       {/* The split comes first because it is the answer. Everything below is
           the evidence for one half and the explanation for the other. */}
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Split
           label="Dipastikan bank"
           sen={confirmed}
@@ -176,7 +176,7 @@ export function Balances({
       <BalanceCards rows={balanceRows} />
 
       <div
-        className="relative hidden overflow-x-auto squircle rounded-md bg-surface shadow-xs sm:block"
+        className="relative hidden overflow-x-auto squircle rounded-md bg-surface shadow-xs @4xl:block"
         tabIndex={0}
         role="region"
         aria-label="Tabel saldo per akun, bisa digeser ke samping"

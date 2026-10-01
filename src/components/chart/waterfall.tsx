@@ -44,7 +44,7 @@ const TONE_FILL: Record<StepTone, string> = {
  * of labels with no numbers beside them. Pairing each amount with its own label
  * costs a line of height and fits inside three hundred and twenty pixels.
  */
-const COLUMNS = 'grid grid-cols-[6.5rem_1fr] gap-x-3 sm:grid-cols-[9rem_1fr]'
+const COLUMNS = 'grid grid-cols-[6.5rem_minmax(0,1fr)] gap-x-3 sm:grid-cols-[9rem_minmax(0,1fr)]'
 
 interface Props {
   statement: MonthlyStatement

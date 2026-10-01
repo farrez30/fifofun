@@ -75,7 +75,7 @@ export function GapPanel({
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <SelectField
           label="Gaya hidup yang dituju"
           value={targetTier}
@@ -119,7 +119,7 @@ export function GapPanel({
         </p>
       ) : (
         <>
-          <div className="grid gap-3 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
             <Route
               title="Naikkan penghasilan"
               amount={formatIdr(gap.byIncome!.extraNeeded)}
@@ -222,7 +222,7 @@ export function GapPanel({
             listrik dan internet dipakai berdua. Skala ekuivalensi OECD menaruhnya di sekitar
             1,5 kali, jadi menikah menghemat sekitar seperempat dibanding hidup terpisah.
           </p>
-          <dl className="mt-3 grid gap-3 sm:grid-cols-3">
+          <dl className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
             <Pair label="Kalau dihitung dua kali lipat" value={formatIdr(marriage.naiveEstimate)} />
             <Pair label="Dengan skala ekuivalensi" value={formatIdr(marriage.togetherCost)} />
             <Pair

@@ -82,10 +82,10 @@ export function TransactionTable({ rows, accounts, categories, caption, emptyTex
   }
 
   return (
-    <>
+    <div className="@container">
       <ul
         aria-label={caption}
-        className="rows-inset squircle rounded-md bg-surface shadow-xs sm:hidden"
+        className="rows-inset squircle rounded-md bg-surface shadow-xs @4xl:hidden"
       >
         {rows.map((row) => {
           const category = categoryOf(row, categoryById)
@@ -170,7 +170,7 @@ export function TransactionTable({ rows, accounts, categories, caption, emptyTex
       </ul>
 
       <div
-        className="relative hidden overflow-x-auto squircle rounded-md bg-surface shadow-xs sm:block"
+        className="relative hidden overflow-x-auto squircle rounded-md bg-surface shadow-xs @4xl:block"
         tabIndex={0}
         role="region"
         aria-label={`${caption}, bisa digeser ke samping`}
@@ -234,7 +234,7 @@ export function TransactionTable({ rows, accounts, categories, caption, emptyTex
           </tbody>
         </table>
       </div>
-    </>
+    </div>
   )
 }
 

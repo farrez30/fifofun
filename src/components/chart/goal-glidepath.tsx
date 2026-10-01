@@ -177,7 +177,7 @@ export function GoalGlidepath({
       </p>
 
       <ChartReadout>
-        <div className="grid grid-cols-[3.5rem_1fr] gap-x-2">
+        <div className="grid grid-cols-[3.5rem_minmax(0,1fr)] gap-x-2">
           <div className="relative">
             {scale.ticks.map((tick) => (
               <span

@@ -41,7 +41,7 @@ export function EntrySummary({
         <SignedMoney sen={row.amount} direction={signedDirection(row.cashflow)} />
       </p>
 
-      <dl className="mt-3 grid gap-x-6 gap-y-2 text-subhead sm:grid-cols-2">
+      <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-2 text-subhead sm:grid-cols-2">
         <Pair label="Waktu">{formatJakarta(row.occurredAt, 'datetime')}</Pair>
         <Pair label="Akun">
           {from && to ? (

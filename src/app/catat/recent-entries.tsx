@@ -43,14 +43,14 @@ export function RecentEntries({ rows }: { rows: RecentEntry[] }) {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="@container space-y-2">
 
       {/* Six columns, every one of them nowrap. The delete form is its own
           form per row, so both trees can be rendered: the hidden one is not
           reachable and cannot be submitted. */}
       <ul
         aria-label="Catatan manual terakhir"
-        className="rows-inset squircle rounded-md bg-surface shadow-xs sm:hidden"
+        className="rows-inset squircle rounded-md bg-surface shadow-xs @5xl:hidden"
       >
         {rows.map((row) => (
           <li key={row.id} className="p-3">
@@ -104,7 +104,7 @@ export function RecentEntries({ rows }: { rows: RecentEntry[] }) {
       </ul>
 
       <div
-        className="relative hidden overflow-x-auto squircle rounded-md bg-surface shadow-xs sm:block"
+        className="relative hidden overflow-x-auto squircle rounded-md bg-surface shadow-xs @5xl:block"
         tabIndex={0}
         role="region"
         aria-label="Tabel catatan manual terakhir, bisa digeser ke samping"

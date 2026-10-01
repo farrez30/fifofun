@@ -78,7 +78,7 @@ export function AccountsPanel({ accounts }: { accounts: AccountView[] }) {
   )
 
   return (
-    <section aria-labelledby="akun" className="scroll-mt-8">
+    <section aria-labelledby="akun" className="@container scroll-mt-8">
       <h2 id="akun" className="text-title3 font-semibold tracking-title3 text-ink">
         Akun
       </h2>
@@ -96,7 +96,7 @@ export function AccountsPanel({ accounts }: { accounts: AccountView[] }) {
         Every action here is its own form, so rendering both trees is safe: the
         hidden one cannot be submitted, and only the visible one is reachable.
       */}
-      <ul aria-label="Akun" className="mt-3 rows-inset squircle rounded-md bg-surface shadow-xs sm:hidden">
+      <ul aria-label="Akun" className="mt-3 rows-inset squircle rounded-md bg-surface shadow-xs @4xl:hidden">
         {scope(
           live.map((account) => (
             <SortableCard
@@ -117,7 +117,7 @@ export function AccountsPanel({ accounts }: { accounts: AccountView[] }) {
         ))}
       </ul>
 
-      <div className="relative mt-3 hidden overflow-x-auto squircle rounded-md bg-surface shadow-xs sm:block">
+      <div className="relative mt-3 hidden overflow-x-auto squircle rounded-md bg-surface shadow-xs @4xl:block">
         <table className="w-full min-w-[46rem] border-collapse text-subhead">
 
           <caption className="sr-only">Akun beserta kunci impor dan urutannya</caption>
@@ -267,9 +267,11 @@ function Card({ account, open, onToggle, reorder }: RowProps) {
     <li
       ref={reorder?.ref}
       style={reorder?.style}
-      className={`p-3 ${reorder ? 'pl-1' : ''} ${reorder?.liftClass ?? ''}`}
+      className={`px-4 py-3 ${reorder?.liftClass ?? ''}`}
     >
-      <div className="flex items-center justify-between gap-1">
+      {/* The handle's 44px target hangs into the padding, so its glyph sits at
+          the card's edge inset while the lines below keep their full 16px. */}
+      <div className={`flex items-center justify-between gap-1 ${reorder ? '-ml-3' : ''}`}>
         {reorder ? <DragHandle label={`Pindahkan ${account.name}`} handle={reorder.handle} /> : null}
         <span className="min-w-0 flex-1 text-subhead text-ink">
           <AccountMark name={account.name} kind={account.kind} />

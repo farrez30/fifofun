@@ -95,7 +95,7 @@ export function CategorySparks({ review, caption }: Props) {
               .join(', ')}.`}
       </p>
 
-      <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {trends.map((trend) => (
           <SparkCard key={trend.category} view={toView(trend)} />
         ))}
@@ -109,7 +109,7 @@ export function CategorySparks({ review, caption }: Props) {
             Tampilkan {omitted} kategori lain, bersama-sama {formatIdrCompact(omittedTotal)}{' '}
             sepanjang {months.length} bulan ini
           </summary>
-          <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <ul className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {rest.map((trend) => (
               <SparkCard key={trend.category} view={toView(trend)} />
             ))}

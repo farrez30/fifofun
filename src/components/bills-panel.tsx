@@ -95,7 +95,7 @@ export function BillsPanel({ review }: Props) {
 
       {/* Five columns want 512px and a phone has 327. The status glyph leads
           each card because it is what the panel is read for. */}
-      <ul aria-label="Tagihan bulan ini" className="divide-y divide-line sm:hidden">
+      <ul aria-label="Tagihan bulan ini" className="divide-y divide-line @2xl:hidden">
         {bills.map((bill) => {
           const style = STATE[bill.state]
           return (
@@ -152,7 +152,7 @@ export function BillsPanel({ review }: Props) {
       </ul>
 
       <div
-        className="relative hidden overflow-x-auto sm:block"
+        className="relative hidden overflow-x-auto @2xl:block"
         tabIndex={0}
         role="region"
         aria-label="Tabel tagihan, bisa digeser ke samping"

@@ -42,7 +42,8 @@ test.describe('catat transaksi', () => {
     await expect(hidden).toHaveValue(/^\d+$/)
 
     // The visible field is the forgiving one: separators, a Rp prefix, either.
-    const visible = page.locator('input[inputmode="numeric"]').first()
+    // Decimal, because a bank row with sen only pairs with an exact copy.
+    const visible = page.locator('input[inputmode="decimal"]').first()
     await expect(visible).toBeVisible()
     await expect(page.getByText('Rp', { exact: true }).first()).toBeVisible()
   })

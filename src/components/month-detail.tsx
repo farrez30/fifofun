@@ -21,7 +21,7 @@ export function MonthDetailPanel({ detail }: { detail: MonthDetail }) {
     <section
       aria-labelledby={headingId}
       data-month-detail={detail.month}
-      className="mt-4 border-t border-line pt-4"
+      className="@container mt-4 border-t border-line pt-4"
     >
       <h3 id={headingId} className="text-subhead font-medium text-ink">
         Rincian {detail.label}
@@ -42,7 +42,7 @@ export function MonthDetailPanel({ detail }: { detail: MonthDetail }) {
           */}
           <ul
             aria-label={`Per kategori, ${detail.label}`}
-            className="rows-inset squircle rounded-md bg-surface shadow-xs mt-3 sm:hidden"
+            className="rows-inset squircle rounded-md bg-surface shadow-xs mt-3 @2xl:hidden"
           >
             {detail.byCategory.map((line) => (
               <li key={`${line.cashflow} ${line.name}`} className="px-3 py-2.5">
@@ -79,7 +79,7 @@ export function MonthDetailPanel({ detail }: { detail: MonthDetail }) {
             role="region"
             tabIndex={0}
             aria-label={`Tabel per kategori ${detail.label}, bisa digeser ke samping`}
-            className="relative mt-3 hidden overflow-x-auto squircle rounded-md bg-surface shadow-xs sm:block"
+            className="relative mt-3 hidden overflow-x-auto squircle rounded-md bg-surface shadow-xs @2xl:block"
           >
             <table className="w-full min-w-[30rem] text-subhead">
               <caption className="sr-only">Per kategori, {detail.label}</caption>
@@ -147,7 +147,7 @@ export function MonthDetailPanel({ detail }: { detail: MonthDetail }) {
 
           <ul
             aria-label={`Transaksi terbesar, ${detail.label}`}
-            className="rows-inset squircle rounded-md bg-surface shadow-xs mt-2 sm:hidden"
+            className="rows-inset squircle rounded-md bg-surface shadow-xs mt-2 @2xl:hidden"
           >
             {detail.top.map((row, index) => (
               <li key={`${row.date}-${index}`} className="px-3 py-2.5">
@@ -188,7 +188,7 @@ export function MonthDetailPanel({ detail }: { detail: MonthDetail }) {
             role="region"
             tabIndex={0}
             aria-label={`Tabel transaksi terbesar ${detail.label}, bisa digeser ke samping`}
-            className="relative mt-2 hidden overflow-x-auto squircle rounded-md bg-surface shadow-xs sm:block"
+            className="relative mt-2 hidden overflow-x-auto squircle rounded-md bg-surface shadow-xs @2xl:block"
           >
             <table className="w-full min-w-[30rem] text-subhead">
               <caption className="sr-only">Transaksi terbesar, {detail.label}</caption>

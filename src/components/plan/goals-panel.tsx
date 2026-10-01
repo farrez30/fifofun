@@ -74,7 +74,7 @@ export function GoalsPanel({
 
       <div>
         <h3 className="text-subhead font-medium text-ink">Hitung tujuan apa pun</h3>
-        <div className="mt-3 grid gap-4 sm:grid-cols-3">
+        <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
           <MoneyInput label="Target" value={target} onChange={onTargetChange} />
           <NumberField
             label="Waktu"
@@ -87,7 +87,7 @@ export function GoalsPanel({
           <MoneyInput label="Sudah terkumpul" value={saved} onChange={onSavedChange} />
         </div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Figure
             label="Setoran per bulan"
             value={formatIdr(plan.monthly)}

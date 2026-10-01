@@ -308,7 +308,7 @@ function GroupCard({
               <input type="hidden" name="pattern" value={pattern} />
               <input type="hidden" name="matchType" value={matchType} />
 
-              <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
                 <CategorySelect
                   name="categoryId"
                   label="Kategori"
@@ -325,7 +325,7 @@ function GroupCard({
                 <summary className="cursor-pointer text-ink-muted">
                   Pola yang dipakai: {MATCH_LABELS[matchType]} &ldquo;{pattern}&rdquo;
                 </summary>
-                <div className="mt-2 grid gap-3 sm:grid-cols-[1fr_auto]">
+                <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
                   <label className="block">
                     <span className="block text-subhead font-medium text-ink">
                       Pola
@@ -536,7 +536,7 @@ function SingleRows({
           }
           return (
             <li key={entry.id} className="border-b border-line pb-2 last:border-0">
-              <form action={settleOne} className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
+              <form action={settleOne} className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
                 <input type="hidden" name="transactionId" value={entry.id} />
 
                 <div className="min-w-0">

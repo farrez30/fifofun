@@ -121,7 +121,7 @@ export function BalanceCards({ rows }: { rows: BalanceRow[] }) {
   return (
     <ul
       aria-label="Saldo tiap akun"
-      className="rows-inset squircle rounded-md bg-surface shadow-xs sm:hidden"
+      className="rows-inset squircle rounded-md bg-surface shadow-xs @4xl:hidden"
     >
       {rows.map((row) => {
         // Distinct from the table's, because both trees are in the document.
@@ -213,7 +213,7 @@ export function AdjustBalanceForm({ row }: { row: BalanceRow }) {
           real one are the comparison, and a reader can only compare two
           numbers they can see at once. Two short lists rather than one, so the
           input between them is not a child of a definition list. */}
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <dl>
           <dt className="text-footnote text-ink-faint">Tercatat di app</dt>
           <dd className="tnum mt-1 font-mono text-ink">{row.closing}</dd>

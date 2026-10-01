@@ -221,6 +221,18 @@ bukan daftar grouped — pasangan label-kiri di sel selebar itu tidak terbaca.
 Keduanya tetap memakai resep bersama `field-base.tsx` (`CONTROL`, `SEGMENTED`
 untuk pemilih mode) dan peran Dynamic Type yang sama dengan form lain.
 
+**Tabel atau daftar ditentukan lebar wadahnya, bukan lebar layar.** Setiap
+tabel yang punya versi daftar beralih lewat container query (`@container` di
+pembungkusnya, `@2xl:`/`@3xl:`/`@4xl:`/`@5xl:` sesuai lebar alami tabelnya),
+bukan `sm:`. Dengan `sm:`, layar 690px yang sudah dipotong sidebar dan kolom
+samping menyisakan sekitar 570px, sementara tabel transaksi butuh 840px dan
+terbaca satu kolom demi satu kolom. Track grid yang lentur selalu
+`minmax(0,1fr)`, tidak pernah `1fr` polos. Grid yang kolomnya baru didefinisikan
+di breakpoint diberi `grid-cols-1` sebagai dasar, karena `1fr` dan track
+implisit sama-sama tidak mau menyusut di bawah lebar isinya: tabel lebar di
+dalamnya mendorong kartu keluar layar. `e2e/narrow.spec.ts` menjaga ini di
+720px, di antara suite ponsel dan desktop.
+
 **Umpan balik aksi lewat toast.** Setiap simpan menampilkan satu toast
 "Menyimpan…" yang berganti di tempat (id yang sama) menjadi berhasil atau
 gagal; yang gagal bertahan sampai ditutup. Form memakai `useActionToast`

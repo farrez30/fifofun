@@ -236,7 +236,7 @@ function Report({ report }: { report: ImportReport }) {
       ) : null}
 
       {report.ok && report.inserted !== undefined ? (
-        <dl className="mt-3 grid gap-3 border-t border-line pt-3 text-subhead sm:grid-cols-2 lg:grid-cols-4">
+        <dl className="mt-3 grid grid-cols-1 gap-3 border-t border-line pt-3 text-subhead sm:grid-cols-2 lg:grid-cols-4">
           <Pair label="Periode" value={`${report.period?.start} sampai ${report.period?.end}`} />
           <Pair label="Masuk" value={`${report.inserted} transaksi`} />
           <Pair
