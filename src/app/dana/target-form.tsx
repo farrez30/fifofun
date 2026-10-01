@@ -1,6 +1,7 @@
 'use client'
 
 import { useActionState, useState } from 'react'
+import { SubmitButton } from '@/components/submit-button'
 import { MoneyInput } from '@/components/money-input'
 import { BUTTON_PLAIN, BUTTON_QUIET, CONTROL, CONTROL_TEXT, FieldLabel, SEGMENT, SEGMENTED, SEGMENT_ON } from '@/components/field-base'
 import { formatMonthKey } from '@/lib/datetime'
@@ -153,14 +154,14 @@ export function TargetForm({
           </>
         )}
 
-        <button type="submit" name="mode" value={mode} className={BUTTON_QUIET}>
+        <SubmitButton name="mode" value={mode} className={BUTTON_QUIET}>
           Simpan
-        </button>
+        </SubmitButton>
 
         {mode === 'setoran' && eta ? (
-          <button type="submit" name="mode" value="tenggat" className={BUTTON_PLAIN}>
+          <SubmitButton name="mode" value="tenggat" className={BUTTON_PLAIN}>
             Jadikan tenggat
-          </button>
+          </SubmitButton>
         ) : null}
       </form>
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useActionState } from 'react'
+import { SubmitButton } from '@/components/submit-button'
 import { MATCH_LABELS, type MatchType } from '@/lib/ledger/rules'
 import type { RuleRow } from '@/lib/queries/household'
 import { deleteRule, type ActionResult } from './actions'
@@ -38,12 +39,9 @@ export function RulesList({ rules }: { rules: RuleRow[] }) {
               </p>
               <form action={action}>
                 <input type="hidden" name="ruleId" value={rule.id} />
-                <button
-                  type="submit"
-                  className="shrink-0 text-footnote text-ink-faint underline underline-offset-2 hover:text-over"
-                >
+                <SubmitButton className="shrink-0 text-footnote text-ink-faint underline underline-offset-2 hover:text-over">
                   Hapus
-                </button>
+                </SubmitButton>
               </form>
             </div>
 

@@ -333,6 +333,15 @@ laju deselerasi scroll view. Flick 30px yang tajam membuang sheet; seretan
 120px pelan yang berhenti justru kembali, dan itu benar, karena seretan pelan
 panjang yang berhenti adalah pembatalan.
 
+**Menunggu selalu terlihat di tempat mata berada.** Tombol yang menunggu
+membawa `aria-busy`, dan satu aturan CSS menggambar spinner di dalamnya.
+Pembaca layar juga mendengar status itu. Tombol yang dipakai bersama banyak
+baris memakai `SubmitButton` (`useFormStatus`), supaya hanya baris yang
+ditekan yang berputar. Perpindahan halaman di luar navigasi (link baris,
+pager, form filter) memunculkan garis 2px di tepi atas (`nav-progress.tsx`),
+dengan jeda 150ms yang sama dengan titik di sidebar. Di bawah reduced motion,
+keduanya berdenyut dan tidak berputar atau berjalan.
+
 **Spring tidak dipakai untuk benda yang mengukur.** Bar anggaran memakai
 easing tanpa overshoot, karena overshoot membuatnya melukis melewati track dan
 menampilkan angka yang tidak benar selama sekitar 150ms.

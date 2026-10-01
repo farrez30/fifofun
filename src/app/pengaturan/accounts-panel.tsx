@@ -1,6 +1,7 @@
 'use client'
 
 import { useActionState, useState, useTransition, type ReactNode } from 'react'
+import { SubmitButton } from '@/components/submit-button'
 import { AccountMark } from '@/components/marks'
 import { DragHandle, ReorderScope, useReorderRow } from '@/components/reorder'
 import { ACCOUNT_KEY_LABELS, arrangeRows, type AccountKey } from '@/lib/ledger/settings'
@@ -328,12 +329,9 @@ function ArchiveButton({ account }: { account: AccountView }) {
     <form action={action} className="flex items-center gap-2">
       <input type="hidden" name="id" value={account.id} />
       <input type="hidden" name="archived" value={account.archived ? '0' : '1'} />
-      <button
-        type="submit"
-        className="h-9 rounded-sm border border-line px-2.5 text-footnote text-ink-muted transition-colors duration-150 hover:border-line-strong hover:text-ink"
-      >
+      <SubmitButton className="inline-flex h-9 items-center rounded-sm border border-line px-2.5 text-footnote text-ink-muted transition-colors duration-150 hover:border-line-strong hover:text-ink">
         {account.archived ? 'Pakai lagi' : 'Arsipkan'}
-      </button>
+      </SubmitButton>
     </form>
   )
 }

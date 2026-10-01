@@ -25,6 +25,7 @@ function Submit({
       name="intent"
       value={intent}
       disabled={pending}
+      aria-busy={pending}
       /*
         The two halves of the only decision on this screen. Filled is the one
         somebody came to press; gray is the other real option rather than a

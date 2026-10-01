@@ -12,6 +12,7 @@ function Submit() {
     <button
       type="submit"
       disabled={pending}
+      aria-busy={pending}
       className={`w-full ${BUTTON_PRIMARY}`}
     >
       {pending ? 'Memeriksa' : 'Gabung'}

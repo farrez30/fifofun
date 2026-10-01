@@ -258,6 +258,7 @@ function SaveButton({
       type="submit"
       form={formId}
       disabled={pending}
+      aria-busy={pending}
       className={`shrink-0 rounded-sm border px-3 text-ink transition-colors duration-150 disabled:opacity-40 ${
         compact ? 'h-10 text-footnote' : 'h-11 text-subhead'
       } ${dirty ? 'border-accent bg-accent-wash' : 'border-line-strong hover:bg-sunken'}`}

@@ -531,6 +531,7 @@ function Submit({ label, tone = 'primary' }: { label: string; tone?: 'primary' |
     <button
       type="submit"
       disabled={pending}
+      aria-busy={pending}
       className={tone === 'primary' ? BUTTON_PRIMARY : BUTTON_QUIET}
     >
       {pending ? 'Menyimpan' : label}

@@ -1,6 +1,7 @@
 'use client'
 
 import { useActionState } from 'react'
+import { SubmitButton } from '@/components/submit-button'
 import { DirectionMark } from '@/components/marks'
 import type { Direction } from '@/lib/ledger/direction'
 import { deleteEntry } from './actions'
@@ -82,13 +83,12 @@ export function RecentEntries({ rows }: { rows: RecentEntry[] }) {
             <div className="mt-2.5 flex flex-wrap items-center gap-2">
               <form action={action}>
                 <input type="hidden" name="transactionId" value={row.id} />
-                <button
-                  type="submit"
+                <SubmitButton
                   aria-label={`Hapus ${row.description}`}
                   className={BUTTON_QUIET}
                 >
                   Hapus
-                </button>
+                </SubmitButton>
               </form>
               {row.duplicateSuspected ? (
                 <a
@@ -165,13 +165,12 @@ export function RecentEntries({ rows }: { rows: RecentEntry[] }) {
                 <td className="whitespace-nowrap px-4 py-2.5 text-right">
                   <form action={action} className="inline">
                     <input type="hidden" name="transactionId" value={row.id} />
-                    <button
-                      type="submit"
+                    <SubmitButton
                       aria-label={`Hapus ${row.description}`}
                       className={BUTTON_QUIET}
                     >
                       Hapus
-                    </button>
+                    </SubmitButton>
                   </form>
                 </td>
               </tr>

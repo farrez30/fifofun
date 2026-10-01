@@ -386,6 +386,7 @@ function Submit({ label }: { label: string }) {
     <button
       type="submit"
       disabled={pending}
+      aria-busy={pending}
       className={BUTTON_PRIMARY}
     >
       {pending ? 'Menyimpan' : label}

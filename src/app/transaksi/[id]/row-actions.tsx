@@ -73,6 +73,7 @@ function Submit({ label, pendingLabel }: { label: string; pendingLabel: string }
     <button
       type="submit"
       disabled={pending}
+      aria-busy={pending}
       className={BUTTON_QUIET}
     >
       {pending ? pendingLabel : label}

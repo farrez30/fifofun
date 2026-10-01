@@ -2,6 +2,7 @@ import { SignOut } from '@phosphor-icons/react/dist/ssr/SignOut'
 import { signOut } from '@/app/login/actions'
 import { MobileTabs } from '@/components/mobile-tabs'
 import { NavHint } from '@/components/nav-hint'
+import { NavProgress } from '@/components/nav-progress'
 import { SIDEBAR_LABEL, SIDEBAR_ROW, SIDEBAR_ROW_OFF, ShellFrame } from '@/components/shell-frame'
 import { countUnconfirmed } from '@/lib/queries/household'
 import type { NavHref } from '@/components/nav'
@@ -57,25 +58,30 @@ export function AppShell({ title, email, current, lead, children }: Props) {
   const review = countUnconfirmed()
 
   return (
-    <ShellFrame
-      title={title}
-      current={current}
-      lead={lead}
-      account={
-        <form action={signOut} className="space-y-0.5">
-          <p className="truncate px-2.5 text-footnote text-ink-muted sr-only lg:not-sr-only lg:collapsed:sr-only">
-            {email}
-          </p>
-          <button type="submit" className={`${SIDEBAR_ROW} ${SIDEBAR_ROW_OFF} w-full`}>
-            <SignOut aria-hidden="true" className="size-5 shrink-0" />
-            <span className={SIDEBAR_LABEL}>Keluar</span>
-          </button>
-        </form>
-      }
-      tabs={<MobileTabs current={current} email={email} review={review} />}
-      navHint={<NavHint className="ml-1.5" />}
-    >
-      {children}
-    </ShellFrame>
+    <>
+      {/* Outside the frame: `main` animates its arrival with a transform, and
+          a fixed element inside a transformed one is fixed to that instead. */}
+      <NavProgress />
+      <ShellFrame
+        title={title}
+        current={current}
+        lead={lead}
+        account={
+          <form action={signOut} className="space-y-0.5">
+            <p className="truncate px-2.5 text-footnote text-ink-muted sr-only lg:not-sr-only lg:collapsed:sr-only">
+              {email}
+            </p>
+            <button type="submit" className={`${SIDEBAR_ROW} ${SIDEBAR_ROW_OFF} w-full`}>
+              <SignOut aria-hidden="true" className="size-5 shrink-0" />
+              <span className={SIDEBAR_LABEL}>Keluar</span>
+            </button>
+          </form>
+        }
+        tabs={<MobileTabs current={current} email={email} review={review} />}
+        navHint={<NavHint className="ml-1.5" />}
+      >
+        {children}
+      </ShellFrame>
+    </>
   )
 }

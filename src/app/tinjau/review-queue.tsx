@@ -470,6 +470,7 @@ function Submit({ count }: { count: number }) {
     <button
       type="submit"
       disabled={pending}
+      aria-busy={pending}
       className="h-11 w-full rounded-sm bg-accent px-5 text-subhead font-medium text-paper transition-colors duration-150 hover:bg-accent-strong disabled:opacity-50 sm:w-auto"
     >
       {pending ? 'Menyimpan' : `Terapkan ke ${count}`}
