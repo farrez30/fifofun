@@ -13,13 +13,18 @@ import { FIXTURE_DIR } from './render'
  * table's own container, and this holds it there.
  */
 
-test.use({ viewport: { width: 720, height: 900 } })
 test.describe.configure({ timeout: 180_000 })
 
 /** Drawings may pan; a table may not, wherever it sits. Same rule as mobile.spec.ts. */
 const PANNABLE = ['[role="region"][aria-label*="bisa digeser"]', '[role="region"]:has(> svg)', 'nav[aria-label="Bagian rencana"] > ul']
 
-test('no table has to be dragged sideways at a tablet or narrow-pane width', async ({ page }) => {
+/*
+  Two widths, because a table can fail between them: at 720px every card has
+  already turned into its list, while at 960px a table may switch on and still
+  be wider than its column. The map page's table did exactly that.
+*/
+for (const width of [720, 960]) test(`no table has to be dragged sideways at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 900 })
   const files = (await readdir(FIXTURE_DIR)).filter((name) => name.endsWith('.html')).sort()
   const dragged: { fixture: string; over: number; where: string }[] = []
 

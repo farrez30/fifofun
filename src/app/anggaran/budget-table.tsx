@@ -119,17 +119,17 @@ export function BudgetTable({ plan }: { plan: BudgetPlanView }) {
             without it a focused input can be scrolled to exactly where the bar
             covers it. */}
         <div className="@container relative overflow-x-auto squircle rounded-md bg-surface shadow-xs [&_input]:scroll-mt-32">
-          <table className="w-full border-collapse text-subhead @3xl:min-w-[38rem]">
+          <table className="w-full border-collapse text-subhead @5xl:min-w-[38rem]">
             <caption className="sr-only">Anggaran {label} per kategori</caption>
             <thead>
               <tr className="border-b border-line text-left text-caption1 uppercase tracking-wide text-ink-faint">
                 <th scope="col" className="px-3 py-2 font-medium sm:px-4">
                   Kategori
                 </th>
-                <th scope="col" className="hidden px-4 py-2 text-right font-medium @3xl:table-cell">
+                <th scope="col" className="hidden px-4 py-2 text-right font-medium @5xl:table-cell">
                   Biasanya
                 </th>
-                <th scope="col" className="hidden px-4 py-2 text-right font-medium @3xl:table-cell">
+                <th scope="col" className="hidden px-4 py-2 text-right font-medium @5xl:table-cell">
                   Bulan lalu
                 </th>
                 {/* Held wide enough on a phone for the figure to fit inside it.
@@ -140,7 +140,7 @@ export function BudgetTable({ plan }: { plan: BudgetPlanView }) {
                   Anggaran
                 </th>
                 {plan.hasData ? (
-                  <th scope="col" className="hidden px-4 py-2 text-right font-medium @3xl:table-cell">
+                  <th scope="col" className="hidden px-4 py-2 text-right font-medium @5xl:table-cell">
                     Realisasi
                   </th>
                 ) : null}
@@ -265,7 +265,7 @@ function Row({
         <Context line={line} hasData={hasData} hasHistory={hasHistory} actual={actual} pace={pace} />
       </th>
 
-      <td className="tnum hidden whitespace-nowrap px-4 py-2 text-right font-mono text-ink-muted @3xl:table-cell">
+      <td className="tnum hidden whitespace-nowrap px-4 py-2 text-right font-mono text-ink-muted @5xl:table-cell">
         {line.usual ?? (
           <span className="font-sans text-ink-faint">
             {hasHistory ? 'belum pernah muncul' : 'tidak diketahui'}
@@ -273,7 +273,7 @@ function Row({
         )}
       </td>
 
-      <td className="tnum hidden whitespace-nowrap px-4 py-2 text-right font-mono text-ink-muted @3xl:table-cell">
+      <td className="tnum hidden whitespace-nowrap px-4 py-2 text-right font-mono text-ink-muted @5xl:table-cell">
         {line.lastMonth ? (
           <>
             {line.lastMonth.derived ? (
@@ -303,7 +303,7 @@ function Row({
       </td>
 
       {hasData ? (
-        <td className="hidden whitespace-nowrap px-4 py-2 text-right @3xl:table-cell">
+        <td className="hidden whitespace-nowrap px-4 py-2 text-right @5xl:table-cell">
 
           {actual ? (
             <>
@@ -392,7 +392,7 @@ function Context({
   pace: MonthPace | null
 }) {
   return (
-    <span className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-caption1 text-ink-muted @3xl:hidden">
+    <span className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-caption1 text-ink-muted @5xl:hidden">
       <span>
         biasanya{' '}
         {line.usual ? (
