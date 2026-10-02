@@ -4,6 +4,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import { useEffect, useRef, useState } from 'react'
 import type { GeoJSONSource, Map as MapLibreMap, Marker, Popup } from 'maplibre-gl'
 import { boundsOf, DOTS, groupFilter, HEAT, JAKARTA, LOCALE, overlayLayers, SOURCE, STYLES, toFeatures, type MapColors } from './map-layers'
+import type { PlaceMode } from '@/lib/ledger/places'
 import type { PlacePoint } from './view-model'
 
 /**
@@ -33,6 +34,8 @@ interface Props {
   onMove: (pointId: string) => void
   /** Category groups switched off in the legend. */
   hidden: readonly string[]
+  /** Which weight sizes the dots and feeds the glow. */
+  mode: PlaceMode
 }
 
 type Theme = 'light' | 'dark'
@@ -136,7 +139,7 @@ function popupContent(point: PlacePoint, onMove: (pointId: string) => void): HTM
   return root
 }
 
-export function PlaceMap({ points, placing, draft, onPick, onMove, hidden }: Props) {
+export function PlaceMap({ points, placing, draft, onPick, onMove, hidden, mode }: Props) {
   const container = useRef<HTMLDivElement>(null)
   const map = useRef<MapLibreMap | null>(null)
   const marker = useRef<Marker | null>(null)
@@ -146,9 +149,9 @@ export function PlaceMap({ points, placing, draft, onPick, onMove, hidden }: Pro
   const [tilesFailed, setTilesFailed] = useState(false)
 
   // The newest props, for listeners registered once when the map was made.
-  const latest = useRef({ points, placing, onPick, onMove, hidden })
+  const latest = useRef({ points, placing, onPick, onMove, hidden, mode })
   useEffect(() => {
-    latest.current = { points, placing, onPick, onMove, hidden }
+    latest.current = { points, placing, onPick, onMove, hidden, mode }
   })
   // Per theme: the same hue is a darker colour on light tiles than on dark ones.
   const colorOf = useRef<((hue: number) => string) | undefined>(undefined)
@@ -188,7 +191,7 @@ export function PlaceMap({ points, placing, draft, onPick, onMove, hidden }: Pro
       const drawOverlay = () => {
         colorOf.current = categoryColors()
         if (!instance.getSource(SOURCE)) {
-          instance.addSource(SOURCE, { type: 'geojson', data: toFeatures(latest.current.points, colorOf.current) })
+          instance.addSource(SOURCE, { type: 'geojson', data: toFeatures(latest.current.points, latest.current.mode, colorOf.current) })
         }
         for (const layer of overlayLayers(themeColors(), latest.current.hidden)) {
           if (!instance.getLayer(layer.id)) instance.addLayer(layer as never)
@@ -257,7 +260,7 @@ export function PlaceMap({ points, placing, draft, onPick, onMove, hidden }: Pro
     const instance = map.current
     if (!instance) return
     const apply = () => {
-      ;(instance.getSource(SOURCE) as GeoJSONSource | undefined)?.setData(toFeatures(latest.current.points, colorOf.current))
+      ;(instance.getSource(SOURCE) as GeoJSONSource | undefined)?.setData(toFeatures(latest.current.points, latest.current.mode, colorOf.current))
       const bounds = boundsOf(latest.current.points)
       if (bounds) instance.fitBounds(bounds, { padding: 48, maxZoom: 14, duration: 0 })
     }
@@ -268,8 +271,8 @@ export function PlaceMap({ points, placing, draft, onPick, onMove, hidden }: Pro
   // Weights change with the reading even when the places do not.
   useEffect(() => {
     const source = map.current?.getSource(SOURCE) as GeoJSONSource | undefined
-    source?.setData(toFeatures(points, colorOf.current))
-  }, [points])
+    source?.setData(toFeatures(points, mode, colorOf.current))
+  }, [points, mode])
 
   // A group switched off leaves the glow and the dots alike, without moving the camera.
   const hiddenKey = hidden.join('|')

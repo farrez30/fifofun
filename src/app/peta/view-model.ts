@@ -25,8 +25,8 @@ export interface PlacePoint {
   address: string | null
   lat: number
   lng: number
-  /** 0 to 1, for the chosen reading. */
-  weight: number
+  /** 0 to 1 under each reading, so switching readings needs no request. */
+  weights: Record<PlaceMode, number>
   total: string
   visits: number
   average: string
@@ -111,7 +111,6 @@ const ownName: (name: string | null) => CategoryLook = groupLookup([])
 
 export function toPoints(
   report: PlacesReport,
-  mode: PlaceMode,
   look: (name: string | null) => CategoryLook = ownName,
 ): PlacePoint[] {
   return report.places.map((place) => ({
@@ -125,7 +124,11 @@ export function toPoints(
     address: place.address,
     lat: place.lat,
     lng: place.lng,
-    weight: weightOf(place, mode, report.places),
+    weights: {
+      total: weightOf(place, 'total', report.places),
+      visits: weightOf(place, 'visits', report.places),
+      average: weightOf(place, 'average', report.places),
+    },
     total: formatIdr(place.total),
     visits: place.visits,
     average: formatIdr(place.average),

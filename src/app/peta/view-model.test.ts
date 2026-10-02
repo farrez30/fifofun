@@ -27,7 +27,7 @@ const report = summarisePlaces(
 
 describe('toPoints', () => {
   it('writes every figure the way the app writes money, for an island that only draws', () => {
-    expect(toPoints(report, 'total')).toEqual([
+    expect(toPoints(report)).toEqual([
       {
         id: 'l1',
         pointId: 'l1',
@@ -39,7 +39,8 @@ describe('toPoints', () => {
         address: 'Tebet',
         lat: -6.23,
         lng: 106.85,
-        weight: 1,
+        // Boga Rasaa is the only placed merchant, so it tops every reading.
+        weights: { total: 1, visits: 1, average: 1 },
         total: 'Rp60.000',
         visits: 2,
         average: 'Rp30.000',
@@ -84,7 +85,7 @@ describe('groupLookup', () => {
   })
 
   it('draws the dot in the group the place is in', () => {
-    const [point] = toPoints(report, 'total', look)
+    const [point] = toPoints(report, look)
     expect(point).toMatchObject({ topCategory: 'Dating', group: 'Sosial', hue: 263 })
   })
 })

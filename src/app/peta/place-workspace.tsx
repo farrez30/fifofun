@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { GroupLegend } from './group-legend'
+import { ModeSwitch, useMapMode } from './mode-switch'
 import { PlaceMap } from './place-map'
 import { PlacingPanel, tidy, type Pending } from './placing-panel'
 import { QueueCard } from './queue-card'
@@ -26,8 +27,6 @@ interface Props {
   initialPoint: string | null
   /** Whole percent of the chosen spending already on the map, for the queue. */
   mapped: number
-  /** The map's heading, reading modes and legend: drawn by the server, placed under the queue. */
-  header: React.ReactNode
   /** Rendered between the map and the waiting list: the server's table of places. */
   children?: React.ReactNode
 }
@@ -39,7 +38,7 @@ interface Placing {
   point: PlacePoint | null
 }
 
-export function PlaceWorkspace({ points, waiting, initial, initialPoint, mapped, header, children }: Props) {
+export function PlaceWorkspace({ points, waiting, initial, initialPoint, mapped, children }: Props) {
   const find = (key: string, pointId?: string | null): Placing | null => {
     const point = pointId ? (points.find((candidate) => candidate.pointId === pointId || candidate.id === pointId) ?? null) : null
     // From the waiting list, a merchant that already has points is placed afresh, for the dates it is missing.
@@ -54,6 +53,7 @@ export function PlaceWorkspace({ points, waiting, initial, initialPoint, mapped,
   // Skipped for this visit only: a skip is "not now", not a decision worth storing.
   const [skipped, setSkipped] = useState<ReadonlySet<string>>(() => new Set())
   const next = waiting.find((merchant) => !skipped.has(merchant.key)) ?? null
+  const mode = useMapMode()
   // Groups switched off in the legend. A view, not a filter: nothing is refetched.
   const [switchedOff, setSwitchedOff] = useState<readonly string[]>([])
   const groups = legendGroups(points)
@@ -99,7 +99,7 @@ export function PlaceWorkspace({ points, waiting, initial, initialPoint, mapped,
         onSkip={skip}
       />
 
-      {header}
+      <ModeSwitch mode={mode} />
 
       <GroupLegend
         groups={groups}
@@ -120,6 +120,7 @@ export function PlaceWorkspace({ points, waiting, initial, initialPoint, mapped,
           points={points}
           placing={placing !== null}
           draft={pending}
+          mode={mode}
           hidden={hidden}
           onPick={(draft) => setPending({ ...draft, address: null, source: 'manual' })}
           onMove={(pointId) => {

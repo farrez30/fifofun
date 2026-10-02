@@ -242,9 +242,15 @@ angkanya.** `/peta` memakai MapLibre dengan tile OpenFreeMap: Positron untuk
 tema terang, Dark untuk tema gelap, dan berganti mengikuti tema app tanpa
 memuat ulang. Saat diperkecil, peta menampilkan heatmap satu hue (aksen memekat ke
 `--color-accent-strong`, bukan pelangi). Merah tidak dipakai, karena di app
-ini merah berarti "lewat anggaran". Saat diperbesar, peta menampilkan titik
-per gerai yang bisa diklik. Satu baris legenda menjelaskan arti pekatnya untuk
-cara menimbang yang sedang dipilih. Titik diwarnai menurut **kelompok**
+ini merah berarti "lewat anggaran". Di atasnya, di **semua** zoom, ada titik
+per gerai yang bisa diklik: kecil dari jauh, penuh saat diperbesar. Dulu titik
+baru muncul di zoom 11, sehingga warna legenda tidak terlihat di tampilan kota
+yang dibuka pertama. Satu baris legenda menjelaskan arti pekatnya untuk
+cara menimbang yang sedang dipilih. Cara menimbang (total, kunjungan, per
+kunjungan) dipilih **di browser** (`mode-switch.tsx`): setiap titik sudah
+membawa ketiga bobotnya, dan pilihan masuk ke URL lewat `history.pushState`,
+jadi tidak ada request, halaman tidak melompat ke atas, dan Back tetap
+membatalkan pilihan. Dulu tiga link, dan setiap klik merender ulang halaman. Titik diwarnai menurut **kelompok**
 kategori teratasnya (Transport, Sosial, …), dengan hue yang sama seperti di
 Sankey dan Anggaran. Warnanya per kelompok, bukan per kategori, karena empat
 puluhan hue di satu peta tidak bisa dibaca balik dari legenda. Heatmap tetap

@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
 import { AppShell } from '@/components/app-shell'
-import { BUTTON_QUIET, CONTROL, SEGMENT, SEGMENTED, SEGMENT_ON } from '@/components/field-base'
+import { BUTTON_QUIET, CONTROL } from '@/components/field-base'
 import { Stat } from '@/components/money'
 import { formatMonthKey } from '@/lib/datetime'
 import { summariseOnline } from '@/lib/ledger/online'
@@ -11,7 +11,8 @@ import { summarisePlaces } from '@/lib/ledger/places'
 import { getCategories, getHousehold, getMerchantLocations, getPlaceEntries } from '@/lib/queries/household'
 import { getUser } from '@/lib/supabase/server'
 import { LEAD, TITLE } from './copy'
-import { MODES, placingHref, readView, viewHref } from './filter'
+import { placingHref, readView } from './filter'
+import { ModeField } from './mode-switch'
 import { ForgetButton } from './forget-button'
 import { OnlineList } from './online-list'
 import { PlaceTable } from './place-table'
@@ -60,7 +61,7 @@ async function MapView({ params }: { params: Params }) {
 
   const report = summarisePlaces(entries, locations, view.filter)
   const online = summariseOnline(entries, view.filter)
-  const points = toPoints(report, view.mode, groupLookup(categories))
+  const points = toPoints(report, groupLookup(categories))
   const waiting = toWaiting(report)
   const placeless = locations.filter((location) => location.lat === null)
 
@@ -72,10 +73,6 @@ async function MapView({ params }: { params: Params }) {
       ? `${view.filter.from ? formatMonthKey(view.filter.from) : 'awal'} sampai ${view.filter.to ? formatMonthKey(view.filter.to) : 'sekarang'}`
       : 'semua bulan'
   const chosen = view.filter.categories?.[0] ?? ''
-  const pick = (key: string) => {
-    const raw = params[key]
-    return (Array.isArray(raw) ? raw[0] : raw) ?? ''
-  }
 
   const mostVisited = [...report.places].sort((a, b) => b.visits - a.visits)[0]
   const dearest = [...report.places].filter((place) => place.visits > 0).sort((a, b) => (b.average > a.average ? 1 : -1))[0]
@@ -122,7 +119,7 @@ async function MapView({ params }: { params: Params }) {
             </select>
           </label>
         </div>
-        {pick('mode') ? <input type="hidden" name="mode" value={pick('mode')} /> : null}
+        <ModeField />
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <button type="submit" className={BUTTON_QUIET}>
             Terapkan
@@ -186,8 +183,9 @@ async function MapView({ params }: { params: Params }) {
 
       {/*
         The queue leads and the map follows: with a few percent placed, placing
-        is the work here and the map is what it pays back. The map's heading
-        and legend are drawn here and placed under the queue by the workspace.
+        is the work here and the map is what it pays back. The map's heading,
+        readings and legend are the workspace's own, since a reading is
+        switched in the browser.
       */}
       <PlaceWorkspace
         points={points}
@@ -195,37 +193,6 @@ async function MapView({ params }: { params: Params }) {
         initial={view.placing}
         initialPoint={view.point}
         mapped={share(report.placed, report.spent)}
-        header={
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 id="peta-heading" className="text-subhead font-medium text-ink">
-                Peta
-              </h2>
-              <nav aria-label="Cara menimbang" className={SEGMENTED}>
-                {MODES.map((mode) => (
-                  <Link
-                    key={mode.value}
-                    href={viewHref(params, { mode: mode.param })}
-                    aria-current={view.mode === mode.value ? 'true' : undefined}
-                    className={`${SEGMENT} ${view.mode === mode.value ? SEGMENT_ON : ''}`}
-                  >
-                    {mode.label}
-                  </Link>
-                ))}
-              </nav>
-            </div>
-            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-footnote text-ink-muted">
-              <span
-                aria-hidden="true"
-                className="h-2 w-16 rounded-full bg-[linear-gradient(to_right,color-mix(in_oklch,var(--color-accent)_25%,transparent),var(--color-accent),var(--color-accent-strong))]"
-              />
-              <span>
-                Makin pekat, makin banyak {MODES.find((mode) => mode.value === view.mode)?.legend}. Titik per gerai muncul
-                saat peta diperbesar, berwarna menurut kelompok kategorinya.
-              </span>
-            </p>
-          </div>
-        }
       >
         <PlaceTable points={points} moveHref={(point) => placingHref(params, point.key, point.id)} />
       </PlaceWorkspace>

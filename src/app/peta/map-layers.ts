@@ -1,13 +1,17 @@
+import type { PlaceMode } from '@/lib/ledger/places'
 import type { PlacePoint } from './view-model'
 
 /**
  * What the map draws on top of the base tiles, with no DOM in it so it can be
  * tested on its own. `place-map.tsx` feeds it colours read from the theme.
  *
- * Two layers over one source. Zoomed out, a heatmap: where the weight gathers,
- * not where each shop is, because forty pins on one mall say less than one
- * glow. Zoomed in, the glow fades and a dot per outlet takes over, sized by
- * the same weight, coloured by its category group and clickable for its visits.
+ * Two layers over one source. A heatmap says where the weight gathers, not
+ * where each shop is, because forty pins on one mall say less than one glow;
+ * zoomed in, it fades. On top of it, at every zoom, a dot per outlet sized by
+ * the same weight and coloured by its category group: small from far away,
+ * full size up close, and clickable for its visits. The dots used to wait
+ * for zoom 11, which left the legend's colours invisible on the city view the
+ * map opens on.
  */
 
 export const SOURCE = 'places'
@@ -37,10 +41,11 @@ export function withAlpha(color: string, alpha: number): string {
 }
 
 /**
- * The points as GeoJSON. `colorOf` turns a group's hue into a colour MapLibre
- * can parse; without it the dots fall back to the accent.
+ * The points as GeoJSON, weighed for one reading. `colorOf` turns a group's
+ * hue into a colour MapLibre can parse; without it the dots fall back to the
+ * accent.
  */
-export function toFeatures(points: readonly PlacePoint[], colorOf?: (hue: number) => string) {
+export function toFeatures(points: readonly PlacePoint[], mode: PlaceMode, colorOf?: (hue: number) => string) {
   return {
     type: 'FeatureCollection' as const,
     features: points.map((point) => ({
@@ -48,7 +53,7 @@ export function toFeatures(points: readonly PlacePoint[], colorOf?: (hue: number
       geometry: { type: 'Point' as const, coordinates: [point.lng, point.lat] },
       properties: {
         key: point.pointId,
-        weight: point.weight,
+        weight: point.weights[mode],
         group: point.group,
         ...(colorOf ? { color: colorOf(point.hue) } : {}),
       },
@@ -70,7 +75,6 @@ export function overlayLayers(colors: MapColors, hidden: readonly string[] = [])
   const filter = groupFilter(hidden)
   // A floor under every weight, so a place visited once still glows a little.
   const weight = ['+', 0.15, ['*', 0.85, ['get', 'weight']]]
-  const fadeIn = ['interpolate', ['linear'], ['zoom'], 11, 0, 12.5, 1]
 
   const layers = [
     {
@@ -106,14 +110,19 @@ export function overlayLayers(colors: MapColors, hidden: readonly string[] = [])
       id: DOTS,
       type: 'circle' as const,
       source: SOURCE,
-      minzoom: 11,
       paint: {
-        'circle-radius': ['interpolate', ['linear'], ['get', 'weight'], 0, 5, 1, 14],
+        'circle-radius': [
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          9,
+          ['interpolate', ['linear'], ['get', 'weight'], 0, 2.5, 1, 6],
+          13,
+          ['interpolate', ['linear'], ['get', 'weight'], 0, 5, 1, 14],
+        ],
         'circle-color': ['coalesce', ['get', 'color'], colors.accent],
         'circle-stroke-color': colors.surface,
-        'circle-stroke-width': 2,
-        'circle-opacity': fadeIn,
-        'circle-stroke-opacity': fadeIn,
+        'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 9, 1, 13, 2],
       },
     },
   ]

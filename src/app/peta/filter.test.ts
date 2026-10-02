@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { placingHref, readView, viewHref } from './filter'
+import { modeHref, modeOf, placingHref, readView, viewHref } from './filter'
 
 describe('readView', () => {
   it('starts on every category, every month, weighed by money', () => {
@@ -64,5 +64,26 @@ describe('placingHref', () => {
     expect(placingHref({}, 'pln iconpay', id)).toBe(`/peta?taruh=pln%20iconpay&titik=${id}#atur`)
     expect(readView({ taruh: 'pln iconpay', titik: id }).point).toBe(id)
     expect(readView({ titik: "1' or 1=1" }).point).toBeNull()
+  })
+})
+
+describe('modeOf', () => {
+  it('reads the two named readings and falls back to total', () => {
+    expect(modeOf('kunjungan')).toBe('visits')
+    expect(modeOf('rata')).toBe('average')
+    expect(modeOf(null)).toBe('total')
+    expect(modeOf('')).toBe('total')
+    expect(modeOf('<script>')).toBe('total')
+  })
+})
+
+describe('modeHref', () => {
+  it('changes only the reading, keeping the filters and the hash', () => {
+    expect(modeHref('?kategori=Dating&dari=2026-06', '#atur', 'visits')).toBe('/peta?kategori=Dating&dari=2026-06&mode=kunjungan#atur')
+  })
+
+  it('drops the parameter for total, which is the default', () => {
+    expect(modeHref('?mode=rata&tagihan=ya', '', 'total')).toBe('/peta?tagihan=ya')
+    expect(modeHref('', '', 'total')).toBe('/peta')
   })
 })

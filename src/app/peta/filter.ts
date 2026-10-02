@@ -33,6 +33,25 @@ function month(value: string): string | undefined {
   return /^\d{4}-(0[1-9]|1[0-2])$/.test(value) ? value : undefined
 }
 
+/** The reading a `mode` query value names, total for anything else. */
+export function modeOf(param: string | null | undefined): PlaceMode {
+  return MODES.find((mode) => mode.param && mode.param === param)?.value ?? 'total'
+}
+
+/**
+ * The current address with only the reading changed, for `history.pushState`.
+ * Everything else in the query and the hash stays, so a filter or an open
+ * placing panel survives the switch.
+ */
+export function modeHref(search: string, hash: string, mode: PlaceMode): string {
+  const query = new URLSearchParams(search)
+  const param = MODES.find((option) => option.value === mode)?.param
+  if (param) query.set('mode', param)
+  else query.delete('mode')
+  const text = query.toString()
+  return `/peta${text ? `?${text}` : ''}${hash}`
+}
+
 export function readView(params: Params): MapView {
   const category = first(params.kategori).slice(0, 60)
   let from = month(first(params.dari))
@@ -43,7 +62,7 @@ export function readView(params: Params): MapView {
   const placing = first(params.taruh).toLowerCase().slice(0, 120)
   return {
     filter: { categories: category ? [category] : undefined, from, to, includeBills: first(params.tagihan) === 'ya' },
-    mode: MODES.find((mode) => mode.param && mode.param === first(params.mode))?.value ?? 'total',
+    mode: modeOf(first(params.mode)),
     placing: placing.length >= 3 ? placing : null,
     point: /^[0-9a-f-]{36}$/.test(first(params.titik)) ? first(params.titik) : null,
   }

@@ -16,17 +16,25 @@ describe('withAlpha', () => {
 
 describe('toFeatures', () => {
   it('puts longitude first, as GeoJSON wants', () => {
-    const point = { pointId: 'l1', key: 'boga rasaa', lat: -6.23, lng: 106.85, weight: 0.5, group: 'Sosial', hue: 263 }
-    const [feature] = toFeatures([point as never]).features
+    const point = { pointId: 'l1', key: 'boga rasaa', lat: -6.23, lng: 106.85, weights: { total: 0.5, visits: 1, average: 0.2 }, group: 'Sosial', hue: 263 }
+    const [feature] = toFeatures([point as never], 'total').features
     expect(feature.geometry.coordinates).toEqual([106.85, -6.23])
     // The point, not the merchant: a merchant that moved house is two dots.
     expect(feature.properties).toEqual({ key: 'l1', weight: 0.5, group: 'Sosial' })
   })
 
   it("carries the colour the theme gives the group's hue", () => {
-    const point = { pointId: 'l1', lat: -6.23, lng: 106.85, weight: 0.5, group: 'Sosial', hue: 263 }
-    const [feature] = toFeatures([point as never], (hue) => `rgb(${hue}, 0, 0)`).features
+    const point = { pointId: 'l1', lat: -6.23, lng: 106.85, weights: { total: 0.5, visits: 1, average: 0.2 }, group: 'Sosial', hue: 263 }
+    const [feature] = toFeatures([point as never], 'total', (hue) => `rgb(${hue}, 0, 0)`).features
     expect(feature.properties.color).toBe('rgb(263, 0, 0)')
+  })
+})
+
+describe('toFeatures under each reading', () => {
+  it('weighs the same point by whichever reading is chosen', () => {
+    const point = { pointId: 'l1', lat: -6.23, lng: 106.85, weights: { total: 0.5, visits: 1, average: 0.2 }, group: 'Sosial', hue: 263 }
+    expect(toFeatures([point as never], 'visits').features[0].properties.weight).toBe(1)
+    expect(toFeatures([point as never], 'average').features[0].properties.weight).toBe(0.2)
   })
 })
 
@@ -43,9 +51,10 @@ describe('groupFilter', () => {
 describe('overlayLayers', () => {
   const layers = overlayLayers({ accent: 'rgb(0, 113, 164)', strong: 'rgb(0, 86, 125)', surface: 'rgb(255, 255, 255)' })
 
-  it('glows when zoomed out and hands over to dots when zoomed in', () => {
+  it('draws the coloured dots over the glow at every zoom, so the legend always has something to point at', () => {
     expect(layers.map((layer) => layer.type)).toEqual(['heatmap', 'circle'])
-    expect(layers[0].maxzoom).toBeGreaterThan(layers[1].minzoom as number)
+    expect('minzoom' in layers[1]).toBe(false)
+    expect('circle-opacity' in layers[1].paint).toBe(false)
   })
 
   it('colours a dot by its group and falls back to the accent', () => {
