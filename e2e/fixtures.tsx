@@ -84,6 +84,7 @@ import { PlacingPanel } from '@/app/peta/placing-panel'
 import { OnlineList } from '@/app/peta/online-list'
 import { summariseOnline } from '@/lib/ledger/online'
 import { WaitingList } from '@/app/peta/waiting-list'
+import { QueueCard } from '@/app/peta/queue-card'
 import type { PlacePoint, WaitingMerchant } from '@/app/peta/view-model'
 import { documentFor, FIXTURE_DIR } from './render'
 
@@ -1556,6 +1557,12 @@ ${description}`,
         })),
       )}
     />
+  ),
+  'peta-antrean': (
+    <QueueCard next={WAITING[0]} remaining={WAITING.length} mapped={6} placing={null} onPlace={() => {}} onSkip={() => {}} />
+  ),
+  'peta-antrean-habis': (
+    <QueueCard next={null} remaining={0} mapped={100} placing={null} onPlace={() => {}} onSkip={() => {}} />
   ),
   'peta-menunggu': <WaitingList waiting={WAITING} placing="pedagang 1" onPlace={() => {}} />,
   'peta-menaruh': (

@@ -101,7 +101,8 @@ export interface OnlineReport {
 export function summariseOnline(entries: readonly PlaceEntry[], filter: PlaceFilter = {}): OnlineReport {
   const byKey = new Map<string, OnlineRecipient>()
   for (const entry of entries) {
-    if (!inFilter(entry, filter)) continue
+    // Online bills are half of what this list is for, whatever the map shows.
+    if (!inFilter(entry, { ...filter, includeBills: true })) continue
     const key = onlineKey(entry)
     if (!key) continue
     const seen = byKey.get(key) ?? {

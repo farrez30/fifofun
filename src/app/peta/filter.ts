@@ -40,7 +40,7 @@ export function readView(params: Params): MapView {
 
   const placing = first(params.taruh).toLowerCase().slice(0, 120)
   return {
-    filter: { categories: category ? [category] : undefined, from, to },
+    filter: { categories: category ? [category] : undefined, from, to, includeBills: first(params.tagihan) === 'ya' },
     mode: MODES.find((mode) => mode.param && mode.param === first(params.mode))?.value ?? 'total',
     placing: placing.length >= 3 ? placing : null,
   }
@@ -49,7 +49,7 @@ export function readView(params: Params): MapView {
 /** The address of this page with one choice changed and the rest kept. */
 export function viewHref(params: Params, change: Record<string, string>): string {
   const query = new URLSearchParams()
-  for (const key of ['kategori', 'dari', 'sampai', 'mode']) {
+  for (const key of ['kategori', 'dari', 'sampai', 'mode', 'tagihan']) {
     const value = key in change ? change[key] : first(params[key])
     if (value) query.set(key, value)
   }

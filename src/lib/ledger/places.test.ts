@@ -172,6 +172,19 @@ describe('summarisePlaces', () => {
     expect(edge.placed).toBe(10_000n)
   })
 
+  it('leaves bills out unless asked, or unless a bill category is picked by name', () => {
+    const token = qr('AEROPOLIS TOKEN', 20_000_000n, '2026-03-02T05:00:00Z', { cashflow: 'bills', categoryName: 'Listrik' })
+    const lunch = qr('BOGA RASAA', 25_000n, '2026-03-02T05:00:00Z')
+    const aeropolis: PlaceLocation = { merchantKey: 'aeropolis token', label: 'Aeropolis', address: null, lat: -6.14, lng: 106.63 }
+
+    const plain = summarisePlaces([token, lunch], [BOGA, aeropolis])
+    expect(plain.places.map((place) => place.merchantKey)).toEqual(['boga rasaa'])
+    expect(plain.spent).toBe(25_000n)
+
+    expect(summarisePlaces([token, lunch], [BOGA, aeropolis], { includeBills: true }).places).toHaveLength(2)
+    expect(summarisePlaces([token, lunch], [BOGA, aeropolis], { categories: ['Listrik'] }).placed).toBe(20_000_000n)
+  })
+
   it('caps the visit list a popup carries', () => {
     const many = Array.from({ length: 20 }, (_, day) =>
       qr('BOGA RASAA', 1_000n, `2026-03-${String(day + 1).padStart(2, '0')}T05:00:00Z`),

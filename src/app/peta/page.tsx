@@ -127,7 +127,7 @@ async function MapView({ params }: { params: Params }) {
           <button type="submit" className={BUTTON_QUIET}>
             Terapkan
           </button>
-          {chosen || view.filter.from || view.filter.to ? (
+          {chosen || view.filter.from || view.filter.to || view.filter.includeBills ? (
             <Link
               href="/peta"
               className="inline-flex min-h-11 items-center px-2 text-subhead text-ink-muted underline underline-offset-2"
@@ -135,6 +135,17 @@ async function MapView({ params }: { params: Params }) {
               Bersihkan
             </Link>
           ) : null}
+
+          <label className="ml-auto flex min-h-11 items-center gap-2 text-footnote text-ink-muted">
+            <input
+              type="checkbox"
+              name="tagihan"
+              value="ya"
+              defaultChecked={view.filter.includeBills}
+              className="size-4 accent-accent"
+            />
+            Ikutkan tagihan (listrik, pulsa)
+          </label>
         </div>
       </form>
 
@@ -173,38 +184,50 @@ async function MapView({ params }: { params: Params }) {
         ) : null}
       </section>
 
-      <section aria-labelledby="peta-heading" className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 id="peta-heading" className="text-subhead font-medium text-ink">
-            Peta
-          </h2>
-          <nav aria-label="Cara menimbang" className={SEGMENTED}>
-            {MODES.map((mode) => (
-              <Link
-                key={mode.value}
-                href={viewHref(params, { mode: mode.param })}
-                aria-current={view.mode === mode.value ? 'true' : undefined}
-                className={`${SEGMENT} ${view.mode === mode.value ? SEGMENT_ON : ''}`}
-              >
-                {mode.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
-        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-footnote text-ink-muted">
-          <span
-            aria-hidden="true"
-            className="h-2 w-16 rounded-full bg-[linear-gradient(to_right,color-mix(in_oklch,var(--color-accent)_25%,transparent),var(--color-accent),var(--color-accent-strong))]"
-          />
-          <span>
-            Makin pekat, makin banyak {MODES.find((mode) => mode.value === view.mode)?.legend}. Titik per gerai muncul
-            saat peta diperbesar.
-          </span>
-        </p>
-        <PlaceWorkspace points={points} waiting={waiting} initial={view.placing}>
-          <PlaceTable points={points} moveHref={(key) => placingHref(params, key)} />
-        </PlaceWorkspace>
-      </section>
+      {/*
+        The queue leads and the map follows: with a few percent placed, placing
+        is the work here and the map is what it pays back. The map's heading
+        and legend are drawn here and placed under the queue by the workspace.
+      */}
+      <PlaceWorkspace
+        points={points}
+        waiting={waiting}
+        initial={view.placing}
+        mapped={share(report.placed, report.spent)}
+        header={
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 id="peta-heading" className="text-subhead font-medium text-ink">
+                Peta
+              </h2>
+              <nav aria-label="Cara menimbang" className={SEGMENTED}>
+                {MODES.map((mode) => (
+                  <Link
+                    key={mode.value}
+                    href={viewHref(params, { mode: mode.param })}
+                    aria-current={view.mode === mode.value ? 'true' : undefined}
+                    className={`${SEGMENT} ${view.mode === mode.value ? SEGMENT_ON : ''}`}
+                  >
+                    {mode.label}
+                  </Link>
+                ))}
+              </nav>
+            </div>
+            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-footnote text-ink-muted">
+              <span
+                aria-hidden="true"
+                className="h-2 w-16 rounded-full bg-[linear-gradient(to_right,color-mix(in_oklch,var(--color-accent)_25%,transparent),var(--color-accent),var(--color-accent-strong))]"
+              />
+              <span>
+                Makin pekat, makin banyak {MODES.find((mode) => mode.value === view.mode)?.legend}. Titik per gerai muncul
+                saat peta diperbesar.
+              </span>
+            </p>
+          </div>
+        }
+      >
+        <PlaceTable points={points} moveHref={(key) => placingHref(params, key)} />
+      </PlaceWorkspace>
 
       <OnlineList report={online} />
 

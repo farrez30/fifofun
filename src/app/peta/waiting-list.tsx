@@ -28,7 +28,7 @@ export function WaitingList({ waiting, placing, onPlace }: Props) {
   return (
     <section aria-labelledby="belum-berlokasi">
       <h2 id="belum-berlokasi" tabIndex={-1} className="mb-1 text-subhead font-medium text-ink">
-        Belum berlokasi
+        Semua yang menunggu
       </h2>
       <p className="mb-3 text-footnote text-ink-muted">
         {waiting.length === 0
@@ -99,7 +99,7 @@ export function WaitingList({ waiting, placing, onPlace }: Props) {
   )
 }
 
-function PlacelessButton({ merchantKey, label }: { merchantKey: string; label: string }) {
+export function PlacelessButton({ merchantKey, label }: { merchantKey: string; label: string }) {
   const [result, action, saving] = useActionState<ActionResult | null, FormData>(markPlaceless, null)
   useActionToast(result, saving)
 

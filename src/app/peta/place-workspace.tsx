@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { PlaceMap } from './place-map'
 import { PlacingPanel, tidy, type Pending } from './placing-panel'
+import { QueueCard } from './queue-card'
 import type { PlacePoint, WaitingMerchant } from './view-model'
 import { WaitingList } from './waiting-list'
 
@@ -20,6 +21,10 @@ interface Props {
   waiting: WaitingMerchant[]
   /** From a "Pindahkan" link: start with this merchant being placed. */
   initial: string | null
+  /** Whole percent of the chosen spending already on the map, for the queue. */
+  mapped: number
+  /** The map's heading, reading modes and legend: drawn by the server, placed under the queue. */
+  header: React.ReactNode
   /** Rendered between the map and the waiting list: the server's table of places. */
   children?: React.ReactNode
 }
@@ -29,7 +34,7 @@ interface Placing {
   query: string
 }
 
-export function PlaceWorkspace({ points, waiting, initial, children }: Props) {
+export function PlaceWorkspace({ points, waiting, initial, mapped, header, children }: Props) {
   const find = (key: string): Placing | null => {
     const label =
       points.find((point) => point.key === key)?.label ?? waiting.find((merchant) => merchant.key === key)?.label
@@ -40,6 +45,9 @@ export function PlaceWorkspace({ points, waiting, initial, children }: Props) {
   const [placing, setPlacing] = useState<Placing | null>(() => (initial ? find(initial) : null))
   const [pending, setPending] = useState<Pending | null>(null)
   const [label, setLabel] = useState(() => (placing ? nameFor(placing) : ''))
+  // Skipped for this visit only: a skip is "not now", not a decision worth storing.
+  const [skipped, setSkipped] = useState<ReadonlySet<string>>(() => new Set())
+  const next = waiting.find((merchant) => !skipped.has(merchant.key)) ?? null
 
   const start = (key: string) => {
     const next = find(key)
@@ -51,7 +59,8 @@ export function PlaceWorkspace({ points, waiting, initial, children }: Props) {
 
   /*
     Focus goes back where the person came from: the row's Taruh after a
-    cancel, the list's heading after a save, since a saved row leaves the list.
+    cancel, and "Taruh berikutnya" after a save, so the queue can be walked
+    with Enter alone; the saved row itself leaves the list.
   */
   const done = (saved: boolean) => {
     const key = placing?.key
@@ -59,12 +68,29 @@ export function PlaceWorkspace({ points, waiting, initial, children }: Props) {
     setPending(null)
     requestAnimationFrame(() => {
       const row = !saved && key ? document.querySelector<HTMLElement>(`[data-place-key="${CSS.escape(key)}"]`) : null
-      ;(row ?? document.getElementById('belum-berlokasi'))?.focus()
+      const queue = document.getElementById('taruh-berikutnya')
+      ;(row ?? queue ?? document.getElementById('belum-berlokasi'))?.focus()
     })
+  }
+
+  const skip = (key: string) => {
+    setSkipped((before) => new Set([...before, key]))
+    if (placing?.key === key) done(false)
   }
 
   return (
     <div className="space-y-6">
+      <QueueCard
+        next={next}
+        remaining={waiting.length}
+        mapped={mapped}
+        placing={placing?.key ?? null}
+        onPlace={start}
+        onSkip={skip}
+      />
+
+      {header}
+
       {/*
         While placing, the map and the panel have to be on screen together:
         the panel asks for a click on the map. Side by side where there is

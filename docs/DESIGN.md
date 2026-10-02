@@ -242,7 +242,15 @@ ini merah berarti "lewat anggaran". Saat diperbesar, peta menampilkan titik
 per gerai yang bisa diklik. Satu baris legenda menjelaskan arti pekatnya untuk
 cara menimbang yang sedang dipilih. Belanja online tidak ditaruh di kantor
 penagihnya: bagian "Uang online ke mana" mendaftar penerimanya beserta negara
-penagih, supaya peta tetap peta tempat yang pernah didatangi. Popup dirakit dari node, bukan HTML, jadi nama pedagang
+penagih, supaya peta tetap peta tempat yang pernah didatangi.
+Halaman dibuka dengan **antrean menaruh**, bukan peta. Selama baru sebagian
+kecil belanja yang tergambar, tugas di halaman ini adalah menaruh pedagang,
+dan peta adalah hasilnya. Kartu antrean menampilkan satu pedagang (terbesar
+dulu) dengan Taruh / Tanpa tempat / Lewati, dan setelah menyimpan fokus
+kembali ke "Taruh berikutnya". Tagihan (listrik, pulsa) tidak ikut heatmap
+secara bawaan, karena satu token listrik yang dibeli 23 kali akan menjadi
+tempat terpanas dan meredupkan semua yang lain. Saklar "Ikutkan tagihan"
+mengembalikannya, dan kategori tagihan yang dipilih langsung selalu tampil. Popup dirakit dari node, bukan HTML, jadi nama pedagang
 tidak pernah menjadi markup. Kontrol di atas peta memakai permukaan opaque
 (§3) dan target 44px. MapLibre dimuat hanya di halaman ini. Worker-nya disajikan
 dari `public/vendor` (`scripts/vendor-maplibre.mjs`), sehingga CSP tetap

@@ -4,7 +4,7 @@ import { placingHref, readView, viewHref } from './filter'
 describe('readView', () => {
   it('starts on every category, every month, weighed by money', () => {
     expect(readView({})).toEqual({
-      filter: { categories: undefined, from: undefined, to: undefined },
+      filter: { categories: undefined, from: undefined, to: undefined, includeBills: false },
       mode: 'total',
       placing: null,
     })
@@ -23,6 +23,12 @@ describe('readView', () => {
     expect(view.filter.to).toBeUndefined()
     expect(view.mode).toBe('total')
     expect(view.placing).toBeNull()
+  })
+
+  it('includes bills only when the box was ticked', () => {
+    expect(readView({ tagihan: 'ya' }).filter.includeBills).toBe(true)
+    expect(readView({ tagihan: 'tidak' }).filter.includeBills).toBe(false)
+    expect(viewHref({ tagihan: 'ya' }, { mode: 'kunjungan' })).toBe('/peta?mode=kunjungan&tagihan=ya')
   })
 
   it('swaps a range typed backwards', () => {

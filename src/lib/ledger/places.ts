@@ -98,6 +98,14 @@ export interface PlaceFilter {
   /** Inclusive `YYYY-MM` bounds on the Jakarta month. */
   from?: string
   to?: string
+  /**
+   * Bills (electricity, phone credit) count too. Off by default: a bill is an
+   * obligation paid where it has to be, and the map is read for the spending
+   * that was chosen; one electricity token bought 23 times would otherwise be
+   * the hottest place and fade every other one. A category picked by name is
+   * always kept, bill or not.
+   */
+  includeBills?: boolean
 }
 
 /**
@@ -166,7 +174,7 @@ export function inFilter(entry: PlaceEntry, filter: PlaceFilter): boolean {
   if (filter.categories && filter.categories.length > 0) {
     return filter.categories.includes(entry.categoryName ?? '')
   }
-  return true
+  return entry.cashflow !== 'bills' || filter.includeBills === true
 }
 
 

@@ -65,6 +65,10 @@ describe('summariseOnline', () => {
     expect(report.unknown).toBe(100_000n)
   })
 
+  it('keeps online bills even when the map leaves bills out', () => {
+    expect(summariseOnline(entries, { includeBills: false }).recipients.map((r) => r.label)).toContain('Google')
+  })
+
   it('answers to the same category and month filter as the map', () => {
     expect(summariseOnline(entries, { categories: ['Google Workspace'] }).total).toBe(185_000n)
     expect(summariseOnline(entries, { from: '2026-09' }).total).toBe(0n)
