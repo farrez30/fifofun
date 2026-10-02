@@ -176,9 +176,13 @@ tidak ada jalan memutar yang layak dipertimbangkan.
 Delapan link `border-b-2` yang wrapping bukan tab bar iOS dan bukan pula
 sidebar macOS; HIG minta sidebar di regular width, dan itu yang sekarang ada
 di `shell-frame.tsx`. Rail dipaksa antara `sm` dan `lg`; di `lg` ke atas
-pembaca memilih sendiri lewat cookie `sidebar`, disimpan dan dibaca persis
+pembaca memilih sendiri lewat cookie `sidebar-rail`. Layout membacanya persis
 seperti `theme` (lihat §4 di atas), sehingga baik shell asli maupun
 `loading.tsx` menstempel lebar yang sama sebelum satu piksel pun digambar.
+Bedanya, cookie ini **ditulis browser**, bukan Server Action: tombol lipat
+langsung mengubah `data-sidebar` di `<html>` (`sidebar-toggle.tsx`). Server
+Action yang menyentuh cookie membuat Next.js merender ulang seluruh halaman,
+dan melipat navigasi tidak boleh menunggu semua transaksi diambil ulang.
 Opaque, bukan kaca: tidak ada yang bergulir di baliknya (§3). Ikon dan rute
 satu sumber di `nav.ts`; `tabs.ts` menurunkan bar HP darinya, bukan menyalin.
 

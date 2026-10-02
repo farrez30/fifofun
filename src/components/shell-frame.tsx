@@ -1,7 +1,6 @@
 import Link from 'next/link'
-import { SidebarSimple } from '@phosphor-icons/react/dist/ssr/SidebarSimple'
 import { MORE, NAV, type Destination, type NavHref } from '@/components/nav'
-import { toggleSidebar } from '@/components/sidebar-actions'
+import { SidebarToggle } from '@/components/sidebar-toggle'
 
 /**
  * The markup of the signed-in frame, with the two parts that need data left
@@ -18,7 +17,7 @@ import { toggleSidebar } from '@/components/sidebar-actions'
  * for a sidebar at regular width, and once the phone's bottom bar had its
  * own HIG-shaped affordances this was the one surface still arguing against
  * the platform it was built for. It is a sidebar now, collapsible to an
- * icon-only rail — see `toggleSidebar` for how the fold survives a reload,
+ * icon-only rail — see `sidebar-cookie.ts` for how the fold survives a reload,
  * and `docs/DESIGN.md` for the rest of the reasoning.
  */
 
@@ -115,17 +114,9 @@ export function ShellFrame({ title, current, lead, account, tabs, navHint, child
           </p>
           {/* Only at `lg` and up: below it the rail is forced regardless of
               the cookie, so there is nothing here to toggle. */}
-          <form action={toggleSidebar} className="hidden lg:block">
-            <button
-              type="submit"
-              title="Lipat atau bentangkan navigasi"
-              className="flex size-11 shrink-0 items-center justify-center rounded-md text-ink-muted transition-colors duration-150 hover:bg-fill-quaternary active:bg-fill-tertiary"
-            >
-              <SidebarSimple aria-hidden="true" className="size-5" />
-              <span className="sr-only collapsed:hidden">Lipat navigasi</span>
-              <span className="sr-only hidden collapsed:inline">Bentangkan navigasi</span>
-            </button>
-          </form>
+          <div className="hidden lg:block">
+            <SidebarToggle />
+          </div>
         </div>
 
         <ul className="flex-1 space-y-0.5 px-2 pb-2">

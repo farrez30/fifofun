@@ -5,6 +5,7 @@ import { ProgressiveWebApp } from '@/components/pwa'
 import { SkipLink } from '@/components/skip-link'
 import { Toaster } from '@/components/toaster'
 import { BusyGuard } from '@/components/busy-guard'
+import { readSidebar, SIDEBAR_COOKIE } from '@/components/sidebar-cookie'
 import './globals.css'
 
 /*
@@ -122,14 +123,14 @@ async function appearance(): Promise<'light' | 'dark' | undefined> {
 
 /**
  * Whether the desktop sidebar is folded, the same cookie-on-`<html>` bargain
- * as `appearance()` above. `src/components/sidebar-actions.ts` writes it,
+ * as `appearance()` above, except that the browser writes this one
+ * (`src/components/sidebar-toggle.tsx`) so a fold costs no request.
  * `globals.css`'s `collapsed` variant reads it, and both the real shell and
  * every route's loading fallback draw off this one attribute, so a fold never
  * reads as a reload.
  */
 async function sidebar(): Promise<'collapsed' | undefined> {
-  const value = (await cookies()).get('sidebar')?.value
-  return value === 'collapsed' ? value : undefined
+  return readSidebar((await cookies()).get(SIDEBAR_COOKIE)?.value)
 }
 
 /**
