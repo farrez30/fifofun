@@ -308,7 +308,9 @@ menyebutnya sekali); angka besar Sisa dan Tabungan memakai format penuh
 "Rp6.363.333", minus pakai tanda minus asli. Warna Sisa redup (merah atau mint
 dicampur ke `ink-muted`) dan angkanya membawa tandanya sendiri, jadi warna
 tidak pernah jadi satu-satunya sinyal. Semua aturan hitungnya (7 kelompok,
-pengecualian pemasukan, penggantian yang dinetkan, kategori "Pajak & STNK" ÷12) ada di
+pengecualian pemasukan, penggantian yang dinetkan, kategori "Pajak & STNK" ÷12,
+baris "Lewat dompet & tunai" = isi ulang dompet dikurangi semua yang tercatat
+keluar darinya) ada di
 `SUMMARY_CONFIG` (`src/lib/ledger/summary.ts`) dan halaman mencetak aturan yang
 dipakainya di catatan kaki. PDF dibuat di server dengan `@react-pdf/renderer`
 dari `SummaryData` yang sama, tapi dengan tata letak A4 sendiri (label di

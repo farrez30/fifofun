@@ -1,7 +1,7 @@
 import { FUND_CASHFLOWS, reviewFunds, type FundCashflow } from '@/lib/ledger/funds'
 import { monthKeyOf, monthKeyToString } from '@/lib/ledger/monthly'
-import { lastFullMonth, monthsEnding, summariseMonths, type SummaryReport } from '@/lib/ledger/summary'
-import { getAllTransactions, getCategories, getSummaryNote } from '@/lib/queries/household'
+import { lastFullMonth, monthsEnding, SUMMARY_CONFIG, summariseMonths, type SummaryReport } from '@/lib/ledger/summary'
+import { getAccounts, getAllTransactions, getCategories, getSummaryNote } from '@/lib/queries/household'
 
 /**
  * Everything the summary shows, read once and shared by the page and the PDF,
@@ -26,10 +26,11 @@ export function readEnd(param: string | undefined, choices: readonly string[], f
 }
 
 export async function loadSummary(householdId: string, endParam: string | undefined, today = new Date()): Promise<SummaryData> {
-  const [transactions, categories, note] = await Promise.all([
+  const [transactions, categories, note, accounts] = await Promise.all([
     getAllTransactions(householdId),
     getCategories(householdId, { includeArchived: true }),
     getSummaryNote(householdId),
+    getAccounts(householdId, { includeArchived: true }),
   ])
 
   // Only months that have finished: a month still running would look like a
@@ -44,7 +45,15 @@ export async function loadSummary(householdId: string, endParam: string | undefi
   const parentByName = new Map(
     categories.map((category) => [category.name, category.parentId ? (nameById.get(category.parentId) ?? null) : null]),
   )
-  const report = summariseMonths(transactions, monthsEnding(end, 3), (name) => parentByName.get(name) ?? null)
+  const { accountKinds } = SUMMARY_CONFIG.spending.unitemised
+  const wallets = new Set(accounts.filter((account) => accountKinds.includes(account.kind)).map((account) => account.id))
+  const report = summariseMonths(
+    transactions,
+    monthsEnding(end, 3),
+    (name) => parentByName.get(name) ?? null,
+    SUMMARY_CONFIG,
+    wallets,
+  )
 
   // The same reckoning /dana makes, so the two pages can never disagree about a pot.
   const pots = categories.filter(

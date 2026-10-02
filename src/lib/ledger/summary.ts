@@ -1,5 +1,5 @@
 import { monthKeyOf, monthKeyToString } from './monthly'
-import type { CashflowType, LedgerEntry } from './types'
+import type { AccountKind, CashflowType, LedgerEntry } from './types'
 
 /**
  * Three months on one screen, for showing somebody else across a table.
@@ -34,6 +34,11 @@ export interface SummaryConfig {
     excluded: readonly SummaryGroup[]
     /** A once-a-year payment spread evenly: category name → months it covers. */
     amortised: Readonly<Record<string, number>>
+    /**
+     * Wallets and cash whose payments are never itemised: what goes in and is
+     * not recorded coming out counts as spent the month it went in.
+     */
+    unitemised: { label: string; accountKinds: readonly AccountKind[]; ignore: readonly string[] }
   }
   /** Whole cashflows that are neither earning nor spending, named for the footnote under one side. */
   excludedCashflows: Readonly<Partial<Record<CashflowType, { label: string; side: Side }>>>
@@ -130,6 +135,13 @@ export const SUMMARY_CONFIG: SummaryConfig = {
     fallback: 'Rutin lain',
     excluded: [{ label: 'Koreksi saldo', categories: ['Penyesuaian Spending'] }],
     amortised: { 'Pajak & STNK': 12 },
+    unitemised: {
+      label: 'Lewat dompet & tunai',
+      accountKinds: ['ewallet', 'emoney', 'cash'],
+      // A correction is the same unrecorded spending, booked late; counting
+      // it too would count that money twice.
+      ignore: ['Penyesuaian Spending', 'Penyesuaian Income'],
+    },
   },
   excludedCashflows: {
     receivable_new: { label: 'Uang yang dipinjamkan', side: 'spending' },
@@ -161,6 +173,8 @@ export interface SummaryReport {
   excluded: { label: string; side: Side; total: bigint }[]
   /** Category names spread over a year, for the footnote. */
   amortised: string[]
+  /** The wallet line's label when the household has wallets, for the footnote. */
+  unitemised: string | null
 }
 
 /** The `count` calendar months ending with `last`, oldest first. */
@@ -200,6 +214,8 @@ export function summariseMonths(
   months: readonly string[],
   parentOf: (name: string) => string | null = () => null,
   config: SummaryConfig = SUMMARY_CONFIG,
+  /** Ids of the accounts `config.spending.unitemised` describes. */
+  wallets: ReadonlySet<string> = new Set(),
 ): SummaryReport {
   const index = new Map(months.map((month, position) => [month, position]))
   const blank = () => months.map(() => 0n)
@@ -215,8 +231,21 @@ export function summariseMonths(
   const amortisedNames = Object.keys(config.spending.amortised)
   const monthOf = (entry: Entry) => monthKeyToString(monthKeyOf(entry.occurredAt))
 
+  const unitemised = blank()
+  const { ignore } = config.spending.unitemised
+
   for (const entry of entries) {
     const category = entry.categoryName ?? ''
+
+    // Money into a wallet less every recorded way out of it. A payment that
+    // was itemised is already in its own group, so subtracting it here keeps
+    // it from counting twice; moves between two wallets cancel out.
+    const at = index.get(monthOf(entry))
+    if (wallets.size > 0 && at !== undefined && !entry.isPassThrough && !ignore.includes(category)) {
+      const into = entry.toAccountId != null && wallets.has(entry.toAccountId)
+      const out = entry.fromAccountId != null && wallets.has(entry.fromAccountId)
+      if (into !== out) unitemised[at] += into ? entry.amount : -entry.amount
+    }
 
     // A once-a-year payment lands in every month whose window covers it, a
     // twelfth at a time, so the month the tax was paid does not look ruined.
@@ -277,6 +306,7 @@ export function summariseMonths(
     // Transfers between own accounts and money put into savings pots are
     // neither: the pots are their own section.
   }
+  if (wallets.size > 0) spendingBy.set(config.spending.unitemised.label, unitemised)
 
   const incomeLabels = [...config.income.lines.map((group) => group.label), config.income.otherLabel]
   const income = incomeLabels.map((label) => line(label, incomeBy.get(label) ?? blank()))
@@ -309,5 +339,6 @@ export function summariseMonths(
       .map(([label, { side, total }]) => ({ label, side, total }))
       .sort((a, b) => (b.total > a.total ? 1 : b.total < a.total ? -1 : 0)),
     amortised: amortisedNames,
+    unitemised: wallets.size > 0 ? config.spending.unitemised.label : null,
   }
 }

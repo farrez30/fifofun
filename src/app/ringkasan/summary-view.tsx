@@ -112,6 +112,9 @@ export function SummaryView({ data }: { data: SummaryData }) {
           {report.netted.average > 0n
             ? `${report.netted.label} mengurangi pengeluaran, karena belanjanya sudah tercatat di atas. `
             : ''}
+          {report.unitemised
+            ? `${report.unitemised}: isi ulang dompet digital dan uang tunai dihitung keluar di bulan diisi, karena belanja di dalamnya tidak dicatat satu per satu. `
+            : ''}
           {report.amortised.join(', ')} dibagi rata per 12 bulan. Tidak dihitung:{' '}
           {spendingExcluded.map((row) => `${row.label.toLowerCase()} (${money(row.total)})`).join(', ') || 'tidak ada'}.
         </p>

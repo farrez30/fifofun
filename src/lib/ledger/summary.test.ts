@@ -130,3 +130,47 @@ describe('summariseMonths', () => {
     expect(report.remainder.average).toBe((sum + 1n) / 3n)
   })
 })
+
+describe('summariseMonths: wallets nobody itemises', () => {
+  const WALLET = 'gopay'
+  const BANK = 'mandiri'
+  const OTHER_WALLET = 'dana'
+  const wallets = new Set([WALLET, OTHER_WALLET])
+  const run = (rows: ReturnType<typeof entry>[], ids: ReadonlySet<string> = wallets) =>
+    summariseMonths(rows, MONTHS, () => null, SUMMARY_CONFIG, ids)
+  const walletLine = (report: ReturnType<typeof run>) =>
+    report.spending.find((row) => row.label === SUMMARY_CONFIG.spending.unitemised.label)
+
+  it('counts a top-up as spent the month it went in', () => {
+    const report = run([entry('transfer', 'Antar Account', 100_000, '2026-07-05', { fromAccountId: BANK, toAccountId: WALLET })])
+    expect(walletLine(report)?.values).toEqual([rp(100_000), 0n, 0n])
+    expect(report.spendingTotal.values[0]).toBe(rp(100_000))
+    expect(report.unitemised).toBe(SUMMARY_CONFIG.spending.unitemised.label)
+  })
+
+  it('takes back what was withdrawn to the bank, and what was itemised', () => {
+    const report = run([
+      entry('transfer', 'Antar Account', 100_000, '2026-08-05', { fromAccountId: BANK, toAccountId: WALLET }),
+      entry('transfer', 'Antar Account', 30_000, '2026-08-06', { fromAccountId: WALLET, toAccountId: BANK }),
+      entry('spending', 'Makan/minum', 50_000, '2026-08-07', { fromAccountId: WALLET }),
+    ])
+    expect(walletLine(report)?.values[1]).toBe(rp(20_000))
+    // The itemised meal stays in its own group, and the month counts 70rb, not 120rb.
+    expect(report.spendingTotal.values[1]).toBe(rp(70_000))
+  })
+
+  it('ignores moves between two wallets and late balance corrections', () => {
+    const report = run([
+      entry('transfer', 'Antar Account', 40_000, '2026-09-05', { fromAccountId: WALLET, toAccountId: OTHER_WALLET }),
+      entry('spending', 'Penyesuaian Spending', 7_000_000, '2026-09-23', { fromAccountId: WALLET }),
+    ])
+    expect(walletLine(report)?.values).toEqual([0n, 0n, 0n])
+  })
+
+  it('has no wallet line when the household has no wallets', () => {
+    const report = run([entry('transfer', 'Antar Account', 100_000, '2026-07-05', { fromAccountId: BANK, toAccountId: WALLET })], new Set())
+    expect(walletLine(report)).toBeUndefined()
+    expect(report.unitemised).toBeNull()
+    expect(report.spendingTotal.values[0]).toBe(0n)
+  })
+})

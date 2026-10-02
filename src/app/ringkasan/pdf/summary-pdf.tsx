@@ -123,6 +123,9 @@ export function SummaryPdf({ data, printedAt }: { data: SummaryData; printedAt: 
           <Table months={report.months} rows={spendingRows} total={report.spendingTotal} />
           <Text style={styles.note}>
             {report.netted.average > 0n ? `${report.netted.label} mengurangi pengeluaran, karena belanjanya sudah tercatat. ` : ''}
+            {report.unitemised
+              ? `${report.unitemised}: isi ulang dompet dan tunai dihitung keluar di bulan diisi, karena isinya tidak dicatat satu per satu. `
+              : ''}
             {report.amortised.join(', ')} dibagi rata per 12 bulan. Tidak dihitung: {list(spendingExcluded)}.
           </Text>
         </View>
