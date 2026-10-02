@@ -78,7 +78,11 @@ export function AppShell({ title, email, current, lead, children }: Props) {
           </form>
         }
         tabs={<MobileTabs current={current} email={email} review={review} />}
-        navHint={<NavHint className="ml-1.5" />}
+        // In the rail there is no room after the label, so the dot pins to
+        // the icon's corner instead of being clipped off the 40px row.
+        navHint={
+          <NavHint className="ml-1.5 max-lg:absolute max-lg:top-2 max-lg:right-1.5 lg:collapsed:absolute lg:collapsed:top-2 lg:collapsed:right-1.5" />
+        }
       >
         {children}
       </ShellFrame>

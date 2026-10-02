@@ -63,6 +63,31 @@ test.describe('sidebar', () => {
     }
   })
 
+  test('folded on a short window: the rail scrolls, but no scrollbar narrows its rows', async ({ page }) => {
+    // Shorter than the twelve rows, so the rail has to scroll. A classic
+    // scrollbar used to take 16px of the 56px rail and squeeze the lit row to
+    // 24px, with its icon spilling out.
+    await page.setViewportSize({ width: 1280, height: 500 })
+    await open(page, 'shell-lipat')
+
+    const nav = page.locator('nav[aria-label="Halaman utama"].bg-sunken')
+    const rail = await nav.evaluate((element: HTMLElement) => ({
+      scrolls: element.scrollHeight > element.clientHeight,
+      // offsetWidth less the 1px border is all the room a row can have.
+      gutter: element.offsetWidth - 1 - element.clientWidth,
+    }))
+    expect(rail.scrolls).toBe(true)
+    expect(rail.gutter).toBe(0)
+
+    const lit = nav.locator('a[aria-current="page"]')
+    const row = (await lit.boundingBox())!
+    expect(row.width).toBeGreaterThanOrEqual(38)
+    // The pending dot moves to the icon's corner rather than off the row.
+    const dot = (await lit.locator('.nav-hint').boundingBox())!
+    expect(dot.x + dot.width).toBeLessThanOrEqual(row.x + row.width)
+    expect(await lit.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+  })
+
   test('between sm and lg the rail is forced, and the toggle has nothing to toggle', async ({
     page,
   }) => {

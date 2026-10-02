@@ -40,7 +40,7 @@ interface Props {
 
 /** One row in the sidebar — a route link here, the sign-out button in `AppShell`. */
 export const SIDEBAR_ROW =
-  'flex min-h-11 items-center gap-3 rounded-md px-2.5 text-subhead transition-colors duration-150 hover:bg-fill-quaternary active:bg-fill-tertiary'
+  'relative flex min-h-11 items-center gap-3 rounded-md px-2.5 text-subhead transition-colors duration-150 hover:bg-fill-quaternary active:bg-fill-tertiary'
 export const SIDEBAR_ROW_ON = 'bg-fill-tertiary font-medium text-ink'
 export const SIDEBAR_ROW_OFF = 'text-ink-muted'
 /** Spoken always, seen only once the rail has room to print it. */
@@ -103,10 +103,14 @@ export function ShellFrame({ title, current, lead, account, tabs, navHint, child
         plain `rgba()` (docs/DESIGN.md §3). `sm..lg` is a fixed icon-only
         rail; `lg` and up either the full 224px sidebar or, once folded, the
         same rail — see the `collapsed` variant in globals.css.
+
+        Still scrollable on a short window, but with no scrollbar drawn: a
+        classic Windows scrollbar is 16px of a 56px rail, and it squeezed every
+        row to 24px with the icons spilling out of the lit one.
       */}
       <nav
         aria-label="Halaman utama"
-        className="hidden border-r border-line bg-sunken pt-safe-t pl-safe-l sm:sticky sm:top-0 sm:flex sm:h-dvh sm:w-14 sm:flex-col sm:self-start sm:overflow-x-hidden sm:overflow-y-auto lg:w-56 lg:collapsed:w-14"
+        className="hidden border-r border-line bg-sunken pt-safe-t pl-safe-l [scrollbar-width:none] sm:sticky sm:top-0 sm:flex sm:h-dvh sm:w-14 sm:flex-col sm:self-start sm:overflow-x-hidden sm:overflow-y-auto lg:w-56 lg:collapsed:w-14 [&::-webkit-scrollbar]:hidden"
       >
         <div className="flex h-14 shrink-0 items-center justify-between px-3">
           <p className="hidden truncate font-mono text-caption1 uppercase tracking-widest text-ink-faint lg:block lg:collapsed:hidden">
