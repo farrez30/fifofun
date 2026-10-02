@@ -72,7 +72,8 @@ in seven groups plus what went into e-wallets and cash, what was left, every sav
 few lines of the household's own plan. It is meant to be read off a phone across
 a table, so it holds aggregates only and no advice, and "Bagikan sebagai PDF"
 renders the same figures on the server as a one-page A4 file. Which income
-counts, which family money only pays back spending, and how categories group are
+counts, which money only pays back spending (family covering a bill, a friend's
+share of a subscription), and how categories group are
 one config, printed on the page as footnotes. Payments made from an e-wallet or
 cash are rarely itemised, so a top-up counts as spent the month it went in,
 less anything that was recorded coming out of the wallet.

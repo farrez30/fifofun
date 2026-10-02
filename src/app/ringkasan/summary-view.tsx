@@ -110,7 +110,7 @@ export function SummaryView({ data }: { data: SummaryData }) {
         <Figures label="Pengeluaran per kelompok" months={report.months} rows={spendingRows} total={report.spendingTotal} />
         <p className={NOTE}>
           {report.netted.average > 0n
-            ? `${report.netted.label} mengurangi pengeluaran, karena belanjanya sudah tercatat di atas. `
+            ? `${report.netted.label} mengurangi pengeluaran, karena belanjanya sudah tercatat di atas: uang itu mengganti, bukan penghasilan. `
             : ''}
           {report.unitemised
             ? `${report.unitemised}: isi ulang dompet digital dan uang tunai dihitung keluar di bulan diisi, karena belanja di dalamnya tidak dicatat satu per satu. `

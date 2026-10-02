@@ -99,6 +99,16 @@ describe('summariseMonths', () => {
     expect(report.spendingTotal.values[1]).toBe(august - rp(304_000))
   })
 
+  it("treats a friend's share of a subscription like a family reimbursement", () => {
+    const shared = summariseMonths(
+      [entry('bills', 'Langganan Spotify', 86_900, '2026-07-05'), entry('income', 'Patungan & Titipan', 14_500, '2026-07-06')],
+      MONTHS,
+    )
+    expect(shared.incomeTotal.values[0]).toBe(0n)
+    expect(shared.netted.values[0]).toBe(rp(14_500))
+    expect(shared.spendingTotal.values[0]).toBe(rp(86_900 - 14_500))
+  })
+
   it('leaves pass-through money and savings out of spending', () => {
     const lifestyle = report.spending.find((row) => row.label === 'Gaya hidup')!
     expect(lifestyle.values[1]).toBe(rp(1_581_448))

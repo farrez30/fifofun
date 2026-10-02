@@ -62,7 +62,9 @@ export const SUMMARY_CONFIG: SummaryConfig = {
       { label: 'Pinjaman yang diterima', categories: ['Pinjaman'] },
       { label: 'Koreksi saldo', categories: ['Penyesuaian Income'] },
     ],
-    netted: { label: 'Penggantian dari keluarga', categories: ['Penggantian Keluarga'] },
+    // Money that pays back something already counted as spending: family
+    // covering a bill, a friend's share of a subscription, a "titip bayar".
+    netted: { label: 'Penggantian & patungan', categories: ['Penggantian Keluarga', 'Patungan & Titipan'] },
   },
   spending: {
     groups: [
@@ -96,6 +98,7 @@ export const SUMMARY_CONFIG: SummaryConfig = {
         label: 'Gaya hidup',
         categories: [
           'Dating',
+          'Cari Pasangan',
           'Belanja',
           'Belanja Online',
           'Pakaian',
