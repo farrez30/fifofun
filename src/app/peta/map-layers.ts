@@ -7,7 +7,7 @@ import type { PlacePoint } from './view-model'
  * Two layers over one source. Zoomed out, a heatmap: where the weight gathers,
  * not where each shop is, because forty pins on one mall say less than one
  * glow. Zoomed in, the glow fades and a dot per outlet takes over, sized by
- * the same weight and clickable for its visits.
+ * the same weight, coloured by its category group and clickable for its visits.
  */
 
 export const SOURCE = 'places'
@@ -36,23 +36,43 @@ export function withAlpha(color: string, alpha: number): string {
   return match ? `rgba(${match[1]}, ${match[2]}, ${match[3]}, ${alpha})` : color
 }
 
-export function toFeatures(points: readonly PlacePoint[]) {
+/**
+ * The points as GeoJSON. `colorOf` turns a group's hue into a colour MapLibre
+ * can parse; without it the dots fall back to the accent.
+ */
+export function toFeatures(points: readonly PlacePoint[], colorOf?: (hue: number) => string) {
   return {
     type: 'FeatureCollection' as const,
     features: points.map((point) => ({
       type: 'Feature' as const,
       geometry: { type: 'Point' as const, coordinates: [point.lng, point.lat] },
-      properties: { key: point.pointId, weight: point.weight },
+      properties: {
+        key: point.pointId,
+        weight: point.weight,
+        group: point.group,
+        ...(colorOf ? { color: colorOf(point.hue) } : {}),
+      },
     })),
   }
 }
 
-export function overlayLayers(colors: MapColors) {
+/** Keeps every feature whose group is not hidden, or null for no filter at all. */
+export function groupFilter(hidden: readonly string[]) {
+  return hidden.length === 0 ? null : ['!', ['in', ['get', 'group'], ['literal', [...hidden]]]]
+}
+
+/**
+ * The heatmap stays one hue on purpose: glows of several hues overlapping
+ * mix into a colour no group has. The groups show in the dots, and hiding a
+ * group in the legend takes it out of the glow as well.
+ */
+export function overlayLayers(colors: MapColors, hidden: readonly string[] = []) {
+  const filter = groupFilter(hidden)
   // A floor under every weight, so a place visited once still glows a little.
   const weight = ['+', 0.15, ['*', 0.85, ['get', 'weight']]]
   const fadeIn = ['interpolate', ['linear'], ['zoom'], 11, 0, 12.5, 1]
 
-  return [
+  const layers = [
     {
       id: HEAT,
       type: 'heatmap' as const,
@@ -89,7 +109,7 @@ export function overlayLayers(colors: MapColors) {
       minzoom: 11,
       paint: {
         'circle-radius': ['interpolate', ['linear'], ['get', 'weight'], 0, 5, 1, 14],
-        'circle-color': colors.accent,
+        'circle-color': ['coalesce', ['get', 'color'], colors.accent],
         'circle-stroke-color': colors.surface,
         'circle-stroke-width': 2,
         'circle-opacity': fadeIn,
@@ -97,6 +117,7 @@ export function overlayLayers(colors: MapColors) {
       },
     },
   ]
+  return filter ? layers.map((layer) => ({ ...layer, filter })) : layers
 }
 
 /** West, south, east, north around every point, or null when there are none. */

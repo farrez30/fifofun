@@ -84,6 +84,7 @@ import { PlacingPanel } from '@/app/peta/placing-panel'
 import { OnlineList } from '@/app/peta/online-list'
 import { summariseOnline } from '@/lib/ledger/online'
 import { WaitingList } from '@/app/peta/waiting-list'
+import { GroupLegend } from '@/app/peta/group-legend'
 import { QueueCard } from '@/app/peta/queue-card'
 import type { PlacePoint, WaitingMerchant } from '@/app/peta/view-model'
 import { documentFor, FIXTURE_DIR } from './render'
@@ -1467,6 +1468,8 @@ const PLACES: PlacePoint[] = [
     visits: 3,
     average: 'Rp143.333',
     topCategory: 'Dating',
+    group: 'Sosial',
+    hue: 263,
     span: '06 Jun 2026 sampai 02 Agu 2026',
     usualTime: 'malam',
     recent: [{ date: '02 Agu 2026', amount: 'Rp200.000', category: 'Dating' }],
@@ -1487,6 +1490,8 @@ const PLACES: PlacePoint[] = [
     visits: 12,
     average: 'Rp24.833',
     topCategory: 'Makan/minum',
+    group: 'Makan & Minum',
+    hue: 20,
     span: '02 Mar 2026 sampai 24 Sep 2026',
     usualTime: 'siang',
     recent: [],
@@ -1571,6 +1576,20 @@ ${description}`,
   ),
   'peta-antrean-habis': (
     <QueueCard next={null} remaining={0} mapped={100} placing={null} onPlace={() => {}} onSkip={() => {}} />
+  ),
+  'peta-legenda': (
+    <GroupLegend
+      groups={[
+        { name: 'Makan & Minum', hue: 20, places: 14 },
+        { name: 'Transport', hue: 283, places: 9 },
+        { name: 'Sosial', hue: 263, places: 7 },
+        { name: 'Rumah', hue: 210, places: 3 },
+        { name: 'Belanja', hue: 158, places: 2 },
+      ]}
+      hidden={['Rumah']}
+      onToggle={() => {}}
+      onShowAll={() => {}}
+    />
   ),
   'peta-menunggu': <WaitingList waiting={WAITING} placing="pedagang 1" onPlace={() => {}} />,
   'peta-menaruh': (

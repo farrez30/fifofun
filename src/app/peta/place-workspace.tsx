@@ -1,10 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import { GroupLegend } from './group-legend'
 import { PlaceMap } from './place-map'
 import { PlacingPanel, tidy, type Pending } from './placing-panel'
 import { QueueCard } from './queue-card'
-import type { PlacePoint, WaitingMerchant } from './view-model'
+import { legendGroups, type PlacePoint, type WaitingMerchant } from './view-model'
 import { WaitingList } from './waiting-list'
 
 /**
@@ -53,6 +54,10 @@ export function PlaceWorkspace({ points, waiting, initial, initialPoint, mapped,
   // Skipped for this visit only: a skip is "not now", not a decision worth storing.
   const [skipped, setSkipped] = useState<ReadonlySet<string>>(() => new Set())
   const next = waiting.find((merchant) => !skipped.has(merchant.key)) ?? null
+  // Groups switched off in the legend. A view, not a filter: nothing is refetched.
+  const [switchedOff, setSwitchedOff] = useState<readonly string[]>([])
+  const groups = legendGroups(points)
+  const hidden = switchedOff.filter((name) => groups.some((group) => group.name === name))
 
   const start = (key: string, pointId?: string | null) => {
     const next = find(key, pointId)
@@ -96,6 +101,15 @@ export function PlaceWorkspace({ points, waiting, initial, initialPoint, mapped,
 
       {header}
 
+      <GroupLegend
+        groups={groups}
+        hidden={hidden}
+        onToggle={(name) =>
+          setSwitchedOff(hidden.includes(name) ? hidden.filter((other) => other !== name) : [...hidden, name])
+        }
+        onShowAll={() => setSwitchedOff([])}
+      />
+
       {/*
         While placing, the map and the panel have to be on screen together:
         the panel asks for a click on the map. Side by side where there is
@@ -106,6 +120,7 @@ export function PlaceWorkspace({ points, waiting, initial, initialPoint, mapped,
           points={points}
           placing={placing !== null}
           draft={pending}
+          hidden={hidden}
           onPick={(draft) => setPending({ ...draft, address: null, source: 'manual' })}
           onMove={(pointId) => {
             const point = points.find((candidate) => candidate.pointId === pointId)

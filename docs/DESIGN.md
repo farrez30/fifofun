@@ -240,7 +240,18 @@ memuat ulang. Saat diperkecil, peta menampilkan heatmap satu hue (aksen memekat 
 `--color-accent-strong`, bukan pelangi). Merah tidak dipakai, karena di app
 ini merah berarti "lewat anggaran". Saat diperbesar, peta menampilkan titik
 per gerai yang bisa diklik. Satu baris legenda menjelaskan arti pekatnya untuk
-cara menimbang yang sedang dipilih. Belanja online tidak ditaruh di kantor
+cara menimbang yang sedang dipilih. Titik diwarnai menurut **kelompok**
+kategori teratasnya (Transport, Sosial, …), dengan hue yang sama seperti di
+Sankey dan Anggaran. Warnanya per kelompok, bukan per kategori, karena empat
+puluhan hue di satu peta tidak bisa dibaca balik dari legenda. Heatmap tetap
+satu hue, sebab cahaya berbagai hue yang bertumpuk bercampur menjadi warna yang
+bukan milik kelompok mana pun. Chip legenda (`group-legend.tsx`, `aria-pressed`)
+menyalakan dan mematikan kelompok di sisi klien lewat `setFilter`, tanpa
+memuat ulang dan tanpa memindahkan kamera; cahaya dan titik ikut keduanya. Chip
+yang mati kehilangan isian swatch-nya dan namanya dicoret, jadi tidak
+bergantung pada warna saja. Chip hanya mengubah peta: filter Kategori di atas
+tetap satu-satunya yang mempersempit semua angka. Hue oklch dibaca ke `rgb()`
+lewat satu piksel canvas, karena MapLibre tidak bisa membaca oklch. Belanja online tidak ditaruh di kantor
 penagihnya: bagian "Uang online ke mana" mendaftar penerimanya beserta negara
 penagih, supaya peta tetap peta tempat yang pernah didatangi.
 Halaman dibuka dengan **antrean menaruh**, bukan peta. Selama baru sebagian

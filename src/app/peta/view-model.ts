@@ -1,5 +1,6 @@
 import { formatJakarta, formatMonthKey } from '@/lib/datetime'
 import { weightOf, type DayPart, type PlaceMode, type PlacesReport, type PlaceSummary } from '@/lib/ledger/places'
+import { categoryHue } from '@/lib/ledger/palette'
 import { formatIdr } from '@/lib/money'
 
 /**
@@ -30,6 +31,10 @@ export interface PlacePoint {
   visits: number
   average: string
   topCategory: string | null
+  /** The group the top category rolls up into, which colours the dot. */
+  group: string
+  /** That group's hue, the same one Laporan and Anggaran draw it in. */
+  hue: number
   span: string
   usualTime: string | null
   recent: { date: string; amount: string; category: string | null }[]
@@ -73,7 +78,42 @@ export function periodLabel(from: string | null, to: string | null): string | nu
   return null
 }
 
-export function toPoints(report: PlacesReport, mode: PlaceMode): PlacePoint[] {
+export interface CategoryLook {
+  group: string
+  hue: number
+}
+
+/** For a place whose payments carry no category at all. */
+export const NO_GROUP = 'Lainnya'
+
+type GroupSource = { id: string; name: string; parentId: string | null; hue: number | null }
+
+/**
+ * A category's group, and the hue that group is drawn in everywhere else.
+ *
+ * A dot is coloured by group, not by category: forty-odd hues on one map are
+ * a confetti nobody can read back from a legend, and the dozen groups are the
+ * same split the home page's flow diagram already draws.
+ */
+export function groupLookup(categories: readonly GroupSource[]): (name: string | null) => CategoryLook {
+  const byId = new Map(categories.map((category) => [category.id, category]))
+  const byName = new Map<string, GroupSource>()
+  for (const category of categories) if (!byName.has(category.name)) byName.set(category.name, category)
+  return (name) => {
+    const category = name ? byName.get(name) : undefined
+    const group = (category?.parentId && byId.get(category.parentId)) || category
+    if (!group) return { group: name || NO_GROUP, hue: categoryHue({ name: name || NO_GROUP, hue: null }) }
+    return { group: group.name, hue: categoryHue(group) }
+  }
+}
+
+const ownName: (name: string | null) => CategoryLook = groupLookup([])
+
+export function toPoints(
+  report: PlacesReport,
+  mode: PlaceMode,
+  look: (name: string | null) => CategoryLook = ownName,
+): PlacePoint[] {
   return report.places.map((place) => ({
     id: place.id ?? null,
     pointId: place.pointId,
@@ -90,6 +130,7 @@ export function toPoints(report: PlacesReport, mode: PlaceMode): PlacePoint[] {
     visits: place.visits,
     average: formatIdr(place.average),
     topCategory: place.topCategory,
+    ...look(place.topCategory),
     span: span(place),
     usualTime: usualTime(place),
     recent: place.recent.map((visit) => ({
@@ -115,4 +156,22 @@ export function share(part: bigint, whole: bigint): number {
   if (whole <= 0n) return 0
   const percent = Number((part * 100n) / whole)
   return part < whole ? Math.min(percent, 99) : 100
+}
+
+export interface LegendGroup {
+  name: string
+  hue: number
+  /** How many dots on the map carry it. */
+  places: number
+}
+
+/** The groups the map has dots for, most dots first. */
+export function legendGroups(points: readonly Pick<PlacePoint, 'group' | 'hue'>[]): LegendGroup[] {
+  const groups = new Map<string, LegendGroup>()
+  for (const point of points) {
+    const group = groups.get(point.group) ?? { name: point.group, hue: point.hue, places: 0 }
+    group.places += 1
+    groups.set(point.group, group)
+  }
+  return [...groups.values()].sort((a, b) => b.places - a.places || a.name.localeCompare(b.name, 'id'))
 }

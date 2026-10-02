@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import { categoryHue } from '@/lib/ledger/palette'
 import { summarisePlaces, type PlaceEntry } from '@/lib/ledger/places'
-import { share, toPoints, toWaiting, usualTime } from './view-model'
+import { groupLookup, legendGroups, NO_GROUP, share, toPoints, toWaiting, usualTime } from './view-model'
 
 function qr(description: string, amount: bigint, at: string): PlaceEntry {
   return {
@@ -43,6 +44,9 @@ describe('toPoints', () => {
         visits: 2,
         average: 'Rp30.000',
         topCategory: 'Dating',
+        // No categories given: the category stands as its own group.
+        group: 'Dating',
+        hue: categoryHue({ name: 'Dating', hue: null }),
         span: '02 Mar 2026 sampai 09 Mar 2026',
         usualTime: 'malam',
         recent: [
@@ -50,6 +54,53 @@ describe('toPoints', () => {
           { date: '02 Mar 2026', amount: 'Rp25.000', category: 'Dating' },
         ],
       },
+    ])
+  })
+})
+
+describe('groupLookup', () => {
+  const look = groupLookup([
+    { id: 'sosial', name: 'Sosial', parentId: null, hue: 263 },
+    { id: 'dating', name: 'Dating', parentId: 'sosial', hue: 230 },
+    { id: 'edukasi', name: 'Edukasi', parentId: null, hue: 145 },
+    { id: 'tagihan', name: 'Tagihan', parentId: null, hue: null },
+  ])
+
+  it("rolls a category up to its group, in the group's own hue", () => {
+    expect(look('Dating')).toEqual({ group: 'Sosial', hue: 263 })
+  })
+
+  it('keeps a category with no group as its own', () => {
+    expect(look('Edukasi')).toEqual({ group: 'Edukasi', hue: 145 })
+  })
+
+  it('falls back to the palette for a group with no stored hue', () => {
+    expect(look('Tagihan')).toEqual({ group: 'Tagihan', hue: categoryHue({ name: 'Tagihan', hue: null }) })
+  })
+
+  it('still names something for a category it does not know or no category at all', () => {
+    expect(look('Hapus Saya').group).toBe('Hapus Saya')
+    expect(look(null).group).toBe(NO_GROUP)
+  })
+
+  it('draws the dot in the group the place is in', () => {
+    const [point] = toPoints(report, 'total', look)
+    expect(point).toMatchObject({ topCategory: 'Dating', group: 'Sosial', hue: 263 })
+  })
+})
+
+describe('legendGroups', () => {
+  it('counts the dots per group, most first, ties by name', () => {
+    const points = [
+      { group: 'Transport', hue: 283 },
+      { group: 'Sosial', hue: 263 },
+      { group: 'Transport', hue: 283 },
+      { group: 'Belanja', hue: 158 },
+    ]
+    expect(legendGroups(points)).toEqual([
+      { name: 'Transport', hue: 283, places: 2 },
+      { name: 'Belanja', hue: 158, places: 1 },
+      { name: 'Sosial', hue: 263, places: 1 },
     ])
   })
 })

@@ -3,7 +3,7 @@
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useEffect, useRef, useState } from 'react'
 import type { GeoJSONSource, Map as MapLibreMap, Marker, Popup } from 'maplibre-gl'
-import { boundsOf, DOTS, JAKARTA, LOCALE, overlayLayers, SOURCE, STYLES, toFeatures, type MapColors } from './map-layers'
+import { boundsOf, DOTS, groupFilter, HEAT, JAKARTA, LOCALE, overlayLayers, SOURCE, STYLES, toFeatures, type MapColors } from './map-layers'
 import type { PlacePoint } from './view-model'
 
 /**
@@ -31,6 +31,8 @@ interface Props {
   onPick: (draft: Draft) => void
   /** Called with the point's id: a merchant that moved house has several. */
   onMove: (pointId: string) => void
+  /** Category groups switched off in the legend. */
+  hidden: readonly string[]
 }
 
 type Theme = 'light' | 'dark'
@@ -41,21 +43,46 @@ function currentTheme(): Theme {
   return matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
-/** A token's colour as the browser resolved it; `light-dark()` is not something MapLibre can parse. */
-function resolve(token: string): string {
+/** A colour as the browser resolved it; `light-dark()` is not something MapLibre can parse. */
+function resolve(css: string): string {
   const probe = document.createElement('span')
-  probe.style.color = `var(${token})`
+  probe.style.color = css
   document.body.append(probe)
   const color = getComputedStyle(probe).color
   probe.remove()
   return color
 }
 
+/**
+ * A category hue in this theme, as `rgb()`. The computed value of an oklch()
+ * colour stays oklch(), which MapLibre cannot read either, so one pixel is
+ * painted with it and read back in sRGB.
+ */
+function categoryColors(): (hue: number) => string {
+  const pixel = document.createElement('canvas').getContext('2d', { willReadFrequently: true })
+  const cache = new Map<number, string>()
+  return (hue) => {
+    const known = cache.get(hue)
+    if (known) return known
+    const css = resolve(`oklch(var(--category-l) var(--category-c) ${hue})`)
+    let color = css
+    if (pixel) {
+      pixel.clearRect(0, 0, 1, 1)
+      pixel.fillStyle = css
+      pixel.fillRect(0, 0, 1, 1)
+      const [r, g, b] = pixel.getImageData(0, 0, 1, 1).data
+      color = `rgb(${r}, ${g}, ${b})`
+    }
+    cache.set(hue, color)
+    return color
+  }
+}
+
 function themeColors(): MapColors {
   return {
-    accent: resolve('--color-accent'),
-    strong: resolve('--color-accent-strong'),
-    surface: resolve('--color-surface'),
+    accent: resolve('var(--color-accent)'),
+    strong: resolve('var(--color-accent-strong)'),
+    surface: resolve('var(--color-surface)'),
   }
 }
 
@@ -109,7 +136,7 @@ function popupContent(point: PlacePoint, onMove: (pointId: string) => void): HTM
   return root
 }
 
-export function PlaceMap({ points, placing, draft, onPick, onMove }: Props) {
+export function PlaceMap({ points, placing, draft, onPick, onMove, hidden }: Props) {
   const container = useRef<HTMLDivElement>(null)
   const map = useRef<MapLibreMap | null>(null)
   const marker = useRef<Marker | null>(null)
@@ -119,10 +146,12 @@ export function PlaceMap({ points, placing, draft, onPick, onMove }: Props) {
   const [tilesFailed, setTilesFailed] = useState(false)
 
   // The newest props, for listeners registered once when the map was made.
-  const latest = useRef({ points, placing, onPick, onMove })
+  const latest = useRef({ points, placing, onPick, onMove, hidden })
   useEffect(() => {
-    latest.current = { points, placing, onPick, onMove }
+    latest.current = { points, placing, onPick, onMove, hidden }
   })
+  // Per theme: the same hue is a darker colour on light tiles than on dark ones.
+  const colorOf = useRef<((hue: number) => string) | undefined>(undefined)
 
   useEffect(() => {
     let cancelled = false
@@ -157,10 +186,11 @@ export function PlaceMap({ points, placing, draft, onPick, onMove }: Props) {
       instance.addControl(new maplibre.NavigationControl({ showCompass: false }), 'top-right')
 
       const drawOverlay = () => {
+        colorOf.current = categoryColors()
         if (!instance.getSource(SOURCE)) {
-          instance.addSource(SOURCE, { type: 'geojson', data: toFeatures(latest.current.points) })
+          instance.addSource(SOURCE, { type: 'geojson', data: toFeatures(latest.current.points, colorOf.current) })
         }
-        for (const layer of overlayLayers(themeColors())) {
+        for (const layer of overlayLayers(themeColors(), latest.current.hidden)) {
           if (!instance.getLayer(layer.id)) instance.addLayer(layer as never)
         }
       }
@@ -227,7 +257,7 @@ export function PlaceMap({ points, placing, draft, onPick, onMove }: Props) {
     const instance = map.current
     if (!instance) return
     const apply = () => {
-      ;(instance.getSource(SOURCE) as GeoJSONSource | undefined)?.setData(toFeatures(latest.current.points))
+      ;(instance.getSource(SOURCE) as GeoJSONSource | undefined)?.setData(toFeatures(latest.current.points, colorOf.current))
       const bounds = boundsOf(latest.current.points)
       if (bounds) instance.fitBounds(bounds, { padding: 48, maxZoom: 14, duration: 0 })
     }
@@ -238,8 +268,18 @@ export function PlaceMap({ points, placing, draft, onPick, onMove }: Props) {
   // Weights change with the reading even when the places do not.
   useEffect(() => {
     const source = map.current?.getSource(SOURCE) as GeoJSONSource | undefined
-    source?.setData(toFeatures(points))
+    source?.setData(toFeatures(points, colorOf.current))
   }, [points])
+
+  // A group switched off leaves the glow and the dots alike, without moving the camera.
+  const hiddenKey = hidden.join('|')
+  useEffect(() => {
+    const instance = map.current
+    if (!instance?.getLayer(DOTS)) return
+    const filter = groupFilter(latest.current.hidden)
+    for (const layer of [HEAT, DOTS]) instance.setFilter(layer, filter as never)
+    popup.current?.remove()
+  }, [hiddenKey])
 
   useEffect(() => {
     const instance = map.current

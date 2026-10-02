@@ -71,6 +71,8 @@ place, so a merchant is placed once, by searching OpenStreetMap or clicking on
 the map, and every payment made at its counter follows, including next month's
 import. The map weighs places by money, by visits, or by what one visit costs,
 filtered by category and month, with a table of the same figures beside it.
+Each dot takes the colour of its category group, and a legend of the groups
+switches them on and off on the map without reloading.
 Online orders, transfers and cashier software that hides the outlet's name are
 counted honestly as having no place rather than pinned wherever the payment
 company is registered. They get their own answer beside the map instead: who

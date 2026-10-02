@@ -17,7 +17,7 @@ import { OnlineList } from './online-list'
 import { PlaceTable } from './place-table'
 import { PlaceWorkspace } from './place-workspace'
 import { MapSkeleton } from './skeleton'
-import { share, toPoints, toWaiting } from './view-model'
+import { groupLookup, share, toPoints, toWaiting } from './view-model'
 
 export const metadata: Metadata = { title: TITLE }
 /* Blocks on runtime data by design; the why lives in src/app/page.tsx above `instant`. */
@@ -60,7 +60,7 @@ async function MapView({ params }: { params: Params }) {
 
   const report = summarisePlaces(entries, locations, view.filter)
   const online = summariseOnline(entries, view.filter)
-  const points = toPoints(report, view.mode)
+  const points = toPoints(report, view.mode, groupLookup(categories))
   const waiting = toWaiting(report)
   const placeless = locations.filter((location) => location.lat === null)
 
@@ -221,7 +221,7 @@ async function MapView({ params }: { params: Params }) {
               />
               <span>
                 Makin pekat, makin banyak {MODES.find((mode) => mode.value === view.mode)?.legend}. Titik per gerai muncul
-                saat peta diperbesar.
+                saat peta diperbesar, berwarna menurut kelompok kategorinya.
               </span>
             </p>
           </div>

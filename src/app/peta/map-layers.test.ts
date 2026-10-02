@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { boundsOf, overlayLayers, STYLES, toFeatures, withAlpha } from './map-layers'
+import { boundsOf, groupFilter, overlayLayers, STYLES, toFeatures, withAlpha } from './map-layers'
 import { MAP_TILES } from '@/lib/csp'
 
 describe('withAlpha', () => {
@@ -16,11 +16,27 @@ describe('withAlpha', () => {
 
 describe('toFeatures', () => {
   it('puts longitude first, as GeoJSON wants', () => {
-    const point = { pointId: 'l1', key: 'boga rasaa', lat: -6.23, lng: 106.85, weight: 0.5 }
+    const point = { pointId: 'l1', key: 'boga rasaa', lat: -6.23, lng: 106.85, weight: 0.5, group: 'Sosial', hue: 263 }
     const [feature] = toFeatures([point as never]).features
     expect(feature.geometry.coordinates).toEqual([106.85, -6.23])
     // The point, not the merchant: a merchant that moved house is two dots.
-    expect(feature.properties).toEqual({ key: 'l1', weight: 0.5 })
+    expect(feature.properties).toEqual({ key: 'l1', weight: 0.5, group: 'Sosial' })
+  })
+
+  it("carries the colour the theme gives the group's hue", () => {
+    const point = { pointId: 'l1', lat: -6.23, lng: 106.85, weight: 0.5, group: 'Sosial', hue: 263 }
+    const [feature] = toFeatures([point as never], (hue) => `rgb(${hue}, 0, 0)`).features
+    expect(feature.properties.color).toBe('rgb(263, 0, 0)')
+  })
+})
+
+describe('groupFilter', () => {
+  it('filters nothing while every group is shown', () => {
+    expect(groupFilter([])).toBeNull()
+  })
+
+  it('drops the hidden groups', () => {
+    expect(groupFilter(['Transport', 'Rumah'])).toEqual(['!', ['in', ['get', 'group'], ['literal', ['Transport', 'Rumah']]]])
   })
 })
 
@@ -30,6 +46,16 @@ describe('overlayLayers', () => {
   it('glows when zoomed out and hands over to dots when zoomed in', () => {
     expect(layers.map((layer) => layer.type)).toEqual(['heatmap', 'circle'])
     expect(layers[0].maxzoom).toBeGreaterThan(layers[1].minzoom as number)
+  })
+
+  it('colours a dot by its group and falls back to the accent', () => {
+    expect(layers[1].paint['circle-color']).toEqual(['coalesce', ['get', 'color'], 'rgb(0, 113, 164)'])
+  })
+
+  it('takes a hidden group out of the glow and the dots alike', () => {
+    expect('filter' in layers[0]).toBe(false)
+    const filtered = overlayLayers({ accent: 'a', strong: 'b', surface: 'c' }, ['Transport'])
+    for (const layer of filtered) expect(layer).toHaveProperty('filter', groupFilter(['Transport']))
   })
 
   it('starts the heatmap fully transparent so empty streets stay clear', () => {
