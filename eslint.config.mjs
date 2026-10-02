@@ -209,6 +209,9 @@ const eslintConfig = defineConfig([
     // axe-core, copied in on demand to audit a real build. It is third-party
     // and gitignored; linting it turns an accessibility check into 26 errors.
     'public/_axe.js',
+    // MapLibre's minified worker, copied from node_modules by
+    // scripts/vendor-maplibre.mjs. Third-party and gitignored, same as above.
+    'public/vendor/**',
   ]),
 ])
 

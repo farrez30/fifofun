@@ -4,6 +4,7 @@ import { CloudArrowUp } from '@phosphor-icons/react/dist/ssr/CloudArrowUp'
 import { Coins } from '@phosphor-icons/react/dist/ssr/Coins'
 import { Gear } from '@phosphor-icons/react/dist/ssr/Gear'
 import { ListChecks } from '@phosphor-icons/react/dist/ssr/ListChecks'
+import { MapTrifold } from '@phosphor-icons/react/dist/ssr/MapTrifold'
 import { NotePencil } from '@phosphor-icons/react/dist/ssr/NotePencil'
 import { Receipt } from '@phosphor-icons/react/dist/ssr/Receipt'
 import { Target } from '@phosphor-icons/react/dist/ssr/Target'
@@ -37,6 +38,7 @@ export interface Destination {
 export const NAV = [
   { href: '/', label: 'Ringkasan', glyph: ChartPieSlice },
   { href: '/laporan', label: 'Laporan', glyph: Receipt },
+  { href: '/peta', label: 'Peta', glyph: MapTrifold },
   { href: '/dana', label: 'Dana', glyph: Coins },
   { href: '/anggaran', label: 'Anggaran', glyph: Wallet },
   { href: '/tinjau', label: 'Tinjau', glyph: ListChecks },

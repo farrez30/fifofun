@@ -70,6 +70,9 @@ CLAUDE.md
 .claude/
 .impeccable/
 skills-lock.json
+# MapLibre's worker, copied from node_modules by scripts/vendor-maplibre.mjs
+/public/vendor/
+
 # axe-core copied here on demand for accessibility audits against a real build
 public/_axe.js
 

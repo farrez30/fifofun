@@ -1,9 +1,10 @@
 import { cache } from 'react'
 import { cacheLife, cacheTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { accountsTag, budgetsTag, categoriesTag, importsTag, planTag, rulesTag, txTag } from '@/lib/queries/tags'
+import { accountsTag, budgetsTag, categoriesTag, importsTag, placesTag, planTag, rulesTag, txTag } from '@/lib/queries/tags'
 import { parseHue } from '@/lib/ledger/palette'
 import type { AccountKind, CashflowType, EntrySource, LedgerEntry } from '@/lib/ledger/types'
+import type { PlaceEntry } from '@/lib/ledger/places'
 import type { AdjustmentRow } from '@/lib/ledger/adjustments'
 import {
   childPlansFromJson,
@@ -508,6 +509,81 @@ export async function getRules(householdId: string): Promise<RuleRow[]> {
       hitCount: (row.hit_count as number) ?? 0,
     }
   })
+}
+
+export interface MerchantLocationRow {
+  id: string
+  merchantKey: string
+  label: string
+  address: string | null
+  /** Null on a merchant marked as having no place. */
+  lat: number | null
+  lng: number | null
+  source: 'manual' | 'osm' | 'riset'
+}
+
+export async function getMerchantLocations(householdId: string): Promise<MerchantLocationRow[]> {
+  'use cache: private'
+  cacheTag(placesTag(householdId))
+  cacheLife({ stale: 300 })
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('merchant_locations')
+    .select('id, merchant_key, label, address, lat, lng, source')
+    .eq('household_id', householdId)
+
+  if (error || !data) return []
+
+  return data.map((row) => ({
+    id: row.id as string,
+    merchantKey: row.merchant_key as string,
+    label: row.label as string,
+    address: (row.address as string | null) ?? null,
+    lat: row.lat === null ? null : Number(row.lat),
+    lng: row.lng === null ? null : Number(row.lng),
+    source: row.source as MerchantLocationRow['source'],
+  }))
+}
+
+/**
+ * Every spending and bill row with the bank's raw text, which is what tells a
+ * counter payment from an online one. Pass-through rows stay out: the money
+ * was somebody else's. Uncached for the same reason as the other ledger reads.
+ */
+export async function getPlaceEntries(householdId: string): Promise<PlaceEntry[]> {
+  const supabase = await createClient()
+  const all: PlaceEntry[] = []
+
+  for (let offset = 0; ; offset += PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('id, occurred_at, description, raw_description, amount, cashflow, source, categories(name)')
+      .eq('household_id', householdId)
+      .is('deleted_at', null)
+      .eq('is_pass_through', false)
+      .in('cashflow', ['spending', 'bills'])
+      .order('occurred_at', { ascending: true })
+      .order('id', { ascending: true })
+      .range(offset, offset + PAGE_SIZE - 1)
+    if (error || !data) break
+
+    for (const row of data) {
+      all.push({
+        id: row.id as string,
+        occurredAt: new Date(row.occurred_at as string),
+        description: row.description as string,
+        rawDescription: (row.raw_description as string | null) ?? null,
+        amount: toBigInt(row.amount),
+        cashflow: row.cashflow as CashflowType,
+        source: row.source as EntrySource,
+        categoryName: joinedName(row.categories),
+      })
+    }
+    if (data.length < PAGE_SIZE) break
+  }
+
+  return all
 }
 
 /**

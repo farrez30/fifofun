@@ -2,6 +2,13 @@ import { expect, test } from '@playwright/test'
 import { readFileSync } from 'node:fs'
 import { FIXTURE_DIR } from './render'
 
+/*
+  Every destination the sidebar draws: NAV (9, with Peta) plus MORE (2).
+  Written out because nav.ts imports icons this runner cannot load; change it
+  with nav.ts.
+*/
+const DESTINATIONS = 11
+
 /**
  * The desktop nav, now a sidebar rather than a row of underlined links.
  *
@@ -28,7 +35,7 @@ test.describe('sidebar', () => {
     expect(box?.width).toBeGreaterThan(200)
     expect(box?.width).toBeLessThan(240)
 
-    await expect(nav.locator('a[href]')).toHaveCount(10)
+    await expect(nav.locator('a[href]')).toHaveCount(DESTINATIONS)
     await expect(nav.locator('a[aria-current="page"]')).toHaveCount(1)
     await expect(nav).toContainText('FiFoFun')
     await expect(nav.getByRole('button', { name: 'Keluar' })).toBeVisible()
@@ -48,7 +55,7 @@ test.describe('sidebar', () => {
     await expect(toggle).toBeVisible()
 
     const links = await nav.locator('a[href]').all()
-    expect(links.length).toBe(10)
+    expect(links.length).toBe(DESTINATIONS)
     for (const link of links) {
       expect((await link.getAttribute('aria-label')) ?? (await link.innerText())).toBeTruthy()
       const linkBox = await link.boundingBox()

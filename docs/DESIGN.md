@@ -233,6 +233,23 @@ implisit sama-sama tidak mau menyusut di bawah lebar isinya: tabel lebar di
 dalamnya mendorong kartu keluar layar. `e2e/narrow.spec.ts` menjaga ini di
 720px, di antara suite ponsel dan desktop.
 
+**Peta adalah gambar dari tabel di bawahnya, bukan satu-satunya jalan ke
+angkanya.** `/peta` memakai MapLibre dengan tile OpenFreeMap: Positron untuk
+tema terang, Dark untuk tema gelap, dan berganti mengikuti tema app tanpa
+memuat ulang. Saat diperkecil, peta menampilkan heatmap satu hue (aksen memekat ke
+`--color-accent-strong`, bukan pelangi). Merah tidak dipakai, karena di app
+ini merah berarti "lewat anggaran". Saat diperbesar, peta menampilkan titik
+per gerai yang bisa diklik. Satu baris legenda menjelaskan arti pekatnya untuk
+cara menimbang yang sedang dipilih. Belanja online tidak ditaruh di kantor
+penagihnya: bagian "Uang online ke mana" mendaftar penerimanya beserta negara
+penagih, supaya peta tetap peta tempat yang pernah didatangi. Popup dirakit dari node, bukan HTML, jadi nama pedagang
+tidak pernah menjadi markup. Kontrol di atas peta memakai permukaan opaque
+(§3) dan target 44px. MapLibre dimuat hanya di halaman ini. Worker-nya disajikan
+dari `public/vendor` (`scripts/vendor-maplibre.mjs`), sehingga CSP tetap
+`worker-src 'self'` tanpa `blob:`. Tabel "Tempat teratas" dan daftar "Belum
+berlokasi" memuat setiap angka yang digambar peta, untuk pembaca layar dan
+perangkat tanpa WebGL.
+
 **Umpan balik aksi lewat toast.** Setiap simpan menampilkan satu toast
 "Menyimpan…" yang berganti di tempat (id yang sama) menjadi berhasil atau
 gagal; yang gagal bertahan sampai ditutup. Form memakai `useActionToast`

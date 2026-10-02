@@ -85,6 +85,13 @@
       "when": 1790652626926,
       "tag": "0011_bill_schedule",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1790847251479,
+      "tag": "0012_merchant_locations",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,64 @@
+import type { PlaceFilter, PlaceMode } from '@/lib/ledger/places'
+
+/**
+ * The map's choices, read from the address bar.
+ *
+ * Same reasoning as the report: every choice lives in the query string, so the
+ * back button undoes a filter and a view can be bookmarked. Everything is
+ * validated here rather than trusted, because these strings come from a URL.
+ */
+
+type Params = Record<string, string | string[] | undefined>
+
+export const MODES: { value: PlaceMode; param: string; label: string; legend: string }[] = [
+  { value: 'total', param: '', label: 'Total uang', legend: 'uang yang keluar di sana' },
+  { value: 'visits', param: 'kunjungan', label: 'Kunjungan', legend: 'kunjungan ke sana' },
+  { value: 'average', param: 'rata', label: 'Per kunjungan', legend: 'uang sekali datang' },
+]
+
+export interface MapView {
+  filter: PlaceFilter
+  mode: PlaceMode
+  /** A merchant to start placing, from a "Pindahkan" link. */
+  placing: string | null
+}
+
+function first(value: string | string[] | undefined): string {
+  return (Array.isArray(value) ? value[0] : value)?.trim() ?? ''
+}
+
+function month(value: string): string | undefined {
+  return /^\d{4}-(0[1-9]|1[0-2])$/.test(value) ? value : undefined
+}
+
+export function readView(params: Params): MapView {
+  const category = first(params.kategori).slice(0, 60)
+  let from = month(first(params.dari))
+  let to = month(first(params.sampai))
+  // A range typed backwards means the same months; swapping beats showing nothing.
+  if (from && to && from > to) [from, to] = [to, from]
+
+  const placing = first(params.taruh).toLowerCase().slice(0, 120)
+  return {
+    filter: { categories: category ? [category] : undefined, from, to },
+    mode: MODES.find((mode) => mode.param && mode.param === first(params.mode))?.value ?? 'total',
+    placing: placing.length >= 3 ? placing : null,
+  }
+}
+
+/** The address of this page with one choice changed and the rest kept. */
+export function viewHref(params: Params, change: Record<string, string>): string {
+  const query = new URLSearchParams()
+  for (const key of ['kategori', 'dari', 'sampai', 'mode']) {
+    const value = key in change ? change[key] : first(params[key])
+    if (value) query.set(key, value)
+  }
+  const text = query.toString()
+  return text ? `/peta?${text}` : '/peta'
+}
+
+/** This page with the filters kept and one merchant's placing panel open. */
+export function placingHref(params: Params, merchantKey: string): string {
+  const base = viewHref(params, {})
+  return `${base}${base.includes('?') ? '&' : '?'}taruh=${encodeURIComponent(merchantKey)}#atur`
+}

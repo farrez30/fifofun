@@ -46,6 +46,7 @@ export const TABS: readonly Tab[] = pick([
 export const SHEET: readonly Tab[] = pick([
   '/anggaran',
   '/dana',
+  '/peta',
   '/rencana',
   '/impor',
   '/pengaturan',

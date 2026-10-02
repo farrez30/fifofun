@@ -79,6 +79,12 @@ import type { UnconfirmedRow } from '@/lib/queries/household'
 import { ACCOUNT_KINDS, CASHFLOW_TYPES } from '@/lib/ledger/types'
 import { ACCOUNT_KIND_LABELS, DIRECTION_LABELS, type Direction } from '@/lib/ledger/direction'
 import { SEED_PALETTE } from '@/lib/ledger/palette'
+import { PlaceTable } from '@/app/peta/place-table'
+import { PlacingPanel } from '@/app/peta/placing-panel'
+import { OnlineList } from '@/app/peta/online-list'
+import { summariseOnline } from '@/lib/ledger/online'
+import { WaitingList } from '@/app/peta/waiting-list'
+import type { PlacePoint, WaitingMerchant } from '@/app/peta/view-model'
 import { documentFor, FIXTURE_DIR } from './render'
 
 /**
@@ -1442,6 +1448,50 @@ const TIDY_CATEGORIES = [
   { id: 'cat-laundry', name: 'Laundry', cashflow: 'spending' as CashflowType, parentId: null },
 ]
 
+/** Places as the map page shows them, with the household's own merchants. */
+const PLACES: PlacePoint[] = [
+  {
+    id: '00000000-0000-4000-8000-0000000000a1',
+    key: 'gandaria city xxidel 4416',
+    label: 'XXI Gandaria City',
+    address: 'Gandaria City, Jalan Sultan Iskandar Muda, Kebayoran Lama, Jakarta Selatan',
+    lat: -6.2443,
+    lng: 106.7834,
+    weight: 1,
+    total: 'Rp430.000',
+    visits: 3,
+    average: 'Rp143.333',
+    topCategory: 'Dating',
+    span: '06 Jun 2026 sampai 02 Agu 2026',
+    usualTime: 'malam',
+    recent: [{ date: '02 Agu 2026', amount: 'Rp200.000', category: 'Dating' }],
+  },
+  {
+    id: '00000000-0000-4000-8000-0000000000a2',
+    key: 'boga rasaa',
+    label: 'Boga Rasaa',
+    address: null,
+    lat: -6.2297,
+    lng: 106.854,
+    weight: 0.69,
+    total: 'Rp298.000',
+    visits: 12,
+    average: 'Rp24.833',
+    topCategory: 'Makan/minum',
+    span: '02 Mar 2026 sampai 24 Sep 2026',
+    usualTime: 'siang',
+    recent: [],
+  },
+]
+
+const WAITING: WaitingMerchant[] = Array.from({ length: 18 }, (_, index) => ({
+  key: `pedagang ${index}`,
+  label: index === 0 ? 'AEROPOLIS TOKEN' : index === 1 ? 'SHELL JATIMEKAR 1 BKS' : `WARUNG NOMOR ${index}`,
+  total: formatIdr(BigInt(200_000_000 - index * 9_000_000)),
+  visits: 23 - index,
+  last: '28 Sep 2026',
+}))
+
 export const FIXTURES = {
   marks: MARKS,
   'sankey-all': (
@@ -1478,6 +1528,47 @@ export const FIXTURES = {
     </div>
   ),
   'catat-duplicates': <DuplicatesPanel pairs={DUPLICATE_PAIRS} />,
+  'peta-tempat': <PlaceTable points={PLACES} moveHref={(key) => `/peta?taruh=${encodeURIComponent(key)}#atur`} />,
+  'peta-tempat-kosong': <PlaceTable points={[]} moveHref={() => '/peta'} />,
+  'peta-online': (
+    <OnlineList
+      report={summariseOnline(
+        (
+          [
+            ['Tokopedia', 'Pembayaran Tokopedia', 29_818_700_00n],
+            ['Shopee Indonesia', 'Pembayaran Shopee Indonesia', 27_657_916_00n],
+            ['Google Work', 'Transaksi e-Commerce', 1_222_116_00n],
+            ['CURSOR, AI', 'Transaksi e-Commerce', 1_396_744_00n],
+            ['Midtrans', 'Pembayaran Midtrans', 1_107_570_00n],
+            ['MVA Close', 'Pembayaran MVA Close', 108_000_00n],
+            ...Array.from({ length: 10 }, (_, index) => [`Toko Online ${index}`, `Pembayaran Toko Online ${index}`, BigInt(50_000_00 - index)] as const),
+          ] as const
+        ).map(([description, via, amount], index) => ({
+          id: `online-${index}`,
+          description,
+          rawDescription: `${via}
+${description}`,
+          amount,
+          cashflow: 'spending' as CashflowType,
+          occurredAt: new Date('2026-08-10T05:00:00Z'),
+          categoryName: 'Belanja Online',
+          source: 'xlsx' as const,
+        })),
+      )}
+    />
+  ),
+  'peta-menunggu': <WaitingList waiting={WAITING} placing="pedagang 1" onPlace={() => {}} />,
+  'peta-menaruh': (
+    <PlacingPanel
+      merchantKey="laundry kak"
+      query="LAUNDRY KAK"
+      pending={{ lat: -6.2061, lng: 106.7359, address: null, source: 'manual' }}
+      label="Laundry Kak"
+      onLabel={() => {}}
+      onChoose={() => {}}
+      onDone={() => {}}
+    />
+  ),
   balances: (
     <Balances
       movements={BALANCE_MOVEMENTS}

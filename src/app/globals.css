@@ -1715,3 +1715,93 @@
 [data-sonner-toaster] [data-sonner-toast] [data-description] {
   color: var(--color-ink-muted);
 }
+
+/*
+  MapLibre's own sheet (imported by place-map.tsx) draws its popup and
+  controls white, in 12px Helvetica, with buttons under the 44px floor. Same
+  answer as sonner above: map its surfaces onto this app's tokens. Unlayered
+  and scoped under `.place-map`, because the library sheet loads later and
+  would otherwise win on order alone.
+
+  The controls sit over the map, so by the material rule (DESIGN.md §3) they
+  are opaque surfaces, never glass.
+*/
+.place-map.maplibregl-map {
+  font: inherit;
+}
+
+.place-map .maplibregl-popup-content {
+  background: var(--color-surface);
+  color: var(--color-ink);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding: 12px 14px;
+}
+
+.place-map .maplibregl-popup-anchor-bottom .maplibregl-popup-tip,
+.place-map .maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip,
+.place-map .maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip {
+  border-top-color: var(--color-surface);
+}
+
+.place-map .maplibregl-popup-anchor-top .maplibregl-popup-tip,
+.place-map .maplibregl-popup-anchor-top-left .maplibregl-popup-tip,
+.place-map .maplibregl-popup-anchor-top-right .maplibregl-popup-tip {
+  border-bottom-color: var(--color-surface);
+}
+
+.place-map .maplibregl-popup-anchor-left .maplibregl-popup-tip {
+  border-right-color: var(--color-surface);
+}
+
+.place-map .maplibregl-popup-anchor-right .maplibregl-popup-tip {
+  border-left-color: var(--color-surface);
+}
+
+.place-map .maplibregl-popup-close-button {
+  width: 44px;
+  height: 44px;
+  font-size: 20px;
+  color: var(--color-ink-muted);
+}
+
+.place-map .maplibregl-ctrl-group {
+  background: var(--color-surface);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+}
+
+.place-map .maplibregl-ctrl-group button {
+  width: 44px;
+  height: 44px;
+}
+
+.place-map .maplibregl-ctrl-group button + button {
+  border-top-color: var(--color-line);
+}
+
+.place-map .maplibregl-ctrl-attrib,
+.place-map .maplibregl-ctrl-attrib.maplibregl-compact {
+  background: var(--color-surface);
+  color: var(--color-ink-muted);
+}
+
+.place-map .maplibregl-ctrl-attrib a {
+  color: inherit;
+}
+
+/* The library's icons are a fixed #333; on the dark surface they turn light. */
+:root[data-theme='dark'] .place-map .maplibregl-ctrl-icon {
+  filter: invert(1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .place-map .maplibregl-ctrl-icon {
+    filter: invert(1);
+  }
+}
+
+/* The popup rides above the attribution, which would otherwise cover its foot. */
+.place-map .maplibregl-popup {
+  z-index: 3;
+}

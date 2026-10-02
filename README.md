@@ -66,6 +66,18 @@ replaces the median of past payments, and the due day lets an unpaid bill say
 how many days late it is instead of waiting for the month to end. Ending a bill
 archives it, so the months it was paid keep their totals.
 
+**Shows where the money went.** A bank statement names a merchant and never a
+place, so a merchant is placed once, by searching OpenStreetMap or clicking on
+the map, and every payment made at its counter follows, including next month's
+import. The map weighs places by money, by visits, or by what one visit costs,
+filtered by category and month, with a table of the same figures beside it.
+Online orders, transfers and cashier software that hides the outlet's name are
+counted honestly as having no place rather than pinned wherever the payment
+company is registered. They get their own answer beside the map instead: who
+was paid online and in which country that company bills from, so the share of
+money leaving the country is a number rather than a guess. The search runs on
+the server and sends only the merchant's name; the tiles come from OpenFreeMap.
+
 ## Correctness
 
 Money is stored as `bigint` in sen. Never floats. Statement reconciliation

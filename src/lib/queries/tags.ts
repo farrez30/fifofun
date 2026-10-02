@@ -27,3 +27,5 @@ export const rulesTag = (householdId: string) => `rules:${householdId}`
 export const planTag = (householdId: string) => `plan:${householdId}`
 /** Statement batches: opening and closing balances printed by the bank. */
 export const importsTag = (householdId: string) => `imports:${householdId}`
+/** Where each merchant is, for the spending map. */
+export const placesTag = (householdId: string) => `places:${householdId}`

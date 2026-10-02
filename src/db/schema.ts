@@ -3,6 +3,7 @@ import {
   type AnyPgColumn,
   bigint,
   boolean,
+  doublePrecision,
   index,
   integer,
   jsonb,
@@ -376,6 +377,38 @@ export const plans = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [uniqueIndex('plans_household_unique').on(table.householdId)],
+)
+
+/**
+ * Where a merchant is, so its spending can be put on a map.
+ *
+ * A statement names the merchant and never the place, so the household places
+ * each one once and every transaction filed under that name follows. The key
+ * is `suggestPattern` of the description, the same key the review queue
+ * groups by, which is what makes a location set today apply to next month's
+ * import as well. One point per merchant: a chain whose outlets share a name
+ * is a known blur, and the place someone actually goes is the one they set.
+ */
+export const merchantLocations = pgTable(
+  'merchant_locations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    householdId: uuid('household_id')
+      .notNull()
+      .references(() => households.id, { onDelete: 'cascade' }),
+    merchantKey: text('merchant_key').notNull(),
+    /** What the household calls the place; the statement's name is often cut short. */
+    label: text('label').notNull(),
+    address: text('address'),
+    /** Both null: the household says this merchant has no place (sells online, takes QRIS). */
+    lat: doublePrecision('lat'),
+    lng: doublePrecision('lng'),
+    /** `manual` (clicked on the map), `osm` (picked from a search) or `riset` (seeded). */
+    source: text('source').notNull().default('manual'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex('merchant_locations_unique').on(table.householdId, table.merchantKey)],
 )
 
 export const householdsRelations = relations(households, ({ many }) => ({
