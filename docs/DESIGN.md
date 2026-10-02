@@ -250,7 +250,14 @@ dulu) dengan Taruh / Tanpa tempat / Lewati, dan setelah menyimpan fokus
 kembali ke "Taruh berikutnya". Tagihan (listrik, pulsa) tidak ikut heatmap
 secara bawaan, karena satu token listrik yang dibeli 23 kali akan menjadi
 tempat terpanas dan meredupkan semua yang lain. Saklar "Ikutkan tagihan"
-mengembalikannya, dan kategori tagihan yang dipilih langsung selalu tampil. Popup dirakit dari node, bukan HTML, jadi nama pedagang
+mengembalikannya, dan kategori tagihan yang dipilih langsung selalu tampil.
+Satu pedagang boleh punya beberapa titik berperiode (`valid_from`/`valid_to`,
+migrasi 0013). Contohnya token PLN, yang dibeli untuk rumah lama lalu kos
+baru, padahal mutasi tidak pernah menyebut nomor meternya. Setiap transaksi
+jatuh ke titik yang periodenya mencakup tanggalnya (hari Jakarta). Transaksi
+di luar periode mana pun kembali ke antrean, tidak ditaruh di rumah yang salah.
+Utilitas rumah yang dibayar online (PLN, Biznet, Media Indonusa,
+Telkom/IndiHome) boleh ditaruh, karena layanannya untuk satu alamat. Popup dirakit dari node, bukan HTML, jadi nama pedagang
 tidak pernah menjadi markup. Kontrol di atas peta memakai permukaan opaque
 (§3) dan target 44px. MapLibre dimuat hanya di halaman ini. Worker-nya disajikan
 dari `public/vendor` (`scripts/vendor-maplibre.mjs`), sehingga CSP tetap

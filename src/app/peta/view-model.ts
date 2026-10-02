@@ -1,4 +1,4 @@
-import { formatJakarta } from '@/lib/datetime'
+import { formatJakarta, formatMonthKey } from '@/lib/datetime'
 import { weightOf, type DayPart, type PlaceMode, type PlacesReport, type PlaceSummary } from '@/lib/ledger/places'
 import { formatIdr } from '@/lib/money'
 
@@ -13,7 +13,13 @@ import { formatIdr } from '@/lib/money'
 export interface PlacePoint {
   /** The stored location row. */
   id: string | null
+  /** Unique per point; one merchant can be several points over time. */
+  pointId: string
   key: string
+  /** When this point holds, for a merchant that moved: "sampai Des 2025". */
+  period: string | null
+  validFrom: string | null
+  validTo: string | null
   label: string
   address: string | null
   lat: number
@@ -58,10 +64,23 @@ function span(place: PlaceSummary): string {
   return first === last ? first : `${first} sampai ${last}`
 }
 
+/** "sejak Jun 2026", "sampai Des 2025", "Feb 2026 sampai Mei 2026", or null for always. */
+export function periodLabel(from: string | null, to: string | null): string | null {
+  const month = (day: string) => formatMonthKey(day.slice(0, 7))
+  if (from && to) return `${month(from)} sampai ${month(to)}`
+  if (from) return `sejak ${month(from)}`
+  if (to) return `sampai ${month(to)}`
+  return null
+}
+
 export function toPoints(report: PlacesReport, mode: PlaceMode): PlacePoint[] {
   return report.places.map((place) => ({
     id: place.id ?? null,
+    pointId: place.pointId,
     key: place.merchantKey,
+    period: periodLabel(place.validFrom ?? null, place.validTo ?? null),
+    validFrom: place.validFrom ?? null,
+    validTo: place.validTo ?? null,
     label: place.label,
     address: place.address,
     lat: place.lat,

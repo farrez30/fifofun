@@ -54,12 +54,12 @@ function household() {
 describe('saveMerchantLocation', () => {
   it('upserts one row per merchant under the signed-in household', async () => {
     household()
-    stub.queue('merchant_locations', { data: [{ id: 'l1' }] })
+    stub.queue('merchant_locations', { data: [] }, { data: [{ id: 'l1' }] })
 
     const result = await saveMerchantLocation(null, form({ ...PLACE, householdId: 'someone-else' }))
 
     expect(result.ok).toBe(true)
-    const [call] = stub.callsOn('merchant_locations')
+    const [, call] = stub.callsOn('merchant_locations')
     expect(call.payload).toEqual({
       household_id: 'h1',
       merchant_key: 'boga rasaa',
@@ -68,9 +68,50 @@ describe('saveMerchantLocation', () => {
       lat: -6.2297465,
       lng: 106.8540123,
       source: 'osm',
+      valid_from: null,
+      valid_to: null,
     })
-    expect(argsFor(call, 'upsert')[0][1]).toEqual({ onConflict: 'household_id,merchant_key' })
+    expect(argsFor(call, 'upsert')[0][1]).toEqual({ onConflict: 'household_id,merchant_key,valid_from' })
     expect(updateTag).toHaveBeenCalledWith('places:h1')
+  })
+
+  const KOST = '00000000-0000-4000-8000-0000000000b2'
+  const HOUSE = { id: '00000000-0000-4000-8000-0000000000b1', label: 'Rumah Jatiasih', valid_from: null, valid_to: '2025-12-31' }
+
+  it('moves one stored point by its id, inside the household', async () => {
+    household()
+    stub.queue('merchant_locations', { data: [HOUSE, { id: KOST, label: 'Tata Kost', valid_from: '2026-06-01', valid_to: null }] }, { data: [{ id: KOST }] })
+    const result = await saveMerchantLocation(null, form({ ...PLACE, merchantKey: 'pln iconpay', id: KOST, validFrom: '2026-06-01' }))
+    expect(result.ok).toBe(true)
+    const [, call] = stub.callsOn('merchant_locations')
+    expect(call.chain).toContain('update')
+    expect(argsFor(call, 'eq')).toEqual([
+      ['id', KOST],
+      ['household_id', 'h1'],
+    ])
+    expect(call.payload).toMatchObject({ valid_from: '2026-06-01', valid_to: null })
+  })
+
+  it('refuses a period that shares a day with another point of the same merchant', async () => {
+    household()
+    stub.queue('merchant_locations', { data: [HOUSE] })
+    const result = await saveMerchantLocation(null, form({ ...PLACE, merchantKey: 'pln iconpay', validFrom: '2025-11-01' }))
+    expect(result.ok).toBe(false)
+    expect(result.message).toContain('bertabrakan')
+    expect(stub.callsOn('merchant_locations')).toHaveLength(1)
+  })
+
+  it('accepts a later period beside an earlier one', async () => {
+    household()
+    stub.queue('merchant_locations', { data: [HOUSE] }, { data: [{ id: KOST }] })
+    const result = await saveMerchantLocation(null, form({ ...PLACE, merchantKey: 'pln iconpay', validFrom: '2026-06-01' }))
+    expect(result.ok).toBe(true)
+  })
+
+  it('refuses dates the wrong way round before asking the database', async () => {
+    const result = await saveMerchantLocation(null, form({ ...PLACE, validFrom: '2026-06-01', validTo: '2025-12-31' }))
+    expect(result.ok).toBe(false)
+    expect(stub.calls).toHaveLength(0)
   })
 
   it('refuses a point no map could produce', async () => {
@@ -88,9 +129,9 @@ describe('saveMerchantLocation', () => {
 
   it('stores an empty address as none', async () => {
     household()
-    stub.queue('merchant_locations', { data: [{ id: 'l1' }] })
+    stub.queue('merchant_locations', { data: [] }, { data: [{ id: 'l1' }] })
     await saveMerchantLocation(null, form({ ...PLACE, address: '  ', source: 'manual' }))
-    expect((stub.callsOn('merchant_locations')[0].payload as { address: unknown }).address).toBeNull()
+    expect((stub.callsOn('merchant_locations')[1].payload as { address: unknown }).address).toBeNull()
   })
 
   it('asks a signed-out visitor to sign in again', async () => {
@@ -102,7 +143,7 @@ describe('saveMerchantLocation', () => {
 
   it('keeps the database message on the server', async () => {
     household()
-    stub.queue('merchant_locations', { error: { message: 'violates check constraint "merchant_locations_bounds"' } })
+    stub.queue('merchant_locations', { data: [] }, { error: { message: 'violates check constraint "merchant_locations_bounds"' } })
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const result = await saveMerchantLocation(null, form(PLACE))
     expect(result.ok).toBe(false)

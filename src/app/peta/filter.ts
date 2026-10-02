@@ -21,6 +21,8 @@ export interface MapView {
   mode: PlaceMode
   /** A merchant to start placing, from a "Pindahkan" link. */
   placing: string | null
+  /** The stored point that link moves, when the merchant has more than one. */
+  point: string | null
 }
 
 function first(value: string | string[] | undefined): string {
@@ -43,6 +45,7 @@ export function readView(params: Params): MapView {
     filter: { categories: category ? [category] : undefined, from, to, includeBills: first(params.tagihan) === 'ya' },
     mode: MODES.find((mode) => mode.param && mode.param === first(params.mode))?.value ?? 'total',
     placing: placing.length >= 3 ? placing : null,
+    point: /^[0-9a-f-]{36}$/.test(first(params.titik)) ? first(params.titik) : null,
   }
 }
 
@@ -57,8 +60,9 @@ export function viewHref(params: Params, change: Record<string, string>): string
   return text ? `/peta?${text}` : '/peta'
 }
 
-/** This page with the filters kept and one merchant's placing panel open. */
-export function placingHref(params: Params, merchantKey: string): string {
+/** This page with the filters kept and one merchant's placing panel open, on one point if given. */
+export function placingHref(params: Params, merchantKey: string, pointId?: string | null): string {
   const base = viewHref(params, {})
-  return `${base}${base.includes('?') ? '&' : '?'}taruh=${encodeURIComponent(merchantKey)}#atur`
+  const point = pointId ? `&titik=${encodeURIComponent(pointId)}` : ''
+  return `${base}${base.includes('?') ? '&' : '?'}taruh=${encodeURIComponent(merchantKey)}${point}#atur`
 }

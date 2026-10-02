@@ -75,7 +75,10 @@ Online orders, transfers and cashier software that hides the outlet's name are
 counted honestly as having no place rather than pinned wherever the payment
 company is registered. They get their own answer beside the map instead: who
 was paid online and in which country that company bills from, so the share of
-money leaving the country is a number rather than a guess. The search runs on
+money leaving the country is a number rather than a guess. A merchant can be
+in different places over time: electricity tokens bought for one house and
+later for another become two dated points, since the statement never names
+the meter. The search runs on
 the server and sends only the merchant's name; the tiles come from OpenFreeMap.
 
 ## Correctness

@@ -22,6 +22,10 @@ export interface Pending {
 
 interface Props {
   merchantKey: string
+  /** The stored point being moved; absent when placing a merchant afresh. */
+  locationId: string | null
+  validFrom: string | null
+  validTo: string | null
   /** What the statement calls it, for the heading and the search box. */
   query: string
   pending: Pending | null
@@ -32,7 +36,18 @@ interface Props {
   onDone: (saved: boolean) => void
 }
 
-export function PlacingPanel({ merchantKey, query, pending, label, onLabel, onChoose, onDone }: Props) {
+export function PlacingPanel({
+  merchantKey,
+  locationId,
+  validFrom,
+  validTo,
+  query,
+  pending,
+  label,
+  onLabel,
+  onChoose,
+  onDone,
+}: Props) {
   const heading = useRef<HTMLHeadingElement>(null)
 
   useEffect(() => {
@@ -62,7 +77,11 @@ export function PlacingPanel({ merchantKey, query, pending, label, onLabel, onCh
       <SearchPanel key={merchantKey} query={query} onChoose={onChoose} />
 
       <SaveForm
+        key={locationId ?? merchantKey}
         merchantKey={merchantKey}
+        locationId={locationId}
+        validFrom={validFrom}
+        validTo={validTo}
         pending={pending}
         label={label}
         onLabel={onLabel}
@@ -136,6 +155,9 @@ function SearchPanel({ query, onChoose }: { query: string; onChoose: (candidate:
 
 interface SaveProps {
   merchantKey: string
+  locationId: string | null
+  validFrom: string | null
+  validTo: string | null
   pending: Pending | null
   label: string
   onLabel: (label: string) => void
@@ -143,7 +165,7 @@ interface SaveProps {
   onCancel: () => void
 }
 
-function SaveForm({ merchantKey, pending, label, onLabel, onSaved, onCancel }: SaveProps) {
+function SaveForm({ merchantKey, locationId, validFrom, validTo, pending, label, onLabel, onSaved, onCancel }: SaveProps) {
   const [result, action, saving] = useActionState<ActionResult | null, FormData>(saveMerchantLocation, null)
   useActionToast(result, saving)
 
@@ -158,6 +180,7 @@ function SaveForm({ merchantKey, pending, label, onLabel, onSaved, onCancel }: S
       <input type="hidden" name="lng" value={pending ? pending.lng.toFixed(7) : ''} />
       <input type="hidden" name="address" value={pending?.address ?? ''} />
       <input type="hidden" name="source" value={pending?.source ?? 'manual'} />
+      {locationId ? <input type="hidden" name="id" value={locationId} /> : null}
 
       <div>
         <label htmlFor="nama-tempat" className="block text-subhead font-medium text-ink">
@@ -173,6 +196,31 @@ function SaveForm({ merchantKey, pending, label, onLabel, onSaved, onCancel }: S
           className={`${CONTROL} mt-1`}
         />
       </div>
+
+      {/*
+        For a merchant whose place changed over time, such as electricity
+        tokens for one house and later another. Left empty, the point holds
+        for every date.
+      */}
+      <details open={Boolean(validFrom || validTo)} className="rounded-sm bg-fill-quaternary px-3">
+        <summary className="flex min-h-11 cursor-pointer items-center text-subhead text-ink">
+          Hanya untuk periode tertentu
+        </summary>
+        <div className="grid grid-cols-1 gap-3 pb-3 sm:grid-cols-2">
+          <label>
+            <span className="block text-footnote text-ink-muted">Berlaku dari</span>
+            <input type="date" name="validFrom" defaultValue={validFrom ?? ''} className={CONTROL} />
+          </label>
+          <label>
+            <span className="block text-footnote text-ink-muted">Sampai</span>
+            <input type="date" name="validTo" defaultValue={validTo ?? ''} className={CONTROL} />
+          </label>
+        </div>
+        <p className="pb-3 text-footnote text-ink-muted">
+          Contoh: token listrik untuk rumah lama sampai Des 2025, lalu kos baru sejak Jun 2026. Transaksi di luar
+          periode mana pun kembali ke antrean.
+        </p>
+      </details>
 
       <p className="text-footnote text-ink-muted" aria-live="polite">
         {pending

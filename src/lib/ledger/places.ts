@@ -39,6 +39,13 @@ export interface PlaceLocation {
   /** Null when the household said this merchant has no place. */
   lat: number | null
   lng: number | null
+  /**
+   * The Jakarta days this point is right for, `YYYY-MM-DD`, inclusive; null or
+   * absent at either end means open. One merchant can have several points
+   * over time, never two for the same day.
+   */
+  validFrom?: string | null
+  validTo?: string | null
 }
 
 export interface PlacedLocation extends PlaceLocation {
@@ -58,6 +65,8 @@ export interface PlaceVisit {
 }
 
 export interface PlaceSummary extends PlacedLocation {
+  /** One merchant can be several points, so the point has its own name. */
+  pointId: string
   total: bigint
   visits: number
   average: bigint
@@ -114,6 +123,13 @@ export interface PlaceFilter {
  */
 const CASHIER_SOFTWARE = ['pawoon', 'aku mpos', 'youtap', 'esb restaurant', 'moka pos', 'majoo', 'idm qris livin']
 
+/**
+ * Bills paid online for one address: an electricity meter, a home internet
+ * line. The payment has no counter, but the service is for a place, so these
+ * may be placed too; a house move is a new dated point (see `locate`).
+ */
+const HOME_UTILITIES = ['pln', 'biznet', 'media indonusa', 'telkom', 'indihome']
+
 /** What `catat` books a corrected wallet balance under. */
 const ADJUSTMENT = 'Penyesuaian Spending'
 
@@ -143,7 +159,10 @@ export function placeKey(entry: PlaceEntry): string | null {
   if (entry.isPassThrough || entry.categoryName === ADJUSTMENT) return null
 
   let key: string | null = null
-  if ((entry.rawDescription ?? '').trimStart().startsWith('Pembayaran QR')) {
+  const via = (entry.rawDescription ?? '').trimStart().split('\n')[0].toLowerCase()
+  if (via.startsWith('pembayaran qr')) {
+    key = normalise(merchantName(entry.description))
+  } else if (via.startsWith('pembayaran ') && HOME_UTILITIES.some((name) => via.includes(name))) {
     key = normalise(merchantName(entry.description))
   } else if (entry.source === 'manual') {
     key = suggestPattern(entry)?.pattern ?? null
@@ -153,7 +172,33 @@ export function placeKey(entry: PlaceEntry): string | null {
 }
 
 function monthOf(date: Date): string {
-  return new Date(date.getTime() + JAKARTA_MS).toISOString().slice(0, 7)
+  return dayOf(date).slice(0, 7)
+}
+
+function dayOf(date: Date): string {
+  return new Date(date.getTime() + JAKARTA_MS).toISOString().slice(0, 10)
+}
+
+export function covers(location: Pick<PlaceLocation, 'validFrom' | 'validTo'>, day: string): boolean {
+  return (!location.validFrom || location.validFrom <= day) && (!location.validTo || day <= location.validTo)
+}
+
+/**
+ * The point an entry belongs to: the one whose days include it, a dated point
+ * before an open-ended one, since a dated point is the more specific claim.
+ */
+export function locate(
+  locations: readonly PlaceLocation[] | undefined,
+  occurredAt: Date,
+): PlaceLocation | null {
+  if (!locations) return null
+  const day = dayOf(occurredAt)
+  const matching = locations.filter((location) => covers(location, day))
+  return matching.find((location) => location.validFrom || location.validTo) ?? matching[0] ?? null
+}
+
+function pointIdOf(location: PlaceLocation): string {
+  return location.id ?? `${location.merchantKey}|${location.validFrom ?? ''}`
 }
 
 export function dayPartOf(date: Date): DayPart {
@@ -183,9 +228,11 @@ export function summarisePlaces(
   locations: readonly PlaceLocation[],
   filter: PlaceFilter = {},
 ): PlacesReport {
-  const located = new Map(locations.map((location) => [location.merchantKey, location]))
-  const placeless = new Set(locations.filter((l) => l.lat === null || l.lng === null).map((l) => l.merchantKey))
-  const byPlace = new Map<string, PlaceEntry[]>()
+  const byKey = new Map<string, PlaceLocation[]>()
+  for (const location of locations) {
+    byKey.set(location.merchantKey, [...(byKey.get(location.merchantKey) ?? []), location])
+  }
+  const byPlace = new Map<string, { location: PlacedLocation; list: PlaceEntry[] }>()
   const byUnplaced = new Map<string, PlaceEntry[]>()
   let spent = 0n
   let unplaceable = 0n
@@ -194,16 +241,23 @@ export function summarisePlaces(
     if (!inFilter(entry, filter)) continue
     spent += entry.amount
     const key = placeKey(entry)
-    if (!key || placeless.has(key)) {
+    const location = key ? locate(byKey.get(key), entry.occurredAt) : null
+    if (!key || (location && (location.lat === null || location.lng === null))) {
       unplaceable += entry.amount
       continue
     }
-    const target = located.has(key) ? byPlace : byUnplaced
-    target.set(key, [...(target.get(key) ?? []), entry])
+    if (!location) {
+      // Waiting, including an entry outside every period its merchant has.
+      byUnplaced.set(key, [...(byUnplaced.get(key) ?? []), entry])
+      continue
+    }
+    const id = pointIdOf(location)
+    const point = byPlace.get(id) ?? { location: location as PlacedLocation, list: [] }
+    point.list.push(entry)
+    byPlace.set(id, point)
   }
 
-  const places: PlaceSummary[] = [...byPlace].map(([key, list]) => {
-    const location = located.get(key) as PlacedLocation
+  const places: PlaceSummary[] = [...byPlace].map(([pointId, { location, list }]) => {
     const total = list.reduce((sum, entry) => sum + entry.amount, 0n)
     const byCategory = new Map<string, bigint>()
     const dayParts: Record<DayPart, number> = { pagi: 0, siang: 0, sore: 0, malam: 0 }
@@ -216,6 +270,7 @@ export function summarisePlaces(
     const sorted = [...list].sort((a, b) => b.occurredAt.getTime() - a.occurredAt.getTime())
     return {
       ...location,
+      pointId,
       total,
       visits: list.length,
       average: total / BigInt(list.length),

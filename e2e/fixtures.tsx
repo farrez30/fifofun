@@ -1453,7 +1453,11 @@ const TIDY_CATEGORIES = [
 const PLACES: PlacePoint[] = [
   {
     id: '00000000-0000-4000-8000-0000000000a1',
+    pointId: '00000000-0000-4000-8000-0000000000a1',
     key: 'gandaria city xxidel 4416',
+    period: null,
+    validFrom: null,
+    validTo: null,
     label: 'XXI Gandaria City',
     address: 'Gandaria City, Jalan Sultan Iskandar Muda, Kebayoran Lama, Jakarta Selatan',
     lat: -6.2443,
@@ -1469,7 +1473,11 @@ const PLACES: PlacePoint[] = [
   },
   {
     id: '00000000-0000-4000-8000-0000000000a2',
+    pointId: '00000000-0000-4000-8000-0000000000a2',
     key: 'boga rasaa',
+    period: 'sejak Mar 2026',
+    validFrom: '2026-03-01',
+    validTo: null,
     label: 'Boga Rasaa',
     address: null,
     lat: -6.2297,
@@ -1529,7 +1537,7 @@ export const FIXTURES = {
     </div>
   ),
   'catat-duplicates': <DuplicatesPanel pairs={DUPLICATE_PAIRS} />,
-  'peta-tempat': <PlaceTable points={PLACES} moveHref={(key) => `/peta?taruh=${encodeURIComponent(key)}#atur`} />,
+  'peta-tempat': <PlaceTable points={PLACES} moveHref={(point) => `/peta?taruh=${encodeURIComponent(point.key)}#atur`} />,
   'peta-tempat-kosong': <PlaceTable points={[]} moveHref={() => '/peta'} />,
   'peta-online': (
     <OnlineList
@@ -1568,6 +1576,9 @@ ${description}`,
   'peta-menaruh': (
     <PlacingPanel
       merchantKey="laundry kak"
+      locationId={null}
+      validFrom={null}
+      validTo={null}
       query="LAUNDRY KAK"
       pending={{ lat: -6.2061, lng: 106.7359, address: null, source: 'manual' }}
       label="Laundry Kak"

@@ -520,6 +520,9 @@ export interface MerchantLocationRow {
   lat: number | null
   lng: number | null
   source: 'manual' | 'osm' | 'riset'
+  /** `YYYY-MM-DD`, inclusive; null for open. */
+  validFrom: string | null
+  validTo: string | null
 }
 
 export async function getMerchantLocations(householdId: string): Promise<MerchantLocationRow[]> {
@@ -530,7 +533,7 @@ export async function getMerchantLocations(householdId: string): Promise<Merchan
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('merchant_locations')
-    .select('id, merchant_key, label, address, lat, lng, source')
+    .select('id, merchant_key, label, address, lat, lng, source, valid_from, valid_to')
     .eq('household_id', householdId)
 
   if (error || !data) return []
@@ -543,6 +546,8 @@ export async function getMerchantLocations(householdId: string): Promise<Merchan
     lat: row.lat === null ? null : Number(row.lat),
     lng: row.lng === null ? null : Number(row.lng),
     source: row.source as MerchantLocationRow['source'],
+    validFrom: (row.valid_from as string | null) ?? null,
+    validTo: (row.valid_to as string | null) ?? null,
   }))
 }
 

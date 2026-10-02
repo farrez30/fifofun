@@ -7,6 +7,7 @@ describe('readView', () => {
       filter: { categories: undefined, from: undefined, to: undefined, includeBills: false },
       mode: 'total',
       placing: null,
+      point: null,
     })
   })
 
@@ -59,5 +60,9 @@ describe('placingHref', () => {
   it('opens one merchant for placing and keeps the filters', () => {
     expect(placingHref({ kategori: 'Dating' }, 'a&w la riviera')).toBe('/peta?kategori=Dating&taruh=a%26w%20la%20riviera#atur')
     expect(placingHref({}, 'boga rasaa')).toBe('/peta?taruh=boga%20rasaa#atur')
+    const id = '00000000-0000-4000-8000-0000000000a1'
+    expect(placingHref({}, 'pln iconpay', id)).toBe(`/peta?taruh=pln%20iconpay&titik=${id}#atur`)
+    expect(readView({ taruh: 'pln iconpay', titik: id }).point).toBe(id)
+    expect(readView({ titik: "1' or 1=1" }).point).toBeNull()
   })
 })

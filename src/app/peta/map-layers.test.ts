@@ -16,9 +16,11 @@ describe('withAlpha', () => {
 
 describe('toFeatures', () => {
   it('puts longitude first, as GeoJSON wants', () => {
-    const [feature] = toFeatures([{ key: 'boga rasaa', lat: -6.23, lng: 106.85, weight: 0.5 } as never]).features
+    const point = { pointId: 'l1', key: 'boga rasaa', lat: -6.23, lng: 106.85, weight: 0.5 }
+    const [feature] = toFeatures([point as never]).features
     expect(feature.geometry.coordinates).toEqual([106.85, -6.23])
-    expect(feature.properties).toEqual({ key: 'boga rasaa', weight: 0.5 })
+    // The point, not the merchant: a merchant that moved house is two dots.
+    expect(feature.properties).toEqual({ key: 'l1', weight: 0.5 })
   })
 })
 

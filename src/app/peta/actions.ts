@@ -18,6 +18,13 @@ import { placesTag } from '@/lib/queries/tags'
 const merchantKey = z.string().trim().toLowerCase().min(3).max(120)
 const label = z.string().trim().min(1, 'Namanya belum diisi.').max(120, 'Namanya maksimal 120 huruf.')
 
+/** A date input's value, or nothing. */
+const day = z
+  .string()
+  .trim()
+  .regex(/^(\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01]))?$/, 'Tanggalnya belum terbaca.')
+  .transform((value) => value || null)
+
 /** A coordinate as a form submits it: digits with a dot, bounded. */
 function degrees(limit: number, name: string) {
   return z
@@ -39,7 +46,19 @@ const placeSchema = z.object({
   lat: degrees(90, 'Lintang'),
   lng: degrees(180, 'Bujur'),
   source: z.enum(['manual', 'osm']),
+  /** The stored point being moved; empty when placing a merchant afresh. */
+  id: z.uuid().or(z.literal('')).transform((value) => value || null),
+  validFrom: day,
+  validTo: day,
+}).refine((values) => !values.validFrom || !values.validTo || values.validFrom <= values.validTo, {
+  message: 'Tanggal mulai harus sebelum tanggal selesai.',
+  path: ['validTo'],
 })
+
+/** Two periods share a day; null ends are open. */
+function overlaps(a: { from: string | null; to: string | null }, b: { from: string | null; to: string | null }) {
+  return (!a.from || !b.to || a.from <= b.to) && (!b.from || !a.to || b.from <= a.to)
+}
 
 const placelessSchema = z.object({ merchantKey, label })
 
@@ -56,28 +75,64 @@ export async function saveMerchantLocation(
   _previous: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
-  const parsed = placeSchema.safeParse(read(formData, ['merchantKey', 'label', 'address', 'lat', 'lng', 'source']))
+  const parsed = placeSchema.safeParse(
+    read(formData, ['merchantKey', 'label', 'address', 'lat', 'lng', 'source', 'id', 'validFrom', 'validTo']),
+  )
   if (!parsed.success) return fail('Lokasinya belum bisa disimpan.', parsed.error.issues[0]?.message)
 
   const ctx = await context()
   if (!ctx) return fail(SESSION_EXPIRED)
 
   const values = parsed.data
-  const { error } = await ctx.supabase
+  /*
+    The other points this merchant already has. A date can belong to one
+    point only, which a constraint could say too, but only with an extension
+    and a message in Latin; here it is a sentence.
+  */
+  const { data: others, error: readError } = await ctx.supabase
     .from('merchant_locations')
-    .upsert(
-      {
-        household_id: ctx.householdId,
-        merchant_key: values.merchantKey,
-        label: values.label,
-        address: values.address,
-        lat: values.lat,
-        lng: values.lng,
-        source: values.source,
-      },
-      { onConflict: 'household_id,merchant_key' },
+    .select('id, label, valid_from, valid_to')
+    .eq('household_id', ctx.householdId)
+    .eq('merchant_key', values.merchantKey)
+  if (readError) return writeFailed('peta', 'Lokasinya gagal disimpan.', readError)
+
+  const period = { from: values.validFrom, to: values.validTo }
+  const clash = (others ?? []).find(
+    (row) =>
+      row.id !== values.id &&
+      // An open-ended point is the one being replaced when no id was given.
+      !(values.id === null && !values.validFrom && !row.valid_from) &&
+      overlaps(period, { from: row.valid_from as string | null, to: row.valid_to as string | null }),
+  )
+  if (clash) {
+    return fail(
+      'Periodenya bertabrakan dengan titik lain untuk pedagang ini.',
+      `${clash.label as string} sudah berlaku untuk sebagian tanggal itu. Ubah tanggalnya, atau pindahkan titik itu.`,
     )
-    .select('id')
+  }
+
+  const row = {
+    household_id: ctx.householdId,
+    merchant_key: values.merchantKey,
+    label: values.label,
+    address: values.address,
+    lat: values.lat,
+    lng: values.lng,
+    source: values.source,
+    valid_from: values.validFrom,
+    valid_to: values.validTo,
+  }
+  const { error } = values.id
+    ? await ctx.supabase
+        .from('merchant_locations')
+        .update(row)
+        .eq('id', values.id)
+        .eq('household_id', ctx.householdId)
+        .select('id')
+    : await ctx.supabase
+        .from('merchant_locations')
+        .upsert(row, { onConflict: 'household_id,merchant_key,valid_from' })
+        .select('id')
   if (error) return writeFailed('peta', 'Lokasinya gagal disimpan.', error)
 
   revalidatePlaces(ctx.householdId)
@@ -106,7 +161,7 @@ export async function markPlaceless(
         lng: null,
         source: 'manual',
       },
-      { onConflict: 'household_id,merchant_key' },
+      { onConflict: 'household_id,merchant_key,valid_from' },
     )
     .select('id')
   if (error) return writeFailed('peta', 'Tandanya gagal disimpan.', error)

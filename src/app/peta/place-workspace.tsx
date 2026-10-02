@@ -21,6 +21,8 @@ interface Props {
   waiting: WaitingMerchant[]
   /** From a "Pindahkan" link: start with this merchant being placed. */
   initial: string | null
+  /** And the stored point that link moves, if the merchant has several. */
+  initialPoint: string | null
   /** Whole percent of the chosen spending already on the map, for the queue. */
   mapped: number
   /** The map's heading, reading modes and legend: drawn by the server, placed under the queue. */
@@ -32,25 +34,28 @@ interface Props {
 interface Placing {
   key: string
   query: string
+  /** The stored point being moved, with its period. */
+  point: PlacePoint | null
 }
 
-export function PlaceWorkspace({ points, waiting, initial, mapped, header, children }: Props) {
-  const find = (key: string): Placing | null => {
-    const label =
-      points.find((point) => point.key === key)?.label ?? waiting.find((merchant) => merchant.key === key)?.label
-    return label ? { key, query: label } : null
+export function PlaceWorkspace({ points, waiting, initial, initialPoint, mapped, header, children }: Props) {
+  const find = (key: string, pointId?: string | null): Placing | null => {
+    const point = pointId ? (points.find((candidate) => candidate.pointId === pointId || candidate.id === pointId) ?? null) : null
+    // From the waiting list, a merchant that already has points is placed afresh, for the dates it is missing.
+    const label = point?.label ?? waiting.find((merchant) => merchant.key === key)?.label ?? points.find((p) => p.key === key)?.label
+    return label ? { key, query: label, point } : null
   }
-  const nameFor = (next: Placing) => points.find((point) => point.key === next.key)?.label ?? tidy(next.query)
+  const nameFor = (next: Placing) => next.point?.label ?? tidy(next.query)
 
-  const [placing, setPlacing] = useState<Placing | null>(() => (initial ? find(initial) : null))
+  const [placing, setPlacing] = useState<Placing | null>(() => (initial ? find(initial, initialPoint) : null))
   const [pending, setPending] = useState<Pending | null>(null)
   const [label, setLabel] = useState(() => (placing ? nameFor(placing) : ''))
   // Skipped for this visit only: a skip is "not now", not a decision worth storing.
   const [skipped, setSkipped] = useState<ReadonlySet<string>>(() => new Set())
   const next = waiting.find((merchant) => !skipped.has(merchant.key)) ?? null
 
-  const start = (key: string) => {
-    const next = find(key)
+  const start = (key: string, pointId?: string | null) => {
+    const next = find(key, pointId)
     if (!next) return
     setPlacing(next)
     setPending(null)
@@ -102,13 +107,19 @@ export function PlaceWorkspace({ points, waiting, initial, mapped, header, child
           placing={placing !== null}
           draft={pending}
           onPick={(draft) => setPending({ ...draft, address: null, source: 'manual' })}
-          onMove={start}
+          onMove={(pointId) => {
+            const point = points.find((candidate) => candidate.pointId === pointId)
+            if (point) start(point.key, pointId)
+          }}
         />
 
         {placing ? (
           <div className="order-first lg:sticky lg:top-4 lg:order-none">
             <PlacingPanel
               merchantKey={placing.key}
+              locationId={placing.point?.id ?? null}
+              validFrom={placing.point?.validFrom ?? null}
+              validTo={placing.point?.validTo ?? null}
               query={placing.query}
               pending={pending}
               label={label}

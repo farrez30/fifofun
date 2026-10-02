@@ -29,7 +29,8 @@ interface Props {
   placing: boolean
   draft: Draft | null
   onPick: (draft: Draft) => void
-  onMove: (key: string) => void
+  /** Called with the point's id: a merchant that moved house has several. */
+  onMove: (pointId: string) => void
 }
 
 type Theme = 'light' | 'dark'
@@ -59,7 +60,7 @@ function themeColors(): MapColors {
 }
 
 /** The popup, built from nodes rather than HTML so a merchant name can never be markup. */
-function popupContent(point: PlacePoint, onMove: (key: string) => void): HTMLElement {
+function popupContent(point: PlacePoint, onMove: (pointId: string) => void): HTMLElement {
   const root = document.createElement('div')
   root.className = 'place-popup'
   const add = (tag: string, text: string, className: string, parent: HTMLElement = root) => {
@@ -104,7 +105,7 @@ function popupContent(point: PlacePoint, onMove: (key: string) => void): HTMLEle
 
   const move = add('button', 'Pindahkan titik', 'mt-2 inline-flex min-h-11 items-center text-subhead font-medium text-accent')
   move.setAttribute('type', 'button')
-  move.addEventListener('click', () => onMove(point.key))
+  move.addEventListener('click', () => onMove(point.pointId))
   return root
 }
 
@@ -178,7 +179,7 @@ export function PlaceMap({ points, placing, draft, onPick, onMove }: Props) {
           return
         }
         const [hit] = instance.queryRenderedFeatures(event.point, { layers: [DOTS] })
-        const point = latest.current.points.find((candidate) => candidate.key === hit?.properties?.key)
+        const point = latest.current.points.find((candidate) => candidate.pointId === hit?.properties?.key)
         if (!point) return
         popup.current?.remove()
         popup.current = new maplibre.Popup({ maxWidth: '280px', focusAfterOpen: true })

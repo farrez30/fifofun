@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  covers,
   dayPartOf,
   merchantName,
   placeKey,
@@ -81,6 +82,17 @@ describe('placeKey', () => {
       source: 'manual',
     })
     expect(placeKey(manual)).toBe('warung bu tini')
+  })
+
+  it('lets a home utility paid online have a place, but not an ordinary biller', () => {
+    const token = qr('PLN Iconpay', 101_750n, '2026-09-29T05:00:00Z', {
+      rawDescription: `Pembayaran PLN Iconpay${String.fromCharCode(10)}8875510024695093`,
+    })
+    const pulsa = qr('IM3 Ooredoo', 50_000n, '2026-09-29T05:00:00Z', {
+      rawDescription: `Pembayaran IM3 Ooredoo${String.fromCharCode(10)}0812`,
+    })
+    expect(placeKey(token)).toBe('pln iconpay')
+    expect(placeKey(pulsa)).toBeNull()
   })
 
   it('has nothing for money that only moved or was never seen leaving', () => {
@@ -213,3 +225,68 @@ describe('weightOf', () => {
     expect([weightOf(xxi, 'average', places), weightOf(boga, 'average', places)]).toEqual([1, 0.2])
   })
 })
+
+describe('points over time', () => {
+  // PLN Iconpay: a house in Jatiasih until the end of 2025, a boarding house
+  // in Joglo from June 2026, and nothing bought through it in between.
+  const pln = (at: string, amount: bigint) =>
+    qr('PLN Iconpay', amount, at, {
+      // The real statement text: a biller payment with a reference that changes
+      // every time, never the meter number.
+      rawDescription: `Pembayaran PLN Iconpay${String.fromCharCode(10)}8875510024695093`,
+      cashflow: 'bills',
+      categoryName: 'Listrik',
+    })
+  const house: PlaceLocation = {
+    id: 'house',
+    merchantKey: 'pln iconpay',
+    label: 'Rumah Jatiasih',
+    address: null,
+    lat: -6.289,
+    lng: 106.943,
+    validTo: '2025-12-31',
+  }
+  const kost: PlaceLocation = {
+    id: 'kost',
+    merchantKey: 'pln iconpay',
+    label: 'Tata Kost',
+    address: null,
+    lat: -6.215,
+    lng: 106.737,
+    validFrom: '2026-06-01',
+  }
+  const entries = [
+    pln('2025-11-12T17:30:00Z', 50_000_00n),
+    pln('2026-03-01T05:00:00Z', 20_000_00n),
+    pln('2026-08-10T05:00:00Z', 10_000_00n),
+  ]
+
+  it('puts each purchase at the place it was for', () => {
+    const report = summarisePlaces(entries, [house, kost], { includeBills: true })
+    expect(report.places.map((place) => [place.pointId, place.label, place.total])).toEqual([
+      ['house', 'Rumah Jatiasih', 50_000_00n],
+      ['kost', 'Tata Kost', 10_000_00n],
+    ])
+  })
+
+  it('leaves a purchase outside every period waiting, not on the wrong house', () => {
+    const report = summarisePlaces(entries, [house, kost], { includeBills: true })
+    expect(report.unplaced).toEqual([expect.objectContaining({ merchantKey: 'pln iconpay', total: 20_000_00n })])
+  })
+
+  it('reads the day in Jakarta: 31 Dec 23.30 WIB still belongs to the house', () => {
+    expect(covers(house, '2025-12-31')).toBe(true)
+    const lateNight = pln('2025-12-31T16:30:00Z', 1_000_00n)
+    expect(summarisePlaces([lateNight], [house, kost], { includeBills: true }).places[0].pointId).toBe('house')
+  })
+
+  it('prefers a dated point over an open-ended one on its days', () => {
+    const always: PlaceLocation = { id: 'always', merchantKey: 'pln iconpay', label: 'Di mana saja', address: null, lat: -6, lng: 106 }
+    const report = summarisePlaces(entries, [always, kost], { includeBills: true })
+    expect(report.places.map((place) => [place.pointId, place.visits])).toEqual([
+      ['always', 2],
+      ['kost', 1],
+    ])
+  })
+})
+

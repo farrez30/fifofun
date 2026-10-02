@@ -29,7 +29,11 @@ describe('toPoints', () => {
     expect(toPoints(report, 'total')).toEqual([
       {
         id: 'l1',
+        pointId: 'l1',
         key: 'boga rasaa',
+        period: null,
+        validFrom: null,
+        validTo: null,
         label: 'Boga Rasaa',
         address: 'Tebet',
         lat: -6.23,

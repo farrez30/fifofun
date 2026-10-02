@@ -193,6 +193,7 @@ async function MapView({ params }: { params: Params }) {
         points={points}
         waiting={waiting}
         initial={view.placing}
+        initialPoint={view.point}
         mapped={share(report.placed, report.spent)}
         header={
           <div className="space-y-3">
@@ -226,7 +227,7 @@ async function MapView({ params }: { params: Params }) {
           </div>
         }
       >
-        <PlaceTable points={points} moveHref={(key) => placingHref(params, key)} />
+        <PlaceTable points={points} moveHref={(point) => placingHref(params, point.key, point.id)} />
       </PlaceWorkspace>
 
       <OnlineList report={online} />

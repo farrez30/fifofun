@@ -42,7 +42,7 @@ export function toFeatures(points: readonly PlacePoint[]) {
     features: points.map((point) => ({
       type: 'Feature' as const,
       geometry: { type: 'Point' as const, coordinates: [point.lng, point.lat] },
-      properties: { key: point.key, weight: point.weight },
+      properties: { key: point.pointId, weight: point.weight },
     })),
   }
 }

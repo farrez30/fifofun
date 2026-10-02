@@ -13,7 +13,7 @@ import type { PlacePoint } from './view-model'
 interface Props {
   points: PlacePoint[]
   /** The address of this page with a merchant to place, keeping the filters. */
-  moveHref: (key: string) => string
+  moveHref: (point: PlacePoint) => string
 }
 
 const LINK = 'inline-flex min-h-11 items-center px-2 text-subhead font-medium text-accent'
@@ -34,9 +34,12 @@ export function PlaceTable({ points, moveHref }: Props) {
         <>
           <ul aria-label="Tempat" className="rows-inset squircle rounded-md bg-surface shadow-xs @5xl:hidden">
             {points.map((point) => (
-              <li key={point.key} className="px-4 py-3">
+              <li key={point.pointId} className="px-4 py-3">
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className="min-w-0 flex-1 truncate text-subhead text-ink">{point.label}</span>
+                  <span className="min-w-0 flex-1 truncate text-subhead text-ink">
+                    {point.label}
+                    {point.period ? <span className="ml-1.5 text-footnote text-ink-muted">({point.period})</span> : null}
+                  </span>
                   <span className="tnum shrink-0 font-mono text-subhead text-ink">{point.total}</span>
                 </div>
                 <p className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-footnote text-ink-muted">
@@ -60,7 +63,7 @@ export function PlaceTable({ points, moveHref }: Props) {
                 </p>
                 {point.address ? <p className="mt-0.5 truncate text-footnote text-ink-faint">{point.address}</p> : null}
                 <div className="mt-1 -ml-2 flex items-center gap-1">
-                  <Link href={moveHref(point.key)} className={LINK} aria-label={`Pindahkan titik ${point.label}`}>
+                  <Link href={moveHref(point)} className={LINK} aria-label={`Pindahkan titik ${point.label}`}>
                     Pindahkan
                   </Link>
                   {point.id ? <ForgetButton id={point.id} label={point.label} /> : null}
@@ -86,9 +89,12 @@ export function PlaceTable({ points, moveHref }: Props) {
               </thead>
               <tbody>
                 {points.map((point) => (
-                  <tr key={point.key} className="border-b border-line last:border-0">
+                  <tr key={point.pointId} className="border-b border-line last:border-0">
                     <th scope="row" className="max-w-64 px-4 py-2.5 text-left font-normal">
-                      <span className="block truncate text-ink">{point.label}</span>
+                      <span className="block truncate text-ink">
+                        {point.label}
+                        {point.period ? <span className="ml-1.5 text-footnote text-ink-muted">({point.period})</span> : null}
+                      </span>
                       {point.address ? (
                         <span className="block truncate text-footnote text-ink-faint">{point.address}</span>
                       ) : null}
@@ -99,7 +105,7 @@ export function PlaceTable({ points, moveHref }: Props) {
                     <td className="whitespace-nowrap px-4 py-2.5 text-ink-muted">{point.topCategory ?? '–'}</td>
                     <td className="whitespace-nowrap px-2 py-1 text-right">
                       <span className="inline-flex items-center">
-                        <Link href={moveHref(point.key)} className={LINK} aria-label={`Pindahkan titik ${point.label}`}>
+                        <Link href={moveHref(point)} className={LINK} aria-label={`Pindahkan titik ${point.label}`}>
                           Pindahkan
                         </Link>
                         {point.id ? <ForgetButton id={point.id} label={point.label} /> : null}

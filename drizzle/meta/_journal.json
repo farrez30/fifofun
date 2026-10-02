@@ -92,6 +92,13 @@
       "when": 1790847251479,
       "tag": "0012_merchant_locations",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1790907243393,
+      "tag": "0013_location_periods",
+      "breakpoints": true
     }
   ]
 }

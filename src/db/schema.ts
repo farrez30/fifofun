@@ -3,6 +3,7 @@ import {
   type AnyPgColumn,
   bigint,
   boolean,
+  date,
   doublePrecision,
   index,
   integer,
@@ -12,6 +13,7 @@ import {
   smallint,
   text,
   timestamp,
+  unique,
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core'
@@ -405,10 +407,22 @@ export const merchantLocations = pgTable(
     lng: doublePrecision('lng'),
     /** `manual` (clicked on the map), `osm` (picked from a search) or `riset` (seeded). */
     source: text('source').notNull().default('manual'),
+    /**
+     * The days this point is right for, inclusive, in Jakarta. Both null means
+     * always. One merchant can be in two places over time: the same "PLN
+     * Iconpay" bought electricity for one house and later for another.
+     */
+    validFrom: date('valid_from'),
+    validTo: date('valid_to'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [uniqueIndex('merchant_locations_unique').on(table.householdId, table.merchantKey)],
+  // NULLS NOT DISTINCT, so a merchant still has one open-ended point at most.
+  (table) => [
+    unique('merchant_locations_unique')
+      .on(table.householdId, table.merchantKey, table.validFrom)
+      .nullsNotDistinct(),
+  ],
 )
 
 export const householdsRelations = relations(households, ({ many }) => ({
