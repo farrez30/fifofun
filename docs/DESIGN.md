@@ -268,7 +268,10 @@ baru, padahal mutasi tidak pernah menyebut nomor meternya. Setiap transaksi
 jatuh ke titik yang periodenya mencakup tanggalnya (hari Jakarta). Transaksi
 di luar periode mana pun kembali ke antrean, tidak ditaruh di rumah yang salah.
 Utilitas rumah yang dibayar online (PLN, Biznet, Media Indonusa,
-Telkom/IndiHome) boleh ditaruh, karena layanannya untuk satu alamat. Popup dirakit dari node, bukan HTML, jadi nama pedagang
+Telkom/IndiHome) boleh ditaruh, karena layanannya untuk satu alamat. QRIS
+pribadi ("Transfer QR", misalnya penyewa tenda atau warung yang memakai QR
+pemiliknya) juga boleh, dengan kunci nama pemilik dari baris kedua mutasi,
+karena deskripsinya hanya nama bank penerima. Popup dirakit dari node, bukan HTML, jadi nama pedagang
 tidak pernah menjadi markup. Kontrol di atas peta memakai permukaan opaque
 (§3) dan target 44px. MapLibre dimuat hanya di halaman ini. Worker-nya disajikan
 dari `public/vendor` (`scripts/vendor-maplibre.mjs`), sehingga CSP tetap

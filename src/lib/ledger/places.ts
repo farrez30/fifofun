@@ -7,7 +7,9 @@ import type { CashflowType, EntrySource } from './types'
  * A statement names the merchant and never the place, so a place here is a
  * merchant the household has located once, and every payment under that name
  * lands on the same point. Only payments made at a counter can have a place:
- * a QRIS scan or something typed in by hand. A Shopee order, a VA payment or
+ * a QRIS scan, a personal QRIS (a warung or a tent rental with its owner's
+ * QR, which the bank books as "Transfer QR"), or something typed in by hand.
+ * A Shopee order, a VA payment or
  * a transfer to a person happened nowhere in particular, and pretending
  * otherwise would put a pin wherever the payment company is registered.
  *
@@ -153,6 +155,16 @@ export function merchantName(description: string): string {
     .trim()
 }
 
+/**
+ * The name a counter goes by. On a personal QRIS the bank's description is the
+ * receiving bank ("Bank BCA"); the owner is the line after it.
+ */
+export function counterName(entry: Pick<PlaceEntry, 'description' | 'rawDescription'>): string {
+  const [via = '', owner = ''] = (entry.rawDescription ?? '').trim().split('\n')
+  if (via.toLowerCase().startsWith('transfer qr') && owner.trim()) return owner.trim()
+  return merchantName(entry.description)
+}
+
 /** The merchant key of a payment that happened somewhere, or null. */
 export function placeKey(entry: PlaceEntry): string | null {
   if (entry.cashflow !== 'spending' && entry.cashflow !== 'bills') return null
@@ -160,8 +172,8 @@ export function placeKey(entry: PlaceEntry): string | null {
 
   let key: string | null = null
   const via = (entry.rawDescription ?? '').trimStart().split('\n')[0].toLowerCase()
-  if (via.startsWith('pembayaran qr')) {
-    key = normalise(merchantName(entry.description))
+  if (via.startsWith('pembayaran qr') || via.startsWith('transfer qr')) {
+    key = normalise(counterName(entry))
   } else if (via.startsWith('pembayaran ') && HOME_UTILITIES.some((name) => via.includes(name))) {
     key = normalise(merchantName(entry.description))
   } else if (entry.source === 'manual') {
@@ -289,7 +301,7 @@ export function summarisePlaces(
 
   const unplaced: UnplacedMerchant[] = [...byUnplaced].map(([key, list]) => ({
     merchantKey: key,
-    label: merchantName(list[0].description),
+    label: counterName(list[0]),
     total: list.reduce((sum, entry) => sum + entry.amount, 0n),
     visits: list.length,
     last: new Date(Math.max(...list.map((entry) => entry.occurredAt.getTime()))),

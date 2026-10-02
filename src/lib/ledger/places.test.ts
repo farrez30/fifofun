@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  counterName,
   covers,
   dayPartOf,
   merchantName,
@@ -65,6 +66,16 @@ describe('placeKey', () => {
     })
     expect(placeKey(online)).toBeNull()
     expect(placeKey(transfer)).toBeNull()
+  })
+
+  it('keys a personal QRIS by its owner, not by the bank it lands in', () => {
+    const tent = qr('Bank BCA', 10_200_000n, '2026-07-04T12:38:00Z', {
+      rawDescription: 'Transfer QR ke Bank BCA\nNENENG SETIARA\nNo. Ref. 607046280483',
+    })
+    expect(placeKey(tent)).toBe('neneng setiara')
+    expect(counterName(tent)).toBe('NENENG SETIARA')
+    // Waiting under the owner's name too, so the search box gets something to search.
+    expect(summarisePlaces([tent], []).unplaced[0].label).toBe('NENENG SETIARA')
   })
 
   it('refuses cashier software on its own but not an outlet behind it', () => {
