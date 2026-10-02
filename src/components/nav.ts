@@ -7,6 +7,7 @@ import { ListChecks } from '@phosphor-icons/react/dist/ssr/ListChecks'
 import { MapTrifold } from '@phosphor-icons/react/dist/ssr/MapTrifold'
 import { NotePencil } from '@phosphor-icons/react/dist/ssr/NotePencil'
 import { Receipt } from '@phosphor-icons/react/dist/ssr/Receipt'
+import { Table } from '@phosphor-icons/react/dist/ssr/Table'
 import { Target } from '@phosphor-icons/react/dist/ssr/Target'
 import { UsersThree } from '@phosphor-icons/react/dist/ssr/UsersThree'
 import { Wallet } from '@phosphor-icons/react/dist/ssr/Wallet'
@@ -38,6 +39,7 @@ export interface Destination {
 export const NAV = [
   { href: '/', label: 'Ringkasan', glyph: ChartPieSlice },
   { href: '/laporan', label: 'Laporan', glyph: Receipt },
+  { href: '/ringkasan', label: 'Ringkasan 3 Bulan', glyph: Table },
   { href: '/peta', label: 'Peta', glyph: MapTrifold },
   { href: '/dana', label: 'Dana', glyph: Coins },
   { href: '/anggaran', label: 'Anggaran', glyph: Wallet },

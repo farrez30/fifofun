@@ -3,11 +3,11 @@ import { readFileSync } from 'node:fs'
 import { FIXTURE_DIR } from './render'
 
 /*
-  Every destination the sidebar draws: NAV (9, with Peta) plus MORE (2).
+  Every destination the sidebar draws: NAV (10, with Peta and Ringkasan 3 Bulan) plus MORE (2).
   Written out because nav.ts imports icons this runner cannot load; change it
   with nav.ts.
 */
-const DESTINATIONS = 11
+const DESTINATIONS = 12
 
 /**
  * The desktop nav, now a sidebar rather than a row of underlined links.

@@ -44,6 +44,7 @@ export const TABS: readonly Tab[] = pick([
 
 /** Everything the bar has no room for, in the order it is reached for. */
 export const SHEET: readonly Tab[] = pick([
+  '/ringkasan',
   '/anggaran',
   '/dana',
   '/peta',

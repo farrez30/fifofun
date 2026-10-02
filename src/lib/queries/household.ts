@@ -1,7 +1,7 @@
 import { cache } from 'react'
 import { cacheLife, cacheTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { accountsTag, budgetsTag, categoriesTag, importsTag, placesTag, planTag, rulesTag, txTag } from '@/lib/queries/tags'
+import { accountsTag, budgetsTag, categoriesTag, importsTag, placesTag, planTag, rulesTag, summaryNoteTag, txTag } from '@/lib/queries/tags'
 import { parseHue } from '@/lib/ledger/palette'
 import type { AccountKind, CashflowType, EntrySource, LedgerEntry } from '@/lib/ledger/types'
 import type { PlaceEntry } from '@/lib/ledger/places'
@@ -549,6 +549,17 @@ export async function getMerchantLocations(householdId: string): Promise<Merchan
     validFrom: (row.valid_from as string | null) ?? null,
     validTo: (row.valid_to as string | null) ?? null,
   }))
+}
+
+/** The household's own lines under the three-month summary, or an empty string. */
+export async function getSummaryNote(householdId: string): Promise<string> {
+  'use cache: private'
+  cacheTag(summaryNoteTag(householdId))
+  cacheLife({ stale: 300 })
+
+  const supabase = await createClient()
+  const { data } = await supabase.from('summary_notes').select('body').eq('household_id', householdId).maybeSingle()
+  return (data?.body as string | undefined) ?? ''
 }
 
 /**

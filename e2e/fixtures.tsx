@@ -85,6 +85,8 @@ import { OnlineList } from '@/app/peta/online-list'
 import { summariseOnline } from '@/lib/ledger/online'
 import { WaitingList } from '@/app/peta/waiting-list'
 import { GroupLegend } from '@/app/peta/group-legend'
+import { SummaryView } from '@/app/ringkasan/summary-view'
+import { summariseMonths } from '@/lib/ledger/summary'
 import { QueueCard } from '@/app/peta/queue-card'
 import type { PlacePoint, WaitingMerchant } from '@/app/peta/view-model'
 import { documentFor, FIXTURE_DIR } from './render'
@@ -1576,6 +1578,59 @@ ${description}`,
   ),
   'peta-antrean-habis': (
     <QueueCard next={null} remaining={0} mapped={100} placing={null} onPlace={() => {}} onSkip={() => {}} />
+  ),
+  ringkasan: (
+    <SummaryView
+      data={{
+        report: summariseMonths(
+          (
+            [
+              ['income', 'Gaji', 630_000_000n, '2026-07-27'],
+              ['income', 'Gaji', 612_000_000n, '2026-08-27'],
+              ['income', 'Gaji', 667_000_000n, '2026-09-28'],
+              ['income', 'Freelance', 50_000_000n, '2026-08-17'],
+              ['income', 'Bonus Naturally Plus', 55_500_000n, '2026-09-24'],
+              ['income', 'Penggantian Keluarga', 30_400_000n, '2026-08-30'],
+              ['income', 'Transfer Keluarga', 30_000_000n, '2026-08-16'],
+              ['income', 'Jual Barang', 140_000_000n, '2026-07-07'],
+              ['spending', 'Kos & Sewa', 150_000_000n, '2026-07-01'],
+              ['spending', 'Kos & Sewa', 150_000_000n, '2026-08-02'],
+              ['spending', 'Kos & Sewa', 150_000_000n, '2026-09-02'],
+              ['spending', 'Dating', 158_144_800n, '2026-08-02'],
+              ['spending', 'Belanja Online', 189_358_900n, '2026-08-30'],
+              ['spending', 'Makan/minum', 76_336_300n, '2026-08-15'],
+              ['spending', 'Bensin', 51_697_700n, '2026-08-14'],
+              ['bills', 'Langganan AI', 88_819_500n, '2026-08-29'],
+              ['spending', 'Listrik', 20_350_000n, '2026-09-07'],
+              ['spending', 'Keluarga', 20_000_000n, '2026-07-12'],
+              ['sinking_fund', 'Pajak Kendaraan', 99_200_000n, '2026-07-14'],
+              ['receivable_new', 'Piutang', 125_000_000n, '2026-08-05'],
+            ] as const
+          ).map(([cashflow, categoryName, amount, day], index) => ({
+            id: `r${index}`,
+            occurredAt: new Date(`${day}T05:00:00Z`),
+            description: categoryName,
+            amount,
+            cashflow: cashflow as CashflowType,
+            categoryId: null,
+            fromAccountId: null,
+            toAccountId: null,
+            source: 'xlsx' as const,
+            categoryName,
+          })),
+          ['2026-07', '2026-08', '2026-09'],
+        ),
+        pots: [
+          { name: 'Dana Darurat', saved: 0n },
+          { name: 'Dana Menikah', saved: 0n },
+          { name: 'Tabungan', saved: 0n },
+        ],
+        potsTotal: 0n,
+        note: 'Mulai Okt: nabung 1 jt/bln.\nDana darurat 2 bulan dulu, lalu nikah.',
+        end: '2026-09',
+        choices: ['2026-09', '2026-08'],
+      }}
+    />
   ),
   'peta-legenda': (
     <GroupLegend

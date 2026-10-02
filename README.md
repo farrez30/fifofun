@@ -66,6 +66,15 @@ replaces the median of past payments, and the due day lets an unpaid bill say
 how many days late it is instead of waiting for the month to end. Ending a bill
 archives it, so the months it was paid keep their totals.
 
+**Shows three months on one screen for somebody else.** `/ringkasan` puts the
+last three finished months side by side with their average: income, spending
+in seven groups, what was left, every savings pot (empty ones included), and a
+few lines of the household's own plan. It is meant to be read off a phone across
+a table, so it holds aggregates only and no advice, and "Bagikan sebagai PDF"
+renders the same figures on the server as a one-page A4 file. Which income
+counts, which family money only pays back spending, and how categories group are
+one config, printed on the page as footnotes.
+
 **Shows where the money went.** A bank statement names a merchant and never a
 place, so a merchant is placed once, by searching OpenStreetMap or clicking on
 the map, and every payment made at its counter follows, including next month's

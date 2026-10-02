@@ -453,6 +453,19 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
   }),
 }))
 
+/**
+ * The household's own few lines under the three-month summary ("Mulai Okt:
+ * nabung 1 jt/bln"). Plain text and the only free text on that page, one row
+ * per household, so saving is an upsert.
+ */
+export const summaryNotes = pgTable('summary_notes', {
+  householdId: uuid('household_id')
+    .primaryKey()
+    .references(() => households.id, { onDelete: 'cascade' }),
+  body: text('body').notNull().default(''),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
 export const householdInvites = pgTable(
   'household_invites',
   {

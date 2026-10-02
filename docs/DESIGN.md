@@ -296,6 +296,26 @@ dari `public/vendor` (`scripts/vendor-maplibre.mjs`), sehingga CSP tetap
 berlokasi" memuat setiap angka yang digambar peta, untuk pembaca layar dan
 perangkat tanpa WebGL.
 
+**Ringkasan 3 Bulan (`/ringkasan`) dibaca orang lain, dari HP, di seberang
+meja.** Karena itu halaman ini sengaja membosankan: satu gulir, tanpa tab,
+tanpa grafik, tanpa panah tren, tanpa kalimat saran, dan tidak ada huruf di
+bawah 15px (`text-subhead`). Isinya hanya agregat; rincian transaksi tetap di
+Laporan. Tabelnya ARIA table di atas CSS grid, bukan `<table>`: di 390px label
+baris tidak muat sebaris dengan empat angka, jadi label naik ke baris sendiri
+di atas angkanya, hal yang tidak bisa dilakukan baris tabel asli tanpa
+kehilangan semantiknya. Sel tidak memakai "Rp" (keterangan di atas tabel
+menyebutnya sekali); angka besar Sisa dan Tabungan memakai format penuh
+"Rp6.363.333", minus pakai tanda minus asli. Warna Sisa redup (merah atau mint
+dicampur ke `ink-muted`) dan angkanya membawa tandanya sendiri, jadi warna
+tidak pernah jadi satu-satunya sinyal. Semua aturan hitungnya (7 kelompok,
+pengecualian pemasukan, penggantian yang dinetkan, pajak ÷12) ada di
+`SUMMARY_CONFIG` (`src/lib/ledger/summary.ts`) dan halaman mencetak aturan yang
+dipakainya di catatan kaki. PDF dibuat di server dengan `@react-pdf/renderer`
+dari `SummaryData` yang sama, tapi dengan tata letak A4 sendiri (label di
+samping angka, Tabungan dan Rencana berdampingan) agar selalu satu halaman;
+tesnya memakai Rencana sepanjang batas maksimal. Tombolnya membuka share sheet
+HP bila ada, kalau tidak mengunduh.
+
 **Umpan balik aksi lewat toast.** Setiap simpan menampilkan satu toast
 "Menyimpan…" yang berganti di tempat (id yang sama) menjadi berhasil atau
 gagal; yang gagal bertahan sampai ditutup. Form memakai `useActionToast`
