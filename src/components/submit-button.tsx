@@ -11,6 +11,8 @@ import { useFormStatus } from 'react-dom'
  * button at once. `useFormStatus` reads the form this button sits in, so only
  * the row that was pressed says it is busy. With a `name` and `value`, as in
  * a form with two submit buttons, only the one that was pressed spins.
+ * The second press is refused by busy-guard.tsx, not by `disabled`, so focus
+ * stays on the button.
  */
 export function SubmitButton({ disabled, name, value, ...props }: ButtonHTMLAttributes<HTMLButtonElement>) {
   const { pending, data } = useFormStatus()
@@ -22,7 +24,7 @@ export function SubmitButton({ disabled, name, value, ...props }: ButtonHTMLAttr
       type="submit"
       name={name}
       value={value}
-      disabled={pending || disabled}
+      disabled={disabled}
       aria-busy={mine}
     />
   )

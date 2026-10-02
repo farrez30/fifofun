@@ -40,7 +40,6 @@ function Issue() {
   return (
     <button
       type="submit"
-      disabled={pending}
       aria-busy={pending}
       className="h-11 rounded-sm bg-accent px-4 text-subhead font-medium text-paper transition-colors duration-150 hover:bg-accent-strong disabled:opacity-60"
     >
@@ -54,7 +53,6 @@ function Revoke() {
   return (
     <button
       type="submit"
-      disabled={pending}
       aria-busy={pending}
       className="h-9 rounded-sm border border-line px-3 text-footnote font-medium text-ink transition-colors duration-150 hover:border-over/50 hover:text-over disabled:opacity-60"
     >

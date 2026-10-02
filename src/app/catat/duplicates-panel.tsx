@@ -30,7 +30,6 @@ function Action({
   return (
     <button
       type="submit"
-      disabled={pending}
       aria-busy={pending}
       aria-label={ariaLabel}
       className={

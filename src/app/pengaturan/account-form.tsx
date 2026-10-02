@@ -208,7 +208,6 @@ function Submit({ label }: { label: string }) {
   return (
     <button
       type="submit"
-      disabled={pending}
       aria-busy={pending}
       className={BUTTON_PRIMARY}
     >

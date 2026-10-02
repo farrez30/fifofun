@@ -24,7 +24,6 @@ function Submit({
       type="submit"
       name="intent"
       value={intent}
-      disabled={pending}
       aria-busy={pending}
       /*
         The two halves of the only decision on this screen. Filled is the one

@@ -12,7 +12,7 @@ export function RecomputeAdjustments() {
 
   return (
     <form action={action} className="mt-2">
-      <button type="submit" disabled={pending} aria-busy={pending} className={BUTTON_QUIET}>
+      <button type="submit" aria-busy={pending} className={BUTTON_QUIET}>
         Hitung ulang penyesuaian
       </button>
     </form>

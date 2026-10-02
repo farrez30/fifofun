@@ -37,7 +37,7 @@ function Submit({ hasFile }: { hasFile: boolean }) {
   return (
     <button
       type="submit"
-      disabled={pending || !hasFile}
+      disabled={!hasFile}
       aria-busy={pending}
       className={BUTTON_PRIMARY}
     >

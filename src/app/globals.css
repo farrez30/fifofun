@@ -996,21 +996,36 @@
     the eye is on the button that was pressed. Every form button marks its wait
     with `aria-busy` (which a screen reader also hears), and this one rule draws
     the spinner for all of them, so no button needs a component of its own.
-    Under reduced motion the ring stops turning and breathes instead: a fade is
-    Apple's substitute for travel, and a wait still has to look like one.
+
+    The spinner takes the label's place, the way an iOS button shows its
+    activity indicator, rather than squeezing in beside it: the button keeps
+    its exact width, so nothing next to it moves. The label is only painted
+    transparent, so a screen reader still reads it. Under reduced motion the
+    ring stops turning and breathes instead: a fade is Apple's substitute for
+    travel, and a wait still has to look like one.
+
+    Not `disabled` while waiting: a disabled button drops keyboard focus, and
+    the person who pressed Enter would land back at the top of the page.
+    busy-guard.tsx refuses the second submit instead.
   */
   button[aria-busy='true'] {
+    position: relative;
     cursor: progress;
+    -webkit-text-fill-color: transparent;
+    text-decoration-color: transparent;
+  }
+
+  button[aria-busy='true'] svg {
+    visibility: hidden;
   }
 
   button[aria-busy='true']::before {
     content: '';
-    display: inline-block;
-    flex: none;
-    width: 1em;
-    height: 1em;
-    margin-inline-end: 0.5em;
-    vertical-align: -0.15em;
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 1.1em;
+    height: 1.1em;
     border-radius: 9999px;
     border: 2px solid currentColor;
     border-inline-end-color: transparent;
@@ -1699,14 +1714,4 @@
 
 [data-sonner-toaster] [data-sonner-toast] [data-description] {
   color: var(--color-ink-muted);
-}
-
-/*
-  A busy button is disabled to stop a second press, not because it cannot be
-  pressed, and dimming it to the 40% of `disabled:opacity-40` would fade out
-  the spinner that explains the wait. Unlayered for the same reason as the
-  sonner block above: a rule inside a layer loses to that utility.
-*/
-button[aria-busy='true']:disabled {
-  opacity: 0.75;
 }

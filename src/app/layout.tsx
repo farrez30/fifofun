@@ -4,6 +4,7 @@ import localFont from 'next/font/local'
 import { ProgressiveWebApp } from '@/components/pwa'
 import { SkipLink } from '@/components/skip-link'
 import { Toaster } from '@/components/toaster'
+import { BusyGuard } from '@/components/busy-guard'
 import './globals.css'
 
 /*
@@ -188,6 +189,7 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
         <SkipLink />
         {children}
         <Toaster />
+        <BusyGuard />
         <ProgressiveWebApp />
       </body>
     </html>

@@ -334,8 +334,12 @@ laju deselerasi scroll view. Flick 30px yang tajam membuang sheet; seretan
 panjang yang berhenti adalah pembatalan.
 
 **Menunggu selalu terlihat di tempat mata berada.** Tombol yang menunggu
-membawa `aria-busy`, dan satu aturan CSS menggambar spinner di dalamnya.
-Pembaca layar juga mendengar status itu. Tombol yang dipakai bersama banyak
+membawa `aria-busy`, dan satu aturan CSS menggambar spinner di tempat labelnya,
+seperti activity indicator di tombol iOS, sehingga lebar tombol tidak berubah
+dan tetangganya tidak bergeser. Labelnya hanya dicat transparan, jadi pembaca
+layar tetap membacanya. Tombol tidak di-`disabled` selama menunggu, karena
+elemen yang disabled melepas fokus keyboard. Tekanan kedua ditolak oleh satu
+listener `submit` global (`busy-guard.tsx`). Tombol yang dipakai bersama banyak
 baris memakai `SubmitButton` (`useFormStatus`), supaya hanya baris yang
 ditekan yang berputar. Perpindahan halaman di luar navigasi (link baris,
 pager, form filter) memunculkan garis 2px di tepi atas (`nav-progress.tsx`),

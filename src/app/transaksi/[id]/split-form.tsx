@@ -162,7 +162,7 @@ function Submit({ disabled }: { disabled: boolean }) {
   return (
     <button
       type="submit"
-      disabled={disabled || pending}
+      disabled={disabled}
       aria-busy={pending}
       className={BUTTON_PRIMARY}
     >

@@ -263,7 +263,6 @@ function Submit() {
   return (
     <button
       type="submit"
-      disabled={pending}
       aria-busy={pending}
       className={BUTTON_PRIMARY}
     >

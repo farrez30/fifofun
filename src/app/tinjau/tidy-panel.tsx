@@ -80,7 +80,7 @@ function Submit({ label, disabled = false }: { label: string; disabled?: boolean
   return (
     <button
       type="submit"
-      disabled={disabled || pending}
+      disabled={disabled}
       aria-busy={pending}
       className="h-11 rounded-sm bg-accent px-4 text-subhead font-medium text-paper transition-colors duration-150 hover:bg-accent-strong disabled:opacity-50"
     >
