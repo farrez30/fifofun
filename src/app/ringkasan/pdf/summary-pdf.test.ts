@@ -33,7 +33,7 @@ const report = summariseMonths(
     row('income', 'Transfer Keluarga', 300_000, '2026-08-16'),
     row('spending', 'Kos & Sewa', 1_500_000, '2026-07-01'),
     row('spending', 'Dating', 1_581_448, '2026-08-02'),
-    row('sinking_fund', 'Pajak Kendaraan', 992_000, '2026-07-14'),
+    row('spending', 'Pajak & STNK', 727_500, '2026-07-14'),
   ],
   ['2026-07', '2026-08', '2026-09'],
 )

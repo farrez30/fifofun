@@ -114,6 +114,7 @@ export const SUMMARY_CONFIG: SummaryConfig = {
           'Air',
           'Laundry',
           'Servis Kendaraan',
+          'Pajak & STNK',
           'Pajak Kendaraan',
           'Biaya Bank',
           'Tagihan Lain',
@@ -128,7 +129,7 @@ export const SUMMARY_CONFIG: SummaryConfig = {
     ],
     fallback: 'Rutin lain',
     excluded: [{ label: 'Koreksi saldo', categories: ['Penyesuaian Spending'] }],
-    amortised: { 'Pajak Kendaraan': 12 },
+    amortised: { 'Pajak & STNK': 12 },
   },
   excludedCashflows: {
     receivable_new: { label: 'Uang yang dipinjamkan', side: 'spending' },

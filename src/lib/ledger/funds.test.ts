@@ -265,3 +265,32 @@ describe('reviewFunds dengan setoran yang direncanakan', () => {
     expect(review.funds[0].etaMonth).toBeNull()
   })
 })
+
+describe('a yearly bill and its sinking fund', () => {
+  const POT: FundCategory = { name: 'Pajak Kendaraan', cashflow: 'sinking_fund', openingBalance: 0n, target: null, targetMonth: null }
+
+  it('leaves a pot that was never filled at zero when the bill is paid as spending', () => {
+    // How Jul 2026 is filed now: the tax went to Samsat, not into the pot.
+    const review = reviewFunds([row('2026-07', 'Pajak & STNK', idr('727.500,00'), 'spending')], [POT])
+    expect(review.funds[0].saved).toBe(0n)
+    expect(review.totalSaved).toBe(0n)
+  })
+
+  it('counts a payment to a third party filed as a contribution as money in the pot, which is why it must not be', () => {
+    const review = reviewFunds([row('2026-07', 'Pajak Kendaraan', idr('727.500,00'), 'sinking_fund')], [POT])
+    expect(review.funds[0].saved).toBe(idr('727.500,00'))
+  })
+
+  it('empties a filled pot when the bill is paid out of it', () => {
+    const months = ['2025-08', '2025-09', '2025-10', '2025-11', '2025-12', '2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06', '2026-07']
+    const review = reviewFunds(
+      [
+        ...months.map((month) => row(month, 'Pajak Kendaraan', idr('60.625,00'), 'sinking_fund')),
+        // Taking it back out to pay: the bill itself is then ordinary spending.
+        row('2026-07', 'Pajak Kendaraan', idr('727.500,00'), 'from_asset'),
+      ],
+      [POT],
+    )
+    expect(review.funds[0].saved).toBe(0n)
+  })
+})

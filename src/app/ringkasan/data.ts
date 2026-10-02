@@ -1,6 +1,6 @@
 import { FUND_CASHFLOWS, reviewFunds, type FundCashflow } from '@/lib/ledger/funds'
 import { monthKeyOf, monthKeyToString } from '@/lib/ledger/monthly'
-import { lastFullMonth, monthsEnding, summariseMonths, SUMMARY_CONFIG, type SummaryReport } from '@/lib/ledger/summary'
+import { lastFullMonth, monthsEnding, summariseMonths, type SummaryReport } from '@/lib/ledger/summary'
 import { getAllTransactions, getCategories, getSummaryNote } from '@/lib/queries/household'
 
 /**
@@ -46,22 +46,16 @@ export async function loadSummary(householdId: string, endParam: string | undefi
   )
   const report = summariseMonths(transactions, monthsEnding(end, 3), (name) => parentByName.get(name) ?? null)
 
-  /*
-    A yearly bill paid out of a pot that was never filled in is a cost, not
-    savings, and the summary spreads it over twelve months as one. Counted here
-    as well, it would be a pot holding money that already went to the tax
-    office.
-  */
-  const amortised = new Set(Object.keys(SUMMARY_CONFIG.spending.amortised))
+  // The same reckoning /dana makes, so the two pages can never disagree about a pot.
   const pots = categories.filter(
     (category) => category.archivedAt === null && (FUND_CASHFLOWS as readonly string[]).includes(category.cashflow),
   )
   const review = reviewFunds(
-    transactions.filter((entry) => !amortised.has(entry.categoryName ?? '')),
+    transactions,
     pots.map((category) => ({
       name: category.name,
       cashflow: category.cashflow as FundCashflow,
-      openingBalance: amortised.has(category.name) ? 0n : category.openingBalance,
+      openingBalance: category.openingBalance,
       target: category.target,
       targetMonth: category.targetMonth,
     })),

@@ -1603,7 +1603,7 @@ ${description}`,
               ['bills', 'Langganan AI', 88_819_500n, '2026-08-29'],
               ['spending', 'Listrik', 20_350_000n, '2026-09-07'],
               ['spending', 'Keluarga', 20_000_000n, '2026-07-12'],
-              ['sinking_fund', 'Pajak Kendaraan', 99_200_000n, '2026-07-14'],
+              ['spending', 'Pajak & STNK', 72_750_000n, '2026-07-14'],
               ['receivable_new', 'Piutang', 125_000_000n, '2026-08-05'],
             ] as const
           ).map(([cashflow, categoryName, amount, day], index) => ({

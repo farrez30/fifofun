@@ -48,7 +48,7 @@ describe('groupOf', () => {
     expect(groupOf('Barbershop & Salon', () => null)).toBe('Gaya hidup')
     expect(groupOf('Edukasi', () => null)).toBe('Langganan & alat kerja')
     expect(groupOf('Sedekah', () => null)).toBe('Keluarga')
-    expect(groupOf('Pajak Kendaraan', () => null)).toBe('Rutin lain')
+    expect(groupOf('Pajak & STNK', () => 'Transport')).toBe('Rutin lain')
   })
 })
 
@@ -69,7 +69,7 @@ describe('summariseMonths', () => {
       entry('spending', 'Belanja Harian', 278_580, '2026-08-30'),
       entry('spending', 'Penyesuaian Spending', 7_350_547, '2026-08-23'),
       entry('spending', 'Dating', 407_242, '2026-08-02', { isPassThrough: true }),
-      entry('sinking_fund', 'Pajak Kendaraan', 992_000, '2026-07-14'),
+      entry('spending', 'Pajak & STNK', 727_500, '2026-07-14'),
       entry('invest_savings', 'Dana Darurat', 950_000, '2026-09-28'),
       entry('spending', 'Kos & Sewa', 1_500_000, '2026-06-01'),
     ],
@@ -107,7 +107,7 @@ describe('summariseMonths', () => {
 
   it('spreads a yearly tax over twelve months instead of one', () => {
     const routine = report.spending.find((row) => row.label === 'Rutin lain')!
-    expect(routine.values).toEqual([rp(992_000) / 12n, rp(992_000) / 12n, rp(992_000) / 12n])
+    expect(routine.values).toEqual([rp(727_500) / 12n, rp(727_500) / 12n, rp(727_500) / 12n])
   })
 
   it('ignores months outside the window and sorts groups by their average', () => {
