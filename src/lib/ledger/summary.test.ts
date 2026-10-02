@@ -99,6 +99,16 @@ describe('summariseMonths', () => {
     expect(report.spendingTotal.values[1]).toBe(august - rp(304_000))
   })
 
+  it('keeps a correction that added money apart from one that took it away', () => {
+    const both = summariseMonths(
+      [entry('spending', 'Penyesuaian Spending', 2_000_000, '2026-08-23'), entry('income', 'Penyesuaian Income', 500_000, '2026-08-23')],
+      MONTHS,
+    )
+    const bySide = Object.fromEntries(both.excluded.map((row) => [`${row.side}:${row.label}`, row.total]))
+    expect(bySide['spending:Koreksi saldo']).toBe(rp(2_000_000))
+    expect(bySide['income:Koreksi saldo']).toBe(rp(500_000))
+  })
+
   it("treats a friend's share of a subscription like a family reimbursement", () => {
     const shared = summariseMonths(
       [entry('bills', 'Langganan Spotify', 86_900, '2026-07-05'), entry('income', 'Patungan & Titipan', 14_500, '2026-07-06')],

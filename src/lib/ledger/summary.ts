@@ -225,9 +225,11 @@ export function summariseMonths(
   const incomeBy = new Map<string, bigint[]>()
   const spendingBy = new Map<string, bigint[]>(config.spending.groups.map((group) => [group.label, blank()]))
   const netted = blank()
-  const excludedBy = new Map<string, { side: Side; total: bigint }>()
+  // Keyed by side too: "Koreksi saldo" exists on both sides, and money that
+  // came in must not be printed under spending, or the other way round.
+  const excludedBy = new Map<string, { label: string; side: Side; total: bigint }>()
   const exclude = (label: string, side: Side, amount: bigint) =>
-    excludedBy.set(label, { side, total: (excludedBy.get(label)?.total ?? 0n) + amount })
+    excludedBy.set(`${side}:${label}`, { label, side, total: (excludedBy.get(`${side}:${label}`)?.total ?? 0n) + amount })
   const named = (groups: readonly SummaryGroup[], category: string) =>
     groups.find((group) => group.categories.includes(category))
 
@@ -338,8 +340,7 @@ export function summariseMonths(
     netted: nettedLine,
     spendingTotal,
     remainder,
-    excluded: [...excludedBy]
-      .map(([label, { side, total }]) => ({ label, side, total }))
+    excluded: [...excludedBy.values()]
       .sort((a, b) => (b.total > a.total ? 1 : b.total < a.total ? -1 : 0)),
     amortised: amortisedNames,
     unitemised: wallets.size > 0 ? config.spending.unitemised.label : null,
