@@ -5,8 +5,9 @@ import type { PlacePoint } from './view-model'
  * What the map draws on top of the base tiles, with no DOM in it so it can be
  * tested on its own. `place-map.tsx` feeds it colours read from the theme.
  *
- * Two layers over one source. A heatmap says where the weight gathers, not
- * where each shop is, because forty pins on one mall say less than one glow;
+ * Layers over one source. A heatmap (one per category group, or one for all
+ * of it; see `Glow`) says where the weight gathers, not where each shop is,
+ * because forty pins on one mall say less than one glow;
  * zoomed in, it fades. On top of it, at every zoom, a dot per outlet sized by
  * the same weight and coloured by its category group: small from far away,
  * full size up close, and clickable for its visits. The dots used to wait
@@ -67,66 +68,102 @@ export function groupFilter(hidden: readonly string[]) {
 }
 
 /**
- * The heatmap stays one hue on purpose: glows of several hues overlapping
- * mix into a colour no group has. The groups show in the dots, and hiding a
- * group in the legend takes it out of the glow as well.
+ * How the glow is coloured. `groups` gives every category group its own glow
+ * in its own hue, so the glow and the dots agree; where groups crowd one mall
+ * the glows overlap and blend, which reads as "mixed" rather than as any one
+ * group. `density` is one accent hue for all of it, for reading only where
+ * the weight gathers.
  */
-export function overlayLayers(colors: MapColors, hidden: readonly string[] = []) {
-  const filter = groupFilter(hidden)
+export type Glow = { mode: 'density' } | { mode: 'groups'; groups: readonly { name: string; color: string }[] }
+
+export interface OverlayLayer {
+  id: string
+  type: 'heatmap' | 'circle'
+  source: string
+  maxzoom?: number
+  filter?: unknown
+  paint: Record<string, unknown>
+}
+
+/** Every layer this file adds, so a redraw can take them all off first. */
+export function isOverlay(id: string): boolean {
+  return id === DOTS || id === HEAT || id.startsWith(`${HEAT}-`)
+}
+
+function heatLayer(id: string, color: string, peak: string, filter: unknown, opacity: number): OverlayLayer {
   // A floor under every weight, so a place visited once still glows a little.
   const weight = ['+', 0.15, ['*', 0.85, ['get', 'weight']]]
+  return {
+    id,
+    type: 'heatmap',
+    source: SOURCE,
+    maxzoom: 16,
+    ...(filter ? { filter } : {}),
+    paint: {
+      'heatmap-weight': weight,
+      'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 9, 1.4, 15, 3],
+      'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 9, 26, 13, 42, 16, 64],
+      'heatmap-opacity': ['interpolate', ['linear'], ['zoom'], 12, opacity, 15.5, 0.25],
+      // One hue deepening, never a rainbow within a layer and never red: red in
+      // this app means over budget, and a place where money was spent is not a
+      // warning.
+      'heatmap-color': [
+        'interpolate',
+        ['linear'],
+        ['heatmap-density'],
+        0,
+        withAlpha(color, 0),
+        0.15,
+        withAlpha(color, 0.35),
+        0.5,
+        color,
+        1,
+        peak,
+      ],
+    },
+  }
+}
 
-  const layers = [
-    {
-      id: HEAT,
-      type: 'heatmap' as const,
-      source: SOURCE,
-      maxzoom: 16,
-      paint: {
-        'heatmap-weight': weight,
-        'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 9, 1.4, 15, 3],
-        'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 9, 26, 13, 42, 16, 64],
-        'heatmap-opacity': ['interpolate', ['linear'], ['zoom'], 12, 0.85, 15.5, 0.25],
-        // One hue deepening, not a rainbow and not red: red in this app means
-        // over budget, and a place where money was spent is not a warning.
-        // `strong` is the accent's own high-contrast step, so the peak reads
-        // as more on both the light and the dark tiles.
-        'heatmap-color': [
-          'interpolate',
-          ['linear'],
-          ['heatmap-density'],
-          0,
-          withAlpha(colors.accent, 0),
-          0.15,
-          withAlpha(colors.accent, 0.35),
-          0.5,
-          colors.accent,
-          1,
-          colors.strong,
-        ],
-      },
+export function overlayLayers(
+  colors: MapColors,
+  hidden: readonly string[] = [],
+  glow: Glow = { mode: 'density' },
+): OverlayLayer[] {
+  const filter = groupFilter(hidden)
+  // `strong` is the accent's own high-contrast step, so the peak reads as more
+  // on both the light and the dark tiles. A group's glow has no second step,
+  // so it peaks at its own colour and is a little fainter, because several of
+  // them can stack on one spot.
+  const heats =
+    glow.mode === 'density'
+      ? [heatLayer(HEAT, colors.accent, colors.strong, filter, 0.85)]
+      : glow.groups
+          .filter((group) => !hidden.includes(group.name))
+          .map((group, index) =>
+            heatLayer(`${HEAT}-${index}`, group.color, group.color, ['==', ['get', 'group'], group.name], 0.7),
+          )
+
+  const dots: OverlayLayer = {
+    id: DOTS,
+    type: 'circle',
+    source: SOURCE,
+    ...(filter ? { filter } : {}),
+    paint: {
+      'circle-radius': [
+        'interpolate',
+        ['linear'],
+        ['zoom'],
+        9,
+        ['interpolate', ['linear'], ['get', 'weight'], 0, 2.5, 1, 6],
+        13,
+        ['interpolate', ['linear'], ['get', 'weight'], 0, 5, 1, 14],
+      ],
+      'circle-color': ['coalesce', ['get', 'color'], colors.accent],
+      'circle-stroke-color': colors.surface,
+      'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 9, 1, 13, 2],
     },
-    {
-      id: DOTS,
-      type: 'circle' as const,
-      source: SOURCE,
-      paint: {
-        'circle-radius': [
-          'interpolate',
-          ['linear'],
-          ['zoom'],
-          9,
-          ['interpolate', ['linear'], ['get', 'weight'], 0, 2.5, 1, 6],
-          13,
-          ['interpolate', ['linear'], ['get', 'weight'], 0, 5, 1, 14],
-        ],
-        'circle-color': ['coalesce', ['get', 'color'], colors.accent],
-        'circle-stroke-color': colors.surface,
-        'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 9, 1, 13, 2],
-      },
-    },
-  ]
-  return filter ? layers.map((layer) => ({ ...layer, filter })) : layers
+  }
+  return [...heats, dots]
 }
 
 /** West, south, east, north around every point, or null when there are none. */

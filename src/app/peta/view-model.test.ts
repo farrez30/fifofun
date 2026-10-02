@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { categoryHue } from '@/lib/ledger/palette'
 import { summarisePlaces, type PlaceEntry } from '@/lib/ledger/places'
-import { groupLookup, legendGroups, NO_GROUP, share, toPoints, toWaiting, usualTime } from './view-model'
+import { groupLookup, legendGroups, NO_GROUP, share, toPoints, topPlaces, toWaiting, usualTime } from './view-model'
 
 function qr(description: string, amount: bigint, at: string): PlaceEntry {
   return {
@@ -128,5 +128,17 @@ describe('share', () => {
     expect(share(1000n, 1000n)).toBe(100)
     expect(share(1n, 3n)).toBe(33)
     expect(share(0n, 0n)).toBe(0)
+  })
+})
+
+describe('topPlaces', () => {
+  const place = (label: string, total: number, visits: number, average: number) =>
+    ({ pointId: label, label, weights: { total, visits, average } }) as never
+  const points = [place('Kos', 1, 0.1, 1), place('Boga Rasaa', 0.2, 1, 0.05), place('Roscik', 0.3, 0.6, 0.2)]
+
+  it('reorders the same places for each reading', () => {
+    expect(topPlaces(points, 'total').map((p) => p.label)).toEqual(['Kos', 'Roscik', 'Boga Rasaa'])
+    expect(topPlaces(points, 'visits').map((p) => p.label)).toEqual(['Boga Rasaa', 'Roscik', 'Kos'])
+    expect(topPlaces(points, 'average', 1).map((p) => p.label)).toEqual(['Kos'])
   })
 })

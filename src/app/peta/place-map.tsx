@@ -3,9 +3,9 @@
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useEffect, useRef, useState } from 'react'
 import type { GeoJSONSource, Map as MapLibreMap, Marker, Popup } from 'maplibre-gl'
-import { boundsOf, DOTS, groupFilter, HEAT, JAKARTA, LOCALE, overlayLayers, SOURCE, STYLES, toFeatures, type MapColors } from './map-layers'
+import { boundsOf, DOTS, isOverlay, JAKARTA, LOCALE, overlayLayers, SOURCE, STYLES, toFeatures, type Glow, type MapColors } from './map-layers'
 import type { PlaceMode } from '@/lib/ledger/places'
-import type { PlacePoint } from './view-model'
+import { legendGroups, type PlacePoint } from './view-model'
 
 /**
  * The map itself: OpenFreeMap tiles under a heatmap and a dot per outlet.
@@ -36,6 +36,8 @@ interface Props {
   hidden: readonly string[]
   /** Which weight sizes the dots and feeds the glow. */
   mode: PlaceMode
+  /** A glow per category group, or one accent glow for density alone. */
+  glow: Glow['mode']
 }
 
 type Theme = 'light' | 'dark'
@@ -139,7 +141,7 @@ function popupContent(point: PlacePoint, onMove: (pointId: string) => void): HTM
   return root
 }
 
-export function PlaceMap({ points, placing, draft, onPick, onMove, hidden, mode }: Props) {
+export function PlaceMap({ points, placing, draft, onPick, onMove, hidden, mode, glow }: Props) {
   const container = useRef<HTMLDivElement>(null)
   const map = useRef<MapLibreMap | null>(null)
   const marker = useRef<Marker | null>(null)
@@ -149,10 +151,12 @@ export function PlaceMap({ points, placing, draft, onPick, onMove, hidden, mode 
   const [tilesFailed, setTilesFailed] = useState(false)
 
   // The newest props, for listeners registered once when the map was made.
-  const latest = useRef({ points, placing, onPick, onMove, hidden, mode })
+  const latest = useRef({ points, placing, onPick, onMove, hidden, mode, glow })
   useEffect(() => {
-    latest.current = { points, placing, onPick, onMove, hidden, mode }
+    latest.current = { points, placing, onPick, onMove, hidden, mode, glow }
   })
+  // Takes every overlay layer off and draws them again; set once the map exists.
+  const redraw = useRef<() => void>(() => {})
   // Per theme: the same hue is a darker colour on light tiles than on dark ones.
   const colorOf = useRef<((hue: number) => string) | undefined>(undefined)
 
@@ -193,9 +197,21 @@ export function PlaceMap({ points, placing, draft, onPick, onMove, hidden, mode 
         if (!instance.getSource(SOURCE)) {
           instance.addSource(SOURCE, { type: 'geojson', data: toFeatures(latest.current.points, latest.current.mode, colorOf.current) })
         }
-        for (const layer of overlayLayers(themeColors(), latest.current.hidden)) {
+        const { hidden, glow, points } = latest.current
+        const spec: Glow =
+          glow === 'density'
+            ? { mode: 'density' }
+            : { mode: 'groups', groups: legendGroups(points).map((group) => ({ name: group.name, color: colorOf.current!(group.hue) })) }
+        for (const layer of overlayLayers(themeColors(), hidden, spec)) {
           if (!instance.getLayer(layer.id)) instance.addLayer(layer as never)
         }
+      }
+      redraw.current = () => {
+        if (!instance.isStyleLoaded()) return
+        for (const layer of instance.getStyle().layers ?? []) {
+          if (isOverlay(layer.id)) instance.removeLayer(layer.id)
+        }
+        drawOverlay()
       }
       // Fires for the first style and again after every theme swap.
       instance.on('style.load', drawOverlay)
@@ -274,15 +290,18 @@ export function PlaceMap({ points, placing, draft, onPick, onMove, hidden, mode 
     source?.setData(toFeatures(points, mode, colorOf.current))
   }, [points, mode])
 
-  // A group switched off leaves the glow and the dots alike, without moving the camera.
+  /*
+    A group switched off, the glow switched between groups and density, or a
+    filter that changes which groups there are: the layers are drawn again,
+    without moving the camera. A glow per group is a layer per group, so this
+    is a redraw rather than a filter change.
+  */
   const hiddenKey = hidden.join('|')
+  const groupsKey = legendGroups(points).map((group) => group.name).join('|')
   useEffect(() => {
-    const instance = map.current
-    if (!instance?.getLayer(DOTS)) return
-    const filter = groupFilter(latest.current.hidden)
-    for (const layer of [HEAT, DOTS]) instance.setFilter(layer, filter as never)
+    redraw.current()
     popup.current?.remove()
-  }, [hiddenKey])
+  }, [hiddenKey, groupsKey, glow])
 
   useEffect(() => {
     const instance = map.current

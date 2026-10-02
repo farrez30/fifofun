@@ -178,3 +178,10 @@ export function legendGroups(points: readonly Pick<PlacePoint, 'group' | 'hue'>[
   }
   return [...groups.values()].sort((a, b) => b.places - a.places || a.name.localeCompare(b.name, 'id'))
 }
+
+/** The places a reading puts first, so a switch changes something you can read. */
+export function topPlaces(points: readonly PlacePoint[], mode: PlaceMode, count = 3): PlacePoint[] {
+  return [...points]
+    .sort((a, b) => b.weights[mode] - a.weights[mode] || a.label.localeCompare(b.label, 'id'))
+    .slice(0, count)
+}

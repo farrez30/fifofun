@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { GroupLegend } from './group-legend'
+import type { Glow } from './map-layers'
 import { ModeSwitch, useMapMode } from './mode-switch'
 import { PlaceMap } from './place-map'
 import { PlacingPanel, tidy, type Pending } from './placing-panel'
@@ -58,6 +59,7 @@ export function PlaceWorkspace({ points, waiting, initial, initialPoint, mapped,
   const [switchedOff, setSwitchedOff] = useState<readonly string[]>([])
   const groups = legendGroups(points)
   const hidden = switchedOff.filter((name) => groups.some((group) => group.name === name))
+  const [glow, setGlow] = useState<Glow['mode']>('groups')
 
   const start = (key: string, pointId?: string | null) => {
     const next = find(key, pointId)
@@ -99,7 +101,7 @@ export function PlaceWorkspace({ points, waiting, initial, initialPoint, mapped,
         onSkip={skip}
       />
 
-      <ModeSwitch mode={mode} />
+      <ModeSwitch mode={mode} points={points.filter((point) => !hidden.includes(point.group))} />
 
       <GroupLegend
         groups={groups}
@@ -108,6 +110,8 @@ export function PlaceWorkspace({ points, waiting, initial, initialPoint, mapped,
           setSwitchedOff(hidden.includes(name) ? hidden.filter((other) => other !== name) : [...hidden, name])
         }
         onShowAll={() => setSwitchedOff([])}
+        glow={glow}
+        onGlow={setGlow}
       />
 
       {/*
@@ -121,6 +125,7 @@ export function PlaceWorkspace({ points, waiting, initial, initialPoint, mapped,
           placing={placing !== null}
           draft={pending}
           mode={mode}
+          glow={glow}
           hidden={hidden}
           onPick={(draft) => setPending({ ...draft, address: null, source: 'manual' })}
           onMove={(pointId) => {

@@ -190,7 +190,10 @@ satu sumber di `nav.ts`; `tabs.ts` menurunkan bar HP darinya, bukan menyalin.
 mengisi segmen aktif dengan warna aksen solid. Itu tab, bukan segmented
 control Apple, yang seleksinya pil netral di atas track abu-abu — pola yang
 sama dengan alasan `BUTTON_TINTED` ada, alih-alih menint semua tombol yang
-bisa ditekan. `SEGMENTED`/`SEGMENT`/`SEGMENT_ON` di `field-base.tsx`.
+bisa ditekan. `SEGMENTED`/`SEGMENT`/`SEGMENT_ON` di `field-base.tsx`. Pil
+terpilih memakai token `--color-segment-on`: putih di tema terang, #636366 di
+gelap, seperti iOS. Dulu memakai `--color-surface` (#1c1c1e), yang di tema
+gelap lebih gelap dari track-nya sehingga pilihan aktif tidak terlihat.
 
 **Kategori punya bentuk tile** di baris list yang kategorinya jadi label
 utama baris (month-detail, tidy-panel, daftar kategori Pengaturan): ubin 28px
@@ -253,9 +256,13 @@ jadi tidak ada request, halaman tidak melompat ke atas, dan Back tetap
 membatalkan pilihan. Dulu tiga link, dan setiap klik merender ulang halaman. Titik diwarnai menurut **kelompok**
 kategori teratasnya (Transport, Sosial, …), dengan hue yang sama seperti di
 Sankey dan Anggaran. Warnanya per kelompok, bukan per kategori, karena empat
-puluhan hue di satu peta tidak bisa dibaca balik dari legenda. Heatmap tetap
-satu hue, sebab cahaya berbagai hue yang bertumpuk bercampur menjadi warna yang
-bukan milik kelompok mana pun. Chip legenda (`group-legend.tsx`, `aria-pressed`)
+puluhan hue di satu peta tidak bisa dibaca balik dari legenda. Cahaya punya
+saklar dua mode: **Per kelompok** (bawaan; satu lapisan heatmap per kelompok
+dengan hue-nya sendiri, jadi cahaya dan titik sepakat, dan tempat yang ramai
+banyak kelompok sengaja terlihat campur) dan **Kepadatan** (satu hue aksen,
+untuk membaca kepadatan saja). Di bawah cara menimbang ada satu baris
+"Teratas menurut …" dengan angka, supaya pergantian menimbang mengubah sesuatu
+yang bisa dibaca, bukan hanya ukuran titik. Chip legenda (`group-legend.tsx`, `aria-pressed`)
 menyalakan dan mematikan kelompok di sisi klien lewat `setFilter`, tanpa
 memuat ulang dan tanpa memindahkan kamera; cahaya dan titik ikut keduanya. Chip
 yang mati kehilangan isian swatch-nya dan namanya dicoret, jadi tidak

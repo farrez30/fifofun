@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { boundsOf, groupFilter, overlayLayers, STYLES, toFeatures, withAlpha } from './map-layers'
+import { boundsOf, DOTS, groupFilter, HEAT, isOverlay, overlayLayers, STYLES, toFeatures, withAlpha } from './map-layers'
 import { MAP_TILES } from '@/lib/csp'
 
 describe('withAlpha', () => {
@@ -65,6 +65,21 @@ describe('overlayLayers', () => {
     expect('filter' in layers[0]).toBe(false)
     const filtered = overlayLayers({ accent: 'a', strong: 'b', surface: 'c' }, ['Transport'])
     for (const layer of filtered) expect(layer).toHaveProperty('filter', groupFilter(['Transport']))
+  })
+
+  it('gives every visible group its own glow in its own colour, dots on top', () => {
+    const groups = [
+      { name: 'Transport', color: 'rgb(200, 150, 0)' },
+      { name: 'Sosial', color: 'rgb(90, 120, 250)' },
+      { name: 'Rumah', color: 'rgb(170, 120, 250)' },
+    ]
+    const drawn = overlayLayers({ accent: 'a', strong: 'b', surface: 'c' }, ['Rumah'], { mode: 'groups', groups })
+    expect(drawn.map((layer) => layer.id)).toEqual([`${HEAT}-0`, `${HEAT}-1`, DOTS])
+    expect(drawn[0].filter).toEqual(['==', ['get', 'group'], 'Transport'])
+    const ramp = drawn[1].paint['heatmap-color'] as unknown[]
+    expect(ramp.at(-1)).toBe('rgb(90, 120, 250)')
+    expect(drawn.every((layer) => isOverlay(layer.id))).toBe(true)
+    expect(isOverlay('road-label')).toBe(false)
   })
 
   it('starts the heatmap fully transparent so empty streets stay clear', () => {

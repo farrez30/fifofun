@@ -106,7 +106,7 @@ export const BUTTON_PLAIN = `${BUTTON_BASE} px-2 text-accent hover:bg-fill-quate
 export const SEGMENTED = 'inline-flex gap-0.5 rounded-lg bg-fill-tertiary p-0.5'
 export const SEGMENT =
   'inline-flex h-11 items-center justify-center rounded-[7px] px-3 text-footnote font-medium text-ink-muted transition-colors duration-150 sm:h-9'
-export const SEGMENT_ON = 'bg-surface text-ink shadow-xs'
+export const SEGMENT_ON = 'bg-segment-on text-ink! shadow-xs'
 
 interface LabelProps {
   htmlFor: string

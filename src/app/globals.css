@@ -220,6 +220,14 @@
   );
 
   /*
+    The chosen segment of a segmented control. White on the light track, as
+    iOS draws it; on the dark track iOS lifts it to #636366 instead, because
+    the card colour (#1c1c1e) is darker than the track and read as nothing
+    being chosen at all.
+  */
+  --color-segment-on: light-dark(#ffffff, #636366);
+
+  /*
     This application's semantics, bound to the system palette.
 
     Still teal, and still one accent. systemBlue is the default of every

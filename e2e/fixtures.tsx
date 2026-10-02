@@ -1589,6 +1589,8 @@ ${description}`,
       hidden={['Rumah']}
       onToggle={() => {}}
       onShowAll={() => {}}
+      glow="groups"
+      onGlow={() => {}}
     />
   ),
   'peta-menunggu': <WaitingList waiting={WAITING} placing="pedagang 1" onPlace={() => {}} />,

@@ -1,5 +1,7 @@
 'use client'
 
+import { SEGMENT, SEGMENTED, SEGMENT_ON } from '@/components/field-base'
+import type { Glow } from './map-layers'
 import type { LegendGroup } from './view-model'
 
 /**
@@ -16,12 +18,19 @@ interface Props {
   hidden: readonly string[]
   onToggle: (group: string) => void
   onShowAll: () => void
+  glow: Glow['mode']
+  onGlow: (glow: Glow['mode']) => void
 }
+
+const GLOWS: { value: Glow['mode']; label: string }[] = [
+  { value: 'groups', label: 'Per kelompok' },
+  { value: 'density', label: 'Kepadatan' },
+]
 
 const CHIP =
   'inline-flex h-11 items-center gap-2 rounded-full border px-3 text-footnote transition-colors duration-150 sm:h-9'
 
-export function GroupLegend({ groups, hidden, onToggle, onShowAll }: Props) {
+export function GroupLegend({ groups, hidden, onToggle, onShowAll, glow, onGlow }: Props) {
   if (groups.length < 2) return null
   const off = new Set(hidden)
 
@@ -49,6 +58,28 @@ export function GroupLegend({ groups, hidden, onToggle, onShowAll }: Props) {
             </button>
           )
         })}
+      </div>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-footnote text-ink-muted">
+        <span>Cahaya</span>
+        <div role="radiogroup" aria-label="Warna cahaya" className={SEGMENTED}>
+          {GLOWS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              role="radio"
+              aria-checked={glow === option.value}
+              onClick={() => onGlow(option.value)}
+              className={`${SEGMENT} ${glow === option.value ? SEGMENT_ON : ''}`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+        <span>
+          {glow === 'groups'
+            ? 'Warna cahaya sama dengan titiknya; tempat yang ramai banyak kelompok terlihat campur.'
+            : 'Satu warna untuk semuanya: hanya menunjukkan di mana belanja paling padat.'}
+        </span>
       </div>
       <p className="flex flex-wrap items-center gap-x-3 text-footnote text-ink-muted">
         <span>Ketuk kelompok untuk menyembunyikannya dari peta. Daftar Tempat di bawah tetap lengkap.</span>
