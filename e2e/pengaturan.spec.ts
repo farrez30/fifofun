@@ -72,6 +72,15 @@ test.describe('formulir akun', () => {
     expect(options[0]).toBe('tidak diimpor')
   })
 
+  test("offers the bank's colour and icon, and never takes an SVG", async ({ page }) => {
+    await open(page, 'settings-account-form')
+    await expect(page.locator('input[type="hidden"][name="color"]')).toHaveValue('#003d79')
+    await expect(page.locator('input[type="color"]')).toHaveValue('#003d79')
+    const accept = await page.locator('input[type="file"][name="logo"]').getAttribute('accept')
+    expect(accept).toContain('image/png')
+    expect(accept).not.toContain('svg')
+  })
+
   test('carries the opening balance as sen digits', async ({ page }) => {
     await open(page, 'settings-account-form')
 
@@ -101,8 +110,11 @@ test.describe('kategori', () => {
       'Bills',
       'Invest / Savings',
       'Dari Asset / Saving',
-      'Diarsipkan',
     ])
+    // Retired categories fold away under a count rather than a third screen.
+    const archive = page.locator('details', { has: page.locator('summary', { hasText: /^Diarsipkan \(\d+\)$/ }) })
+    await expect(archive).toHaveCount(1)
+    await expect(archive).not.toHaveAttribute('open')
   })
 
   test('shows a savings pot in both of the groups it belongs to', async ({ page }) => {
@@ -160,7 +172,8 @@ test.describe('kategori', () => {
     // Read from the DOM rather than from what is on screen: the list is folded
     // away until somebody asks for it.
     const chips = await page
-      .locator('details li')
+      .locator('details', { has: page.locator('summary', { hasText: 'Nama yang dicari impor' }) })
+      .locator('li')
       .evaluateAll((nodes) => nodes.map((node) => node.textContent ?? ''))
     expect(chips.sort()).toEqual([...LOOKED_UP_NAMES].sort())
   })

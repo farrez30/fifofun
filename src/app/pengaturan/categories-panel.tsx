@@ -11,6 +11,7 @@ import type { ActionResult } from '@/lib/actions'
 import { reorderCategories, setCategoryArchived } from './actions'
 import { CategoryForm } from './category-form'
 import { useActionToast, withToast } from '@/components/use-action-toast'
+import { CaretDown } from '@phosphor-icons/react/dist/ssr/CaretDown'
 
 /**
  * Every category, grouped by the direction it points.
@@ -116,17 +117,29 @@ export function CategoriesPanel({ categories }: { categories: CategoryView[] }) 
           </div>
         ))}
 
+        {/* Folded: dozens of retired names under the live ones made the page
+            three screens long to reach a setting below them. Left uncontrolled,
+            so a save re-rendering the panel never closes it on the row being
+            edited inside. */}
         {archived.length > 0 ? (
-          <div>
-            <h3 className="text-subhead font-medium text-ink">Diarsipkan</h3>
-            <Table
-              rows={archived}
-              siblings={categories}
-              editing={editing}
-              onToggle={(id) => setEditing(editing === id ? null : id)}
-              caption="Kategori yang diarsipkan"
-            />
-          </div>
+          <details className="group squircle rounded-md bg-surface shadow-xs">
+            <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-4 text-subhead font-medium text-ink">
+              <CaretDown
+                aria-hidden="true"
+                className="size-4 shrink-0 text-ink-faint transition-transform duration-150 group-open:rotate-180"
+              />
+              Diarsipkan ({archived.length})
+            </summary>
+            <div className="border-t border-line">
+              <Table
+                rows={archived}
+                siblings={categories}
+                editing={editing}
+                onToggle={(id) => setEditing(editing === id ? null : id)}
+                caption="Kategori yang diarsipkan"
+              />
+            </div>
+          </details>
         ) : null}
       </div>
 
@@ -434,6 +447,7 @@ function Card({
           className="h-11 flex-1 rounded-sm border border-line px-3 text-subhead text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
         >
           {open ? 'Tutup' : 'Ubah'}
+          <span className="sr-only"> {category.name}</span>
         </button>
         <ArchiveButton category={category} />
       </div>
@@ -503,6 +517,7 @@ function Row({ category, siblings, isGroup, open, onToggle, reorder }: RowProps)
               className="h-9 rounded-sm border border-line px-2.5 text-footnote text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
             >
               {open ? 'Tutup' : 'Ubah'}
+          <span className="sr-only"> {category.name}</span>
             </button>
             <ArchiveButton category={category} />
           </div>
@@ -530,6 +545,7 @@ function ArchiveButton({ category }: { category: CategoryView }) {
       <input type="hidden" name="archived" value={category.archived ? '0' : '1'} />
       <SubmitButton className="inline-flex h-9 items-center rounded-sm border border-line px-2.5 text-footnote text-ink-muted transition-colors duration-150 hover:border-line-strong hover:text-ink">
         {category.archived ? 'Pakai lagi' : 'Arsipkan'}
+        <span className="sr-only"> {category.name}</span>
       </SubmitButton>
     </form>
   )

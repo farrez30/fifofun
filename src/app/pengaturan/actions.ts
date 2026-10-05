@@ -19,6 +19,8 @@ import { ICON_NAMES } from '@/components/marks'
 import { ACCOUNT_KEYS, parseIdentifiers, planArrange, twinsOf } from '@/lib/ledger/settings'
 import { describeBackfill, planOwnMoneyBackfill, type BackfillRow } from '@/lib/ledger/own-money-backfill'
 import { accountNumber } from '@/lib/statement/classify'
+import { normaliseHex } from '@/lib/brand'
+import { encodeLogo } from '@/lib/brand-logo'
 import { ACCOUNT_KINDS, CASHFLOW_LABELS, CASHFLOW_TYPES, type CashflowType } from '@/lib/ledger/types'
 
 /**
@@ -72,6 +74,12 @@ const accountSchema = z.object({
       const digits = accountNumber(value).length
       return value === '' || (digits >= 6 && digits <= 20)
     }, 'Nomor rekening biasanya 6 sampai 20 digit.'),
+  /** The institution's colour; empty means the app's own accent. */
+  color: z
+    .string()
+    .trim()
+    .refine((value) => value === '' || normaliseHex(value) !== null, 'Warnanya ditulis seperti #003d79.')
+    .transform((value) => normaliseHex(value)),
 })
 
 const categorySchema = z.object({
@@ -228,6 +236,9 @@ export async function createAccount(
   const identifiers = parseIdentifiers(String(formData.get('ownIdentifiers') ?? ''))
   if (!identifiers.ok) return fail('Nomor e-walletnya belum bisa dibaca.', identifiers.reason)
 
+  const logo = await readLogo(formData)
+  if (!logo.ok) return fail('Logonya belum bisa dipakai.', logo.reason)
+
   const ctx = await context()
   if (!ctx) return fail(SESSION_EXPIRED)
 
@@ -255,6 +266,8 @@ export async function createAccount(
       opening_balance_at: values.openingBalanceAt || null,
       own_identifiers: values.kind === 'bank' ? identifiers.values : [],
       reference: reference || null,
+      color: values.color,
+      ...(logo.change ? { logo: logo.value } : {}),
       sort_order: existing.length + 1,
     })
     .select('id')
@@ -280,6 +293,9 @@ export async function updateAccount(
 
   const identifiers = parseIdentifiers(String(formData.get('ownIdentifiers') ?? ''))
   if (!identifiers.ok) return fail('Nomor e-walletnya belum bisa dibaca.', identifiers.reason)
+
+  const logo = await readLogo(formData)
+  if (!logo.ok) return fail('Logonya belum bisa dipakai.', logo.reason)
 
   const ctx = await context()
   if (!ctx) return fail(SESSION_EXPIRED)
@@ -320,6 +336,10 @@ export async function updateAccount(
       opening_balance_at: values.openingBalanceAt || null,
       own_identifiers: values.kind === 'bank' ? identifiers.values : [],
       reference: reference || null,
+      color: values.color,
+      // Left out unless something was chosen: an empty file input means
+      // "keep the icon", not "remove it".
+      ...(logo.change ? { logo: logo.value } : {}),
     })
     .eq('id', values.id)
     .eq('household_id', ctx.householdId)
@@ -817,7 +837,24 @@ function readAccount(formData: FormData) {
     openingBalance: formData.get('openingBalance') ?? '0',
     openingBalanceAt: formData.get('openingBalanceAt') ?? '',
     reference: formData.get('reference') ?? '',
+    color: formData.get('color') ?? '',
   }
+}
+
+/**
+ * What the form asks of the icon: keep it, replace it, or remove it.
+ *
+ * An upload is redrawn by `encodeLogo` before it is kept, so what reaches the
+ * database is always the server's own small WebP and never the file as sent.
+ */
+async function readLogo(
+  formData: FormData,
+): Promise<{ ok: true; change: false } | { ok: true; change: true; value: string | null } | { ok: false; reason: string }> {
+  if (formData.get('removeLogo') === 'on') return { ok: true, change: true, value: null }
+  const file = formData.get('logo')
+  if (!(file instanceof File) || file.size === 0) return { ok: true, change: false }
+  const encoded = await encodeLogo(new Uint8Array(await file.arrayBuffer()))
+  return encoded.ok ? { ok: true, change: true, value: encoded.base64 } : encoded
 }
 
 function readCategory(formData: FormData) {

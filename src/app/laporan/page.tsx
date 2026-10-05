@@ -5,7 +5,8 @@ import { AppShell } from '@/components/app-shell'
 import { PeriodReport } from '@/components/period-report'
 import { TablePager, TransactionTable } from '@/components/transaction-table'
 import { matchesFilter, summarisePeriod, UNCATEGORISED, type PeriodFilter } from '@/lib/ledger/period'
-import { CASHFLOW_TYPES, type CashflowType } from '@/lib/ledger/types'
+import { CASHFLOW_TYPES, type CashflowType, type EntrySource } from '@/lib/ledger/types'
+import { SOURCE_LABELS } from '@/lib/ledger/edit'
 import {
   countLedger,
   getAccounts,
@@ -59,6 +60,7 @@ export function buildFilter(params: Record<string, string | string[] | undefined
   const cashflow = first(params.cashflow)
   const category = first(params.kategori)
   const account = first(params.akun)
+  const source = first(params.sumber)
 
   return {
     from: asDate(first(params.dari)),
@@ -72,6 +74,8 @@ export function buildFilter(params: Record<string, string | string[] | undefined
     accounts: account ? [account] : undefined,
     search: first(params.cari).slice(0, MAX_SEARCH) || undefined,
     includePassThrough: first(params.titipan) === 'ya',
+    // Same as the cashflow: only a source the ledger knows gets through.
+    sources: Object.hasOwn(SOURCE_LABELS, source) ? [source as EntrySource] : undefined,
   }
 }
 
@@ -126,6 +130,7 @@ async function Report({ params }: { params: Record<string, string | string[] | u
       accountIds,
       search: filter.search,
       includePassThrough: filter.includePassThrough === true ? undefined : false,
+      sources: filter.sources,
     }),
     countLedger(household.id),
   ])

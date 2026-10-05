@@ -3,6 +3,7 @@ import { cacheLife, cacheTag } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { accountsTag, budgetsTag, categoriesTag, importsTag, placesTag, planTag, rulesTag, summaryNoteTag, txTag } from '@/lib/queries/tags'
 import { parseHue } from '@/lib/ledger/palette'
+import { logoUrl } from '@/lib/brand'
 import type { AccountKind, CashflowType, EntrySource, LedgerEntry } from '@/lib/ledger/types'
 import type { PlaceEntry } from '@/lib/ledger/places'
 import type { AdjustmentRow } from '@/lib/ledger/adjustments'
@@ -52,6 +53,10 @@ export interface AccountRow {
   openingBalanceAt: Date | null
   sortOrder: number
   archivedAt: Date | null
+  /** The institution's colour as `#rrggbb`, or null for the app's own accent. */
+  color: string | null
+  /** Where the institution's icon is served, or null when there is none. */
+  logoUrl: string | null
 }
 
 export interface CategoryRow {
@@ -127,7 +132,9 @@ export async function getAccounts(
   let query = supabase
     .from('accounts')
     .select(
-      'id, name, kind, opening_balance, opening_balance_at, key, institution, own_identifiers, reference, sort_order, archived_at',
+      // logo_hash, not logo: the icon itself is served once by /akun/[id]/logo
+      // rather than riding along in every page that lists accounts.
+      'id, name, kind, opening_balance, opening_balance_at, key, institution, own_identifiers, reference, sort_order, archived_at, color, logo_hash',
     )
     .eq('household_id', householdId)
     .order('sort_order')
@@ -149,6 +156,8 @@ export async function getAccounts(
     openingBalanceAt: row.opening_balance_at ? new Date(row.opening_balance_at as string) : null,
     sortOrder: (row.sort_order as number) ?? 0,
     archivedAt: row.archived_at ? new Date(row.archived_at as string) : null,
+    color: (row.color as string | null) ?? null,
+    logoUrl: logoUrl(row.id as string, (row.logo_hash as string | null) ?? null),
   }))
 }
 
@@ -257,6 +266,7 @@ interface FetchOptions {
   search?: string
   /** Pass `false` to hide pass-through rows; anything else leaves them in. */
   includePassThrough?: boolean
+  sources?: EntrySource[]
 }
 
 /** LIKE wildcards typed into the search box are text, not syntax. */
@@ -289,6 +299,7 @@ export async function getTransactions(
   if (options.from) query = query.gte('occurred_at', options.from.toISOString())
   if (options.to) query = query.lt('occurred_at', options.to.toISOString())
   if (options.cashflows?.length) query = query.in('cashflow', options.cashflows)
+  if (options.sources?.length) query = query.in('source', options.sources)
 
   if (options.categoryIds?.length) {
     const ids = options.categoryIds.filter((id): id is string => id !== null)
@@ -835,24 +846,30 @@ export async function getTransaction(
   return { row: detail, children, fees, parent }
 }
 
-/** The most recent rows a person typed, for the page they typed them on. */
-export async function getManualEntries(householdId: string, limit = 10): Promise<TransactionRow[]> {
+/**
+ * The most recent rows a person typed, for the page they typed them on, and
+ * how many there are in all: the count rides on the same request.
+ */
+export async function getManualEntries(
+  householdId: string,
+  limit = 10,
+): Promise<{ rows: TransactionRow[]; total: number }> {
   'use cache: private'
   cacheTag(txTag(householdId))
   cacheLife({ stale: 30 })
 
   const supabase = await createClient()
-  const { data, error } = await supabase
+  const { data, error, count } = await supabase
     .from('transactions')
-    .select(TRANSACTION_COLUMNS)
+    .select(TRANSACTION_COLUMNS, { count: 'exact' })
     .eq('household_id', householdId)
     .eq('source', 'manual')
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .limit(limit)
 
-  if (error || !data) return []
-  return data.map(toTransactionRow)
+  if (error || !data) return { rows: [], total: 0 }
+  return { rows: data.map(toTransactionRow), total: count ?? data.length }
 }
 
 export interface DuplicateSide {

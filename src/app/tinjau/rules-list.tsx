@@ -1,6 +1,7 @@
 'use client'
 
 import { useActionState } from 'react'
+import { useShowMore } from '@/components/show-more'
 import { SubmitButton } from '@/components/submit-button'
 import { MATCH_LABELS, type MatchType } from '@/lib/ledger/rules'
 import type { RuleRow } from '@/lib/queries/household'
@@ -18,6 +19,7 @@ import { useActionToast } from '@/components/use-action-toast'
 export function RulesList({ rules }: { rules: RuleRow[] }) {
   const [result, action, pending] = useActionState<ActionResult | null, FormData>(deleteRule, null)
   useActionToast(result, pending, 'Menghapus aturan…')
+  const { shown, button, listId } = useShowMore(rules, 6)
 
   if (rules.length === 0) {
     return (
@@ -30,8 +32,8 @@ export function RulesList({ rules }: { rules: RuleRow[] }) {
   return (
     <div>
 
-      <ul className="space-y-2">
-        {rules.map((rule) => (
+      <ul id={listId} className="space-y-2">
+        {shown.map((rule) => (
           <li key={rule.id} className="squircle rounded-md bg-surface shadow-xs p-3">
             <div className="flex items-baseline justify-between gap-3">
               <p className="min-w-0 text-subhead text-ink">
@@ -57,6 +59,7 @@ export function RulesList({ rules }: { rules: RuleRow[] }) {
           </li>
         ))}
       </ul>
+      {button ? <div className="mt-2">{button}</div> : null}
     </div>
   )
 }

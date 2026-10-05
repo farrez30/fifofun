@@ -54,6 +54,8 @@ async function Settings() {
       : '',
     ownIdentifiers: account.ownIdentifiers.join('\n'),
     reference: account.reference ?? '',
+    color: account.color ?? '',
+    logoUrl: account.logoUrl,
     archived: account.archivedAt !== null,
     usage: usage.accounts[account.id] ?? 0,
   }))

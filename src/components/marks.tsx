@@ -310,16 +310,34 @@ export function CategoryMark({
 export function AccountMark({
   name,
   kind,
+  logo,
   className = '',
 }: {
   name: string
   kind: AccountKind
+  /** The institution's icon (`AccountRow.logoUrl`); the kind's glyph stands in without one. */
+  logo?: string | null
   className?: string
 }) {
   const Glyph = ICONS[ACCOUNT_ICON[kind]]
   return (
     <span data-mark="account" className={`inline-flex items-center gap-1.5 ${className}`}>
-      <Glyph aria-hidden="true" weight="regular" className="size-4 shrink-0 opacity-70" />
+      {logo ? (
+        // Sized in em so the icon follows the row's type role, and rounded like
+        // the app icon it is. Decorative: the name beside it is the label.
+        // eslint-disable-next-line @next/next/no-img-element -- a 64px private icon, not an optimisable image
+        <img
+          src={logo}
+          alt=""
+          width={20}
+          height={20}
+          loading="lazy"
+          decoding="async"
+          className="size-[1.25em] shrink-0 rounded-[0.3em] ring-1 ring-line"
+        />
+      ) : (
+        <Glyph aria-hidden="true" weight="regular" className="size-4 shrink-0 opacity-70" />
+      )}
       <span className="min-w-0 truncate">{name}</span>
       <span className="sr-only">, {ACCOUNT_KIND_LABELS[kind]}</span>
     </span>

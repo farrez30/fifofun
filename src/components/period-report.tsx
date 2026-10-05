@@ -1,6 +1,7 @@
 import { formatJakarta } from '@/lib/datetime'
 import type { CategoryTotal, PeriodFilter, PeriodSummary } from '@/lib/ledger/period'
-import { CASHFLOW_LABELS, CASHFLOW_TYPES } from '@/lib/ledger/types'
+import { CASHFLOW_LABELS, CASHFLOW_TYPES, type EntrySource } from '@/lib/ledger/types'
+import { SOURCE_LABELS } from '@/lib/ledger/edit'
 import { formatIdr } from '@/lib/money'
 import { CONTROL } from '@/components/field-base'
 
@@ -140,7 +141,7 @@ function Merchants({ line }: { line: CategoryTotal }) {
 export function PeriodReport({ summary, raw, categories, accounts, ledgerSize }: Props) {
   const filtered =
     Boolean(value(raw, 'dari') || value(raw, 'sampai') || value(raw, 'cashflow')) ||
-    Boolean(value(raw, 'kategori') || value(raw, 'akun') || value(raw, 'cari'))
+    Boolean(value(raw, 'kategori') || value(raw, 'akun') || value(raw, 'cari') || value(raw, 'sumber'))
 
   return (
     <div className="space-y-6">
@@ -196,6 +197,18 @@ export function PeriodReport({ summary, raw, categories, accounts, ledgerSize }:
               {accounts.map((account) => (
                 <option key={account} value={account}>
                   {account}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            <span className={LABEL}>Sumber</span>
+            <select name="sumber" defaultValue={value(raw, 'sumber')} className={CONTROL}>
+              <option value="">Semua</option>
+              {(Object.keys(SOURCE_LABELS) as EntrySource[]).map((source) => (
+                <option key={source} value={source}>
+                  {SOURCE_LABELS[source]}
                 </option>
               ))}
             </select>

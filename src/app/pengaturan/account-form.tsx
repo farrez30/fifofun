@@ -4,6 +4,7 @@ import { useActionState, useId, useState } from 'react'
 import { useFormStatus } from 'react-dom'
 import { BUTTON_PRIMARY, CONTROL, CONTROL_INLINE, FieldLabel, FieldRow } from '@/components/field-base'
 import { MoneyInput } from '@/components/money-input'
+import { PICKER_START } from '@/lib/brand'
 import { ACCOUNT_KEYS, ACCOUNT_KEY_LABELS } from '@/lib/ledger/settings'
 import { ACCOUNT_KINDS, type AccountKind } from '@/lib/ledger/types'
 import { ACCOUNT_KIND_LABELS } from '@/lib/ledger/direction'
@@ -13,7 +14,7 @@ import type { AccountView } from './accounts-panel'
 import { useActionToast } from '@/components/use-action-toast'
 
 /**
- * One account, as the six things about it that can be decided.
+ * One account, as the things about it that can be decided.
  *
  * The import key is the only field here that does anything beyond labelling.
  * It says which account the e-statement and the Telegram bot write to, which
@@ -41,11 +42,16 @@ export function AccountForm({ account }: { account?: AccountView }) {
     at: useId(),
     identifiers: useId(),
     reference: useId(),
+    color: useId(),
+    logo: useId(),
+    removeLogo: useId(),
   }
 
   const [kind, setKind] = useState<AccountKind>(account?.kind ?? 'ewallet')
   const [openingBalance, setOpeningBalance] = useState(() => BigInt(account?.openingBalance || '0'))
   const [key, setKey] = useState(account?.key ?? '')
+  const [color, setColor] = useState(account?.color ?? '')
+  const [removeLogo, setRemoveLogo] = useState(false)
 
   return (
     /*
@@ -110,6 +116,62 @@ export function AccountForm({ account }: { account?: AccountView }) {
             className={`${CONTROL_INLINE} placeholder:text-right`}
           />
         </FieldRow>
+
+        <FieldRow htmlFor={ids.color} label="Warna" hint="Mengisi pilihan akun saat dipilih.">
+          <span className="flex items-center justify-end gap-2">
+            {/* The colour input cannot be empty, so the value posted is this
+                hidden field and "Tanpa warna" clears it. */}
+            <input type="hidden" name="color" value={color} />
+            <input
+              id={ids.color}
+              type="color"
+              value={color || PICKER_START}
+              onChange={(event) => setColor(event.target.value)}
+              className="size-9 shrink-0 cursor-pointer rounded-sm border border-line bg-transparent p-0.5"
+            />
+            <span className="tnum min-w-[4.5rem] font-mono text-footnote text-ink-muted">
+              {color || 'aksen'}
+            </span>
+            {color ? (
+              <button
+                type="button"
+                onClick={() => setColor('')}
+                className="min-h-11 px-1 text-footnote text-ink-muted underline underline-offset-2 hover:text-ink"
+              >
+                Tanpa warna
+              </button>
+            ) : null}
+          </span>
+        </FieldRow>
+
+        <FieldRow htmlFor={ids.logo} label="Logo" hint="PNG, JPEG, atau WebP. Disimpan kecil, tidak dibagikan.">
+          <span className="flex min-w-0 items-center justify-end gap-2">
+            {account?.logoUrl && !removeLogo ? (
+              // eslint-disable-next-line @next/next/no-img-element -- the stored 64px icon itself
+              <img src={account.logoUrl} alt="" width={28} height={28} className="size-7 rounded-[8px] ring-1 ring-line" />
+            ) : null}
+            <input
+              id={ids.logo}
+              type="file"
+              name="logo"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              className="min-w-0 max-w-[13rem] text-body text-ink-muted file:mr-2 file:min-h-11 file:cursor-pointer file:rounded-sm file:border file:border-line file:bg-paper file:px-2.5 file:text-subhead file:text-ink"
+            />
+          </span>
+        </FieldRow>
+
+        {account?.logoUrl ? (
+          <FieldRow htmlFor={ids.removeLogo} label="Hapus logo">
+            <input
+              id={ids.removeLogo}
+              type="checkbox"
+              name="removeLogo"
+              checked={removeLogo}
+              onChange={(event) => setRemoveLogo(event.target.checked)}
+              className="size-5 accent-[var(--color-accent)]"
+            />
+          </FieldRow>
+        ) : null}
 
         <FieldRow htmlFor={ids.key} label="Kunci impor" hint="Satu kunci, satu akun.">
           <select

@@ -694,6 +694,15 @@ const BUDGET_YEAR = buildBudgetYear({
   One statement row and one typed row. Which fields the form draws is decided
   from the source, and these are the two answers.
 */
+/*
+  A stand-in institution icon: a data URL, because the real ones are served
+  from the database by /akun/[id]/logo and the fixture server has none. The
+  CSP allows data: images, so this exercises the same <img> path.
+*/
+const FIXTURE_LOGO =
+  'data:image/svg+xml,' +
+  encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><rect width="20" height="20" fill="#00aed6"/><rect x="5" y="6" width="10" height="8" rx="2" fill="#fff"/></svg>')
+
 const TABLE_ACCOUNTS = [
   { id: 'acc-mandiri', name: 'Bank Mandiri', kind: 'bank' as const },
   { id: 'acc-gopay', name: 'GoPay', kind: 'ewallet' as const },
@@ -799,6 +808,8 @@ const SETTINGS_ACCOUNTS: AccountView[] = [
     openingBalanceAt: '2026-01-01',
     ownIdentifiers: '081234567890\n+6281122334455',
     reference: '1230000000002',
+    color: '#003d79',
+    logoUrl: null,
     archived: false,
     usage: 1591,
   },
@@ -812,6 +823,8 @@ const SETTINGS_ACCOUNTS: AccountView[] = [
     openingBalanceAt: '',
     ownIdentifiers: '',
     reference: '',
+    color: '',
+    logoUrl: null,
     archived: false,
     usage: 42,
   },
@@ -825,6 +838,8 @@ const SETTINGS_ACCOUNTS: AccountView[] = [
     openingBalanceAt: '',
     ownIdentifiers: '',
     reference: '',
+    color: '#00aed6',
+    logoUrl: FIXTURE_LOGO,
     archived: false,
     usage: 18,
   },
@@ -839,6 +854,8 @@ const SETTINGS_ACCOUNTS: AccountView[] = [
     openingBalanceAt: '',
     ownIdentifiers: '',
     reference: '',
+    color: '#4c3494',
+    logoUrl: null,
     archived: true,
     usage: 3,
   },
@@ -1108,10 +1125,10 @@ const QUEUE_REMAINING_PANJANG = summariseQueue(QUEUE_ROWS_PANJANG.length, QUEUE_
 
 /* Four accounts of four kinds, which is what the chips have to stay legible at. */
 const CATAT_ACCOUNTS = [
-  { id: 'acc-mandiri', name: 'Bank Mandiri', kind: 'bank' as const },
+  { id: 'acc-mandiri', name: 'Bank Mandiri', kind: 'bank' as const, color: '#003d79' },
   { id: 'acc-cash', name: 'Cash', kind: 'cash' as const },
-  { id: 'acc-gopay', name: 'GoPay', kind: 'ewallet' as const },
-  { id: 'acc-emoney', name: 'e-Money', kind: 'emoney' as const },
+  { id: 'acc-gopay', name: 'GoPay', kind: 'ewallet' as const, color: '#00aed6', logoUrl: FIXTURE_LOGO },
+  { id: 'acc-emoney', name: 'e-Money', kind: 'emoney' as const, color: '#ffb700' },
 ]
 
 const CATAT_CATEGORIES = [
@@ -2114,6 +2131,8 @@ ${description}`,
           duplicateSuspected: false,
         },
       ]}
+      // More typed than shown, so the link to the rest of them renders.
+      total={42}
     />
   ),
 

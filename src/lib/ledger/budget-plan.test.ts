@@ -105,6 +105,15 @@ describe('buildBudgetPlan', () => {
     expect(baru.lastMonth).toBeNull()
     expect(baru.actual).toBeNull()
     expect(baru.amount).toBe('')
+    // ...so the table can fold it away until somebody asks for it.
+    expect(baru.quiet).toBe(true)
+  })
+
+  it('never folds a category that has a budget, spending, or a history', () => {
+    const rows = plan().lines
+    for (const id of ['c-belanja', 'c-wifi', 'c-jajan']) {
+      expect(rows.find((line) => line.id === id)!.quiet).toBe(false)
+    }
   })
 
   it('prefers last month budget over last month spending, and marks the difference', () => {

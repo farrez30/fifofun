@@ -59,6 +59,7 @@ export interface AccountOption {
   id: string
   name: string
   kind: 'bank' | 'ewallet' | 'cash' | 'emoney' | 'investment'
+  logoUrl?: string | null
 }
 
 interface Props {
@@ -553,6 +554,7 @@ function SingleRows({
                       <AccountMark
                         name={account.name}
                         kind={account.kind}
+                        logo={account.logoUrl}
                         className="text-footnote text-ink"
                       />
                     ) : (

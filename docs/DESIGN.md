@@ -240,6 +240,53 @@ implisit sama-sama tidak mau menyusut di bawah lebar isinya: tabel lebar di
 dalamnya mendorong kartu keluar layar. `e2e/narrow.spec.ts` menjaga ini di
 720px, di antara suite ponsel dan desktop.
 
+**Akun memakai warna dan ikon lembaganya sendiri.** Chip akun yang dipilih
+terisi warna bank atau dompetnya (`accounts.color`, `#rrggbb`), seperti tampilan
+aplikasi aslinya, jadi DANA dikenali dari birunya sebelum namanya terbaca. Chip
+yang tidak dipilih tetap netral: dua belas chip jenuh sekaligus justru membuat
+yang terpilih paling sulit dilihat. Tintanya dipilih `inkOn` di
+`src/lib/brand.ts`: hitam atau putih murni, mana yang kontrasnya lebih tinggi.
+Hanya pasangan murni itu yang menjamin 4,5:1 di atas warna apa pun (kasus
+terburuknya 4,58:1), jadi berkas ini masuk daftar pengecualian warna mentah di
+konfigurasi ESLint, bersama manifest dan layout. Akun tanpa warna memakai wash
+aksen seperti pilihan lain di app. Garis tipis ikon ikut warna tinta saat chip
+terpilih, karena ubin kuning Jago di atas chip kuning Jago kehilangan tepinya.
+
+Ikonnya adalah ikon aplikasi resmi lembaga itu (diambil dari halaman Google
+Play pengembang resminya), disimpan di database (`accounts.logo`) dan disajikan
+`/akun/[id]/logo` di balik RLS akun, **bukan** di `public/`. Repo ini publik.
+Menyimpan ikon untuk dipakai sendiri termasuk penggandaan untuk kepentingan
+pribadi (UU Hak Cipta Pasal 46), tapi meng-commit-nya berarti menyebarkannya ke
+siapa pun. Setiap unggahan digambar ulang di server menjadi WebP 64px
+(`src/lib/brand-logo.ts`), dan SVG ditolak, jadi yang tersimpan selalu gambar
+buatan server sendiri, bukan berkas kiriman. URL-nya membawa `logo_hash`
+sehingga bisa di-cache setahun dan langsung berganti saat ikonnya berganti.
+`AccountMark` menampilkan ikon ini di semua tempat yang sudah memakainya (chip,
+tabel, Tinjau, saldo) dan kembali ke glyph jenis akun bila tidak ada.
+
+**Arah uang yang dipilih diberi warna sisinya, hanya di pemilihnya.** Keluar
+memakai wash merah (`over`), Masuk wash mint (`under`), Antar akun wash aksen.
+Ini satu-satunya tempat arah diwarnai: warnanya menjawab "sisi mana yang
+sedang dipilih", sedangkan nominal di tempat lain tetap tidak pernah diwarnai
+arahnya saja.
+
+**Daftar menampilkan sebagian, dan selalu menyebut sisanya.** Daftar yang
+punya halaman sendiri berhenti di beberapa baris dan menautkan ke sana dengan
+jumlahnya: Catat menampilkan lima catatan terakhir dan "Lihat semua (n)" ke
+`/laporan?sumber=manual` (Laporan punya saringan Sumber), Ringkasan menampilkan
+delapan transaksi dan menautkan ke Laporan. Daftar yang isinya pekerjaan
+(pasangan kemungkinan ganda, aturan di Tinjau) memakai `useShowMore` di
+`components/show-more.tsx`: beberapa yang pertama, lalu satu tombol yang
+menyebut berapa yang ditahan, karena memindahkan pekerjaan ke halaman lain
+sama dengan menyembunyikannya. Anggaran melipat kategori yang tidak punya apa
+pun untuk dikatakan bulan itu (tanpa anggaran, realisasi, median, dan bulan
+lalu) di balik "Tampilkan n kategori yang kosong". Barisnya tetap di form
+(`hidden`, bukan dibuang) sehingga Simpan tidak pernah menghapus anggaran yang
+tidak dilihat, dan tidak ada yang dilipat bila semua baris kosong (rumah tangga
+baru). Kategori yang diarsipkan di Pengaturan ada di `<details>` yang tertutup.
+Tombol Hapus tidak lagi berdiri di barisnya sendiri di bawah setiap kartu:
+di ponsel ia di baki geser (`SwipeActionRow`), di tabel ia tindakan baris biasa.
+
 **Peta adalah gambar dari tabel di bawahnya, bukan satu-satunya jalan ke
 angkanya.** `/peta` memakai MapLibre dengan tile OpenFreeMap: Positron untuk
 tema terang, Dark untuk tema gelap, dan berganti mengikuti tema app tanpa

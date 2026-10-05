@@ -97,10 +97,12 @@ const chromeFiles = [
   'src/components/toaster.tsx',
 ]
 
-/* The two files that have to name a colour rather than a token: a web app
-   manifest is read by the installer before any stylesheet exists, and the
-   browser chrome colour is a meta tag. */
-const rawColourFiles = ['src/app/manifest.ts', 'src/app/layout.tsx']
+/* The files that have to name a colour rather than a token: a web app
+   manifest is read by the installer before any stylesheet exists, the
+   browser chrome colour is a meta tag, and the ink on a bank's own colour
+   must be pure black or white, because only that pair guarantees 4.5:1 on
+   every colour a household can pick (src/lib/brand.ts). */
+const rawColourFiles = ['src/app/manifest.ts', 'src/app/layout.tsx', 'src/lib/brand.ts', 'src/lib/brand.test.ts']
 
 const eslintConfig = defineConfig([
   ...nextVitals,

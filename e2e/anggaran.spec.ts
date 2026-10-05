@@ -68,12 +68,29 @@ test.describe('anggaran', () => {
     await expect(other).toContainText('belum pernah muncul')
   })
 
+  test('folds categories with nothing to say, without dropping them from the form', async ({
+    page,
+  }) => {
+    await open(page, 'budget-table')
+    const toggle = page.getByRole('button', { name: /^Tampilkan \d+ kategori yang kosong$/ })
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    const hidden = page.locator('form table tr[hidden]')
+    const folded = await hidden.count()
+    expect(folded).toBeGreaterThan(0)
+    // Still inside the form, so saving cannot drop a budget nobody looked at.
+    // (The fixture is not hydrated, so the button itself is not pressed here.)
+    expect(await hidden.locator('input').count()).toBeGreaterThan(0)
+    await expect(toggle).toHaveText(`Tampilkan ${folded} kategori yang kosong`)
+  })
+
   test('says nothing is known when there is no history at all', async ({ page }) => {
     await open(page, 'budget-table-empty')
     const body = await page.locator('body').innerText()
 
     expect(body).toContain('Belum ada anggaran untuk Jan 2026')
     expect((body.match(/tidak diketahui/g) ?? []).length).toBe(5)
+    // Every row is quiet here, so none of them is folded: there is nothing else to show.
+    await expect(page.getByRole('button', { name: /kategori yang kosong/ })).toHaveCount(0)
     // Nothing spent yet, so there is no realisation column to draw at all.
     expect(await page.getByRole('columnheader', { name: 'Realisasi' }).count()).toBe(0)
   })

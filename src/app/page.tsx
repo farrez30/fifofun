@@ -55,6 +55,10 @@ import { Receipt } from '@phosphor-icons/react/dist/ssr/Receipt'
 import { BUTTON_PRIMARY } from '@/components/field-base'
 import { Unavailable } from '@/components/unavailable'
 
+
+/** How many of the newest transactions the home page lists. */
+const RECENT_ROWS = 8
+
 export const metadata: Metadata = { title: 'Ringkasan' }
 
 /*
@@ -436,7 +440,7 @@ async function Dashboard({ akun }: { akun: string }) {
           reconciliation={reconciliation}
           stalled={stalled}
           statementDate={printed?.periodEnd ?? null}
-          accounts={accounts.map((account) => ({ id: account.id, kind: account.kind }))}
+          accounts={accounts.map((account) => ({ id: account.id, kind: account.kind, logoUrl: account.logoUrl }))}
           today={formatJakarta(new Date(), 'iso-date')}
           entryKeys={Object.fromEntries(accounts.map((account) => [account.id, randomUUID()]))}
         />
@@ -518,6 +522,7 @@ async function Dashboard({ akun }: { akun: string }) {
             id: account.id,
             name: account.name,
             kind: account.kind,
+            logoUrl: account.logoUrl,
           }))}
           current={scoped?.id ?? null}
         />
@@ -554,16 +559,24 @@ async function Dashboard({ akun }: { akun: string }) {
         <h2 id="transaksi" className="mb-3 text-subhead font-medium text-ink">
           Transaksi terakhir
         </h2>
+        {/* Eight, the last week or so of a normal household: a glance at what
+            just landed. The rest is paged and filterable in Laporan, which is
+            what the link says rather than leaving it to a sentence. */}
         <TransactionTable
-          rows={[...transactions].slice(-20).reverse()}
+          rows={[...transactions].slice(-RECENT_ROWS).reverse()}
           accounts={accounts}
           categories={categories}
-          caption="Dua puluh transaksi terakhir"
+          caption="Delapan transaksi terakhir"
           emptyText="Belum ada transaksi tercatat."
         />
-        <p className="mt-2 text-footnote text-ink-muted">
-          Klik keterangannya untuk mengubahnya. Semua transaksi ada di Laporan.
-        </p>
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+          <p className="text-footnote text-ink-muted">Klik keterangannya untuk mengubahnya.</p>
+          {transactions.length > RECENT_ROWS ? (
+            <Link href="/laporan" className="inline-flex min-h-11 items-center text-subhead text-accent">
+              Lihat semua ({transactions.length.toLocaleString('id-ID')}) ›
+            </Link>
+          ) : null}
+        </div>
       </section>
     </div>
   )

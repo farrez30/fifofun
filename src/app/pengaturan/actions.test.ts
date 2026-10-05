@@ -183,6 +183,54 @@ describe('updateAccount', () => {
     expect(result.message).toBe('Rekening dengan kunci mandiri harus tetap berjenis Bank.')
   })
 
+  it('stores the colour in one spelling and keeps the icon when no file was chosen', async () => {
+    household()
+    stub.queue('accounts', { data: ACCOUNTS }, { data: [{ id: '00000000-0000-4000-8000-0000000000a1' }] })
+
+    const data = form({ ...ACCOUNT_FIELDS, id: '00000000-0000-4000-8000-0000000000a1', color: '#003D79' })
+    data.append('logo', new File([], ''))
+    const result = await updateAccount(null, data)
+    expect(result.ok).toBe(true)
+    const patch = stub.callsOn('accounts')[1].payload as Record<string, unknown>
+    expect(patch.color).toBe('#003d79')
+    expect('logo' in patch).toBe(false)
+  })
+
+  it('redraws an uploaded icon and refuses one that is not a picture', async () => {
+    const sharp = (await import('sharp')).default
+    const png = await sharp({ create: { width: 128, height: 128, channels: 3, background: '#ee4d2d' } }).png().toBuffer()
+
+    household()
+    stub.queue('accounts', { data: ACCOUNTS }, { data: [{ id: '00000000-0000-4000-8000-0000000000a2' }] })
+    const data = form({ ...ACCOUNT_FIELDS, id: '00000000-0000-4000-8000-0000000000a2', name: 'GoPay', kind: 'ewallet', key: 'gopay' })
+    data.append('logo', new File([new Uint8Array(png)], 'gopay.png', { type: 'image/png' }))
+    expect((await updateAccount(null, data)).ok).toBe(true)
+    const stored = (stub.callsOn('accounts')[1].payload as Record<string, string>).logo
+    expect((await sharp(Buffer.from(stored, 'base64')).metadata()).format).toBe('webp')
+
+    stub.calls.length = 0
+    const svg = form({ ...ACCOUNT_FIELDS, id: '00000000-0000-4000-8000-0000000000a2', name: 'GoPay', kind: 'ewallet', key: 'gopay' })
+    svg.append('logo', new File(['<svg xmlns="http://www.w3.org/2000/svg"/>'], 'x.png', { type: 'image/png' }))
+    const refused = await updateAccount(null, svg)
+    expect(refused.message).toBe('Logonya belum bisa dipakai.')
+    // Refused before a single query: a bad file never costs a round trip.
+    expect(stub.calls).toHaveLength(0)
+  })
+
+  it('removes the icon when asked, and refuses a colour the database would', async () => {
+    household()
+    stub.queue('accounts', { data: ACCOUNTS }, { data: [{ id: '00000000-0000-4000-8000-0000000000a1' }] })
+    const data = form({ ...ACCOUNT_FIELDS, id: '00000000-0000-4000-8000-0000000000a1', removeLogo: 'on', color: '' })
+    expect((await updateAccount(null, data)).ok).toBe(true)
+    const patch = stub.callsOn('accounts')[1].payload as Record<string, unknown>
+    expect(patch.logo).toBeNull()
+    expect(patch.color).toBeNull()
+
+    const bad = await updateAccount(null, form({ ...ACCOUNT_FIELDS, id: '00000000-0000-4000-8000-0000000000a1', color: 'red' }))
+    expect(bad.ok).toBe(false)
+    expect(bad.detail).toBe('Warnanya ditulis seperti #003d79.')
+  })
+
   it('lets an account be renamed freely', async () => {
     household()
     stub.queue('accounts', { data: ACCOUNTS }, { data: [{ id: '00000000-0000-4000-8000-0000000000a1' }] })

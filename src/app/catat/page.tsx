@@ -31,7 +31,7 @@ async function Entry() {
   const household = await getHousehold()
   if (!household) redirect('/gabung')
 
-  const [accounts, categories, recent] = await Promise.all([
+  const [accounts, categories, manual] = await Promise.all([
     getAccounts(household.id),
     getCategories(household.id),
     getManualEntries(household.id),
@@ -40,7 +40,7 @@ async function Entry() {
   const now = new Date()
   const accountNames = new Map(accounts.map((account) => [account.id, account.name]))
 
-  const rows: RecentEntry[] = recent.map((row) => {
+  const rows: RecentEntry[] = manual.rows.map((row) => {
     const from = row.fromAccountId ? accountNames.get(row.fromAccountId) : null
     const to = row.toAccountId ? accountNames.get(row.toAccountId) : null
     return {
@@ -63,6 +63,8 @@ async function Entry() {
             id: account.id,
             name: account.name,
             kind: account.kind,
+            color: account.color,
+            logoUrl: account.logoUrl,
           }))}
           categories={categories.map((category) => ({
             id: category.id,
@@ -79,9 +81,9 @@ async function Entry() {
 
         <section aria-labelledby="catatan-terakhir">
           <h2 id="catatan-terakhir" className="mb-3 text-subhead font-medium text-ink">
-            Sepuluh catatan manual terakhir
+            Catatan manual terakhir
           </h2>
-          <RecentEntries rows={rows} />
+          <RecentEntries rows={rows} total={manual.total} />
         </section>
       </div>
 

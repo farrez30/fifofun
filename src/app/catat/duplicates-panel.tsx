@@ -1,6 +1,7 @@
 'use client'
 
 import { useActionState } from 'react'
+import { useShowMore } from '@/components/show-more'
 import { useFormStatus } from 'react-dom'
 import { keepBoth, mergeDuplicate } from './actions'
 import type { DuplicateView } from './duplicates-view'
@@ -48,6 +49,8 @@ export function DuplicatesPanel({ pairs }: { pairs: DuplicateView[] }) {
   useActionToast(mergeResult, mergePending, 'Menggabungkan…')
   const [keepResult, keep, keepPending] = useActionState<ActionResult | null, FormData>(keepBoth, null)
   useActionToast(keepResult, keepPending)
+  // A hundred pairs after a first import is a hundred cards; five is a batch.
+  const { shown, button, listId } = useShowMore(pairs, 5)
 
   if (pairs.length === 0) return null
 
@@ -69,8 +72,8 @@ export function DuplicatesPanel({ pairs }: { pairs: DuplicateView[] }) {
       </p>
 
 
-      <ul className="mt-3 space-y-3">
-        {pairs.map((pair) => (
+      <ul id={listId} className="mt-3 space-y-3">
+        {shown.map((pair) => (
           <li key={pair.manualId} className="@container squircle rounded-md bg-surface shadow-xs">
             {/*
               Stacked rather than side by side, and still a comparison. The two
@@ -202,6 +205,7 @@ export function DuplicatesPanel({ pairs }: { pairs: DuplicateView[] }) {
           </li>
         ))}
       </ul>
+      {button ? <div className="mt-2">{button}</div> : null}
 
       <p className="mt-3 text-footnote text-ink-muted">
         Gabungkan memakai baris dari bank dan memindahkan kategori serta catatan manualnya ke sana.

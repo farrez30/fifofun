@@ -102,6 +102,17 @@ export const accounts = pgTable(
      * either of them.
      */
     key: text('key'),
+    /** The institution's own colour as `#rrggbb`, filling the account's chip when picked. */
+    color: text('color'),
+    /**
+     * The institution's app icon, re-encoded on the server to a 64px WebP and
+     * kept as base64. It lives here rather than in `public/` because the repo
+     * is public and the icons belong to the banks; served by
+     * `/akun/[id]/logo` behind the household's own row-level security.
+     */
+    logo: text('logo'),
+    /** Changes whenever the logo does, so its URL can be cached forever. */
+    logoHash: text('logo_hash').generatedAlwaysAs(sql`md5(logo)`),
   },
   (table) => [
     index('accounts_household_idx').on(table.householdId),

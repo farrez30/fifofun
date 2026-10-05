@@ -144,6 +144,13 @@ test.describe('the pages that need somebody signed in', () => {
       await expect(page).toHaveURL(/\/login$/)
     })
   }
+  // An account icon is a picture, not a page: a stranger gets a refusal, not
+  // a redirect, and nothing cacheable.
+  test('an account icon answers a stranger with 401', async ({ request }) => {
+    const response = await request.get('/akun/00000000-0000-4000-8000-000000000000/logo?v=x')
+    expect(response.status()).toBe(401)
+    expect(response.headers()['cache-control']).toContain('no-store')
+  })
 })
 
 test.describe('a page that does not exist', () => {

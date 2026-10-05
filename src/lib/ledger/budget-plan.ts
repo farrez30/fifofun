@@ -74,6 +74,12 @@ export interface BudgetLineView {
   /** Month-end projection for this line; current month with an actual only. */
   projectedSen: string | null
   projectedText: string | null
+  /**
+   * Nothing to say about this category this month: no budget, no spending,
+   * no median and nothing last month. The table folds these away rather than
+   * listing forty rows of empty fields; they are still in the form.
+   */
+  quiet: boolean
 }
 
 export interface BudgetPlanView {
@@ -231,6 +237,9 @@ export function buildBudgetPlan({
       actualSen: !hasData || spent === undefined ? null : spent.toString(),
       projectedSen: projected === null ? null : projected.toString(),
       projectedText: projected === null ? null : formatIdr(projected),
+      quiet: [budget, usual[category.id], previousBudget, previousSpent, spent].every(
+        (value) => value === undefined || value === 0n,
+      ),
     }
   })
 

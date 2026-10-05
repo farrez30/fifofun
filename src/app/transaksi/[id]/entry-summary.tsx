@@ -46,13 +46,13 @@ export function EntrySummary({
         <Pair label="Akun">
           {from && to ? (
             <span className="inline-flex flex-wrap items-center gap-1.5">
-              <AccountMark name={from.name} kind={from.kind} />
+              <AccountMark name={from.name} kind={from.kind} logo={from.logoUrl} />
               <span aria-hidden="true">→</span>
               <span className="sr-only">ke</span>
-              <AccountMark name={to.name} kind={to.kind} />
+              <AccountMark name={to.name} kind={to.kind} logo={to.logoUrl} />
             </span>
           ) : from || to ? (
-            <AccountMark name={(from ?? to)!.name} kind={(from ?? to)!.kind} />
+            <AccountMark name={(from ?? to)!.name} kind={(from ?? to)!.kind} logo={(from ?? to)!.logoUrl} />
           ) : (
             'Akun tidak dikenal'
           )}

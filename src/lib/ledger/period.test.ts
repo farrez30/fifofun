@@ -122,6 +122,14 @@ describe('summarisePeriod', () => {
     expect(summary.matched).toBe(3)
   })
 
+  it('keeps only the rows typed by hand when asked, for the Catat page to link to', () => {
+    const typed = [...LEDGER, entry('2026-03-04', 'Kopi', idr('15.000,00'), 'spending', { source: 'manual' })]
+    const summary = summarisePeriod(typed, { sources: ['manual'] })
+    expect(summary.matched).toBe(1)
+    expect(summary.outflow).toBe(idr('15.000,00'))
+    expect(summarisePeriod(typed, {}).matched).toBe(typed.length - typed.filter((row) => row.isPassThrough).length)
+  })
+
   it('searches the description', () => {
     expect(summarisePeriod(LEDGER, { search: 'makan' }).matched).toBe(1)
     expect(summarisePeriod(LEDGER, { search: 'MAKAN' }).matched).toBe(1)

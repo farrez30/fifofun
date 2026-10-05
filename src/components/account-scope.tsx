@@ -22,6 +22,7 @@ export interface ScopeAccount {
   id: string
   name: string
   kind: AccountKind
+  logoUrl?: string | null
 }
 
 export function AccountScope({
@@ -52,7 +53,7 @@ export function AccountScope({
               aria-current={current === account.id ? 'true' : undefined}
               className={`${SEGMENT} ${current === account.id ? SEGMENT_ON : ''}`}
             >
-              <AccountMark name={account.name} kind={account.kind} />
+              <AccountMark name={account.name} kind={account.kind} logo={account.logoUrl} />
               <NavHint className="ml-1.5" />
             </Link>
           </li>

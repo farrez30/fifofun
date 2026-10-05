@@ -40,6 +40,9 @@ export interface AccountView {
   ownIdentifiers: string
   /** Digits only, or empty. */
   reference: string
+  /** `#rrggbb`, or empty for the app's own accent. */
+  color: string
+  logoUrl: string | null
   archived: boolean
   /** How many transactions have this account on either side. */
   usage: number
@@ -213,7 +216,7 @@ function Row({ account, open, onToggle, reorder }: RowProps) {
           {reorder ? <DragHandle label={`Pindahkan ${account.name}`} handle={reorder.handle} /> : null}
         </td>
         <th scope="row" className="whitespace-nowrap px-4 py-2.5 text-left font-normal text-ink">
-          <AccountMark name={account.name} kind={account.kind} />
+          <AccountMark name={account.name} kind={account.kind} logo={account.logoUrl} />
           {account.archived ? (
             <span className="ml-2 text-footnote text-ink-faint">(arsip)</span>
           ) : null}
@@ -245,6 +248,7 @@ function Row({ account, open, onToggle, reorder }: RowProps) {
               className="h-9 rounded-sm border border-line px-2.5 text-footnote text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
             >
               {open ? 'Tutup' : 'Ubah'}
+          <span className="sr-only"> {account.name}</span>
             </button>
             <ArchiveButton account={account} />
           </div>
@@ -275,7 +279,7 @@ function Card({ account, open, onToggle, reorder }: RowProps) {
       <div className={`flex items-center justify-between gap-1 ${reorder ? '-ml-3' : ''}`}>
         {reorder ? <DragHandle label={`Pindahkan ${account.name}`} handle={reorder.handle} /> : null}
         <span className="min-w-0 flex-1 text-subhead text-ink">
-          <AccountMark name={account.name} kind={account.kind} />
+          <AccountMark name={account.name} kind={account.kind} logo={account.logoUrl} />
           {account.archived ? <span className="ml-2 text-footnote text-ink-faint">(arsip)</span> : null}
         </span>
         <span className="tnum shrink-0 font-mono text-subhead text-ink-muted">
@@ -308,6 +312,7 @@ function Card({ account, open, onToggle, reorder }: RowProps) {
           className="h-11 flex-1 rounded-sm border border-line px-3 text-subhead text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
         >
           {open ? 'Tutup' : 'Ubah'}
+          <span className="sr-only"> {account.name}</span>
         </button>
         <ArchiveButton account={account} />
       </div>
@@ -331,6 +336,7 @@ function ArchiveButton({ account }: { account: AccountView }) {
       <input type="hidden" name="archived" value={account.archived ? '0' : '1'} />
       <SubmitButton className="inline-flex h-9 items-center rounded-sm border border-line px-2.5 text-footnote text-ink-muted transition-colors duration-150 hover:border-line-strong hover:text-ink">
         {account.archived ? 'Pakai lagi' : 'Arsipkan'}
+        <span className="sr-only"> {account.name}</span>
       </SubmitButton>
     </form>
   )

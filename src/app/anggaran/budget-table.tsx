@@ -3,7 +3,7 @@
 import { useActionState, useCallback, useState } from 'react'
 import { useFormStatus } from 'react-dom'
 import { CategoryMark } from '@/components/marks'
-import { BUTTON_PRIMARY, BUTTON_QUIET } from '@/components/field-base'
+import { BUTTON_PLAIN, BUTTON_PRIMARY, BUTTON_QUIET } from '@/components/field-base'
 import { MoneyInput } from '@/components/money-input'
 import { formatMonthKey } from '@/lib/datetime'
 import { formatIdr } from '@/lib/money'
@@ -67,6 +67,18 @@ export function BudgetTable({ plan }: { plan: BudgetPlanView }) {
     .filter((group) => group.rows.length > 0)
 
   const columns = plan.hasData ? 5 : 4
+
+  /*
+    Categories with nothing to say this month (no budget, no spending, no
+    history) fold away behind one button. Judged from what the server sent,
+    never from what is being typed: clearing a field must not make its row
+    vanish under the cursor. Folded rows keep their inputs, `hidden` rather
+    than unrendered, so saving never drops a budget nobody looked at.
+  */
+  const quietCount = plan.lines.filter((line) => line.quiet).length
+  // A household with no history yet has nothing but quiet rows, and folding
+  // all of them would leave an empty table where the first budget goes.
+  const [showQuiet, setShowQuiet] = useState(quietCount === plan.lines.length)
 
   return (
     <div className="space-y-3">
@@ -150,7 +162,10 @@ export function BudgetTable({ plan }: { plan: BudgetPlanView }) {
 
             {groups.map((group) => (
               <tbody key={group.cashflow}>
-                <tr className="border-b border-line bg-sunken">
+                <tr
+                  hidden={!showQuiet && group.rows.every((line) => line.quiet)}
+                  className="border-b border-line bg-sunken"
+                >
                   <th
                     scope="colgroup"
                     colSpan={columns}
@@ -162,6 +177,7 @@ export function BudgetTable({ plan }: { plan: BudgetPlanView }) {
                 {group.rows.map((line) => (
                   <Row
                     key={line.id}
+                    hidden={!showQuiet && line.quiet}
                     line={line}
                     hasData={plan.hasData}
                     hasHistory={plan.hasHistory}
@@ -175,6 +191,19 @@ export function BudgetTable({ plan }: { plan: BudgetPlanView }) {
             ))}
           </table>
         </div>
+
+        {quietCount > 0 && quietCount < plan.lines.length ? (
+          <button
+            type="button"
+            aria-expanded={showQuiet}
+            onClick={() => setShowQuiet((open) => !open)}
+            className={BUTTON_PLAIN}
+          >
+            {showQuiet
+              ? 'Sembunyikan kategori yang kosong'
+              : `Tampilkan ${quietCount} kategori yang kosong`}
+          </button>
+        ) : null}
 
         <div className="flex flex-wrap items-center gap-3">
           <Submit label={`Simpan anggaran ${label}`} />
@@ -235,6 +264,7 @@ function judge(line: BudgetLineView, amount: bigint) {
 
 function Row({
   line,
+  hidden,
   hasData,
   hasHistory,
   amount,
@@ -243,6 +273,7 @@ function Row({
   income,
 }: {
   line: BudgetLineView
+  hidden: boolean
   hasData: boolean
   hasHistory: boolean
   amount: bigint
@@ -254,7 +285,7 @@ function Row({
   const actual = judge(line, amount)
 
   return (
-    <tr className="border-b border-line last:border-0">
+    <tr hidden={hidden} className="border-b border-line last:border-0">
       <th scope="row" className="px-3 py-2 text-left font-normal text-ink sm:px-4">
         <CategoryMark
           name={line.name}

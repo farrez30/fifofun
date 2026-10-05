@@ -36,6 +36,7 @@ export interface TableAccount {
   id: string
   name: string
   kind: AccountKind
+  logoUrl?: string | null
 }
 
 export interface TableCategory {
@@ -251,10 +252,10 @@ function Accounts({
   if (from && to) {
     return (
       <span className="inline-flex flex-wrap items-center gap-1.5">
-        <AccountMark name={from.name} kind={from.kind} />
+        <AccountMark name={from.name} kind={from.kind} logo={from.logoUrl} />
         <span aria-hidden="true">→</span>
         <span className="sr-only">ke</span>
-        <AccountMark name={to.name} kind={to.kind} />
+        <AccountMark name={to.name} kind={to.kind} logo={to.logoUrl} />
       </span>
     )
   }
@@ -263,7 +264,7 @@ function Accounts({
   // A row whose account was deleted outright rather than archived. It should
   // not read as an account called nothing.
   if (!side) return <span className="text-ink-faint">Akun tidak dikenal</span>
-  return <AccountMark name={side.name} kind={side.kind} />
+  return <AccountMark name={side.name} kind={side.kind} logo={side.logoUrl} />
 }
 
 /**

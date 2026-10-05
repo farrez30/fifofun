@@ -7,7 +7,7 @@ import { DirectionMark } from '@/components/marks'
 import { MoneyInput } from '@/components/money-input'
 import { directionOf, type Direction } from '@/lib/ledger/direction'
 import { CASHFLOW_LABELS, type CashflowType } from '@/lib/ledger/types'
-import { AccountChips, type AccountOption } from './account-chips'
+import { AccountChips, CHIP_RADIO, type AccountOption } from './account-chips'
 import { recordEntry } from './actions'
 import type { ActionResult } from '@/lib/actions'
 import { useActionToast } from '@/components/use-action-toast'
@@ -41,10 +41,16 @@ interface Props {
   entryKey: string
 }
 
-const DIRECTION_CHOICES: { value: Direction; label: string }[] = [
-  { value: 'out', label: 'Keluar' },
-  { value: 'in', label: 'Masuk' },
-  { value: 'neither', label: 'Antar akun' },
+/*
+  The picked direction takes the colour of its side: the same red and mint the
+  budget uses for over and under, and the accent for money that only moves.
+  Only here, where the colour says which side is chosen; an amount elsewhere
+  is never coloured by its direction alone.
+*/
+const DIRECTION_CHOICES: { value: Direction; label: string; picked: string }[] = [
+  { value: 'out', label: 'Keluar', picked: 'has-checked:border-over has-checked:bg-over-wash' },
+  { value: 'in', label: 'Masuk', picked: 'has-checked:border-under has-checked:bg-under-wash' },
+  { value: 'neither', label: 'Antar akun', picked: 'has-checked:border-accent has-checked:bg-accent-wash' },
 ]
 
 export function EntryForm({ accounts, categories, defaults, entryKey }: Props) {
@@ -61,6 +67,7 @@ export function EntryForm({ accounts, categories, defaults, entryKey }: Props) {
         // before that reuses this one and is answered as already saved.
         setClientId(crypto.randomUUID())
         setAmount(0n)
+        setCategoryId('')
       }
       return outcome
     },
@@ -87,7 +94,15 @@ export function EntryForm({ accounts, categories, defaults, entryKey }: Props) {
   }
 
   return (
-    <form action={action} noValidate className="space-y-5">
+    /*
+      Keyed by the entry key, which changes only after a save. React resets a
+      form once its action finishes, and a reset puts every radio back to the
+      one it was first rendered with: the direction chips showed "Keluar" while
+      state, and the account fields under them, still said "Antar akun". A new
+      form built from state cannot disagree with it, and the direction a
+      person picked stays picked for the next entry.
+    */
+    <form key={clientId} action={action} noValidate className="space-y-5">
 
       <input type="hidden" name="clientId" value={clientId} />
 
@@ -97,7 +112,7 @@ export function EntryForm({ accounts, categories, defaults, entryKey }: Props) {
           {DIRECTION_CHOICES.map((choice) => (
             <label
               key={choice.value}
-              className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-sm border border-line bg-paper px-3 text-subhead text-ink transition-colors duration-150 hover:border-line-strong has-checked:border-accent has-checked:bg-accent-wash"
+              className={`inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-sm border border-line bg-paper px-3 text-subhead text-ink transition-colors duration-150 hover:border-line-strong ${choice.picked}`}
             >
               <input
                 type="radio"
@@ -105,7 +120,7 @@ export function EntryForm({ accounts, categories, defaults, entryKey }: Props) {
                 value={choice.value}
                 checked={direction === choice.value}
                 onChange={() => setDirection(choice.value)}
-                className="size-4 shrink-0 accent-[var(--color-accent)]"
+                className={`${CHIP_RADIO} accent-[var(--color-accent)]`}
               />
               <DirectionMark direction={choice.value} />
               {choice.label}

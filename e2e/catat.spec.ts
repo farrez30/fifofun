@@ -54,6 +54,54 @@ test.describe('catat transaksi', () => {
     await expect(page.locator('[data-mark="account"]')).toHaveCount(4)
   })
 
+  test("fills the picked account with its bank's colour, and picks the ink for contrast", async ({
+    page,
+  }) => {
+    await open(page, 'catat-entry')
+    const mandiri = page.locator('fieldset label', { hasText: 'Bank Mandiri' })
+    await expect(mandiri.locator('input')).toBeChecked()
+    // #003d79 is dark, so the name on it is white.
+    await expect(mandiri).toHaveCSS('background-color', 'rgb(0, 61, 121)')
+    await expect(mandiri).toHaveCSS('color', 'rgb(255, 255, 255)')
+
+    // An account with an icon shows it in place of the kind's glyph.
+    await expect(page.locator('fieldset label', { hasText: 'GoPay' }).locator('img')).toHaveCount(1)
+
+    // A light colour gets black ink once it is picked.
+    const emoney = page.locator('fieldset label', { hasText: 'e-Money' })
+    await emoney.click()
+    await expect(emoney).toHaveCSS('background-color', 'rgb(255, 183, 0)')
+    await expect(emoney).toHaveCSS('color', 'rgb(0, 0, 0)')
+    // And the one it left goes back to neutral.
+    await expect(mandiri).not.toHaveCSS('background-color', 'rgb(0, 61, 121)')
+  })
+
+  test('colours the picked direction by its side', async ({ page }) => {
+    await open(page, 'catat-entry')
+    const out = page.locator('label', { has: page.locator('input[name="direction"][value="out"]') })
+    const into = page.locator('label', { has: page.locator('input[name="direction"][value="in"]') })
+    const outBg = await out.evaluate((node) => getComputedStyle(node).backgroundColor)
+    await into.click()
+    const inBg = await into.evaluate((node) => getComputedStyle(node).backgroundColor)
+    expect(inBg).not.toBe(outBg)
+  })
+
+  test('lists only the last few entries and links to every one of them', async ({ page }) => {
+    await open(page, 'catat-terakhir')
+    const all = page.getByRole('link', { name: 'Lihat semua (42)' })
+    await expect(all).toHaveAttribute('href', '/laporan?sumber=manual')
+
+    // On a phone, delete waits in the swipe tray under each card instead of
+    // sitting on a line of its own and doubling the card's height.
+    await page.setViewportSize({ width: 375, height: 800 })
+    const deletes = page.locator('ul[aria-label="Catatan manual terakhir"]').getByRole('button', { name: /^Hapus/ })
+    await expect(deletes).toHaveCount(3)
+    const outsideTray = await deletes.evaluateAll(
+      (nodes) => nodes.filter((node) => !node.closest('[data-swipe-actions]')).length,
+    )
+    expect(outsideTray).toBe(0)
+  })
+
   test('lines up each FieldRow label with its control at phone width', async ({ page }) => {
     await open(page, 'catat-entry')
     await page.setViewportSize({ width: 375, height: 900 })

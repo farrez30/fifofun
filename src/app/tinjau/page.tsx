@@ -119,6 +119,7 @@ async function Queue({ options }: { options: QueueOptions }) {
             id: account.id,
             name: account.name,
             kind: account.kind,
+            logoUrl: account.logoUrl,
           }))}
           remaining={remaining}
           options={options}

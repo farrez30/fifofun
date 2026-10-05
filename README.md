@@ -40,6 +40,10 @@ rather than counted twice. Where a wallet balance has drifted, the difference is
 recorded as an adjustment transaction, so the money that went missing shows up
 as spending instead of quietly vanishing from a balance.
 
+Each account can carry its institution's colour and app icon, so a picker of a
+dozen wallets is read by colour first. The picked chip fills with the bank's own
+colour, with black or white ink chosen for contrast.
+
 **Lets a decision be revisited.** Any transaction can be recategorised, noted,
 split into several categories, or removed, from wherever it was seen. What the
 bank said about a row is not editable: the amount, the date and the accounts of
@@ -147,6 +151,11 @@ The runbook, including which environment variable belongs where and why
 No financial data lives in this repository, and none ever will. Statements are
 read from a local directory that is git-ignored, and the test fixtures reproduce
 the shape of real statements using invented names and account numbers.
+
+Bank and wallet icons are not in the repository either. They belong to the
+institutions, so each household uploads its own; the server redraws every upload
+as a small WebP, keeps it in the database behind row-level security, and serves
+it only to members of that household.
 
 ## Licence
 

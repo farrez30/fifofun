@@ -30,6 +30,7 @@ export interface BalanceRow {
   accountId: string
   name: string
   kind: AccountKind
+  logoUrl?: string | null
   stalled: boolean
   /** Already formatted; this island holds no bigint. */
   credit: string
@@ -65,7 +66,7 @@ export function BalanceRows({ rows }: { rows: BalanceRow[] }) {
                     ◆
                   </span>
                 ) : null}
-                <AccountMark name={row.name} kind={row.kind} />
+                <AccountMark name={row.name} kind={row.kind} logo={row.logoUrl} />
               </th>
               <td className="tnum whitespace-nowrap px-4 py-2.5 text-right font-mono text-ink-muted">
                 {row.credit}
@@ -136,7 +137,7 @@ export function BalanceCards({ rows }: { rows: BalanceRow[] }) {
                     ◆
                   </span>
                 ) : null}
-                <AccountMark name={row.name} kind={row.kind} />
+                <AccountMark name={row.name} kind={row.kind} logo={row.logoUrl} />
               </span>
               <span className="tnum shrink-0 font-mono text-subhead text-ink">{row.closing}</span>
             </div>

@@ -25,7 +25,7 @@ interface Props {
   stalled: StalledAccount[]
   statementDate: Date | null
   /** Kind per account, for the mark beside each name. */
-  accounts: { id: string; kind: AccountKind }[]
+  accounts: { id: string; kind: AccountKind; logoUrl?: string | null }[]
   /** Today in Jakarta, as the adjustment form's date input wants it. */
   today: string
   /** One per row, so a double submit of a correction writes once. */
@@ -43,6 +43,7 @@ export function Balances({
 }: Props) {
   const stalledIds = new Set(stalled.map((account) => account.accountId))
   const kinds = new Map(accounts.map((account) => [account.id, account.kind]))
+  const logos = new Map(accounts.map((account) => [account.id, account.logoUrl ?? null]))
   const bankName =
     movements.find((movement) => movement.accountId === reconciliation?.accountId)?.name ??
     'rekening bank'
@@ -58,6 +59,7 @@ export function Balances({
     accountId: account.accountId,
     name: account.name,
     kind: kinds.get(account.accountId) ?? ('cash' as const),
+    logoUrl: logos.get(account.accountId) ?? null,
     stalled: stalledIds.has(account.accountId),
     credit: formatIdr(account.credit),
     debit: formatIdr(account.debit),
