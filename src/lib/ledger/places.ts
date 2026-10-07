@@ -13,6 +13,11 @@ import type { CashflowType, EntrySource } from './types'
  * a transfer to a person happened nowhere in particular, and pretending
  * otherwise would put a pin wherever the payment company is registered.
  *
+ * A card payment to a website is the one exception, and only by hand: a
+ * homestay booked on Agoda was for a place. It gets a key so it can be given
+ * a point, but it never waits in the queue, where every Google bill would
+ * otherwise sit forever.
+ *
  * Some QRIS payments still cannot be placed, because the name printed is the
  * cashier software rather than the shop: Pawoon, AKU MPOS, Youtap and ESB sit
  * in front of hundreds of unrelated counters. Those are counted as
@@ -165,16 +170,28 @@ export function counterName(entry: Pick<PlaceEntry, 'description' | 'rawDescript
   return merchantName(entry.description)
 }
 
+/** The first line of the bank's raw text, which says how the money left. */
+function channelOf(entry: PlaceEntry): string {
+  return (entry.rawDescription ?? '').trimStart().split('\n')[0].toLowerCase()
+}
+
+/** A card payment to a website: placed only where someone put it, never waiting. */
+function isOnlineCard(entry: PlaceEntry): boolean {
+  return channelOf(entry).startsWith('transaksi e-commerce')
+}
+
 /** The merchant key of a payment that happened somewhere, or null. */
 export function placeKey(entry: PlaceEntry): string | null {
   if (entry.cashflow !== 'spending' && entry.cashflow !== 'bills') return null
   if (entry.isPassThrough || entry.categoryName === ADJUSTMENT) return null
 
   let key: string | null = null
-  const via = (entry.rawDescription ?? '').trimStart().split('\n')[0].toLowerCase()
+  const via = channelOf(entry)
   if (via.startsWith('pembayaran qr') || via.startsWith('transfer qr')) {
     key = normalise(counterName(entry))
   } else if (via.startsWith('pembayaran ') && HOME_UTILITIES.some((name) => via.includes(name))) {
+    key = normalise(merchantName(entry.description))
+  } else if (isOnlineCard(entry)) {
     key = normalise(merchantName(entry.description))
   } else if (entry.source === 'manual') {
     key = suggestPattern(entry)?.pattern ?? null
@@ -259,6 +276,10 @@ export function summarisePlaces(
       continue
     }
     if (!location) {
+      if (isOnlineCard(entry)) {
+        unplaceable += entry.amount
+        continue
+      }
       // Waiting, including an entry outside every period its merchant has.
       byUnplaced.set(key, [...(byUnplaced.get(key) ?? []), entry])
       continue

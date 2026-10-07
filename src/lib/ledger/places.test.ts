@@ -106,6 +106,13 @@ describe('placeKey', () => {
     expect(placeKey(pulsa)).toBeNull()
   })
 
+  it('keys a card payment online by the site, so a booking can be put where it was for', () => {
+    const agoda = qr('AGODA.COM A', 258_791_00n, '2025-12-09T18:54:00Z', {
+      rawDescription: `Transaksi e-Commerce${String.fromCharCode(10)}VAP-AGODA.COM A`,
+    })
+    expect(placeKey(agoda)).toBe('agoda.com a')
+  })
+
   it('has nothing for money that only moved or was never seen leaving', () => {
     const base = qr('BOGA RASAA', 25_000n, '2026-03-02T05:00:00Z')
     expect(placeKey({ ...base, cashflow: 'income' })).toBeNull()
@@ -298,6 +305,45 @@ describe('points over time', () => {
       ['always', 2],
       ['kost', 1],
     ])
+  })
+})
+
+describe('online card payments', () => {
+  // A homestay in Pangandaran, paid on Agoda at 01.54 WIB on 10 Dec 2025 for
+  // the night of the 13th. The bank only ever names the site.
+  const agoda = qr('AGODA.COM A', 258_791_00n, '2025-12-09T18:54:00Z', {
+    rawDescription: `Transaksi e-Commerce${String.fromCharCode(10)}VAP-AGODA.COM A`,
+    categoryName: 'Jalan-jalan',
+  })
+  const homestay: PlaceLocation = {
+    id: 'adams',
+    merchantKey: 'agoda.com a',
+    label: 'Adams Home Stay',
+    address: null,
+    lat: -7.6908,
+    lng: 108.6487,
+    validFrom: '2025-12-10',
+    validTo: '2025-12-10',
+  }
+
+  it('stays online, not in the queue, until somebody gives it a point', () => {
+    const report = summarisePlaces([agoda], [])
+    expect(report.unplaced).toEqual([])
+    expect(report.unplaceable).toBe(258_791_00n)
+  })
+
+  it('is drawn where the booking was for, on the Jakarta day it was paid', () => {
+    const report = summarisePlaces([agoda], [homestay])
+    expect(report.places.map((place) => [place.label, place.total])).toEqual([['Adams Home Stay', 258_791_00n]])
+    expect(report.unplaceable).toBe(0n)
+  })
+
+  it('goes back online, not into the queue, on a day its point does not cover', () => {
+    const nextBooking = { ...agoda, id: 'next', occurredAt: new Date('2026-03-01T05:00:00Z') }
+    const report = summarisePlaces([agoda, nextBooking], [homestay])
+    expect(report.unplaced).toEqual([])
+    expect(report.placed).toBe(258_791_00n)
+    expect(report.unplaceable).toBe(258_791_00n)
   })
 })
 
