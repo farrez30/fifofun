@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useActionState, useState } from 'react'
-import { BUTTON_QUIET, BUTTON_TINTED, CONTROL } from '@/components/field-base'
+import { BUTTON_PLAIN, BUTTON_TINTED, CONTROL } from '@/components/field-base'
 import { Pager } from '@/components/pager'
 import { useActionToast } from '@/components/use-action-toast'
 import type { ActionResult } from '@/lib/actions'
@@ -141,6 +141,14 @@ export function WaitingList({ waiting, initialQuery = '', initialPage = 1 }: Pro
   )
 }
 
+/*
+  A plain, muted verb: Taruh is the job, this is the exception. As a filled
+  grey button it was the widest and, in dark mode, the brightest thing in
+  every row, one tap from taking a merchant out of the queue; the way back is
+  the "Ditandai tanpa tempat" list under this view.
+*/
+const PLACELESS = `${BUTTON_PLAIN} text-ink-muted! hover:text-ink!`
+
 export function PlacelessButton({ merchantKey, label }: { merchantKey: string; label: string }) {
   const [result, action, saving] = useActionState<ActionResult | null, FormData>(markPlaceless, null)
   useActionToast(result, saving)
@@ -149,7 +157,7 @@ export function PlacelessButton({ merchantKey, label }: { merchantKey: string; l
     <form action={action}>
       <input type="hidden" name="merchantKey" value={merchantKey} />
       <input type="hidden" name="label" value={label} />
-      <button type="submit" aria-busy={saving} className={BUTTON_QUIET} aria-label={`Tandai ${label} tanpa tempat`}>
+      <button type="submit" aria-busy={saving} className={PLACELESS} aria-label={`Tandai ${label} tanpa tempat`}>
         Tanpa tempat
       </button>
     </form>

@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react'
+import Link from 'next/link'
 import { CaretDown } from '@phosphor-icons/react/dist/ssr/CaretDown'
+import { CaretRight } from '@phosphor-icons/react/dist/ssr/CaretRight'
 import { formatJakarta } from '@/lib/datetime'
 import type { CategoryTotal, PeriodFilter, PeriodSummary } from '@/lib/ledger/period'
 import { CASHFLOW_LABELS, CASHFLOW_TYPES, type EntrySource } from '@/lib/ledger/types'
@@ -32,12 +33,8 @@ interface Props {
   categories: { name: string; group: string | null }[]
   accounts: string[]
   ledgerSize: number
-  /** The open view, carried through a filter so applying one stays on it; empty for the first. */
-  section?: string
-  /** The views of the report, drawn first, under the page title, as on every split page. */
-  nav?: ReactNode
-  /** Which breakdown this view shows under the totals, if any. */
-  breakdown?: 'kategori' | 'cashflow' | null
+  /** The form's id, which the views name to carry the open view through a filter. */
+  formId?: string
 }
 
 /**
@@ -171,15 +168,13 @@ function Merchants({ line }: { line: CategoryTotal }) {
   )
 }
 
-export function PeriodReport({ summary, raw, categories, accounts, ledgerSize, section, nav, breakdown }: Props) {
+export function PeriodReport({ summary, raw, categories, accounts, ledgerSize, formId = 'laporan-saring' }: Props) {
   const filtered =
     Boolean(value(raw, 'dari') || value(raw, 'sampai') || value(raw, 'cashflow')) ||
     Boolean(value(raw, 'kategori') || value(raw, 'akun') || value(raw, 'cari') || value(raw, 'sumber'))
 
   return (
     <div className="space-y-6">
-      {nav}
-
       <details className="group squircle rounded-md bg-surface shadow-xs">
         <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-4 py-2 text-subhead font-medium text-ink">
           <CaretDown
@@ -189,8 +184,7 @@ export function PeriodReport({ summary, raw, categories, accounts, ledgerSize, s
           Saring
           <span className="min-w-0 truncate font-normal text-ink-muted">{appliedFilters(raw)}</span>
         </summary>
-        <form method="get" className="border-t border-line p-4">
-          {section ? <input type="hidden" name="bagian" value={section} /> : null}
+        <form id={formId} method="get" className="border-t border-line p-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <label>
               <span className={LABEL}>Dari tanggal</span>
@@ -286,7 +280,7 @@ export function PeriodReport({ summary, raw, categories, accounts, ledgerSize, s
                  exemption, and padding alone left this at 37px against the 44 a
                  finger needs. */
               <a
-                href={section ? `/laporan?bagian=${section}` : '/laporan'}
+                href="/laporan"
                 className="inline-flex min-h-11 items-center rounded-sm px-2 text-subhead text-ink-muted underline underline-offset-2"
               >
                 Bersihkan
@@ -351,78 +345,112 @@ export function PeriodReport({ summary, raw, categories, accounts, ledgerSize, s
           kali top-up tidak terbaca dua kali.
         </p>
       </div>
-
-      {breakdown === 'cashflow' && summary.byCashflow.length > 0 ? (
-        <section aria-labelledby="per-cashflow">
-          <h2 id="per-cashflow" className="mb-3 text-subhead font-medium text-ink">
-            Per cashflow
-          </h2>
-          <ul className="rows-inset squircle rounded-md bg-surface shadow-xs">
-            {summary.byCashflow.map((line) => (
-              <li key={line.cashflow} className="flex items-baseline justify-between gap-3 p-3">
-                <span className="text-subhead text-ink">{line.label}</span>
-                <span className="flex items-baseline gap-3">
-                  <span className="text-footnote text-ink-faint">{line.count} transaksi</span>
-                  <span className="tnum font-mono text-subhead text-ink">{formatIdr(line.total)}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      {breakdown === 'kategori' && summary.byGroup.length > 0 ? (
-        <section aria-labelledby="per-kategori">
-          <h2 id="per-kategori" className="mb-3 text-subhead font-medium text-ink">
-            Per kategori
-          </h2>
-          <ul className="rows-inset squircle rounded-md bg-surface shadow-xs">
-            {summary.byGroup.map((group) => (
-              <li key={`${group.cashflow} ${group.group}`} className="p-3">
-                <Line
-                  name={group.group}
-                  note={CASHFLOW_LABELS[group.cashflow]}
-                  share={group.share}
-                  total={group.total}
-                />
-
-                {/* A group of one is the category itself, and opening it would
-                    show the same figure a second time. */}
-                {group.categories.length > 1 ? (
-                  <details className="mt-1">
-                    {/* The whole row is the target, not the eight pixels of
-                        text in it: a disclosure the size of its own label is
-                        the smallest thing on the page and the one most often
-                        reached for on a phone. */}
-                    <summary className="flex min-h-11 cursor-pointer list-none items-center text-footnote text-accent underline underline-offset-2 marker:content-none">
-                      {group.categories.length} pos di dalamnya
-                    </summary>
-                    <ul className="mt-2 space-y-2 border-l border-line pl-3">
-                      {group.categories.map((line) => (
-                        <li key={`${line.cashflow} ${line.category}`}>
-                          <Line
-                            name={line.category}
-                            note={`${line.count} transaksi`}
-                            share={line.share}
-                            total={line.total}
-                          />
-                          <Merchants line={line} />
-                        </li>
-                      ))}
-                    </ul>
-                  </details>
-                ) : (
-                  group.categories.map((line) => <Merchants key={line.category} line={line} />)
-                )}
-              </li>
-            ))}
-          </ul>
-          <p className="max-w-2xl mt-2 text-footnote text-ink-muted">
-            Persentasenya dihitung terhadap arah kategori itu sendiri: kategori pengeluaran
-            dibandingkan dengan total keluar, kategori pemasukan dengan total masuk.
-          </p>
-        </section>
-      ) : null}
     </div>
+  )
+}
+
+/** Builds the address of the transactions behind one line, keeping the filter. */
+type Drill = (change: Record<string, string>) => string
+
+const DRILL_ROW = 'flex min-h-11 items-baseline justify-between gap-3 p-3 transition-colors duration-150 hover:bg-fill-quaternary'
+// A finger-sized target around a line that is shorter than one on its own.
+const DRILL_LINE = '-mx-1 flex min-h-11 flex-col justify-center rounded-sm px-1 py-0.5 transition-colors duration-150 hover:bg-fill-quaternary'
+
+function NothingMatched() {
+  return <p className="text-subhead text-ink-muted">Tidak ada transaksi yang cocok dengan saringan ini.</p>
+}
+
+/**
+ * Per cashflow, each line the way into the transactions it adds up.
+ *
+ * A total that cannot be opened is a dead end: Tagihan at Rp2,4 juta, and the
+ * reader rebuilding that filter by hand to see which bills. The link keeps
+ * every filter that is on and opens the list, not this view.
+ */
+export function CashflowBreakdown({ summary, drill }: { summary: PeriodSummary; drill: Drill }) {
+  if (summary.byCashflow.length === 0) return <NothingMatched />
+
+  return (
+    <section aria-labelledby="per-cashflow">
+      <h2 id="per-cashflow" className="mb-3 text-subhead font-medium text-ink">
+        Per cashflow
+      </h2>
+      <ul className="rows-inset squircle rounded-md bg-surface shadow-xs">
+        {summary.byCashflow.map((line) => (
+          <li key={line.cashflow}>
+            <Link href={drill({ cashflow: line.cashflow })} className={DRILL_ROW}>
+              <span className="text-subhead text-ink">{line.label}</span>
+              <span className="flex items-baseline gap-3">
+                <span className="text-footnote text-ink-faint">{line.count} transaksi</span>
+                <span className="tnum font-mono text-subhead text-ink">{formatIdr(line.total)}</span>
+                <CaretRight aria-hidden="true" className="size-3.5 self-center text-ink-faint" />
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+/**
+ * Per category, grouped, each category a way into its transactions.
+ *
+ * A group of several is not a link itself: the report filters by category
+ * name, and a group's own name holds no transactions. Its pos are, once it is
+ * opened, and a group of one is its category and links straight away.
+ */
+export function CategoryBreakdown({ summary, drill }: { summary: PeriodSummary; drill: Drill }) {
+  if (summary.byGroup.length === 0) return <NothingMatched />
+
+  return (
+    <section aria-labelledby="per-kategori">
+      <h2 id="per-kategori" className="mb-3 text-subhead font-medium text-ink">
+        Per kategori
+      </h2>
+      <ul className="rows-inset squircle rounded-md bg-surface shadow-xs">
+        {summary.byGroup.map((group) => (
+          <li key={`${group.cashflow} ${group.group}`} className="p-3">
+            {group.categories.length > 1 ? (
+              <Line name={group.group} note={CASHFLOW_LABELS[group.cashflow]} share={group.share} total={group.total} />
+            ) : (
+              <Link href={drill({ kategori: group.categories[0].category })} className={DRILL_LINE}>
+                <Line name={group.group} note={CASHFLOW_LABELS[group.cashflow]} share={group.share} total={group.total} />
+              </Link>
+            )}
+
+            {/* A group of one is the category itself, and opening it would
+                show the same figure a second time. */}
+            {group.categories.length > 1 ? (
+              <details className="mt-1">
+                {/* The whole row is the target, not the eight pixels of
+                    text in it: a disclosure the size of its own label is
+                    the smallest thing on the page and the one most often
+                    reached for on a phone. */}
+                <summary className="flex min-h-11 cursor-pointer list-none items-center text-footnote text-accent underline underline-offset-2 marker:content-none">
+                  {group.categories.length} pos di dalamnya
+                </summary>
+                <ul className="mt-2 space-y-2 border-l border-line pl-3">
+                  {group.categories.map((line) => (
+                    <li key={`${line.cashflow} ${line.category}`}>
+                      <Link href={drill({ kategori: line.category })} className={DRILL_LINE}>
+                        <Line name={line.category} note={`${line.count} transaksi`} share={line.share} total={line.total} />
+                      </Link>
+                      <Merchants line={line} />
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            ) : (
+              group.categories.map((line) => <Merchants key={line.category} line={line} />)
+            )}
+          </li>
+        ))}
+      </ul>
+      <p className="mt-2 max-w-2xl text-footnote text-ink-muted">
+        Persentasenya dihitung terhadap arah kategori itu sendiri: kategori pengeluaran
+        dibandingkan dengan total keluar, kategori pemasukan dengan total masuk.
+      </p>
+    </section>
   )
 }

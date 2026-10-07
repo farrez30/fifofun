@@ -278,7 +278,12 @@ Peta (Peta · Menunggu · Tempat · Online), Pengaturan (Akun · Kategori ·
 Tampilan), Laporan (Transaksi · Per kategori · Per cashflow), Rencana (lima
 kalkulator). Pilihan segmen ada di `?bagian=`, jadi tombol Back
 membatalkannya, segmen bisa dikirim, dan server hanya merender segmen yang
-terbuka; segmen pertama tidak menulis parameter (`lib/sections.ts`). Di HP
+terbuka; segmen pertama tidak menulis parameter (`lib/sections.ts`). Peta dan
+Laporan merender semua segmennya sekaligus dan berpindah di tempat
+(`components/view-switch.tsx`, `docs/decisions/0002-in-place-view-switching.md`):
+datanya sudah dimuat untuk satu halaman, jadi ketukan tidak menunggu server;
+alamat tetap mengikuti lewat pushState, dan form saringan menerima segmen yang
+terbuka lewat `<input form=…>`. Di HP
 segmen mengisi lebar penuh, masing-masing selebar labelnya; titik `NavHint`
 duduk di pojok, bukan setelah label, karena lebarnya membuat empat segmen
 meluber di 375px, dan ring fokusnya digambar di dalam segmen karena trek yang
@@ -299,7 +304,18 @@ tempat di daftar; kedua ujung selalu satu ketukan (`pageWindow`). Pengecualian:
 kategori di Pengaturan ditampilkan satu cashflow per kali, bukan dipaginasi,
 karena seret-untuk-mengurutkan hanya bekerja di antara baris yang terlihat
 (`?cashflow=` membuka cashflow tertentu). Di HP, Arsipkan menunggu di dalam
-kartu yang dibuka lewat Ubah, seperti tindakan jarang di halaman detail iOS.
+kartu yang dibuka lewat Ubah, seperti tindakan jarang di halaman detail iOS;
+kartu Akun memakai pola yang sama. Di HP pager menukar nomornya dengan roda
+halaman (`components/jump-select.tsx`); daftar transaksi Laporan menambahkan
+"Lompat ke bulan" (`monthPages`). Baris Per kategori dan Per cashflow adalah
+tautan ke daftar transaksi dengan saringan yang sama, bertanda chevron.
+Tempat dan Menunggu dicari dan dipaginasi di browser, dengan pencarian dan
+halaman dicerminkan ke alamat supaya Back kembali ke tempat yang sama.
+Segmen tingkat halaman setingkat lebih besar dari `sm` ke atas (44px, teks
+subhead) daripada pemilih lokal peta, yang memakai resep yang sama di 36px.
+"Tanpa tempat" adalah kata kerja polos yang redup, bukan tombol isi: Taruh
+adalah pekerjaannya, dan daftar "Ditandai tanpa tempat" untuk membatalkannya
+berada di segmen Menunggu.
 
 **Daftar menampilkan sebagian, dan selalu menyebut sisanya.** Daftar yang
 punya halaman sendiri berhenti di beberapa baris dan menautkan ke sana dengan

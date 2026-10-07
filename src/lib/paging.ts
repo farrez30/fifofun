@@ -48,6 +48,25 @@ export function pageHref(path: string, params: Record<string, string | undefined
 }
 
 /**
+ * The page each month starts on, for rows already in display order (the
+ * report's are newest first), given the month key of every row. A year at
+ * twenty a page is a hundred pages, and "September" is what a person is
+ * looking for, not page 61.
+ */
+export function monthPages(months: readonly string[], size = PAGE_SIZE): { month: string; page: number }[] {
+  const starts: { month: string; page: number }[] = []
+  months.forEach((month, index) => {
+    if (starts[starts.length - 1]?.month !== month) starts.push({ month, page: Math.floor(index / size) + 1 })
+  })
+  return starts
+}
+
+/** The month a page opens in: the last one that started on it or before. */
+export function monthOnPage(starts: readonly { month: string; page: number }[], page: number): string {
+  return starts.filter((start) => start.page <= page).at(-1)?.month ?? starts[0]?.month ?? ''
+}
+
+/**
  * The page numbers worth a button, with `null` where a run is left out.
  *
  * Always the first and the last, so both ends are one tap away, and the pages

@@ -6,12 +6,11 @@ import { CaretDown } from '@phosphor-icons/react/dist/ssr/CaretDown'
 import { AppShell } from '@/components/app-shell'
 import { BUTTON_QUIET, CONTROL } from '@/components/field-base'
 import { Stat } from '@/components/money'
-import { Pager } from '@/components/pager'
-import { SegmentNav } from '@/components/segment-nav'
+import { ViewSwitch } from '@/components/view-switch'
 import { formatMonthKey } from '@/lib/datetime'
 import { summariseOnline } from '@/lib/ledger/online'
 import { summarisePlaces } from '@/lib/ledger/places'
-import { pageCount, pageHref, pageSlice, parsePage } from '@/lib/paging'
+import { parsePage } from '@/lib/paging'
 import { getCategories, getHousehold, getMerchantLocations, getPlaceEntries } from '@/lib/queries/household'
 import { sectionHref, sectionOf } from '@/lib/sections'
 import { getUser } from '@/lib/supabase/server'
@@ -20,7 +19,7 @@ import { SECTIONS, filterParams, placingHref, readView } from './filter'
 import { ModeField } from './mode-switch'
 import { ForgetButton } from './forget-button'
 import { OnlineList } from './online-list'
-import { PlaceTable } from './place-table'
+import { PlaceList } from './place-list'
 import { PlaceWorkspace } from './place-workspace'
 import { MapSkeleton } from './skeleton'
 import { WaitingList } from './waiting-list'
@@ -84,8 +83,11 @@ async function MapView({ params }: { params: Params }) {
   const dearest = [...report.places].filter((place) => place.visits > 0).sort((a, b) => (b.average > a.average ? 1 : -1))[0]
 
   /*
-    One view at a time. A Taruh or Pindahkan link always lands on the map,
-    because placing is a click on it, whatever view the link came from.
+    Every view is rendered and the open one shown: the page already holds what
+    all four show, so a tap switches in place (ViewSwitch) instead of asking
+    the server again. A Taruh or Pindahkan link lands on the map, because
+    placing is a click on it, and the switch is keyed on it so the map opens
+    with the panel up, whatever view the link came from.
   */
   const section = view.placing ? 'peta' : sectionOf(params.bagian, SECTIONS)
   const keep = filterParams(params)
@@ -97,231 +99,189 @@ async function MapView({ params }: { params: Params }) {
     { key: 'online', label: 'Online' },
   ].map((segment) => ({ ...segment, href: sectionHref('/peta', keep, segment.key, SECTIONS[0]) }))
 
-  const query = (Array.isArray(params.cari) ? params.cari[0] : params.cari)?.trim().slice(0, 60) ?? ''
-  const needle = query.toLowerCase()
-  const matching = needle
-    ? points.filter((point) => `${point.label} ${point.address ?? ''}`.toLowerCase().includes(needle))
-    : points
-  const pages = pageCount(matching.length)
-  const page = Math.min(parsePage(params.hal), pages)
-
   return (
     <div className="space-y-6">
-      <SegmentNav label="Bagian peta" segments={segments} current={section} />
-
-      {/*
-        Folded on every visit: it is set once and read on every view, and open
-        it was the first phone screen of each of them. The summary line says
-        what is applied, so folding it hides nothing.
-      */}
-      <details className="group squircle rounded-md bg-surface shadow-xs">
-        <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-4 py-2 text-subhead font-medium text-ink">
-          <CaretDown
-            aria-hidden="true"
-            className="size-4 shrink-0 text-ink-faint transition-transform duration-150 group-open:rotate-180"
-          />
-          Saring
-          <span className="min-w-0 truncate font-normal text-ink-muted">
-            {chosen || 'Semua kategori'} · {period}
-            {view.filter.includeBills ? ' · dengan tagihan' : ''}
-          </span>
-        </summary>
-        <form method="get" className="border-t border-line p-4">
-          {section !== SECTIONS[0] ? <input type="hidden" name="bagian" value={section} /> : null}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <label>
-              <span className={LABEL}>Kategori</span>
-              <select name="kategori" defaultValue={chosen} className={CONTROL}>
-                <option value="">Semua</option>
-                {categoryGroups(categories).map((group) => (
-                  <optgroup key={group.label} label={group.label}>
-                    {group.names.map((name) => (
-                      <option key={name} value={name}>
-                        {name}
+      <ViewSwitch
+        key={`${view.placing ?? ''}|${view.point ?? ''}`}
+        label="Bagian peta"
+        segments={segments}
+        initial={section}
+        form="peta-saring"
+        header={
+          /*
+            Folded on every visit: it is set once and read on every view, and
+            open it was the first phone screen of each of them. The summary
+            line says what is applied, so folding it hides nothing.
+          */
+          <details className="group squircle rounded-md bg-surface shadow-xs">
+            <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-4 py-2 text-subhead font-medium text-ink">
+              <CaretDown
+                aria-hidden="true"
+                className="size-4 shrink-0 text-ink-faint transition-transform duration-150 group-open:rotate-180"
+              />
+              Saring
+              <span className="min-w-0 truncate font-normal text-ink-muted">
+                {chosen || 'Semua kategori'} · {period}
+                {view.filter.includeBills ? ' · dengan tagihan' : ''}
+              </span>
+            </summary>
+            <form id="peta-saring" method="get" className="border-t border-line p-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <label>
+                  <span className={LABEL}>Kategori</span>
+                  <select name="kategori" defaultValue={chosen} className={CONTROL}>
+                    <option value="">Semua</option>
+                    {categoryGroups(categories).map((group) => (
+                      <optgroup key={group.label} label={group.label}>
+                        {group.names.map((name) => (
+                          <option key={name} value={name}>
+                            {name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span className={LABEL}>Dari bulan</span>
+                  <select name="dari" defaultValue={view.filter.from ?? ''} className={CONTROL}>
+                    <option value="">Awal</option>
+                    {months.map((month) => (
+                      <option key={month} value={month}>
+                        {formatMonthKey(month)}
                       </option>
                     ))}
-                  </optgroup>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span className={LABEL}>Dari bulan</span>
-              <select name="dari" defaultValue={view.filter.from ?? ''} className={CONTROL}>
-                <option value="">Awal</option>
-                {months.map((month) => (
-                  <option key={month} value={month}>
-                    {formatMonthKey(month)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span className={LABEL}>Sampai bulan</span>
-              <select name="sampai" defaultValue={view.filter.to ?? ''} className={CONTROL}>
-                <option value="">Sekarang</option>
-                {months.map((month) => (
-                  <option key={month} value={month}>
-                    {formatMonthKey(month)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <ModeField />
-          <div className="mt-4 flex flex-wrap items-center gap-3">
-            <button type="submit" className={BUTTON_QUIET}>
-              Terapkan
-            </button>
-            {filtered ? (
-              <Link
-                href={sectionHref('/peta', {}, section, SECTIONS[0])}
-                className="inline-flex min-h-11 items-center px-2 text-subhead text-ink-muted underline underline-offset-2"
-              >
-                Bersihkan
-              </Link>
-            ) : null}
-
-            <label className="ml-auto flex min-h-11 items-center gap-2 text-footnote text-ink-muted">
-              <input
-                type="checkbox"
-                name="tagihan"
-                value="ya"
-                defaultChecked={view.filter.includeBills}
-                className="size-4 accent-accent"
-              />
-              Ikutkan tagihan (listrik, pulsa)
-            </label>
-          </div>
-        </form>
-      </details>
-
-      {section === 'peta' ? (
-        <>
-          <section aria-labelledby="ringkasan-peta">
-            <h2 id="ringkasan-peta" className="sr-only">
-              Ringkasan
-            </h2>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <Stat
-                label="Tergambar di peta"
-                sen={report.placed}
-                emphasis
-                hint={`${share(report.placed, report.spent)}% dari belanja ${chosen ? `${chosen}, ` : ''}${period}.`}
-              />
-              <Stat
-                label="Menunggu lokasi"
-                sen={report.waiting}
-                hint={`${waiting.length} pedagang dibayar di kasir tapi belum punya titik.`}
-              />
-              <Stat
-                label="Tanpa tempat"
-                sen={report.unplaceable}
-                hint="Belanja online, transfer, VA, dan kasir yang tidak menyebut nama gerai."
-              />
-            </div>
-            {mostVisited ? (
-              <p className="mt-3 text-subhead text-ink-muted">
-                Paling sering didatangi: <span className="text-ink">{mostVisited.label}</span>, {mostVisited.visits} kali.
-                {dearest && dearest.merchantKey !== mostVisited.merchantKey ? (
-                  <>
-                    {' '}
-                    Paling mahal sekali datang: <span className="text-ink">{dearest.label}</span>.
-                  </>
+                  </select>
+                </label>
+                <label>
+                  <span className={LABEL}>Sampai bulan</span>
+                  <select name="sampai" defaultValue={view.filter.to ?? ''} className={CONTROL}>
+                    <option value="">Sekarang</option>
+                    {months.map((month) => (
+                      <option key={month} value={month}>
+                        {formatMonthKey(month)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <ModeField />
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <button type="submit" className={BUTTON_QUIET}>
+                  Terapkan
+                </button>
+                {filtered ? (
+                  <Link
+                    href={sectionHref('/peta', {}, section, SECTIONS[0])}
+                    className="inline-flex min-h-11 items-center px-2 text-subhead text-ink-muted underline underline-offset-2"
+                  >
+                    Bersihkan
+                  </Link>
                 ) : null}
-              </p>
-            ) : null}
-          </section>
 
-          {/*
-            The queue leads and the map follows: with a few percent placed, placing
-            is the work here and the map is what it pays back. The map's heading,
-            readings and legend are the workspace's own, since a reading is
-            switched in the browser.
-          */}
-          {/* Keyed on the merchant being placed, so a Taruh or Pindahkan link
-              opens its panel even though the page around it is not rebuilt. */}
-          <PlaceWorkspace
-            key={`${view.placing ?? ''}|${view.point ?? ''}`}
-            points={points}
-            waiting={waiting}
-            initial={view.placing}
-            initialPoint={view.point}
-            mapped={share(report.placed, report.spent)}
-          />
-
-          <p className="max-w-2xl text-footnote text-ink-faint">
-            Peta digambar dari OpenFreeMap, yang hanya tahu area peta yang sedang dilihat, bukan transaksinya. Mencari
-            lokasi mengirim nama pedagang (tanpa nominal atau tanggal) ke OpenStreetMap lewat server app ini. Data peta
-            dari para kontributor OpenStreetMap.
-          </p>
-        </>
-      ) : null}
-
-      {section === 'menunggu' ? (
-        <WaitingList
-          waiting={waiting.map((merchant) => ({ ...merchant, href: placingHref(params, merchant.key) }))}
-          initialQuery={query}
-          initialPage={parsePage(params.hal)}
-        />
-      ) : null}
-
-      {section === 'tempat' ? (
-        <div className="space-y-3">
-          {points.length > 0 ? (
-            <form method="get" role="search" className="flex gap-2">
-              {Object.entries(keep).map(([name, value]) => (
-                <input key={name} type="hidden" name={name} value={value} />
-              ))}
-              <input type="hidden" name="bagian" value="tempat" />
-              <label htmlFor="cari-tempat" className="sr-only">
-                Cari tempat
-              </label>
-              <input
-                id="cari-tempat"
-                type="search"
-                name="cari"
-                defaultValue={query}
-                placeholder="Cari tempat atau alamat"
-                autoComplete="off"
-                className={CONTROL}
-              />
-              <button type="submit" className={BUTTON_QUIET}>
-                Cari
-              </button>
+                <label className="ml-auto flex min-h-11 items-center gap-2 text-footnote text-ink-muted">
+                  <input
+                    type="checkbox"
+                    name="tagihan"
+                    value="ya"
+                    defaultChecked={view.filter.includeBills}
+                    className="size-4 accent-accent"
+                  />
+                  Ikutkan tagihan (listrik, pulsa)
+                </label>
+              </div>
             </form>
-          ) : null}
-          <PlaceTable
-            points={pageSlice(matching, page)}
-            total={points.length}
-            matched={query ? matching.length : null}
-            moveHref={(point) => placingHref(params, point.key, point.id)}
-          />
-          <Pager
-            label="Halaman daftar tempat"
-            page={page}
-            pages={pages}
-            hrefFor={(next) => `${pageHref('/peta', { ...keep, bagian: 'tempat', cari: query }, next)}#tempat`}
-          />
-        </div>
-      ) : null}
+          </details>
+        }
+        views={{
+          peta: (
+            <div className="space-y-6">
+              <section aria-labelledby="ringkasan-peta">
+                <h2 id="ringkasan-peta" className="sr-only">
+                  Ringkasan
+                </h2>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <Stat
+                    label="Tergambar di peta"
+                    sen={report.placed}
+                    emphasis
+                    hint={`${share(report.placed, report.spent)}% dari belanja ${chosen ? `${chosen}, ` : ''}${period}.`}
+                  />
+                  <Stat
+                    label="Menunggu lokasi"
+                    sen={report.waiting}
+                    hint={`${waiting.length} pedagang dibayar di kasir tapi belum punya titik.`}
+                  />
+                  <Stat
+                    label="Tanpa tempat"
+                    sen={report.unplaceable}
+                    hint="Belanja online, transfer, VA, dan kasir yang tidak menyebut nama gerai."
+                  />
+                </div>
+                {mostVisited ? (
+                  <p className="mt-3 text-subhead text-ink-muted">
+                    Paling sering didatangi: <span className="text-ink">{mostVisited.label}</span>, {mostVisited.visits} kali.
+                    {dearest && dearest.merchantKey !== mostVisited.merchantKey ? (
+                      <>
+                        {' '}
+                        Paling mahal sekali datang: <span className="text-ink">{dearest.label}</span>.
+                      </>
+                    ) : null}
+                  </p>
+                ) : null}
+              </section>
 
-      {section === 'online' ? <OnlineList report={online} /> : null}
+              {/*
+                The queue leads and the map follows: with a few percent placed, placing
+                is the work here and the map is what it pays back. The map's heading,
+                readings and legend are the workspace's own, since a reading is
+                switched in the browser.
+              */}
+              <PlaceWorkspace
+                points={points}
+                waiting={waiting}
+                initial={view.placing}
+                initialPoint={view.point}
+                mapped={share(report.placed, report.spent)}
+              />
 
-      {section === 'online' && placeless.length > 0 ? (
-        <details className="squircle rounded-md bg-surface p-4 shadow-xs">
-          <summary className="flex min-h-11 cursor-pointer items-center text-subhead font-medium text-ink">
-            Ditandai tanpa tempat ({placeless.length})
-          </summary>
-          <ul className="mt-2 divide-y divide-line">
-            {placeless.map((location) => (
-              <li key={location.id} className="flex items-center justify-between gap-3 py-1">
-                <span className="truncate text-subhead text-ink-muted">{location.label}</span>
-                <ForgetButton id={location.id} label={location.label} verb="Batalkan" what="tanda tanpa tempat" />
-              </li>
-            ))}
-          </ul>
-        </details>
-      ) : null}
+              <p className="max-w-2xl text-footnote text-ink-faint">
+                Peta digambar dari OpenFreeMap, yang hanya tahu area peta yang sedang dilihat, bukan transaksinya. Mencari
+                lokasi mengirim nama pedagang (tanpa nominal atau tanggal) ke OpenStreetMap lewat server app ini. Data peta
+                dari para kontributor OpenStreetMap.
+              </p>
+            </div>
+          ),
+          menunggu: (
+            <div className="space-y-6">
+              <WaitingList
+                waiting={waiting.map((merchant) => ({ ...merchant, href: placingHref(params, merchant.key) }))}
+                initialQuery={(Array.isArray(params.cari) ? params.cari[0] : params.cari)?.trim().slice(0, 60) ?? ''}
+                initialPage={parsePage(params.hal)}
+              />
+            {placeless.length > 0 ? (
+              <details className="squircle rounded-md bg-surface p-4 shadow-xs">
+                <summary className="flex min-h-11 cursor-pointer items-center text-subhead font-medium text-ink">
+                  Ditandai tanpa tempat ({placeless.length})
+                </summary>
+                <ul className="mt-2 divide-y divide-line">
+                  {placeless.map((location) => (
+                    <li key={location.id} className="flex items-center justify-between gap-3 py-1">
+                      <span className="truncate text-subhead text-ink-muted">{location.label}</span>
+                      <ForgetButton id={location.id} label={location.label} verb="Batalkan" what="tanda tanpa tempat" />
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            ) : null}
+            </div>
+          ),
+          tempat: (
+            <PlaceList points={points.map((point) => ({ ...point, moveHref: placingHref(params, point.key, point.id) }))} />
+          ),
+          online: <OnlineList report={online} />,
+        }}
+      />
     </div>
   )
 }

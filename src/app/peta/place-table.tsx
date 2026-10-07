@@ -36,7 +36,7 @@ function summary(total: number, matched: number | null): string {
 export function PlaceTable({ points, total, matched, moveHref }: Props) {
   return (
     <section aria-labelledby="tempat" className="@container">
-      <h2 id="tempat" className="mb-1 text-subhead font-medium text-ink">
+      <h2 id="tempat" tabIndex={-1} className="mb-1 text-subhead font-medium text-ink">
         Tempat
       </h2>
       <p role={matched !== null ? 'status' : undefined} className="mb-3 text-footnote text-ink-muted">

@@ -287,39 +287,43 @@ function Card({ account, open, onToggle, reorder }: RowProps) {
         </span>
       </div>
 
-      <p className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-footnote text-ink-muted">
-        {account.key === '' ? (
-          <span>tidak diimpor</span>
-        ) : (
-          <span>
-            <code className="text-ink">{account.key}</code>{' '}
-            {ACCOUNT_KEY_LABELS[account.key as AccountKey]}
+      {/*
+        Ubah at the end of the detail line, as on the category cards: a
+        full-width button row under every card made each one twice as tall as
+        what it says. Arsipkan, the rare one, waits inside the open card.
+      */}
+      <div className="mt-1 flex items-center justify-between gap-2">
+        <p className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5 text-footnote text-ink-muted">
+          {account.key === '' ? (
+            <span>tidak diimpor</span>
+          ) : (
+            <span>
+              <code className="text-ink">{account.key}</code>{' '}
+              {ACCOUNT_KEY_LABELS[account.key as AccountKey]}
+            </span>
+          )}
+          <span aria-hidden="true" className="text-ink-faint">
+            ·
           </span>
-        )}
-        <span aria-hidden="true" className="text-ink-faint">
-          ·
-        </span>
-        <span>
-          <span className="tnum font-mono">{account.usage}</span> transaksi
-        </span>
-      </p>
-
-      <div className="mt-2.5 flex flex-wrap items-center gap-2">
+          <span>
+            <span className="tnum font-mono">{account.usage}</span> transaksi
+          </span>
+        </p>
         <button
           type="button"
           onClick={onToggle}
           aria-expanded={open}
-          className="h-11 flex-1 rounded-sm border border-line px-3 text-subhead text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
+          className="h-11 shrink-0 rounded-sm border border-line px-3 text-subhead text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
         >
           {open ? 'Tutup' : 'Ubah'}
           <span className="sr-only"> {account.name}</span>
         </button>
-        <ArchiveButton account={account} />
       </div>
 
       {open ? (
-        <div className="mt-3 border-t border-line pt-3">
+        <div className="mt-3 space-y-3 border-t border-line pt-3">
           <AccountForm account={account} />
+          <ArchiveButton account={account} />
         </div>
       ) : null}
     </li>

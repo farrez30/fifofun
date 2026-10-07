@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { CaretLeft } from '@phosphor-icons/react/dist/ssr/CaretLeft'
 import { CaretRight } from '@phosphor-icons/react/dist/ssr/CaretRight'
+import { JumpSelect } from '@/components/jump-select'
 import { NavHint } from '@/components/nav-hint'
 import { pageWindow } from '@/lib/paging'
 
@@ -16,8 +17,9 @@ import { pageWindow } from '@/lib/paging'
  * Back and forward sit in fixed slots at the two ends, an invisible stand-in
  * holding the place of the one that does not apply, so neither moves between
  * pages and a thumb finds them where it left them. On a phone the numbers give
- * way to "5 / 104": seven 44px numbers and two arrows were wider than the
- * screen and pushed Berikutnya under Sebelumnya.
+ * way to a select reading "5 / 104" that opens the system wheel on every page:
+ * seven 44px numbers and two arrows were wider than the screen and pushed
+ * Berikutnya under Sebelumnya, and the wheel reaches page 87 in one flick.
  *
  * Links when the page lives in the address bar (the report, the map's places),
  * so the back button undoes a page and a page can be sent; buttons when the
@@ -98,13 +100,18 @@ export function Pager({ page, pages, label, hrefFor, onPage }: Props) {
           )}
         </ol>
 
-        <p className="tnum font-mono text-subhead text-ink sm:hidden">
-          <span className="sr-only">Halaman </span>
-          {page}
-          <span aria-hidden="true"> / </span>
-          <span className="sr-only"> dari </span>
-          {pages}
-        </p>
+        <div className="sm:hidden">
+          <JumpSelect
+            label={`Pilih halaman, sekarang ${page} dari ${pages}`}
+            value={String(page)}
+            options={Array.from({ length: pages }, (_, index) => ({
+              value: String(index + 1),
+              label: `${index + 1} / ${pages}`,
+              href: hrefFor?.(index + 1),
+            }))}
+            onSelect={onPage ? (next) => onPage(Number(next)) : undefined}
+          />
+        </div>
 
         {page < pages ? go(page + 1, `${STEP} relative`, forward, { rel: 'next' }) : placeholder(forward)}
       </div>

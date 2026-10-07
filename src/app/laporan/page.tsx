@@ -2,10 +2,12 @@ import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
 import { AppShell } from '@/components/app-shell'
-import { PeriodReport } from '@/components/period-report'
+import { JumpSelect } from '@/components/jump-select'
+import { CashflowBreakdown, CategoryBreakdown, PeriodReport } from '@/components/period-report'
 import { Pager } from '@/components/pager'
-import { SegmentNav } from '@/components/segment-nav'
 import { TransactionTable } from '@/components/transaction-table'
+import { ViewSwitch } from '@/components/view-switch'
+import { formatJakarta, formatMonthKey } from '@/lib/datetime'
 import { matchesFilter, summarisePeriod, UNCATEGORISED, type PeriodFilter } from '@/lib/ledger/period'
 import { CASHFLOW_TYPES, type CashflowType, type EntrySource } from '@/lib/ledger/types'
 import { SOURCE_LABELS } from '@/lib/ledger/edit'
@@ -17,7 +19,7 @@ import {
   getMatchingTransactions,
 } from '@/lib/queries/household'
 import { getUser } from '@/lib/supabase/server'
-import { pageCount, pageHref, pageSlice, parsePage } from '@/lib/paging'
+import { monthOnPage, monthPages, pageCount, pageHref, pageSlice, parsePage } from '@/lib/paging'
 import { sectionHref, sectionOf } from '@/lib/sections'
 import { ReportSkeleton } from './skeleton'
 
@@ -201,7 +203,8 @@ async function Report({ params }: { params: Record<string, string | string[] | u
   /*
     The list first: every link into this page ("Lihat semua" from Catat and
     the dashboard) comes for the transactions. The two breakdowns are views of
-    the same filtered set, a tap away instead of a long scroll below it.
+    the same filtered set, all three rendered here and switched in place, since
+    the matched rows they are cut from are already in hand.
   */
   const section = sectionOf(params.bagian, SECTIONS)
   const keep = Object.fromEntries(Object.entries(plain).filter(([key]) => key !== 'hal' && key !== 'bagian'))
@@ -210,55 +213,92 @@ async function Report({ params }: { params: Record<string, string | string[] | u
     { key: 'kategori', label: 'Per kategori' },
     { key: 'cashflow', label: 'Per cashflow' },
   ].map((segment) => ({ ...segment, href: sectionHref('/laporan', keep, segment.key, SECTIONS[0]) }))
+  const summary = summarisePeriod(enriched, filter, groupNames)
+
+  /** One line of a breakdown, opened as the list it adds up, with every other filter kept. */
+  const drill = (change: Record<string, string>) => {
+    const query = new URLSearchParams()
+    for (const [key, value] of Object.entries({ ...keep, ...change })) if (value) query.set(key, value)
+    return `/laporan?${query}#daftar`
+  }
+
+  // Where each month starts in the list, for "Lompat ke bulan".
+  const monthStarts = monthPages(matched.map((row) => formatJakarta(row.occurredAt, 'iso-date').slice(0, 7)))
+
+  const transactionList = (
+    <section aria-labelledby="daftar">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <h2 id="daftar" tabIndex={-1} className="text-subhead font-medium text-ink">
+          Daftar transaksi
+        </h2>
+        {monthStarts.length > 1 ? (
+          <label className="flex items-center gap-2 text-footnote text-ink-muted">
+            Lompat ke bulan
+            <JumpSelect
+              label="Lompat ke bulan"
+              value={monthOnPage(monthStarts, page)}
+              options={monthStarts.map((start) => ({
+                value: start.month,
+                label: formatMonthKey(start.month),
+                href: `${pageHref('/laporan', plain, start.page)}#daftar`,
+              }))}
+            />
+          </label>
+        ) : null}
+      </div>
+      <TransactionTable
+        rows={pageSlice(matched, page)}
+        accounts={accounts}
+        categories={categories}
+        caption={`Transaksi terpilih, halaman ${page} dari ${pages}`}
+        emptyText="Tidak ada transaksi yang cocok dengan saringan ini."
+      />
+      <Pager
+        label="Halaman daftar transaksi"
+        page={page}
+        pages={pages}
+        hrefFor={(next) => `${pageHref('/laporan', plain, next)}#daftar`}
+      />
+      <p className="mt-2 max-w-2xl text-footnote text-ink-muted">
+        Klik keterangannya untuk mengubah kategori, catatan, atau memisahkannya jadi beberapa
+        kategori.
+      </p>
+    </section>
+  )
 
   return (
     <div className="space-y-8">
-      <PeriodReport
-        section={section === SECTIONS[0] ? '' : section}
-        nav={<SegmentNav label="Bagian laporan" segments={segments} current={section} />}
-        breakdown={section === SECTIONS[0] ? null : section}
-        summary={summarisePeriod(enriched, filter, groupNames)}
-        filter={filter}
-        raw={params}
-        /*
-          Deduped, because the picker's vocabulary is names, not rows. The
-          unique index is (household, cashflow, name), so the same name may
-          legally exist on two cashflows — the seed itself ships Dana Darurat
-          twice — and two identical <option>s would collide as React keys
-          while offering nothing: matchesFilter compares names, and the id
-          translation above already resolves one name to every matching row.
-          (The groupNames map above has the same collision and keeps the last
-          row; a summary group is a display grouping, so last-wins is benign.)
-        */
-        categories={categoryOptions}
-        accounts={[...new Set(accounts.map((account) => account.name))]}
-        ledgerSize={ledgerSize}
+      <ViewSwitch
+        label="Bagian laporan"
+        segments={segments}
+        initial={section}
+        form="laporan-saring"
+        header={
+          <PeriodReport
+            summary={summary}
+            filter={filter}
+            raw={params}
+            /*
+              Deduped, because the picker's vocabulary is names, not rows. The
+              unique index is (household, cashflow, name), so the same name may
+              legally exist on two cashflows — the seed itself ships Dana Darurat
+              twice — and two identical <option>s would collide as React keys
+              while offering nothing: matchesFilter compares names, and the id
+              translation above already resolves one name to every matching row.
+              (The groupNames map above has the same collision and keeps the last
+              row; a summary group is a display grouping, so last-wins is benign.)
+            */
+            categories={categoryOptions}
+            accounts={[...new Set(accounts.map((account) => account.name))]}
+            ledgerSize={ledgerSize}
+          />
+        }
+        views={{
+          transaksi: transactionList,
+          kategori: <CategoryBreakdown summary={summary} drill={drill} />,
+          cashflow: <CashflowBreakdown summary={summary} drill={drill} />,
+        }}
       />
-
-      {section === SECTIONS[0] ? (
-        <section aria-labelledby="daftar">
-          <h2 id="daftar" className="mb-3 text-subhead font-medium text-ink">
-            Daftar transaksi
-          </h2>
-          <TransactionTable
-            rows={pageSlice(matched, page)}
-            accounts={accounts}
-            categories={categories}
-            caption={`Transaksi terpilih, halaman ${page} dari ${pages}`}
-            emptyText="Tidak ada transaksi yang cocok dengan saringan ini."
-          />
-          <Pager
-            label="Halaman daftar transaksi"
-            page={page}
-            pages={pages}
-            hrefFor={(next) => `${pageHref('/laporan', plain, next)}#daftar`}
-          />
-          <p className="max-w-2xl mt-2 text-footnote text-ink-muted">
-            Klik keterangannya untuk mengubah kategori, catatan, atau memisahkannya jadi beberapa
-            kategori.
-          </p>
-        </section>
-      ) : null}
     </div>
   )
 }

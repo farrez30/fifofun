@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { PAGE_SIZE, pageCount, pageHref, pageSlice, pageWindow, parsePage } from './paging'
+import { PAGE_SIZE, monthOnPage, monthPages, pageCount, pageHref, pageSlice, pageWindow, parsePage } from './paging'
 
 describe('parsePage', () => {
   it('reads a page number and refuses anything that is not one', () => {
@@ -87,5 +87,40 @@ describe('pageWindow', () => {
   it('draws a gap of one page as the page itself, not an ellipsis', () => {
     expect(pageWindow(4, 16)).toEqual([1, 2, 3, 4, 5, null, 16])
     expect(pageWindow(3, 5)).toEqual([1, 2, 3, 4, 5])
+  })
+})
+
+describe('monthPages', () => {
+  // Newest first, as the report lists them: three October rows, then September.
+  const months = ['2026-10', '2026-10', '2026-10', '2026-09', '2026-09', '2026-08']
+
+  it('names the page each month starts on', () => {
+    expect(monthPages(months, 2)).toEqual([
+      { month: '2026-10', page: 1 },
+      { month: '2026-09', page: 2 },
+      { month: '2026-08', page: 3 },
+    ])
+  })
+
+  it('gives nothing for an empty list', () => {
+    expect(monthPages([])).toEqual([])
+  })
+})
+
+describe('monthOnPage', () => {
+  const starts = [
+    { month: '2026-10', page: 1 },
+    { month: '2026-09', page: 4 },
+  ]
+
+  it('is the month the page opens in, even mid-month', () => {
+    expect(monthOnPage(starts, 1)).toBe('2026-10')
+    expect(monthOnPage(starts, 3)).toBe('2026-10')
+    expect(monthOnPage(starts, 4)).toBe('2026-09')
+    expect(monthOnPage(starts, 9)).toBe('2026-09')
+  })
+
+  it('is empty when there are no months', () => {
+    expect(monthOnPage([], 1)).toBe('')
   })
 })

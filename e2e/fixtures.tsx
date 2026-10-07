@@ -46,7 +46,8 @@ import { TransactionTable } from '@/components/transaction-table'
 import { Pager } from '@/components/pager'
 import { SegmentNav } from '@/components/segment-nav'
 import { BudgetTable } from '@/app/anggaran/budget-table'
-import { PeriodReport } from '@/components/period-report'
+import { CashflowBreakdown, CategoryBreakdown, PeriodReport } from '@/components/period-report'
+import { ViewSwitch } from '@/components/view-switch'
 import { TidyPanel } from '@/app/tinjau/tidy-panel'
 import { summarisePeriod } from '@/lib/ledger/period'
 import { buildBudgetPlan, type BudgetCategory } from '@/lib/ledger/budget-plan'
@@ -81,6 +82,7 @@ import { ACCOUNT_KINDS, CASHFLOW_TYPES } from '@/lib/ledger/types'
 import { ACCOUNT_KIND_LABELS, DIRECTION_LABELS, type Direction } from '@/lib/ledger/direction'
 import { SEED_PALETTE } from '@/lib/ledger/palette'
 import { PlaceTable } from '@/app/peta/place-table'
+import { PlaceList } from '@/app/peta/place-list'
 import { PlacingPanel } from '@/app/peta/placing-panel'
 import { OnlineList } from '@/app/peta/online-list'
 import { summariseOnline } from '@/lib/ledger/online'
@@ -1539,6 +1541,10 @@ const WAITING_LONG = Array.from({ length: 45 }, (_, index) => ({
   href: `/peta?taruh=${encodeURIComponent(`warung ${index}`)}#atur`,
 }))
 
+const REPORT_SUMMARY = summarisePeriod(REPORT_ROWS, {}, REPORT_GROUPS)
+const reportDrill = (change: Record<string, string>) =>
+  `/laporan?${new URLSearchParams({ sumber: 'manual', cari: 'kopi', ...change })}#daftar`
+
 export const FIXTURES = {
   marks: MARKS,
   'sankey-all': (
@@ -1587,6 +1593,22 @@ export const FIXTURES = {
     <PlaceTable points={PLACES.slice(0, 1)} total={PLACES.length} matched={1} moveHref={() => '/peta'} />
   ),
   'peta-tempat-kosong': <PlaceTable points={[]} total={0} matched={null} moveHref={() => '/peta'} />,
+  'peta-tempat-daftar': (
+    <PlaceList
+      points={Array.from({ length: 45 }, (_, index) => {
+        const base = PLACES[index % PLACES.length]
+        const pointId = `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`
+        return {
+          ...base,
+          id: pointId,
+          pointId,
+          key: `${base.key} ${index}`,
+          label: index === 0 ? base.label : `${base.label} ${index}`,
+          moveHref: `/peta?taruh=${encodeURIComponent(`${base.key} ${index}`)}#atur`,
+        }
+      })}
+    />
+  ),
   'peta-segmen': (
     <SegmentNav
       label="Bagian peta"
@@ -2133,7 +2155,7 @@ ${description}`,
         { key: 'alokasi', label: 'Alokasi', href: '/rencana' },
         { key: 'kesehatan', label: 'Kesehatan', href: '/rencana?bagian=kesehatan' },
         { key: 'anak', label: 'Anak', href: '/rencana?bagian=anak' },
-        { key: 'gap', label: 'Jarak', href: '/rencana?bagian=gap' },
+        { key: 'gap', label: 'Gaya hidup', href: '/rencana?bagian=gap' },
         { key: 'tujuan', label: 'Tujuan', href: '/rencana?bagian=tujuan' },
       ]}
     />
@@ -2181,35 +2203,53 @@ ${description}`,
   ),
 
   'laporan-per-kategori': (
-    <PeriodReport
-      summary={summarisePeriod(REPORT_ROWS, {}, REPORT_GROUPS)}
-      filter={{}}
-      raw={{}}
-      categories={[
-        { name: 'Bensin', group: 'Transport' },
-        // The pair that reads as one thing in a flat list and as two under
-        // headings: eating versus getting about.
-        { name: 'Kopi & Snack', group: 'Makan & Minum' },
-        { name: 'Makan/minum', group: 'Makan & Minum' },
-        { name: 'Laundry', group: 'Rumah' },
-        { name: 'Parkir & Tol', group: null },
-      ]}
-      accounts={['Bank Mandiri']}
-      ledgerSize={REPORT_ROWS.length}
-      section="kategori"
-      breakdown="kategori"
-    />
+    <div className="space-y-6">
+      <PeriodReport
+        summary={REPORT_SUMMARY}
+        filter={{}}
+        raw={{}}
+        categories={[
+          { name: 'Bensin', group: 'Transport' },
+          // The pair that reads as one thing in a flat list and as two under
+          // headings: eating versus getting about.
+          { name: 'Kopi & Snack', group: 'Makan & Minum' },
+          { name: 'Makan/minum', group: 'Makan & Minum' },
+          { name: 'Laundry', group: 'Rumah' },
+          { name: 'Parkir & Tol', group: null },
+        ]}
+        accounts={['Bank Mandiri']}
+        ledgerSize={REPORT_ROWS.length}
+      />
+      <CategoryBreakdown summary={REPORT_SUMMARY} drill={reportDrill} />
+    </div>
   ),
-  'laporan-per-cashflow': (
-    <PeriodReport
-      summary={summarisePeriod(REPORT_ROWS, {}, REPORT_GROUPS)}
-      filter={{}}
-      raw={{ sumber: 'manual', cari: 'kopi' }}
-      categories={[{ name: 'Bensin', group: 'Transport' }]}
-      accounts={['Bank Mandiri']}
-      ledgerSize={REPORT_ROWS.length}
-      section="cashflow"
-      breakdown="cashflow"
+  // The three views of the report as the page renders them, opened on Per
+  // cashflow, with a filter on so the folded summary has something to say.
+  'laporan-segmen': (
+    <ViewSwitch
+      label="Bagian laporan"
+      initial="cashflow"
+      form="laporan-saring"
+      segments={[
+        { key: 'transaksi', label: 'Transaksi', count: REPORT_ROWS.length, href: '/laporan?sumber=manual&cari=kopi' },
+        { key: 'kategori', label: 'Per kategori', href: '/laporan?sumber=manual&cari=kopi&bagian=kategori' },
+        { key: 'cashflow', label: 'Per cashflow', href: '/laporan?sumber=manual&cari=kopi&bagian=cashflow' },
+      ]}
+      header={
+        <PeriodReport
+          summary={REPORT_SUMMARY}
+          filter={{}}
+          raw={{ sumber: 'manual', cari: 'kopi' }}
+          categories={[{ name: 'Bensin', group: 'Transport' }]}
+          accounts={['Bank Mandiri']}
+          ledgerSize={REPORT_ROWS.length}
+        />
+      }
+      views={{
+        transaksi: <p>Daftar transaksi</p>,
+        kategori: <CategoryBreakdown summary={REPORT_SUMMARY} drill={reportDrill} />,
+        cashflow: <CashflowBreakdown summary={REPORT_SUMMARY} drill={reportDrill} />,
+      }}
     />
   ),
 }

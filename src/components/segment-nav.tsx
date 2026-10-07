@@ -17,8 +17,11 @@ import { SEGMENT, SEGMENT_ON, SEGMENTED } from '@/components/field-base'
  * place instead.
  *
  * Full width on a phone, each view as wide as its label, like iOS; its natural
- * width from `sm` up. The focus ring is drawn inside the segment, because the
- * track scrolls sideways as a last resort and would clip a ring drawn outside.
+ * width from `sm` up, where it is also a size above the local segmented
+ * controls (44px, subhead text): the map's own readings use the same recipe at
+ * 36px, and a page's views and a map's reading are not the same rank of
+ * choice. The focus ring is drawn inside the segment, because the track
+ * scrolls sideways as a last resort and would clip a ring drawn outside.
  */
 
 export interface Segment {
@@ -45,7 +48,7 @@ export function SegmentNav({
       <ul className={`${SEGMENTED} w-full overflow-x-auto sm:w-auto`}>
         {segments.map((segment) => {
           const on = segment.key === current
-          const className = `${SEGMENT} ${on ? SEGMENT_ON : ''} relative w-full whitespace-nowrap focus-visible:outline-offset-[-2px] max-sm:px-2`
+          const className = `${SEGMENT} ${on ? SEGMENT_ON : ''} relative w-full whitespace-nowrap focus-visible:outline-offset-[-2px] max-sm:px-2 sm:h-11! sm:px-4! sm:text-subhead!`
           const body = (
             <>
               {segment.label}

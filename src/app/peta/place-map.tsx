@@ -192,6 +192,24 @@ export function PlaceMap({ points, placing, draft, onPick, onMove, hidden, mode,
       map.current = instance
       instance.addControl(new maplibre.NavigationControl({ showCompass: false }), 'top-right')
 
+      /*
+        The map can be made while its view is hidden (a link straight to the
+        places), and MapLibre sizes its canvas once, at zero. Resized whenever
+        the container changes, and framed on the points the moment it first
+        has a size, so a view switched to shows a map rather than a blank box.
+      */
+      let unsized = container.current.clientWidth === 0
+      const sizing = new ResizeObserver(() => {
+        instance.resize()
+        const sized = (container.current?.clientWidth ?? 0) > 0
+        if (unsized && sized) {
+          const bounds = boundsOf(latest.current.points)
+          if (bounds) instance.fitBounds(bounds, { padding: 48, maxZoom: 14, duration: 0 })
+        }
+        unsized = !sized
+      })
+      sizing.observe(container.current)
+
       const drawOverlay = () => {
         colorOf.current = categoryColors()
         if (!instance.getSource(SOURCE)) {
@@ -256,6 +274,7 @@ export function PlaceMap({ points, placing, draft, onPick, onMove, hidden, mode,
       media.addEventListener('change', restyle)
       unwatch = () => {
         observer.disconnect()
+        sizing.disconnect()
         media.removeEventListener('change', restyle)
       }
     })()
@@ -340,8 +359,8 @@ export function PlaceMap({ points, placing, draft, onPick, onMove, hidden, mode,
     return (
       <div className="squircle flex h-[55vh] min-h-80 items-center justify-center rounded-md bg-surface p-6 text-center shadow-xs">
         <p className="max-w-sm text-subhead text-ink-muted">
-          Peta tidak bisa digambar di perangkat ini. Semua tempat dan angkanya tetap ada di daftar di
-          bawah.
+          Peta tidak bisa digambar di perangkat ini. Semua tempat dan angkanya tetap ada di bagian
+          Tempat.
         </p>
       </div>
     )

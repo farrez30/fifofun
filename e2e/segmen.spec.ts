@@ -66,6 +66,23 @@ test.describe('halaman daftar', () => {
     await expect(page.getByRole('navigation')).toHaveCount(0)
   })
 
+  test('turns into one row with a page wheel on a phone', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 })
+    await open(page, 'pager-tengah')
+    const pager = page.getByRole('navigation', { name: 'Halaman daftar tempat' })
+    const wheel = pager.getByRole('combobox')
+
+    // Straight to any page, from a select the phone opens as its own wheel.
+    await expect(wheel).toBeVisible()
+    await expect(wheel).toHaveValue('8')
+    await expect(wheel.locator('option')).toHaveCount(16)
+    // Back and forward on the same row, at the two ends.
+    const back = await pager.locator('a[rel="prev"]').boundingBox()
+    const forward = await pager.locator('a[rel="next"]').boundingBox()
+    expect(Math.round(back!.y)).toBe(Math.round(forward!.y))
+    expect(back!.x).toBeLessThan(forward!.x)
+  })
+
   test('gives every pager control a finger-sized target', async ({ page }) => {
     await open(page, 'pager-tengah')
     const boxes = await page
@@ -95,6 +112,17 @@ test.describe('pedagang yang menunggu', () => {
 })
 
 test.describe('daftar tempat', () => {
+  test('pages every place in the browser, twenty at a time, each with its way back to the map', async ({ page }) => {
+    await open(page, 'peta-tempat-daftar')
+    await expect(page.locator('section[aria-labelledby="tempat"] tbody tr')).toHaveCount(20)
+    await expect(page.getByRole('searchbox', { name: 'Cari tempat' })).toBeVisible()
+    await expect(page.getByRole('navigation', { name: 'Halaman daftar tempat' })).toContainText('Halaman 1 dari 3')
+    await expect(page.locator('section[aria-labelledby="tempat"] tbody a', { hasText: 'Pindahkan' }).first()).toHaveAttribute(
+      'href',
+      /^\/peta\?taruh=.+#atur$/,
+    )
+  })
+
   test('counts every place, not the page it was handed', async ({ page }) => {
     await open(page, 'peta-tempat')
     await expect(page.locator('section[aria-labelledby="tempat"] > p').first()).toContainText(/^\d+ tempat, urut/)
@@ -111,19 +139,32 @@ test.describe('daftar tempat', () => {
 
 test.describe('saringan laporan', () => {
   test('is folded, and says on the outside what it holds', async ({ page }) => {
-    await open(page, 'laporan-per-cashflow')
+    await open(page, 'laporan-segmen')
     const filter = page.locator('details').first()
 
     await expect(filter).not.toHaveAttribute('open', /.*/)
     await expect(filter.locator('summary')).toContainText('Sumber: Dicatat manual')
     await expect(filter.locator('summary')).toContainText('cari “kopi”')
-    // Applying a filter stays on the view it was applied from.
-    await expect(filter.locator('input[type="hidden"][name="bagian"]')).toHaveValue('cashflow')
+    // Applying a filter stays on the open view: the field rides with the form by id.
+    await expect(page.locator('input[type="hidden"][name="bagian"][form="laporan-saring"]')).toHaveValue('cashflow')
+    await expect(page.locator('form#laporan-saring')).toHaveCount(1)
   })
 
-  test('shows only the breakdown its view is for', async ({ page }) => {
-    await open(page, 'laporan-per-cashflow')
-    await expect(page.locator('#per-cashflow')).toHaveCount(1)
-    await expect(page.locator('#per-kategori')).toHaveCount(0)
+  test('renders every view and shows the open one, so a tap needs no round trip', async ({ page }) => {
+    await open(page, 'laporan-segmen')
+    await expect(page.locator('[data-view="cashflow"]')).toBeVisible()
+    await expect(page.locator('[data-view="kategori"]')).toBeHidden()
+    await expect(page.locator('[data-view="transaksi"]')).toBeHidden()
+    // Already there, closed: the breakdown is in the page, not fetched on tap.
+    await expect(page.locator('#per-kategori')).toHaveCount(1)
+  })
+
+  test('opens every line of a breakdown as its transactions, with the filter kept', async ({ page }) => {
+    await open(page, 'laporan-segmen')
+    const lines = page.locator('[data-view="cashflow"] a')
+    expect(await lines.count()).toBeGreaterThan(0)
+    for (const href of await lines.evaluateAll((nodes) => nodes.map((node) => node.getAttribute('href')))) {
+      expect(href).toMatch(/^\/laporan\?sumber=manual&cari=kopi&cashflow=[a-z_]+#daftar$/)
+    }
   })
 })
