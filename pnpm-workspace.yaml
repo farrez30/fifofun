@@ -18,3 +18,11 @@ overrides:
 
 patchedDependencies:
   sonner@2.0.8: patches/sonner@2.0.8.patch
+
+# GHSA-vfj7-8cjw-p6xm (braces, Sep 2026) has no fixed release yet: every
+# version up to the latest, 3.0.3, is affected, so no override can clear it.
+# It sits under eslint-config-next's fast-glob, lint-time only and fed only
+# our own glob patterns. Drop this line once braces publishes a fix.
+auditConfig:
+  ignoreGhsas:
+    - GHSA-vfj7-8cjw-p6xm
