@@ -175,10 +175,16 @@ test.describe('material', () => {
       // wait is an endless one.
       await open(page, file)
 
+      // Only endless ones. A finite transition can start after the wait above:
+      // an autofocused field takes focus on its own schedule, and on a slow
+      // runner its focus-ring fade was caught mid-way and reported as stuck.
       const found = await page.evaluate(() =>
         document
           .getAnimations()
-          .filter((animation) => animation.playState === 'running')
+          .filter(
+            (animation) =>
+              animation.playState === 'running' && animation.effect?.getTiming().iterations === Infinity,
+          )
           .map((animation) => (animation as CSSAnimation).animationName ?? 'unnamed'),
       )
 
