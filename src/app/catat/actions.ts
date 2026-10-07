@@ -57,7 +57,8 @@ const MAX_NOTE = 500
 
 const entrySchema = z.object({
   clientId: z.uuid(),
-  categoryId: z.uuid(),
+  // The placeholder option is disabled, so an unpicked category arrives as null.
+  categoryId: z.uuid('Kategorinya belum dipilih.'),
   accountId: optionalUuid,
   fromAccountId: optionalUuid,
   toAccountId: optionalUuid,

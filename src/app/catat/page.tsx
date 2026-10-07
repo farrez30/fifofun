@@ -70,6 +70,7 @@ async function Entry() {
             id: category.id,
             name: category.name,
             cashflow: category.cashflow,
+            parentId: category.parentId,
             description: category.description,
           }))}
           defaults={{

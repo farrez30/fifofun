@@ -74,6 +74,18 @@ beforeEach(() => {
 })
 
 describe('recordEntry', () => {
+  it('asks for the category in words when none was picked', async () => {
+    const form = entryForm()
+    form.delete('categoryId')
+
+    const result = await recordEntry(null, form)
+
+    expect(result.ok).toBe(false)
+    expect(result.fieldErrors?.categoryId).toBe('Kategorinya belum dipilih.')
+    expect(result.detail).toBe('Kategorinya belum dipilih.')
+    expect(stub.callsOn('transactions')).toHaveLength(0)
+  })
+
   it('takes the cashflow from the category row, not from the form', async () => {
     stub.queue('households', { data: HOUSEHOLD })
     stub.queue('categories', { data: { id: CATEGORY, name: 'Wifi', cashflow: 'bills' } })

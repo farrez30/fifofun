@@ -34,6 +34,15 @@ test.describe('catat transaksi', () => {
     expect(groups).not.toContain('Antar Account')
   })
 
+  test('offers what is inside a group, never the group itself', async ({ page }) => {
+    await open(page, 'catat-entry')
+    const select = page.locator('select[name="categoryId"]')
+    // The server refuses a group, so offering one only ever ends in an error.
+    await expect(select.locator('option[value="cat-makan-group"]')).toHaveCount(0)
+    const heading = select.locator('optgroup[label="Makan & Minum"]')
+    await expect(heading.locator('option')).toHaveText(['Makan/minum', 'Jajan'])
+  })
+
   test('sends the amount as sen digits, not as typed text', async ({ page }) => {
     await open(page, 'catat-entry')
 

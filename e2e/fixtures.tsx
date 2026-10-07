@@ -1132,13 +1132,15 @@ const CATAT_ACCOUNTS = [
 ]
 
 const CATAT_CATEGORIES = [
-  { id: 'cat-makan', name: 'Makan/minum', cashflow: 'spending' as CashflowType },
-  { id: 'cat-jajan', name: 'Jajan', cashflow: 'spending' as CashflowType },
-  { id: 'cat-bensin', name: 'Bensin', cashflow: 'spending' as CashflowType },
-  { id: 'cat-wifi', name: 'Wifi', cashflow: 'bills' as CashflowType },
-  { id: 'cat-tabungan', name: 'Tabungan', cashflow: 'invest_savings' as CashflowType },
-  { id: 'cat-gaji', name: 'Gaji', cashflow: 'income' as CashflowType },
-  { id: 'cat-antar', name: 'Antar Account', cashflow: 'transfer' as CashflowType },
+  // A group with two things inside, which the server refuses to file under.
+  { id: 'cat-makan-group', name: 'Makan & Minum', cashflow: 'spending' as CashflowType, parentId: null },
+  { id: 'cat-makan', name: 'Makan/minum', cashflow: 'spending' as CashflowType, parentId: 'cat-makan-group' },
+  { id: 'cat-jajan', name: 'Jajan', cashflow: 'spending' as CashflowType, parentId: 'cat-makan-group' },
+  { id: 'cat-bensin', name: 'Bensin', cashflow: 'spending' as CashflowType, parentId: null },
+  { id: 'cat-wifi', name: 'Wifi', cashflow: 'bills' as CashflowType, parentId: null },
+  { id: 'cat-tabungan', name: 'Tabungan', cashflow: 'invest_savings' as CashflowType, parentId: null },
+  { id: 'cat-gaji', name: 'Gaji', cashflow: 'income' as CashflowType, parentId: null },
+  { id: 'cat-antar', name: 'Antar Account', cashflow: 'transfer' as CashflowType, parentId: null },
 ]
 
 const BALANCE_ROWS: BalanceRow[] = [

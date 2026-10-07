@@ -6,7 +6,8 @@ import { BUTTON_PRIMARY, CONTROL, CONTROL_INLINE, FieldLabel, FieldRow } from '@
 import { DirectionMark } from '@/components/marks'
 import { MoneyInput } from '@/components/money-input'
 import { directionOf, type Direction } from '@/lib/ledger/direction'
-import { CASHFLOW_LABELS, type CashflowType } from '@/lib/ledger/types'
+import { optionGroups } from '@/lib/ledger/settings'
+import type { CashflowType } from '@/lib/ledger/types'
 import { AccountChips, CHIP_RADIO, type AccountOption } from './account-chips'
 import { recordEntry } from './actions'
 import type { ActionResult } from '@/lib/actions'
@@ -29,6 +30,8 @@ export interface CategoryOption {
   id: string
   name: string
   cashflow: CashflowType
+  /** Set when this sits inside a group; a group itself is never offered. */
+  parentId: string | null
   /** One sentence saying what belongs here, read out under the picker. */
   description?: string | null
 }
@@ -79,10 +82,7 @@ export function EntryForm({ accounts, categories, defaults, entryKey }: Props) {
 
   const allowed = categories.filter((category) => directionOf(category.cashflow) === direction)
   const chosen = allowed.find((category) => category.id === categoryId)
-  const byCashflow = new Map<CashflowType, CategoryOption[]>()
-  for (const category of allowed) {
-    byCashflow.set(category.cashflow, [...(byCashflow.get(category.cashflow) ?? []), category])
-  }
+  const grouped = optionGroups(allowed)
 
   const ids = {
     category: useId(),
@@ -101,8 +101,19 @@ export function EntryForm({ accounts, categories, defaults, entryKey }: Props) {
       state, and the account fields under them, still said "Antar akun". A new
       form built from state cannot disagree with it, and the direction a
       person picked stays picked for the next entry.
+
+      The reset itself is cancelled. It also ran after a refused save, and
+      emptied the description, date, time, note and category while the
+      amount, held in state, stayed: a person corrected one field and had to
+      retype four. After a save the new key gives a fresh form anyway.
     */
-    <form key={clientId} action={action} noValidate className="space-y-5">
+    <form
+      key={clientId}
+      action={action}
+      onReset={(event) => event.preventDefault()}
+      noValidate
+      className="space-y-5"
+    >
 
       <input type="hidden" name="clientId" value={clientId} />
 
@@ -175,9 +186,9 @@ export function EntryForm({ accounts, categories, defaults, entryKey }: Props) {
             <option value="" disabled>
               Pilih kategori
             </option>
-            {[...byCashflow.entries()].map(([cashflow, options]) => (
-              <optgroup key={cashflow} label={CASHFLOW_LABELS[cashflow]}>
-                {options.map((category) => (
+            {grouped.map((group) => (
+              <optgroup key={group.label} label={group.label}>
+                {group.options.map((category) => (
                   <option key={category.id} value={category.id}>
                     {category.name}
                   </option>
