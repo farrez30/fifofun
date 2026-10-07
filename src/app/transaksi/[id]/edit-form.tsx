@@ -86,7 +86,19 @@ export function EditEntryForm({
   const chosen = categories.find((category) => category.id === categoryId)
 
   return (
-    <form action={action} className="space-y-4" aria-labelledby={ids.heading}>
+    /*
+      React resets a form after its action, and a select resets to the option
+      it was first rendered with, not the one just saved: the picker showed
+      the old category while the row and the kamus under it held the new one,
+      and a second save would have quietly moved it back. What is on screen
+      after a save is what was saved, so the reset is cancelled.
+    */
+    <form
+      action={action}
+      onReset={(event) => event.preventDefault()}
+      className="space-y-4"
+      aria-labelledby={ids.heading}
+    >
       <h2 id={ids.heading} className="text-subhead font-medium text-ink">
         Ubah transaksi
       </h2>
