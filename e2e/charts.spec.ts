@@ -1530,15 +1530,18 @@ test.describe('rencana', () => {
     await expect(save).toHaveAttribute('form', 'rencana-simpan')
   })
 
-  test('numbers the sections and marks where the reader is', async ({ page }) => {
+  test('names the views and marks the one that is open', async ({ page }) => {
     await open(page, 'plan-index')
-    const links = page.getByRole('link')
+    const links = page.getByRole('navigation', { name: 'Bagian rencana' }).getByRole('link')
 
-    await expect(links).toHaveCount(6)
-    await expect(links.first()).toHaveAttribute('aria-current', 'location')
-    await expect(links.first()).toContainText('Titik berangkat')
-    // The first pill is 01, not 0 and not 1.
-    await expect(links.first()).toContainText('01')
+    await expect(links).toHaveCount(5)
+    await expect(links.first()).toHaveAttribute('aria-current', 'page')
+    await expect(links.first()).toHaveText('Alokasi')
+    await expect(links.nth(1)).not.toHaveAttribute('aria-current', /.+/)
+    // A real address under every view, so it works before hydration and in a new tab.
+    await expect(links.nth(1)).toHaveAttribute('href', '/rencana?bagian=kesehatan')
+    // The starting point is not a view: it stays in the dock above all of them.
+    await expect(page.getByRole('link', { name: /Titik berangkat/ })).toHaveCount(0)
   })
 })
 

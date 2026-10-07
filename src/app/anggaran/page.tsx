@@ -83,7 +83,7 @@ async function Budgets({ params }: { params: Record<string, string | string[] | 
         <p className="text-subhead font-medium text-ink">Belum ada kategori Spending atau Bills.</p>
         <p className="mt-2 text-subhead text-ink-muted">
           Anggaran ditetapkan per kategori pengeluaran.{' '}
-          <a href="/pengaturan#kategori" className="text-accent underline underline-offset-2">
+          <a href="/pengaturan?bagian=kategori" className="text-accent underline underline-offset-2">
             Buat dulu satu di Pengaturan
           </a>
           .

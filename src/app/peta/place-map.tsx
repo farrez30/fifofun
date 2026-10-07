@@ -352,7 +352,7 @@ export function PlaceMap({ points, placing, draft, onPick, onMove, hidden, mode,
       <div
         ref={container}
         role="region"
-        aria-label="Peta belanja. Angka yang sama ada di daftar Tempat di bawahnya."
+        aria-label="Peta belanja. Angka yang sama ada di bagian Tempat."
         className="place-map squircle h-[55vh] min-h-80 overflow-hidden rounded-md bg-sunken shadow-xs sm:h-[60vh]"
       />
       {/* Opaque, not glass: it sits over the map, which DESIGN.md §3 keeps flat. */}
@@ -361,7 +361,7 @@ export function PlaceMap({ points, placing, draft, onPick, onMove, hidden, mode,
           role="status"
           className="absolute inset-x-3 top-3 rounded-sm bg-surface px-3 py-2 text-footnote text-ink shadow-sm"
         >
-          Peta dasar dari OpenFreeMap gagal dimuat. Semua tempat dan angkanya tetap ada di daftar di bawah.
+          Peta dasar dari OpenFreeMap gagal dimuat. Semua tempat dan angkanya tetap ada di bagian Tempat.
         </p>
       ) : null}
     </div>

@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { CashflowChip, CategoryMark } from '@/components/marks'
 import type { MonthDetail } from '@/lib/ledger/month-detail'
 
@@ -14,8 +15,22 @@ import type { MonthDetail } from '@/lib/ledger/month-detail'
  * type is.
  */
 
+/**
+ * Categories drawn under the chart. A month can touch twenty; the report holds
+ * all of them for the same month, one tap away and with its count, instead of
+ * a list that pushed the rest of the dashboard two screens down.
+ */
+const CATEGORY_ROWS = 8
+
+function monthReportHref(month: string): string {
+  const [year, index] = month.split('-').map(Number)
+  const last = new Date(Date.UTC(year, index, 0)).getUTCDate()
+  return `/laporan?dari=${month}-01&sampai=${month}-${String(last).padStart(2, '0')}&bagian=kategori`
+}
+
 export function MonthDetailPanel({ detail }: { detail: MonthDetail }) {
   const headingId = `rincian-${detail.month}`
+  const categories = detail.byCategory.slice(0, CATEGORY_ROWS)
 
   return (
     <section
@@ -44,7 +59,7 @@ export function MonthDetailPanel({ detail }: { detail: MonthDetail }) {
             aria-label={`Per kategori, ${detail.label}`}
             className="rows-inset squircle rounded-md bg-surface shadow-xs mt-3 @2xl:hidden"
           >
-            {detail.byCategory.map((line) => (
+            {categories.map((line) => (
               <li key={`${line.cashflow} ${line.name}`} className="px-3 py-2.5">
                 <div className="flex items-center justify-between gap-3">
                   <CategoryMark
@@ -103,7 +118,7 @@ export function MonthDetailPanel({ detail }: { detail: MonthDetail }) {
                 </tr>
               </thead>
               <tbody>
-                {detail.byCategory.map((line) => (
+                {categories.map((line) => (
                   <tr key={`${line.cashflow} ${line.name}`} className="border-b border-line last:border-0">
                     <th scope="row" className="px-4 py-2 text-left font-normal">
                       <CategoryMark
@@ -138,6 +153,12 @@ export function MonthDetailPanel({ detail }: { detail: MonthDetail }) {
               </tbody>
             </table>
           </div>
+
+          {detail.byCategory.length > categories.length ? (
+            <Link href={monthReportHref(detail.month)} className="mt-1 inline-flex min-h-11 items-center text-subhead text-accent">
+              {detail.byCategory.length - categories.length} kategori lain di Laporan ›
+            </Link>
+          ) : null}
 
           <h4 className="mt-4 text-footnote text-ink-faint">
             {detail.count > detail.top.length

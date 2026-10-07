@@ -82,7 +82,7 @@ export function GroupLegend({ groups, hidden, onToggle, onShowAll, glow, onGlow 
         </span>
       </div>
       <p className="flex flex-wrap items-center gap-x-3 text-footnote text-ink-muted">
-        <span>Ketuk kelompok untuk menyembunyikannya dari peta. Daftar Tempat di bawah tetap lengkap.</span>
+        <span>Ketuk kelompok untuk menyembunyikannya dari peta. Bagian Tempat di atas tetap mencantumkan semuanya.</span>
         {hidden.length > 0 ? (
           <button
             type="button"

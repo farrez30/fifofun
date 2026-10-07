@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import type { BudgetLine, BudgetReview } from '@/lib/ledger/budget'
 import { formatIdr, formatIdrCompact, senToRupiahNumber } from '@/lib/money'
 
@@ -69,10 +70,19 @@ interface Props {
    * thing as money left over from the allocation.
    */
   income?: bigint
+  /**
+   * Rows drawn before the rest is left to the budget page. The lines arrive
+   * worst overrun first, so the cut keeps exactly the ones worth reading on a
+   * dashboard; the totals in the caption still count every line.
+   */
+  limit?: number
+  /** Where every line is, said with its count when the limit hides some. */
+  moreHref?: string
 }
 
-export function BudgetBullet({ review, caption, income }: Props) {
+export function BudgetBullet({ review, caption, income, limit, moreHref }: Props) {
   const { lines } = review
+  const shown = limit === undefined ? lines : lines.slice(0, limit)
 
   if (lines.length === 0) {
     return (
@@ -117,10 +127,16 @@ export function BudgetBullet({ review, caption, income }: Props) {
       </div>
 
       <ul className="space-y-3">
-        {lines.map((line) => (
+        {shown.map((line) => (
           <Row key={line.category} line={line} percentOf={percentOf} source={review.source} />
         ))}
       </ul>
+
+      {moreHref && shown.length < lines.length ? (
+        <Link href={moreHref} className="mt-2 inline-flex min-h-11 items-center text-subhead text-accent">
+          {lines.length - shown.length} kategori lain di Anggaran ›
+        </Link>
+      ) : null}
 
       {quiet > 0 ? (
         <p className="mt-4 border-t border-line pt-3 text-footnote text-ink-faint">

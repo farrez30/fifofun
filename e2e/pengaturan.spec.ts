@@ -102,27 +102,36 @@ test.describe('kategori', () => {
     page,
   }) => {
     await open(page, 'settings-categories')
-    const headings = await page.getByRole('heading', { level: 3 }).allInnerTexts()
-
-    expect(headings).toEqual([
+    // Every cashflow is one pick away, with how many categories it holds, and
+    // only the one picked is drawn: all of them at once was the longest list
+    // in the app. Spending first, because nearly every new category goes there.
+    const options = await page.getByRole('combobox', { name: 'Cashflow' }).locator('option').allInnerTexts()
+    expect(options.map((option) => option.replace(/ \(\d+\)$/, ''))).toEqual([
       'Income',
       'Spending',
       'Bills',
       'Invest / Savings',
       'Dari Asset / Saving',
     ])
-    // Retired categories fold away under a count rather than a third screen.
-    const archive = page.locator('details', { has: page.locator('summary', { hasText: /^Diarsipkan \(\d+\)$/ }) })
+    expect(options.every((option) => /\(\d+\)$/.test(option))).toBe(true)
+    expect(await page.getByRole('heading', { level: 3 }).allInnerTexts()).toEqual(['Spending'])
+    // Retired categories fold away under a count rather than a third screen,
+    // and say they span every cashflow, since the picker above scopes to one.
+    const archive = page.locator('details', {
+      has: page.locator('summary', { hasText: /^Diarsipkan, semua cashflow \(\d+\)$/ }),
+    })
     await expect(archive).toHaveCount(1)
     await expect(archive).not.toHaveAttribute('open')
   })
 
   test('shows a savings pot in both of the groups it belongs to', async ({ page }) => {
-    await open(page, 'settings-categories')
-
     // The pot and the way out of it are two rows with one name, and the funds
-    // panel pairs them by that name.
-    expect(await page.getByRole('rowheader', { name: /Tabungan/ }).count()).toBe(2)
+    // panel pairs them by that name: one under money going in, one under money
+    // coming back out.
+    await open(page, 'settings-categories-tabungan')
+    expect(await page.getByRole('rowheader', { name: /Tabungan/ }).count()).toBe(1)
+    await open(page, 'settings-categories-asal')
+    expect(await page.getByRole('rowheader', { name: /Tabungan/ }).count()).toBe(1)
   })
 
   test('offers a handle only where there is something to reorder against', async ({ page }) => {
@@ -133,6 +142,8 @@ test.describe('kategori', () => {
     await expect(table.getByRole('button', { name: 'Pindahkan Makan/minum' })).toBeVisible()
     await expect(table.getByRole('button', { name: 'Pindahkan Kopi' })).toBeVisible()
     // The only row under its heading has nowhere to go.
+    await open(page, 'settings-categories-income')
+    await expect(page.getByRole('rowheader', { name: /Gaji/ })).toHaveCount(1)
     await expect(page.getByRole('button', { name: 'Pindahkan Gaji' })).toHaveCount(0)
   })
 
@@ -161,11 +172,12 @@ test.describe('kategori', () => {
   })
 
   test('marks the names the importer looks for literally', async ({ page }) => {
-    await open(page, 'settings-categories')
     // Makan/minum used to be one of these, back when every QRIS payment was
     // filed as a meal. The importer no longer guesses that, so the name it does
     // still look for is the one the payroll line lands on.
+    await open(page, 'settings-categories-income')
     await expect(page.getByRole('rowheader', { name: /Gaji/ })).toContainText('dicari impor')
+    await open(page, 'settings-categories')
     await expect(page.getByRole('rowheader', { name: /^Kopi/ })).not.toContainText('dicari impor')
 
     // And lists all of them in one place rather than leaving it to be guessed.

@@ -3,7 +3,9 @@ import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
 import { AppShell } from '@/components/app-shell'
 import { PeriodReport } from '@/components/period-report'
-import { TablePager, TransactionTable } from '@/components/transaction-table'
+import { Pager } from '@/components/pager'
+import { SegmentNav } from '@/components/segment-nav'
+import { TransactionTable } from '@/components/transaction-table'
 import { matchesFilter, summarisePeriod, UNCATEGORISED, type PeriodFilter } from '@/lib/ledger/period'
 import { CASHFLOW_TYPES, type CashflowType, type EntrySource } from '@/lib/ledger/types'
 import { SOURCE_LABELS } from '@/lib/ledger/edit'
@@ -15,7 +17,8 @@ import {
   getMatchingTransactions,
 } from '@/lib/queries/household'
 import { getUser } from '@/lib/supabase/server'
-import { pageCount, pageHref, pageSlice, parsePage } from './paging'
+import { pageCount, pageHref, pageSlice, parsePage } from '@/lib/paging'
+import { sectionHref, sectionOf } from '@/lib/sections'
 import { ReportSkeleton } from './skeleton'
 
 export const metadata: Metadata = { title: 'Laporan' }
@@ -55,6 +58,12 @@ function dayAfter(date: Date): Date {
 }
 
 const MAX_SEARCH = 100
+
+/** Everything in the address except which view and which page, for the Suspense key. */
+function filterKey(params: Record<string, string | string[] | undefined>) {
+  return Object.fromEntries(Object.entries(params).filter(([key]) => key !== 'bagian' && key !== 'hal'))
+}
+const SECTIONS = ['transaksi', 'kategori', 'cashflow'] as const
 
 export function buildFilter(params: Record<string, string | string[] | undefined>): PeriodFilter {
   const cashflow = first(params.cashflow)
@@ -189,9 +198,25 @@ async function Report({ params }: { params: Record<string, string | string[] | u
       .filter((pair): pair is [string, string] => pair[1] !== undefined),
   )
 
+  /*
+    The list first: every link into this page ("Lihat semua" from Catat and
+    the dashboard) comes for the transactions. The two breakdowns are views of
+    the same filtered set, a tap away instead of a long scroll below it.
+  */
+  const section = sectionOf(params.bagian, SECTIONS)
+  const keep = Object.fromEntries(Object.entries(plain).filter(([key]) => key !== 'hal' && key !== 'bagian'))
+  const segments = [
+    { key: 'transaksi', label: 'Transaksi', count: matched.length },
+    { key: 'kategori', label: 'Per kategori' },
+    { key: 'cashflow', label: 'Per cashflow' },
+  ].map((segment) => ({ ...segment, href: sectionHref('/laporan', keep, segment.key, SECTIONS[0]) }))
+
   return (
     <div className="space-y-8">
       <PeriodReport
+        section={section === SECTIONS[0] ? '' : section}
+        nav={<SegmentNav label="Bagian laporan" segments={segments} current={section} />}
+        breakdown={section === SECTIONS[0] ? null : section}
         summary={summarisePeriod(enriched, filter, groupNames)}
         filter={filter}
         raw={params}
@@ -210,23 +235,30 @@ async function Report({ params }: { params: Record<string, string | string[] | u
         ledgerSize={ledgerSize}
       />
 
-      <section aria-labelledby="daftar">
-        <h2 id="daftar" className="mb-3 text-subhead font-medium text-ink">
-          Daftar transaksi
-        </h2>
-        <TransactionTable
-          rows={pageSlice(matched, page)}
-          accounts={accounts}
-          categories={categories}
-          caption={`Transaksi terpilih, halaman ${page} dari ${pages}`}
-          emptyText="Tidak ada transaksi yang cocok dengan saringan ini."
-        />
-        <TablePager page={page} pages={pages} hrefFor={(next) => pageHref(plain, next)} />
-        <p className="mt-2 text-footnote text-ink-muted">
-          Klik keterangannya untuk mengubah kategori, catatan, atau memisahkannya jadi beberapa
-          kategori.
-        </p>
-      </section>
+      {section === SECTIONS[0] ? (
+        <section aria-labelledby="daftar">
+          <h2 id="daftar" className="mb-3 text-subhead font-medium text-ink">
+            Daftar transaksi
+          </h2>
+          <TransactionTable
+            rows={pageSlice(matched, page)}
+            accounts={accounts}
+            categories={categories}
+            caption={`Transaksi terpilih, halaman ${page} dari ${pages}`}
+            emptyText="Tidak ada transaksi yang cocok dengan saringan ini."
+          />
+          <Pager
+            label="Halaman daftar transaksi"
+            page={page}
+            pages={pages}
+            hrefFor={(next) => `${pageHref('/laporan', plain, next)}#daftar`}
+          />
+          <p className="max-w-2xl mt-2 text-footnote text-ink-muted">
+            Klik keterangannya untuk mengubah kategori, catatan, atau memisahkannya jadi beberapa
+            kategori.
+          </p>
+        </section>
+      ) : null}
     </div>
   )
 }
@@ -248,7 +280,9 @@ export default async function LaporanPage({
       current="/laporan"
       lead="Potong catatanmu menurut tanggal, cashflow, kategori, atau akun. Setiap pilihan tersimpan di alamat halaman, jadi bisa ditandai dan dikirim."
     >
-      <Suspense key={JSON.stringify(params)} fallback={<ReportSkeleton />}>
+      {/* Keyed on the filters only: a view or a page keeps the report on screen
+          until the next one arrives, instead of flashing the skeleton. */}
+      <Suspense key={JSON.stringify(filterKey(params))} fallback={<ReportSkeleton />}>
         <Report params={params} />
       </Suspense>
     </AppShell>

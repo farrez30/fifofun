@@ -2,7 +2,6 @@ import Link from 'next/link'
 import { CaretRight } from '@phosphor-icons/react/dist/ssr/CaretRight'
 import { SignedMoney } from '@/components/money'
 import { AccountMark, CategoryMark } from '@/components/marks'
-import { NavHint } from '@/components/nav-hint'
 import { SwipeActionRow, TrayDelete } from '@/components/swipe-action-row'
 import { formatJakarta } from '@/lib/datetime'
 import { signedDirection } from '@/lib/ledger/direction'
@@ -309,54 +308,5 @@ function Tag({
     >
       {children}
     </span>
-  )
-}
-
-/**
- * Which page of the list is on screen, and how to get to the others.
- *
- * Plain links rather than a button that fetches: the report is a server
- * component, the page belongs in the address so it can be sent to somebody,
- * and `rel` tells a browser which way is forward.
- */
-export function TablePager({
-  page,
-  pages,
-  hrefFor,
-}: {
-  page: number
-  pages: number
-  hrefFor: (page: number) => string
-}) {
-  if (pages <= 1) return null
-
-  return (
-    <nav aria-label="Halaman daftar transaksi" className="mt-3 flex items-center gap-3">
-      {page > 1 ? (
-        <Link
-          href={hrefFor(page - 1)}
-          rel="prev"
-          className="inline-flex h-11 items-center rounded-sm border border-line px-3 text-subhead text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
-        >
-          Sebelumnya
-          <NavHint className="ml-1.5" />
-        </Link>
-      ) : null}
-
-      <p className="text-subhead text-ink-muted">
-        Halaman {page} dari {pages}
-      </p>
-
-      {page < pages ? (
-        <Link
-          href={hrefFor(page + 1)}
-          rel="next"
-          className="inline-flex h-11 items-center rounded-sm border border-line px-3 text-subhead text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
-        >
-          Berikutnya
-          <NavHint className="ml-1.5" />
-        </Link>
-      ) : null}
-    </nav>
   )
 }

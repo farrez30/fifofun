@@ -89,7 +89,7 @@ export function QueueCard({ next, remaining, mapped, placing, onPlace, onSkip }:
         </div>
       ) : (
         <p className="mt-3 text-subhead text-ink-muted">
-          Semua yang tersisa sudah dilewati. Daftar lengkapnya ada di bawah peta.
+          Semua yang tersisa sudah dilewati. Daftar lengkapnya ada di bagian Menunggu.
         </p>
       )}
     </section>

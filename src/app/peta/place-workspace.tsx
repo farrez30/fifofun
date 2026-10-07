@@ -8,15 +8,15 @@ import { PlaceMap } from './place-map'
 import { PlacingPanel, tidy, type Pending } from './placing-panel'
 import { QueueCard } from './queue-card'
 import { legendGroups, type PlacePoint, type WaitingMerchant } from './view-model'
-import { WaitingList } from './waiting-list'
 
 /**
  * The map and everything that puts a merchant on it.
  *
  * One island because the pieces share one decision, which merchant is being
- * placed: the list picks it, the map takes a click for it, the search offers
- * points for it, and the save writes it. Everything that only reads (the
- * stats, the table) stays on the server and arrives as `children`.
+ * placed: the queue picks it, the map takes a click for it, the search offers
+ * points for it, and the save writes it. The full list of waiting merchants and
+ * the table of places are views of their own on this page; a Taruh or a
+ * Pindahkan there comes back here through `initial`.
  */
 
 interface Props {
@@ -28,8 +28,6 @@ interface Props {
   initialPoint: string | null
   /** Whole percent of the chosen spending already on the map, for the queue. */
   mapped: number
-  /** Rendered between the map and the waiting list: the server's table of places. */
-  children?: React.ReactNode
 }
 
 interface Placing {
@@ -39,7 +37,7 @@ interface Placing {
   point: PlacePoint | null
 }
 
-export function PlaceWorkspace({ points, waiting, initial, initialPoint, mapped, children }: Props) {
+export function PlaceWorkspace({ points, waiting, initial, initialPoint, mapped }: Props) {
   const find = (key: string, pointId?: string | null): Placing | null => {
     const point = pointId ? (points.find((candidate) => candidate.pointId === pointId || candidate.id === pointId) ?? null) : null
     // From the waiting list, a merchant that already has points is placed afresh, for the dates it is missing.
@@ -70,24 +68,18 @@ export function PlaceWorkspace({ points, waiting, initial, initialPoint, mapped,
   }
 
   /*
-    Focus goes back where the person came from: the row's Taruh after a
-    cancel, and "Taruh berikutnya" after a save, so the queue can be walked
-    with Enter alone; the saved row itself leaves the list.
+    Focus goes back to "Taruh berikutnya" after a save or a cancel, so the
+    queue can be walked with Enter alone; the saved merchant leaves it.
   */
-  const done = (saved: boolean) => {
-    const key = placing?.key
+  const done = () => {
     setPlacing(null)
     setPending(null)
-    requestAnimationFrame(() => {
-      const row = !saved && key ? document.querySelector<HTMLElement>(`[data-place-key="${CSS.escape(key)}"]`) : null
-      const queue = document.getElementById('taruh-berikutnya')
-      ;(row ?? queue ?? document.getElementById('belum-berlokasi'))?.focus()
-    })
+    requestAnimationFrame(() => document.getElementById('taruh-berikutnya')?.focus())
   }
 
   const skip = (key: string) => {
     setSkipped((before) => new Set([...before, key]))
-    if (placing?.key === key) done(false)
+    if (placing?.key === key) done()
   }
 
   return (
@@ -154,10 +146,6 @@ export function PlaceWorkspace({ points, waiting, initial, initialPoint, mapped,
           </div>
         ) : null}
       </div>
-
-      {children}
-
-      <WaitingList waiting={waiting} placing={placing?.key ?? null} onPlace={start} />
     </div>
   )
 }

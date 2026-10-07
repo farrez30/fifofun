@@ -455,7 +455,7 @@ function CategorySelect({
       {empty ? (
         <span className="mt-1 block text-footnote text-ink-muted">
           Buat kategorinya di{' '}
-          <a href="/pengaturan#kategori" className="text-accent underline underline-offset-2">
+          <a href="/pengaturan?bagian=kategori" className="text-accent underline underline-offset-2">
             Pengaturan
           </a>
           , dengan cashflow yang arahnya sama.

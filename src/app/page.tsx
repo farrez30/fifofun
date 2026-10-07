@@ -58,6 +58,8 @@ import { Unavailable } from '@/components/unavailable'
 
 /** How many of the newest transactions the home page lists. */
 const RECENT_ROWS = 8
+/** Budget rows on the dashboard; the budget page holds every one. */
+const BUDGET_ROWS = 8
 
 export const metadata: Metadata = { title: 'Ringkasan' }
 
@@ -467,6 +469,8 @@ async function Dashboard({ akun }: { akun: string }) {
             review={budgetReview}
             caption={`Per kategori, ${latest.month}`}
             income={latest.statement.income}
+            limit={BUDGET_ROWS}
+            moreHref={`/anggaran?bulan=${latest.month}`}
           />
           {/* The panel above says a category is above its usual. This says
               whether that is an accident or the fourth month of a climb, which

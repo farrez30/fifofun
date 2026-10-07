@@ -2,7 +2,10 @@ import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
 import { AppShell } from '@/components/app-shell'
+import { SegmentNav } from '@/components/segment-nav'
 import { getAccounts, getCategories, getHousehold, getUsage } from '@/lib/queries/household'
+import { CASHFLOW_TYPES, type CashflowType } from '@/lib/ledger/types'
+import { sectionHref, sectionOf } from '@/lib/sections'
 import { getUser } from '@/lib/supabase/server'
 import { Appearance } from './appearance'
 import { AccountsPanel, type AccountView } from './accounts-panel'
@@ -23,9 +26,15 @@ export const instant = false
  * exist. Everything here is ordinary editing except for the handful of things
  * the importer and the bot depend on, which are called out where they are set
  * rather than explained in a paragraph nobody reads.
+ *
+ * One table at a time. Stacked, the categories alone were eight desktop screens
+ * and the appearance settings sat under all of them, so `?bagian=` picks the
+ * view and the other two are a tap away in the segmented control.
  */
 
-async function Settings() {
+const SECTIONS = ['akun', 'kategori', 'tampilan'] as const
+
+async function Settings({ section, cashflow }: { section: (typeof SECTIONS)[number]; cashflow?: CashflowType }) {
   const household = await getHousehold()
   if (!household) redirect('/gabung')
 
@@ -74,18 +83,35 @@ async function Settings() {
     usage: usage.categories[category.id] ?? 0,
   }))
 
+  const segments = [
+    { key: 'akun', label: 'Akun', count: accountViews.filter((account) => !account.archived).length },
+    { key: 'kategori', label: 'Kategori', count: categoryViews.filter((category) => !category.archived).length },
+    { key: 'tampilan', label: 'Tampilan' },
+  ].map((segment) => ({ ...segment, href: sectionHref('/pengaturan', {}, segment.key, SECTIONS[0]) }))
+
   return (
-    <div className="space-y-10">
-      <AccountsPanel accounts={accountViews} />
-      <CategoriesPanel categories={categoryViews} />
-      <Appearance />
+    <div className="space-y-6">
+      <SegmentNav label="Bagian pengaturan" segments={segments} current={section} />
+      {section === 'akun' ? <AccountsPanel accounts={accountViews} /> : null}
+      {section === 'kategori' ? <CategoriesPanel categories={categoryViews} cashflow={cashflow} /> : null}
+      {section === 'tampilan' ? <Appearance /> : null}
     </div>
   )
 }
 
-export default async function PengaturanPage() {
+export default async function PengaturanPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
   const user = await getUser()
   if (!user) redirect('/login')
+
+  const params = await searchParams
+  const section = sectionOf(params.bagian, SECTIONS)
+  // From a URL, so only a cashflow that exists is passed on.
+  const asked = Array.isArray(params.cashflow) ? params.cashflow[0] : params.cashflow
+  const cashflow = CASHFLOW_TYPES.find((type) => type === asked)
 
   return (
     <AppShell
@@ -95,7 +121,7 @@ export default async function PengaturanPage() {
       lead="Akun dan kategori yang dipakai semua halaman. Nama boleh diganti kapan saja: yang berubah tampilannya, bukan angkanya."
     >
       <Suspense fallback={<SettingsSkeleton />}>
-        <Settings />
+        <Settings section={section} cashflow={cashflow} />
       </Suspense>
     </AppShell>
   )

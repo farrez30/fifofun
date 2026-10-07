@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+import { CaretDown } from '@phosphor-icons/react/dist/ssr/CaretDown'
 import { formatJakarta } from '@/lib/datetime'
 import type { CategoryTotal, PeriodFilter, PeriodSummary } from '@/lib/ledger/period'
 import { CASHFLOW_LABELS, CASHFLOW_TYPES, type EntrySource } from '@/lib/ledger/types'
@@ -30,6 +32,12 @@ interface Props {
   categories: { name: string; group: string | null }[]
   accounts: string[]
   ledgerSize: number
+  /** The open view, carried through a filter so applying one stays on it; empty for the first. */
+  section?: string
+  /** The views of the report, drawn first, under the page title, as on every split page. */
+  nav?: ReactNode
+  /** Which breakdown this view shows under the totals, if any. */
+  breakdown?: 'kategori' | 'cashflow' | null
 }
 
 /**
@@ -61,6 +69,31 @@ function groupedCategories(
 function value(raw: Props['raw'], key: string): string {
   const found = Array.isArray(raw[key]) ? raw[key][0] : raw[key]
   return found ?? ''
+}
+
+/**
+ * What the folded filter is set to, in one line. The form is folded on every
+ * visit because seven fields were a phone screen above every view, and a fold
+ * is only honest if what it holds is said on the outside.
+ */
+function day(text: string): string {
+  return /^\d{4}-\d{2}-\d{2}$/.test(text) ? formatJakarta(new Date(`${text}T00:00:00+07:00`), 'date') : text
+}
+
+function appliedFilters(raw: Props['raw']): string {
+  const parts: string[] = []
+  const from = value(raw, 'dari')
+  const to = value(raw, 'sampai')
+  if (from || to) parts.push(`${from ? day(from) : 'awal'} sampai ${to ? day(to) : 'sekarang'}`)
+  const cashflow = value(raw, 'cashflow')
+  if (cashflow && cashflow in CASHFLOW_LABELS) parts.push(CASHFLOW_LABELS[cashflow as keyof typeof CASHFLOW_LABELS])
+  if (value(raw, 'kategori')) parts.push(value(raw, 'kategori'))
+  if (value(raw, 'akun')) parts.push(value(raw, 'akun'))
+  const source = value(raw, 'sumber')
+  if (source && Object.hasOwn(SOURCE_LABELS, source)) parts.push(`Sumber: ${SOURCE_LABELS[source as EntrySource]}`)
+  if (value(raw, 'cari')) parts.push(`cari “${value(raw, 'cari')}”`)
+  if (value(raw, 'titipan') === 'ya') parts.push('dengan titipan')
+  return parts.length > 0 ? parts.join(' · ') : 'Semua transaksi'
 }
 
 /*
@@ -138,128 +171,141 @@ function Merchants({ line }: { line: CategoryTotal }) {
   )
 }
 
-export function PeriodReport({ summary, raw, categories, accounts, ledgerSize }: Props) {
+export function PeriodReport({ summary, raw, categories, accounts, ledgerSize, section, nav, breakdown }: Props) {
   const filtered =
     Boolean(value(raw, 'dari') || value(raw, 'sampai') || value(raw, 'cashflow')) ||
     Boolean(value(raw, 'kategori') || value(raw, 'akun') || value(raw, 'cari') || value(raw, 'sumber'))
 
   return (
     <div className="space-y-6">
-      <form method="get" className="squircle rounded-md bg-surface shadow-xs p-4">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <label>
-            <span className={LABEL}>Dari tanggal</span>
-            <input type="date" name="dari" defaultValue={value(raw, 'dari')} className={CONTROL} />
-          </label>
+      {nav}
 
-          <label>
-            <span className={LABEL}>Sampai tanggal</span>
-            <input
-              type="date"
-              name="sampai"
-              defaultValue={value(raw, 'sampai')}
-              className={CONTROL}
-            />
-          </label>
+      <details className="group squircle rounded-md bg-surface shadow-xs">
+        <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-4 py-2 text-subhead font-medium text-ink">
+          <CaretDown
+            aria-hidden="true"
+            className="size-4 shrink-0 text-ink-faint transition-transform duration-150 group-open:rotate-180"
+          />
+          Saring
+          <span className="min-w-0 truncate font-normal text-ink-muted">{appliedFilters(raw)}</span>
+        </summary>
+        <form method="get" className="border-t border-line p-4">
+          {section ? <input type="hidden" name="bagian" value={section} /> : null}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <label>
+              <span className={LABEL}>Dari tanggal</span>
+              <input type="date" name="dari" defaultValue={value(raw, 'dari')} className={CONTROL} />
+            </label>
 
-          <label>
-            <span className={LABEL}>Cashflow</span>
-            <select name="cashflow" defaultValue={value(raw, 'cashflow')} className={CONTROL}>
-              <option value="">Semua</option>
-              {CASHFLOW_TYPES.map((cashflow) => (
-                <option key={cashflow} value={cashflow}>
-                  {CASHFLOW_LABELS[cashflow]}
-                </option>
-              ))}
-            </select>
-          </label>
+            <label>
+              <span className={LABEL}>Sampai tanggal</span>
+              <input
+                type="date"
+                name="sampai"
+                defaultValue={value(raw, 'sampai')}
+                className={CONTROL}
+              />
+            </label>
 
-          <label>
-            <span className={LABEL}>Kategori</span>
-            <select name="kategori" defaultValue={value(raw, 'kategori')} className={CONTROL}>
-              <option value="">Semua</option>
-              {groupedCategories(categories).map((group) => (
-                <optgroup key={group.label} label={group.label}>
-                  {group.names.map((name) => (
-                    <option key={name} value={name}>
-                      {name}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
-          </label>
+            <label>
+              <span className={LABEL}>Cashflow</span>
+              <select name="cashflow" defaultValue={value(raw, 'cashflow')} className={CONTROL}>
+                <option value="">Semua</option>
+                {CASHFLOW_TYPES.map((cashflow) => (
+                  <option key={cashflow} value={cashflow}>
+                    {CASHFLOW_LABELS[cashflow]}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-          <label>
-            <span className={LABEL}>Akun</span>
-            <select name="akun" defaultValue={value(raw, 'akun')} className={CONTROL}>
-              <option value="">Semua</option>
-              {accounts.map((account) => (
-                <option key={account} value={account}>
-                  {account}
-                </option>
-              ))}
-            </select>
-          </label>
+            <label>
+              <span className={LABEL}>Kategori</span>
+              <select name="kategori" defaultValue={value(raw, 'kategori')} className={CONTROL}>
+                <option value="">Semua</option>
+                {groupedCategories(categories).map((group) => (
+                  <optgroup key={group.label} label={group.label}>
+                    {group.names.map((name) => (
+                      <option key={name} value={name}>
+                        {name}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </label>
 
-          <label>
-            <span className={LABEL}>Sumber</span>
-            <select name="sumber" defaultValue={value(raw, 'sumber')} className={CONTROL}>
-              <option value="">Semua</option>
-              {(Object.keys(SOURCE_LABELS) as EntrySource[]).map((source) => (
-                <option key={source} value={source}>
-                  {SOURCE_LABELS[source]}
-                </option>
-              ))}
-            </select>
-          </label>
+            <label>
+              <span className={LABEL}>Akun</span>
+              <select name="akun" defaultValue={value(raw, 'akun')} className={CONTROL}>
+                <option value="">Semua</option>
+                {accounts.map((account) => (
+                  <option key={account} value={account}>
+                    {account}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-          <label>
-            <span className={LABEL}>Cari keterangan</span>
-            <input
-              type="search"
-              name="cari"
-              maxLength={100}
-              defaultValue={value(raw, 'cari')}
-              placeholder="misalnya indomaret"
-              className={CONTROL}
-            />
-          </label>
-        </div>
+            <label>
+              <span className={LABEL}>Sumber</span>
+              <select name="sumber" defaultValue={value(raw, 'sumber')} className={CONTROL}>
+                <option value="">Semua</option>
+                {(Object.keys(SOURCE_LABELS) as EntrySource[]).map((source) => (
+                  <option key={source} value={source}>
+                    {SOURCE_LABELS[source]}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <button
-            type="submit"
-            className="h-11 rounded-sm bg-accent px-4 text-subhead font-medium text-paper transition-colors duration-150 hover:bg-accent-strong"
-          >
-            Terapkan
-          </button>
+            <label>
+              <span className={LABEL}>Cari keterangan</span>
+              <input
+                type="search"
+                name="cari"
+                maxLength={100}
+                defaultValue={value(raw, 'cari')}
+                placeholder="misalnya indomaret"
+                className={CONTROL}
+              />
+            </label>
+          </div>
 
-          {filtered ? (
-            /* Sized to the button beside it rather than to its own text. A
-               standalone control is not covered by the inline-in-a-sentence
-               exemption, and padding alone left this at 37px against the 44 a
-               finger needs. */
-            <a
-              href="/laporan"
-              className="inline-flex min-h-11 items-center rounded-sm px-2 text-subhead text-ink-muted underline underline-offset-2"
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <button
+              type="submit"
+              className="h-11 rounded-sm bg-accent px-4 text-subhead font-medium text-paper transition-colors duration-150 hover:bg-accent-strong"
             >
-              Bersihkan
-            </a>
-          ) : null}
+              Terapkan
+            </button>
 
-          <label className="ml-auto flex items-center gap-2 text-footnote text-ink-muted">
-            <input
-              type="checkbox"
-              name="titipan"
-              value="ya"
-              defaultChecked={value(raw, 'titipan') === 'ya'}
-              className="size-4 accent-accent"
-            />
-            Ikutkan uang titipan
-          </label>
-        </div>
-      </form>
+            {filtered ? (
+              /* Sized to the button beside it rather than to its own text. A
+                 standalone control is not covered by the inline-in-a-sentence
+                 exemption, and padding alone left this at 37px against the 44 a
+                 finger needs. */
+              <a
+                href={section ? `/laporan?bagian=${section}` : '/laporan'}
+                className="inline-flex min-h-11 items-center rounded-sm px-2 text-subhead text-ink-muted underline underline-offset-2"
+              >
+                Bersihkan
+              </a>
+            ) : null}
+
+            <label className="ml-auto flex items-center gap-2 text-footnote text-ink-muted">
+              <input
+                type="checkbox"
+                name="titipan"
+                value="ya"
+                defaultChecked={value(raw, 'titipan') === 'ya'}
+                className="size-4 accent-accent"
+              />
+              Ikutkan uang titipan
+            </label>
+          </div>
+        </form>
+      </details>
 
       <div className="squircle rounded-md bg-surface shadow-xs p-4">
         <p className="text-subhead font-medium text-ink">
@@ -300,13 +346,13 @@ export function PeriodReport({ summary, raw, categories, accounts, ledgerSize }:
           </dl>
         ) : null}
 
-        <p className="mt-3 text-footnote text-ink-muted">
+        <p className="max-w-2xl mt-3 text-footnote text-ink-muted">
           Perpindahan antar akunmu sendiri tidak dihitung sebagai masuk maupun keluar, supaya satu
           kali top-up tidak terbaca dua kali.
         </p>
       </div>
 
-      {summary.byCashflow.length > 0 ? (
+      {breakdown === 'cashflow' && summary.byCashflow.length > 0 ? (
         <section aria-labelledby="per-cashflow">
           <h2 id="per-cashflow" className="mb-3 text-subhead font-medium text-ink">
             Per cashflow
@@ -325,7 +371,7 @@ export function PeriodReport({ summary, raw, categories, accounts, ledgerSize }:
         </section>
       ) : null}
 
-      {summary.byGroup.length > 0 ? (
+      {breakdown === 'kategori' && summary.byGroup.length > 0 ? (
         <section aria-labelledby="per-kategori">
           <h2 id="per-kategori" className="mb-3 text-subhead font-medium text-ink">
             Per kategori
@@ -371,7 +417,7 @@ export function PeriodReport({ summary, raw, categories, accounts, ledgerSize }:
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-footnote text-ink-muted">
+          <p className="max-w-2xl mt-2 text-footnote text-ink-muted">
             Persentasenya dihitung terhadap arah kategori itu sendiri: kategori pengeluaran
             dibandingkan dengan total keluar, kategori pemasukan dengan total masuk.
           </p>

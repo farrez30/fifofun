@@ -8,26 +8,39 @@ import type { PlacePoint } from './view-model'
  *
  * A list in a narrow column and a table in a wide one, by the width this
  * section actually gets (see DESIGN.md §4), never by the screen's.
+ *
+ * It receives one page of places; the count above it is always the whole
+ * set, so a page of twenty never reads as if twenty were all there is.
  */
 
 interface Props {
+  /** The page on screen. */
   points: PlacePoint[]
+  /** Every place in the chosen filter, across all pages. */
+  total: number
+  /** How many a search matched, or null when nothing was searched. */
+  matched: number | null
   /** The address of this page with a merchant to place, keeping the filters. */
   moveHref: (point: PlacePoint) => string
 }
 
 const LINK = 'inline-flex min-h-11 items-center px-2 text-subhead font-medium text-accent'
 
-export function PlaceTable({ points, moveHref }: Props) {
+function summary(total: number, matched: number | null): string {
+  if (total === 0) return 'Belum ada tempat di pilihan ini. Taruh pedagang dari bagian Menunggu.'
+  if (matched === 0) return 'Tidak ada tempat dengan nama atau alamat itu.'
+  if (matched !== null) return `${matched} dari ${total} tempat cocok, urut dari yang paling banyak menghabiskan uang.`
+  return `${total} tempat, urut dari yang paling banyak menghabiskan uang.`
+}
+
+export function PlaceTable({ points, total, matched, moveHref }: Props) {
   return (
     <section aria-labelledby="tempat" className="@container">
       <h2 id="tempat" className="mb-1 text-subhead font-medium text-ink">
         Tempat
       </h2>
-      <p className="mb-3 text-footnote text-ink-muted">
-        {points.length === 0
-          ? 'Belum ada tempat di pilihan ini. Taruh pedagang dari daftar Belum berlokasi di bawah.'
-          : `${points.length} tempat, urut dari yang paling banyak menghabiskan uang.`}
+      <p role={matched !== null ? 'status' : undefined} className="mb-3 text-footnote text-ink-muted">
+        {summary(total, matched)}
       </p>
 
       {points.length > 0 ? (

@@ -1,6 +1,7 @@
 'use client'
 
-import { useActionState, useState, useTransition, type ReactNode } from 'react'
+import { useActionState, useId, useState, useTransition, type ReactNode } from 'react'
+import { CONTROL } from '@/components/field-base'
 import { SubmitButton } from '@/components/submit-button'
 import { CategoryMark } from '@/components/marks'
 import { DragHandle, ReorderScope, useReorderRow } from '@/components/reorder'
@@ -42,8 +43,17 @@ export interface CategoryView {
   usage: number
 }
 
-export function CategoriesPanel({ categories }: { categories: CategoryView[] }) {
+export function CategoriesPanel({
+  categories,
+  cashflow,
+}: {
+  categories: CategoryView[]
+  /** The cashflow to open on, from `?cashflow=`; Spending when absent. */
+  cashflow?: CashflowType
+}) {
   const [editing, setEditing] = useState<string | null>(null)
+  const [picked, setPicked] = useState<CashflowType | null>(cashflow ?? null)
+  const pickerId = useId()
 
   // A drop shows at once and is put back if the server refuses it.
   const [shown, setShown] = useState(categories)
@@ -92,6 +102,17 @@ export function CategoriesPanel({ categories }: { categories: CategoryView[] }) 
 
   const reorderable = { onReorder: reorder, onDragStart: () => setEditing(null) }
 
+  /*
+    One cashflow at a time, Spending first because it is where nearly every
+    new category goes. All of them at once was the longest list in the app.
+    Not paged: a drag only reorders within the rows it can see, and a
+    cashflow is exactly the unit the order belongs to.
+  */
+  const shownGroup =
+    groups.find((group) => group.cashflow === picked) ??
+    groups.find((group) => group.cashflow === 'spending') ??
+    groups[0]
+
   return (
     <section aria-labelledby="kategori" className="scroll-mt-8">
       <h2 id="kategori" className="text-title3 font-semibold tracking-title3 text-ink">
@@ -103,19 +124,53 @@ export function CategoriesPanel({ categories }: { categories: CategoryView[] }) 
       </p>
 
       <div className="mt-3 space-y-6">
-        {groups.map((group) => (
-          <div key={group.cashflow}>
-            <h3 className="text-subhead font-medium text-ink">{CASHFLOW_LABELS[group.cashflow]}</h3>
+        {groups.length > 1 ? (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            <label htmlFor={pickerId} className="text-subhead font-medium text-ink">
+              Cashflow
+            </label>
+            <select
+              id={pickerId}
+              value={shownGroup?.cashflow}
+              onChange={(event) => {
+                setPicked(event.target.value as CashflowType)
+                setEditing(null)
+              }}
+              className={`${CONTROL} sm:w-72`}
+            >
+              {groups.map((group) => (
+                <option key={group.cashflow} value={group.cashflow}>
+                  {CASHFLOW_LABELS[group.cashflow]} ({group.rows.length})
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
+
+        {/* Above the list, not under forty rows of it: the Dana, Anggaran and
+            Tinjau empty states send people here to add one. */}
+        <details className="squircle rounded-md bg-surface shadow-xs">
+          <summary className="flex min-h-11 cursor-pointer items-center px-4 text-subhead text-accent">
+            Tambah kategori
+          </summary>
+          <div className="border-t border-line p-4">
+            <CategoryForm siblings={categories} />
+          </div>
+        </details>
+
+        {shownGroup ? (
+          <div>
+            <h3 className="text-subhead font-medium text-ink">{CASHFLOW_LABELS[shownGroup.cashflow]}</h3>
             <Table
-              rows={group.rows}
+              rows={shownGroup.rows}
               siblings={categories}
               editing={editing}
               onToggle={(id) => setEditing(editing === id ? null : id)}
-              caption={`Kategori bercashflow ${CASHFLOW_LABELS[group.cashflow]}`}
+              caption={`Kategori bercashflow ${CASHFLOW_LABELS[shownGroup.cashflow]}`}
               {...reorderable}
             />
           </div>
-        ))}
+        ) : null}
 
         {/* Folded: dozens of retired names under the live ones made the page
             three screens long to reach a setting below them. Left uncontrolled,
@@ -128,7 +183,7 @@ export function CategoriesPanel({ categories }: { categories: CategoryView[] }) 
                 aria-hidden="true"
                 className="size-4 shrink-0 text-ink-faint transition-transform duration-150 group-open:rotate-180"
               />
-              Diarsipkan ({archived.length})
+              Diarsipkan, semua cashflow ({archived.length})
             </summary>
             <div className="border-t border-line">
               <Table
@@ -144,12 +199,12 @@ export function CategoriesPanel({ categories }: { categories: CategoryView[] }) 
       </div>
 
 
-      <p className="mt-3 text-footnote text-ink-muted">
+      <p className="max-w-2xl mt-3 text-footnote text-ink-muted">
         Seret pegangan di kiri untuk mengubah urutan. Kelompok berpindah bersama isinya, dan isi
         sebuah kelompok hanya bisa diurutkan di dalam kelompok itu.
       </p>
 
-      <p className="mt-3 text-footnote text-ink-muted">
+      <p className="max-w-2xl mt-3 text-footnote text-ink-muted">
         Cashflow menentukan arah uang dan ikut tersimpan di setiap transaksi bersama sisi akunnya,
         jadi tidak bisa diubah setelah kategorinya dipakai. Warna dan ikon hanya penanda: yang
         tersimpan cuma derajat warnanya, terangnya mengikuti tema.
@@ -170,19 +225,13 @@ export function CategoriesPanel({ categories }: { categories: CategoryView[] }) 
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-footnote text-ink-muted">
+          <p className="max-w-2xl mt-2 text-footnote text-ink-muted">
             Kalau salah satu diganti nama, baris impor yang biasanya ke sana menunggu di Tinjau
             tanpa kategori. Itu bukan kerusakan, hanya pekerjaan tambahan sekali.
           </p>
         </div>
       </details>
 
-      <details className="mt-3 squircle rounded-md bg-surface shadow-xs">
-        <summary className="cursor-pointer px-4 py-3 text-subhead text-accent">Tambah kategori</summary>
-        <div className="border-t border-line p-4">
-          <CategoryForm siblings={categories} />
-        </div>
-      </details>
     </section>
   )
 }
@@ -415,10 +464,32 @@ function Card({
             tile
           />
         </span>
-        <span className="tnum shrink-0 font-mono text-footnote text-ink-muted">
-          {category.usage} transaksi
-        </span>
+        {/*
+          Ubah on the name's own line, like a Settings row: a full-width button
+          row under every card made each one twice as tall as its content and
+          the spending list ten phone screens. Arsipkan, the rare one, waits
+          inside the open card.
+        */}
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={open}
+          className="h-11 shrink-0 rounded-sm border border-line px-3 text-subhead text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
+        >
+          {open ? 'Tutup' : 'Ubah'}
+          <span className="sr-only"> {category.name}</span>
+        </button>
       </div>
+
+      <p className="mt-0.5 text-footnote text-ink-faint">
+        {[
+          `${category.usage} transaksi`,
+          isLookedUpByName(category.name) ? 'dicari impor' : null,
+          isGroup ? 'kelompok, tidak menampung transaksi' : null,
+        ]
+          .filter(Boolean)
+          .join(' · ')}
+      </p>
 
       {category.description ? (
         <p className="mt-1 text-footnote text-ink-muted">{category.description}</p>
@@ -428,33 +499,10 @@ function Card({
         <p className="tnum mt-1 text-footnote text-ink-muted">{billSummary(category)}</p>
       ) : null}
 
-      {isLookedUpByName(category.name) || isGroup ? (
-        <p className="mt-1 text-footnote text-ink-faint">
-          {[
-            isLookedUpByName(category.name) ? 'dicari impor' : null,
-            isGroup ? 'kelompok, tidak menampung transaksi' : null,
-          ]
-            .filter(Boolean)
-            .join(' · ')}
-        </p>
-      ) : null}
-
-      <div className="mt-2.5 flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={onToggle}
-          aria-expanded={open}
-          className="h-11 flex-1 rounded-sm border border-line px-3 text-subhead text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
-        >
-          {open ? 'Tutup' : 'Ubah'}
-          <span className="sr-only"> {category.name}</span>
-        </button>
-        <ArchiveButton category={category} />
-      </div>
-
       {open ? (
-        <div className="mt-3 border-t border-line pt-3">
+        <div className="mt-3 space-y-3 border-t border-line pt-3">
           <CategoryForm category={category} siblings={siblings} />
+          <ArchiveButton category={category} />
         </div>
       ) : null}
       </div>
@@ -509,7 +557,9 @@ function Row({ category, siblings, isGroup, open, onToggle, reorder }: RowProps)
           {category.usage}
         </td>
         <td className="whitespace-nowrap px-4 py-2.5">
-          <div className="flex flex-wrap gap-2">
+          {/* Side by side from sm up: stacked, the two buttons made every row
+              twice as tall as its text and the 43 spending rows five screens. */}
+          <div className="flex flex-wrap gap-2 sm:flex-nowrap">
             <button
               type="button"
               onClick={onToggle}

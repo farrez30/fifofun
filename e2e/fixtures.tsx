@@ -37,13 +37,14 @@ import { ChildrenPanel } from '@/components/plan/children-panel'
 import { GapPanel } from '@/components/plan/gap-panel'
 import { GoalsPanel } from '@/components/plan/goals-panel'
 import { HouseholdInputs } from '@/components/plan/household-inputs'
-import { PlanIndex } from '@/components/plan/plan-index'
 import { RatioPanel } from '@/components/plan/ratio-panel'
 import type { HouseholdProfile } from '@/lib/planning/allocation'
 import type { ChildPlan } from '@/lib/planning/children'
 import { templateProfile } from '@/lib/planning/lifestyle'
 import { AccountMark, CashflowChip, CategoryMark, DirectionMark } from '@/components/marks'
 import { TransactionTable } from '@/components/transaction-table'
+import { Pager } from '@/components/pager'
+import { SegmentNav } from '@/components/segment-nav'
 import { BudgetTable } from '@/app/anggaran/budget-table'
 import { PeriodReport } from '@/components/period-report'
 import { TidyPanel } from '@/app/tinjau/tidy-panel'
@@ -1527,6 +1528,17 @@ const WAITING: WaitingMerchant[] = Array.from({ length: 18 }, (_, index) => ({
   last: '28 Sep 2026',
 }))
 
+/* More than one page of them, each with the address that opens its placing
+   panel on the map, the way the page hands them over. */
+const WAITING_LONG = Array.from({ length: 45 }, (_, index) => ({
+  key: `warung ${index}`,
+  label: index === 0 ? 'AEROPOLIS TOKEN' : `WARUNG NOMOR ${index}`,
+  total: formatIdr(BigInt(90_000_000 - index * 1_500_000)),
+  visits: 1 + (index % 4),
+  last: '28 Sep 2026',
+  href: `/peta?taruh=${encodeURIComponent(`warung ${index}`)}#atur`,
+}))
+
 export const FIXTURES = {
   marks: MARKS,
   'sankey-all': (
@@ -1563,8 +1575,33 @@ export const FIXTURES = {
     </div>
   ),
   'catat-duplicates': <DuplicatesPanel pairs={DUPLICATE_PAIRS} />,
-  'peta-tempat': <PlaceTable points={PLACES} moveHref={(point) => `/peta?taruh=${encodeURIComponent(point.key)}#atur`} />,
-  'peta-tempat-kosong': <PlaceTable points={[]} moveHref={() => '/peta'} />,
+  'peta-tempat': (
+    <PlaceTable
+      points={PLACES}
+      total={PLACES.length + 40}
+      matched={null}
+      moveHref={(point) => `/peta?taruh=${encodeURIComponent(point.key)}#atur`}
+    />
+  ),
+  'peta-tempat-cari': (
+    <PlaceTable points={PLACES.slice(0, 1)} total={PLACES.length} matched={1} moveHref={() => '/peta'} />
+  ),
+  'peta-tempat-kosong': <PlaceTable points={[]} total={0} matched={null} moveHref={() => '/peta'} />,
+  'peta-segmen': (
+    <SegmentNav
+      label="Bagian peta"
+      current="tempat"
+      segments={[
+        { key: 'peta', label: 'Peta', href: '/peta?kategori=Bensin' },
+        { key: 'menunggu', label: 'Menunggu', count: 168, href: '/peta?kategori=Bensin&bagian=menunggu' },
+        { key: 'tempat', label: 'Tempat', count: 149, href: '/peta?kategori=Bensin&bagian=tempat' },
+        { key: 'online', label: 'Online', href: '/peta?kategori=Bensin&bagian=online' },
+      ]}
+    />
+  ),
+  'pager-tengah': <Pager label="Halaman daftar tempat" page={8} pages={16} hrefFor={(page) => `/peta?bagian=tempat${page > 1 ? `&hal=${page}` : ''}`} />,
+  'pager-awal': <Pager label="Halaman daftar tempat" page={1} pages={3} hrefFor={(page) => `/peta?bagian=tempat${page > 1 ? `&hal=${page}` : ''}`} />,
+  'pager-satu': <Pager label="Halaman daftar tempat" page={1} pages={1} hrefFor={() => '/peta'} />,
   'peta-online': (
     <OnlineList
       report={summariseOnline(
@@ -1667,7 +1704,7 @@ ${description}`,
       onGlow={() => {}}
     />
   ),
-  'peta-menunggu': <WaitingList waiting={WAITING} placing="pedagang 1" onPlace={() => {}} />,
+  'peta-menunggu': <WaitingList waiting={WAITING_LONG} />,
   'peta-menaruh': (
     <PlacingPanel
       merchantKey="laundry kak"
@@ -2070,6 +2107,9 @@ ${description}`,
   'settings-accounts': <AccountsPanel accounts={SETTINGS_ACCOUNTS} />,
   'settings-account-form': <AccountForm account={SETTINGS_ACCOUNTS[0]} />,
   'settings-categories': <CategoriesPanel categories={SETTINGS_CATEGORIES} />,
+  'settings-categories-income': <CategoriesPanel categories={SETTINGS_CATEGORIES} cashflow="income" />,
+  'settings-categories-tabungan': <CategoriesPanel categories={SETTINGS_CATEGORIES} cashflow="invest_savings" />,
+  'settings-categories-asal': <CategoriesPanel categories={SETTINGS_CATEGORIES} cashflow="from_asset" />,
   // A category nothing has been filed under yet, so the cashflow is still open,
   // beside one where it is locked.
   'settings-category-form': (
@@ -2085,14 +2125,16 @@ ${description}`,
     />
   ),
   'plan-index': (
-    <PlanIndex
-      sections={[
-        { id: 'rumah-tangga', label: 'Titik berangkat' },
-        { id: 'alokasi', label: 'Alokasi' },
-        { id: 'kesehatan', label: 'Kesehatan' },
-        { id: 'anak', label: 'Anak' },
-        { id: 'gap', label: 'Jarak' },
-        { id: 'tujuan', label: 'Tujuan' },
+    <SegmentNav
+      label="Bagian rencana"
+      current="alokasi"
+      onSelect={() => {}}
+      segments={[
+        { key: 'alokasi', label: 'Alokasi', href: '/rencana' },
+        { key: 'kesehatan', label: 'Kesehatan', href: '/rencana?bagian=kesehatan' },
+        { key: 'anak', label: 'Anak', href: '/rencana?bagian=anak' },
+        { key: 'gap', label: 'Jarak', href: '/rencana?bagian=gap' },
+        { key: 'tujuan', label: 'Tujuan', href: '/rencana?bagian=tujuan' },
       ]}
     />
   ),
@@ -2154,6 +2196,20 @@ ${description}`,
       ]}
       accounts={['Bank Mandiri']}
       ledgerSize={REPORT_ROWS.length}
+      section="kategori"
+      breakdown="kategori"
+    />
+  ),
+  'laporan-per-cashflow': (
+    <PeriodReport
+      summary={summarisePeriod(REPORT_ROWS, {}, REPORT_GROUPS)}
+      filter={{}}
+      raw={{ sumber: 'manual', cari: 'kopi' }}
+      categories={[{ name: 'Bensin', group: 'Transport' }]}
+      accounts={['Bank Mandiri']}
+      ledgerSize={REPORT_ROWS.length}
+      section="cashflow"
+      breakdown="cashflow"
     />
   ),
 }

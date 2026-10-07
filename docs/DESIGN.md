@@ -270,11 +270,44 @@ Ini satu-satunya tempat arah diwarnai: warnanya menjawab "sisi mana yang
 sedang dipilih", sedangkan nominal di tempat lain tetap tidak pernah diwarnai
 arahnya saja.
 
+**Halaman panjang dibagi segmen, daftar panjang dibagi halaman.** Lihat
+`docs/decisions/0001-segmented-views-and-paged-lists.md`. Halaman yang
+menumpuk beberapa pekerjaan menampilkan satu per kali lewat `SegmentNav`
+(`components/segment-nav.tsx`, resep `SEGMENTED` yang sama, berupa tautan):
+Peta (Peta · Menunggu · Tempat · Online), Pengaturan (Akun · Kategori ·
+Tampilan), Laporan (Transaksi · Per kategori · Per cashflow), Rencana (lima
+kalkulator). Pilihan segmen ada di `?bagian=`, jadi tombol Back
+membatalkannya, segmen bisa dikirim, dan server hanya merender segmen yang
+terbuka; segmen pertama tidak menulis parameter (`lib/sections.ts`). Di HP
+segmen mengisi lebar penuh, masing-masing selebar labelnya; titik `NavHint`
+duduk di pojok, bukan setelah label, karena lebarnya membuat empat segmen
+meluber di 375px, dan ring fokusnya digambar di dalam segmen karena trek yang
+bisa digeser memotong ring di luar. Segmen berada tepat di bawah judul di
+setiap halaman yang dibagi. Ganti segmen, halaman, atau pencarian tidak
+membangun ulang halaman: batas Suspense hanya di-key oleh saringan. Rencana berpindah segmen di tempat (`onSelect`) supaya angka yang sedang
+diketik tidak hilang oleh navigasi, dan dock Titik berangkat tetap di atas
+semua segmen karena semuanya dihitung darinya. Saringan Peta dan Laporan
+dilipat di setiap kunjungan, dengan satu baris ringkasan yang menyebut
+saringan yang aktif; terbuka, form tujuh kolom itu adalah layar HP pertama di
+setiap segmen. Ringkasan (beranda) sengaja tetap satu gulir.
+
+Daftar yang bisa ratusan baris dipaginasi dua puluh per halaman (`lib/paging.ts`,
+`components/pager.tsx`) dan tidak pernah dibentangkan seluruhnya: transaksi
+Laporan, Tempat, dan pedagang yang Menunggu. Pager bernomor, bukan hanya
+Sebelumnya/Berikutnya, karena alasan memaginasi adalah untuk sampai ke suatu
+tempat di daftar; kedua ujung selalu satu ketukan (`pageWindow`). Pengecualian:
+kategori di Pengaturan ditampilkan satu cashflow per kali, bukan dipaginasi,
+karena seret-untuk-mengurutkan hanya bekerja di antara baris yang terlihat
+(`?cashflow=` membuka cashflow tertentu). Di HP, Arsipkan menunggu di dalam
+kartu yang dibuka lewat Ubah, seperti tindakan jarang di halaman detail iOS.
+
 **Daftar menampilkan sebagian, dan selalu menyebut sisanya.** Daftar yang
 punya halaman sendiri berhenti di beberapa baris dan menautkan ke sana dengan
 jumlahnya: Catat menampilkan lima catatan terakhir dan "Lihat semua (n)" ke
 `/laporan?sumber=manual` (Laporan punya saringan Sumber), Ringkasan menampilkan
-delapan transaksi dan menautkan ke Laporan. Daftar yang isinya pekerjaan
+delapan transaksi dan menautkan ke Laporan, delapan baris anggaran ke
+`/anggaran`, dan delapan kategori rincian bulan ke Laporan per kategori bulan
+itu. Daftar yang isinya pekerjaan
 (pasangan kemungkinan ganda, aturan di Tinjau) memakai `useShowMore` di
 `components/show-more.tsx`: beberapa yang pertama, lalu satu tombol yang
 menyebut berapa yang ditahan, karena memindahkan pekerjaan ke halaman lain
@@ -339,9 +372,11 @@ karena deskripsinya hanya nama bank penerima. Popup dirakit dari node, bukan HTM
 tidak pernah menjadi markup. Kontrol di atas peta memakai permukaan opaque
 (§3) dan target 44px. MapLibre dimuat hanya di halaman ini. Worker-nya disajikan
 dari `public/vendor` (`scripts/vendor-maplibre.mjs`), sehingga CSP tetap
-`worker-src 'self'` tanpa `blob:`. Tabel "Tempat teratas" dan daftar "Belum
-berlokasi" memuat setiap angka yang digambar peta, untuk pembaca layar dan
-perangkat tanpa WebGL.
+`worker-src 'self'` tanpa `blob:`. Segmen Tempat dan Menunggu memuat setiap
+angka yang digambar peta, untuk pembaca layar dan perangkat tanpa WebGL: dua
+puluh per halaman, tetapi tidak ada yang hanya bisa dicapai lewat peta. Taruh
+di segmen Menunggu adalah tautan ke segmen Peta dengan pedagang itu terpilih
+(`?taruh=`), karena menaruh berarti mengetuk peta.
 
 **Ringkasan 3 Bulan (`/ringkasan`) dibaca orang lain, dari HP, di seberang
 meja.** Karena itu halaman ini sengaja membosankan: satu gulir, tanpa tab,

@@ -41,7 +41,7 @@ function NoData({ reason }: { reason: string }) {
   )
 }
 
-async function PlannerData() {
+async function PlannerData({ section }: { section?: string }) {
   const household = await getHousehold()
   if (!household) {
     // An account with no household has nothing to show and, until /gabung
@@ -79,13 +79,21 @@ async function PlannerData() {
       snapshot={buildSnapshot(series, movements)}
       currentYear={new Date().getUTCFullYear()}
       saved={saved}
+      section={section}
     />
   )
 }
 
-export default async function RencanaPage() {
+export default async function RencanaPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
   const user = await getUser()
   if (!user) redirect('/login')
+
+  const bagian = (await searchParams).bagian
+  const section = Array.isArray(bagian) ? bagian[0] : bagian
 
   return (
     <AppShell
@@ -95,7 +103,7 @@ export default async function RencanaPage() {
       lead="Setiap angka di sini membawa sumbernya. Yang datang dari OJK, BPS atau Kemenag ditandai sebagai itu; yang diturunkan di aplikasi ini ditandai sebagai itu juga. Jawabanmu sendiri bisa disimpan, dan akan terisi lagi saat halaman ini dibuka."
     >
       <Suspense fallback={<PlannerSkeleton />}>
-        <PlannerData />
+        <PlannerData section={section} />
       </Suspense>
     </AppShell>
   )

@@ -229,7 +229,7 @@ export function BudgetTable({ plan }: { plan: BudgetPlanView }) {
           that is while looking at a bill they no longer pay. */}
       <p className="text-footnote text-ink-muted">
         Barisnya sendiri diatur di{' '}
-        <a href="/pengaturan#kategori" className="text-accent underline underline-offset-2">
+        <a href="/pengaturan?bagian=kategori" className="text-accent underline underline-offset-2">
           Pengaturan
         </a>
         : tambah kategori baru, ganti namanya, atau arsipkan yang sudah tidak dipakai. Yang

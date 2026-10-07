@@ -83,7 +83,7 @@ export function FundsPanel({ review, idOf, caption, income, asOf }: Props) {
       <Unavailable glyph={Coins} title="Belum ada pos tabungan atau tujuan">
         <p>
           Buat satu di{' '}
-          <a href="/pengaturan#kategori" className="text-accent underline underline-offset-2">
+          <a href="/pengaturan?bagian=kategori" className="text-accent underline underline-offset-2">
             Pengaturan kategori
           </a>{' '}
           dengan cashflow Invest / Savings, Sinking Fund, atau Financial Goals. Setoran ke pos itu

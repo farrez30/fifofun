@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useMemo, useRef, useState } from 'react'
+import { useActionState, useEffect, useMemo, useRef, useState } from 'react'
 import { savePlan } from '@/app/rencana/actions'
 import { recommendFramework, type HouseholdProfile } from '@/lib/planning/allocation'
 import { deriveLifestyle, scaleLifestyle, type MonthSpend } from '@/lib/planning/lifestyle'
@@ -23,10 +23,11 @@ import { ChildrenPanel } from './children-panel'
 import { GapPanel } from './gap-panel'
 import { GoalsPanel } from './goals-panel'
 import { HouseholdInputs, type HouseholdVariant } from './household-inputs'
-import { PlanIndex, type PlanSection } from './plan-index'
 import { RatioPanel } from './ratio-panel'
 import { Section } from './field'
+import { SegmentNav } from '@/components/segment-nav'
 import { useReservedHeight, useStuck } from '@/components/use-stuck'
+import { sectionHref } from '@/lib/sections'
 import { useActionToast } from '@/components/use-action-toast'
 
 
@@ -51,14 +52,26 @@ import { useActionToast } from '@/components/use-action-toast'
  * the field first.
  */
 
-const SECTIONS: PlanSection[] = [
-  { id: 'rumah-tangga', label: 'Titik berangkat' },
+/*
+  The plan's views, one on screen at a time. Six sections stacked were sixteen
+  phone screens; the starting point stays in the dock above every view because
+  each of them is computed from it, and changing the income should show its
+  effect on whichever view is open.
+*/
+const VIEWS = [
   { id: 'alokasi', label: 'Alokasi' },
   { id: 'kesehatan', label: 'Kesehatan' },
   { id: 'anak', label: 'Anak' },
-  { id: 'gap', label: 'Jarak' },
+  { id: 'gap', label: 'Gaya hidup' },
   { id: 'tujuan', label: 'Tujuan' },
-]
+] as const
+type View = (typeof VIEWS)[number]['id']
+
+function viewOf(value: string | null | undefined): View {
+  return VIEWS.find((view) => view.id === value)?.id ?? VIEWS[0].id
+}
+
+const viewHref = (view: View) => sectionHref('/rencana', {}, view, VIEWS[0].id)
 
 const SAVE_FORM = 'rencana-simpan'
 
@@ -71,9 +84,11 @@ interface Props {
   currentYear: number
   /** What was saved last time, or null for a household that never has. */
   saved: PlanValues | null
+  /** The view named in the address when the page was opened. */
+  section?: string
 }
 
-export function Planner({ history, observedIncome, snapshot, currentYear, saved }: Props) {
+export function Planner({ history, observedIncome, snapshot, currentYear, saved, section }: Props) {
   const derived = deriveLifestyle(history)
 
   const baseProfile = {
@@ -104,6 +119,36 @@ export function Planner({ history, observedIncome, snapshot, currentYear, saved 
   const [sentinel, stuck] = useStuck<HTMLDivElement>()
   const dock = useRef<HTMLDivElement>(null)
   const reserved = useReservedHeight(dock, stuck)
+
+  /*
+    Switched in place, not navigated: the figures typed above are this
+    component's state, and a navigation would rebuild it from the last save.
+    The address still follows, so Back returns to the previous view and a
+    view can be sent; the link underneath works before hydration too.
+  */
+  const [view, setView] = useState<View>(() => viewOf(section))
+  useEffect(() => {
+    const onPop = () => setView(viewOf(new URLSearchParams(window.location.search).get('bagian')))
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+  const choose = (next: string) => {
+    const target = viewOf(next)
+    if (target === view) return
+    setView(target)
+    window.history.pushState(null, '', viewHref(target))
+    /*
+      Brought into sight after it renders. On a phone the dock above the views
+      is a screen tall, so a switched view used to change far below the fold
+      and the tap looked like it did nothing.
+    */
+    requestAnimationFrame(() => {
+      const section = document.getElementById(target)?.closest('section')
+      if (!section) return
+      const top = section.getBoundingClientRect().top
+      if (top < 0 || top > window.innerHeight * 0.6) section.scrollIntoView({ block: 'start' })
+    })
+  }
 
   function set<K extends keyof PlanValues>(key: K, value: PlanValues[K]) {
     setValues((current) => ({ ...current, [key]: value }))
@@ -151,12 +196,16 @@ export function Planner({ history, observedIncome, snapshot, currentYear, saved 
         }`}
       >
         <div className={stuck ? '' : 'mb-3'}>
-          <PlanIndex sections={SECTIONS} />
+          <SegmentNav
+            label="Bagian rencana"
+            segments={VIEWS.map((option) => ({ key: option.id, label: option.label, href: viewHref(option.id) }))}
+            current={view}
+            onSelect={choose}
+          />
         </div>
 
         <Section
           id="rumah-tangga"
-          index={1}
           variant={stuck ? 'bar' : 'card'}
           title="Titik berangkat"
           lead="Semua angka di bawah sudah terisi dari mutasi yang kamu impor. Ubah apa pun untuk melihat akibatnya seketika, lalu simpan supaya tidak perlu diisi ulang."
@@ -225,87 +274,92 @@ export function Planner({ history, observedIncome, snapshot, currentYear, saved 
         ))}
       </form>
 
-      <Section
-        id="alokasi"
-        index={2}
-        title="Kalau penghasilanmu segini, pos ini sebaiknya berapa"
-        lead="Setiap angka membawa kerangka asalnya dan alasan mengapa ia batas bawah, batas atas, atau sekadar target."
-      >
-        <AllocationPanel
-          income={values.income}
-          frameworkId={values.frameworkId}
-          onFrameworkChange={(id) => set('frameworkId', id)}
-          profile={profile}
-          snapshot={liveSnapshot}
-          observedIncome={observedIncome}
-        />
-      </Section>
+      <div hidden={view !== 'alokasi'}>
+        <Section
+          id="alokasi"
+          title="Kalau penghasilanmu segini, pos ini sebaiknya berapa"
+          lead="Setiap angka membawa kerangka asalnya dan alasan mengapa ia batas bawah, batas atas, atau sekadar target."
+        >
+          <AllocationPanel
+            income={values.income}
+            frameworkId={values.frameworkId}
+            onFrameworkChange={(id) => set('frameworkId', id)}
+            profile={profile}
+            snapshot={liveSnapshot}
+            observedIncome={observedIncome}
+          />
+        </Section>
+      </div>
 
-      <Section
-        id="kesehatan"
-        index={3}
-        title="Kesehatan keuangan"
-        lead="Lima rasio yang dipakai OJK, dihitung dari catatanmu sendiri, lengkap dengan berapa yang harus bergerak agar sehat."
-      >
-        <RatioPanel snapshot={liveSnapshot} />
-      </Section>
+      <div hidden={view !== 'kesehatan'}>
+        <Section
+          id="kesehatan"
+          title="Kesehatan keuangan"
+          lead="Lima rasio yang dipakai OJK, dihitung dari catatanmu sendiri, lengkap dengan berapa yang harus bergerak agar sehat."
+        >
+          <RatioPanel snapshot={liveSnapshot} />
+        </Section>
+      </div>
 
-      <Section
-        id="anak"
-        index={4}
-        title="Anak, dan jaraknya"
-        lead="Biaya anak digambar per tahun kalender, karena yang menentukan sebuah rencana bertahan bukan totalnya melainkan tahun terberatnya."
-      >
-        <ChildrenPanel
-          plans={values.childPlans}
-          onPlansChange={(next) =>
-            setValues((current) => ({ ...current, childPlans: next, children: next.length }))
-          }
-          track={values.track}
-          onTrackChange={(track) => set('track', track)}
-          currentYear={currentYear}
-        />
-      </Section>
+      <div hidden={view !== 'anak'}>
+        <Section
+          id="anak"
+          title="Anak, dan jaraknya"
+          lead="Biaya anak digambar per tahun kalender, karena yang menentukan sebuah rencana bertahan bukan totalnya melainkan tahun terberatnya."
+        >
+          <ChildrenPanel
+            plans={values.childPlans}
+            onPlansChange={(next) =>
+              setValues((current) => ({ ...current, childPlans: next, children: next.length }))
+            }
+            track={values.track}
+            onTrackChange={(track) => set('track', track)}
+            currentYear={currentYear}
+          />
+        </Section>
+      </div>
 
-      <Section
-        id="gap"
-        index={5}
-        title="Jarak ke gaya hidup yang dituju"
-        lead="Berapa tambahan penghasilan, atau berapa pengetatan pengeluaran, atau setengah dari masing-masing."
-      >
-        <GapPanel
-          currentProfile={scaledCurrent}
-          currentIncome={values.income}
-          targetTier={values.targetTier}
-          onTargetTierChange={(tier) => set('targetTier', tier)}
-          targetSavings={values.targetSavings}
-          onTargetSavingsChange={(amount) => set('targetSavings', amount)}
-          adults={values.adults}
-          childCount={values.children}
-          currentYear={currentYear}
-        />
-      </Section>
+      <div hidden={view !== 'gap'}>
+        <Section
+          id="gap"
+          title="Jarak ke gaya hidup yang dituju"
+          lead="Berapa tambahan penghasilan, atau berapa pengetatan pengeluaran, atau setengah dari masing-masing."
+        >
+          <GapPanel
+            currentProfile={scaledCurrent}
+            currentIncome={values.income}
+            targetTier={values.targetTier}
+            onTargetTierChange={(tier) => set('targetTier', tier)}
+            targetSavings={values.targetSavings}
+            onTargetSavingsChange={(amount) => set('targetSavings', amount)}
+            adults={values.adults}
+            childCount={values.children}
+            currentYear={currentYear}
+          />
+        </Section>
+      </div>
 
-      <Section
-        id="tujuan"
-        index={6}
-        title="Tujuan"
-        lead="Dana darurat, tujuan apa pun, dan haji yang ditangani sebagai dua pembayaran terpisah."
-      >
-        <GoalsPanel
-          monthlyExpenses={scaledCurrent.total}
-          profile={profile}
-          currentYear={currentYear}
-          target={values.goalTarget}
-          onTargetChange={(amount) => set('goalTarget', amount)}
-          years={values.goalYears}
-          onYearsChange={(years) => set('goalYears', years)}
-          saved={values.goalSaved}
-          onSavedChange={(amount) => set('goalSaved', amount)}
-          hajjMonthly={values.hajjMonthly}
-          onHajjMonthlyChange={(amount) => set('hajjMonthly', amount)}
-        />
-      </Section>
+      <div hidden={view !== 'tujuan'}>
+        <Section
+          id="tujuan"
+          title="Tujuan"
+          lead="Dana darurat, tujuan apa pun, dan haji yang ditangani sebagai dua pembayaran terpisah."
+        >
+          <GoalsPanel
+            monthlyExpenses={scaledCurrent.total}
+            profile={profile}
+            currentYear={currentYear}
+            target={values.goalTarget}
+            onTargetChange={(amount) => set('goalTarget', amount)}
+            years={values.goalYears}
+            onYearsChange={(years) => set('goalYears', years)}
+            saved={values.goalSaved}
+            onSavedChange={(amount) => set('goalSaved', amount)}
+            hajjMonthly={values.hajjMonthly}
+            onHajjMonthlyChange={(amount) => set('hajjMonthly', amount)}
+          />
+        </Section>
+      </div>
     </div>
   )
 }

@@ -68,10 +68,21 @@ export function readView(params: Params): MapView {
   }
 }
 
+const FILTER_KEYS = ['kategori', 'dari', 'sampai', 'mode', 'tagihan'] as const
+
+/** The views of this page, the map first because it is what the page is for. */
+export const SECTIONS = ['peta', 'menunggu', 'tempat', 'online'] as const
+export type Section = (typeof SECTIONS)[number]
+
+/** The choices that describe what is being looked at, which every view keeps. */
+export function filterParams(params: Params): Record<string, string> {
+  return Object.fromEntries(FILTER_KEYS.map((key) => [key, first(params[key])]).filter(([, value]) => value))
+}
+
 /** The address of this page with one choice changed and the rest kept. */
 export function viewHref(params: Params, change: Record<string, string>): string {
   const query = new URLSearchParams()
-  for (const key of ['kategori', 'dari', 'sampai', 'mode', 'tagihan']) {
+  for (const key of FILTER_KEYS) {
     const value = key in change ? change[key] : first(params[key])
     if (value) query.set(key, value)
   }
