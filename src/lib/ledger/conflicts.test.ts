@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { findLikelyDuplicates, planMerge, type Pairable } from './conflicts'
+import { findLikelyDuplicates, needsCategoryChoice, planMerge, type Pairable } from './conflicts'
 
 const DAY = 24 * 60 * 60 * 1000
 
@@ -165,5 +165,42 @@ describe('planMerge', () => {
       now,
     )
     expect(decision).toEqual({ importedPatch: null, adopted: 'nothing' })
+  })
+
+  it('writes the manual category over a settled bank row when the person keeps theirs', () => {
+    // An import rule filed IDM QRIS LIVIN as groceries; this payment was snacks.
+    const decision = planMerge(typed(), 'spending', bank({ categoryId: 'cat-belanja', confirmedAt: now }), now, 'manual')
+    expect(decision.adopted).toBe('category-and-note')
+    expect(decision.importedPatch?.category_id).toBe('cat-makan')
+  })
+
+  it('leaves the bank category alone when the person keeps it, and still moves the note', () => {
+    const decision = planMerge(typed(), 'spending', bank({ categoryId: 'cat-belanja', confirmedAt: now }), now, 'imported')
+    expect(decision).toEqual({ importedPatch: { note: 'makan siang' }, adopted: 'note' })
+  })
+
+  it('never writes a category the bank row cannot hold, whatever was picked', () => {
+    const decision = planMerge(typed({ note: null }), 'income', bank({ confirmedAt: now }), now, 'manual')
+    expect(decision.importedPatch).toBeNull()
+  })
+})
+
+describe('needsCategoryChoice', () => {
+  const settled = { categoryId: 'cat-belanja', cashflow: 'spending' as const, confirmedAt: new Date('2026-10-12T12:00:00Z') }
+
+  it('asks when a settled bank row and the manual entry disagree', () => {
+    expect(needsCategoryChoice({ categoryId: 'cat-jajan' }, 'spending', settled)).toBe(true)
+  })
+
+  it('does not ask when they agree, when the bank row is only a guess, or when either side has none', () => {
+    expect(needsCategoryChoice({ categoryId: 'cat-belanja' }, 'spending', settled)).toBe(false)
+    expect(needsCategoryChoice({ categoryId: 'cat-jajan' }, 'spending', { ...settled, confirmedAt: null })).toBe(false)
+    expect(needsCategoryChoice({ categoryId: null }, null, settled)).toBe(false)
+    expect(needsCategoryChoice({ categoryId: 'cat-jajan' }, 'spending', { ...settled, categoryId: null })).toBe(false)
+  })
+
+  it('does not offer a manual category the bank row could not hold', () => {
+    // Money arriving cannot be filed under a spending category.
+    expect(needsCategoryChoice({ categoryId: 'cat-jajan' }, 'spending', { ...settled, cashflow: 'income' })).toBe(false)
   })
 })

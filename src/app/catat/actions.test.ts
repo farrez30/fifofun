@@ -46,6 +46,7 @@ const ACCOUNT = '22222222-2222-4222-8222-222222222222'
 const OTHER_ACCOUNT = '33333333-3333-4333-8333-333333333333'
 const MANUAL = '44444444-4444-4444-8444-444444444444'
 const IMPORTED = '55555555-5555-4555-8555-555555555555'
+const OTHER_CATEGORY = '77777777-7777-4777-8777-777777777777'
 
 function entryForm(over: Record<string, string> = {}) {
   const data = new FormData()
@@ -402,6 +403,36 @@ describe('mergeDuplicate and keepBoth', () => {
     const [, patch, hide] = stub.callsOn('transactions')
     expect(patch.payload).toMatchObject({ category_id: CATEGORY, cashflow: 'spending' })
     expect(hide.payload).toHaveProperty('deleted_at')
+  })
+
+  it('refuses to pick a side for the person when a settled bank category disagrees', async () => {
+    stub.queue('households', { data: HOUSEHOLD })
+    const [manualRow, importedRow] = pair()
+    const rows = [manualRow, { ...importedRow, category_id: OTHER_CATEGORY, confirmed_at: '2026-10-12T12:00:00.000Z' }]
+    stub.queue('transactions', { data: rows })
+    stub.queue('categories', { data: { cashflow: 'spending' } })
+
+    const result = await mergeDuplicate(null, form())
+
+    expect(result.ok).toBe(false)
+    expect(result.message).toBe('Pilih kategori yang dipakai.')
+    // Nothing written: only the read happened.
+    expect(stub.callsOn('transactions')).toHaveLength(1)
+  })
+
+  it('writes the kept manual category over a settled bank row', async () => {
+    stub.queue('households', { data: HOUSEHOLD })
+    const [manualRow, importedRow] = pair()
+    const rows = [manualRow, { ...importedRow, category_id: OTHER_CATEGORY, confirmed_at: '2026-10-12T12:00:00.000Z' }]
+    stub.queue('transactions', { data: rows }, { data: [{ id: IMPORTED }] }, { data: [{ id: MANUAL }] })
+    stub.queue('categories', { data: { cashflow: 'spending' } })
+    const data = form()
+    data.append('keep', 'manual')
+
+    const result = await mergeDuplicate(null, data)
+
+    expect(result.ok).toBe(true)
+    expect(stub.callsOn('transactions')[1].payload).toMatchObject({ category_id: CATEGORY })
   })
 
   it('is idempotent once the pair has already been merged', async () => {

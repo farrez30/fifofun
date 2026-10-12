@@ -188,6 +188,26 @@ test.describe('kemungkinan ganda', () => {
     */
     await expect(page.getByText('(sudah dipastikan)').filter({ visible: true })).toHaveCount(3)
     await expect(page.getByText('Selisih waktu 2 hari')).toBeVisible()
+    // Neither pair disagrees on a settled category, so neither asks.
+    await expect(page.getByRole('group', { name: 'Kategori yang dipakai' })).toHaveCount(0)
+  })
+
+  test('asks which category stays when a rule and the person disagree, with nothing picked for them', async ({ page }) => {
+    await open(page, 'catat-duplicates-pilih')
+
+    const choice = page.getByRole('group', { name: 'Kategori yang dipakai' })
+    await expect(choice).toBeVisible()
+    const mine = choice.getByRole('radio', { name: /Jajan/ })
+    const bank = choice.getByRole('radio', { name: /Belanja Harian/ })
+    await expect(mine).not.toBeChecked()
+    await expect(bank).not.toBeChecked()
+
+    // The radios ride with the merge form, which will not submit until one is picked.
+    const form = page.locator('form#gabung-00000000-0000-4000-8000-000000000025')
+    expect(await form.evaluate((node: HTMLFormElement) => node.checkValidity())).toBe(false)
+    await mine.check()
+    expect(await form.evaluate((node: HTMLFormElement) => node.checkValidity())).toBe(true)
+    expect(await form.evaluate((node: HTMLFormElement) => new FormData(node).get('keep'))).toBe('manual')
   })
 })
 

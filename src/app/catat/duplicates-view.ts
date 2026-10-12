@@ -1,4 +1,5 @@
 import { formatJakarta } from '@/lib/datetime'
+import { needsCategoryChoice } from '@/lib/ledger/conflicts'
 import { formatIdr } from '@/lib/money'
 import type { DuplicatePair, DuplicateSide } from '@/lib/queries/household'
 
@@ -25,6 +26,8 @@ export interface DuplicateView {
   drift: string
   manual: DuplicateSideView
   imported: DuplicateSideView
+  /** Set when the two categories disagree and merging has to ask which one stays. */
+  choice: { manual: string; imported: string } | null
 }
 
 function side(row: DuplicateSide): DuplicateSideView {
@@ -54,5 +57,10 @@ export function toDuplicateView(pair: DuplicatePair): DuplicateView {
     drift: describeDrift(pair.manual.occurredAt.getTime() - pair.imported.occurredAt.getTime()),
     manual: side(pair.manual),
     imported: side(pair.imported),
+    // The manual row's own cashflow stands in for its category's: a typed
+    // entry is always written with the cashflow of the category it was given.
+    choice: needsCategoryChoice(pair.manual, pair.manual.cashflow, pair.imported)
+      ? { manual: pair.manual.categoryName ?? 'Belum berkategori', imported: pair.imported.categoryName ?? 'Belum berkategori' }
+      : null,
   }
 }

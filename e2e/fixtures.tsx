@@ -1197,6 +1197,7 @@ const DUPLICATE_PAIRS: DuplicateView[] = [
       note: null,
       confirmed: false,
     },
+    choice: null,
   },
   {
     manualId: '00000000-0000-4000-8000-000000000023',
@@ -1218,8 +1219,33 @@ const DUPLICATE_PAIRS: DuplicateView[] = [
       note: null,
       confirmed: true,
     },
+    choice: null,
   },
 ]
+
+/* An import rule filed the bank row one way and the person typed it another. */
+const DUPLICATE_CHOICE: DuplicateView = {
+  manualId: '00000000-0000-4000-8000-000000000025',
+  importedId: '00000000-0000-4000-8000-000000000026',
+  drift: '2 menit',
+  manual: {
+    when: '9 Okt 2026 21:57:23',
+    description: 'IDM QRIS LIVIN',
+    amount: idrText('131.300,00'),
+    categoryName: 'Jajan',
+    note: 'Snack untuk teman-teman sebelum fun cooking.',
+    confirmed: true,
+  },
+  imported: {
+    when: '9 Okt 2026 21:59:21',
+    description: 'IDM QRIS LIVIN',
+    amount: idrText('131.300,00'),
+    categoryName: 'Belanja Harian',
+    note: null,
+    confirmed: true,
+  },
+  choice: { manual: 'Jajan', imported: 'Belanja Harian' },
+}
 
 /*
   A month with every category the household actually uses, which is the picture
@@ -1581,6 +1607,7 @@ export const FIXTURES = {
     </div>
   ),
   'catat-duplicates': <DuplicatesPanel pairs={DUPLICATE_PAIRS} />,
+  'catat-duplicates-pilih': <DuplicatesPanel pairs={[DUPLICATE_CHOICE]} />,
   'peta-tempat': (
     <PlaceTable
       points={PLACES}

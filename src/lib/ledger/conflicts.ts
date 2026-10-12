@@ -122,6 +122,41 @@ export interface MergeDecision {
   adopted: 'category-and-note' | 'note' | 'nothing'
 }
 
+/** Whose category a person picked when the two disagree. */
+export type MergeKeep = 'manual' | 'imported'
+
+/** A category of this cashflow fits the bank row's stored account sides. */
+export function fitsSides(target: CashflowType | null, imported: CashflowType): boolean {
+  return (
+    target !== null &&
+    ACCOUNT_RULES[target].from === ACCOUNT_RULES[imported].from &&
+    ACCOUNT_RULES[target].to === ACCOUNT_RULES[imported].to
+  )
+}
+
+/**
+ * Whether merging has to ask which category to keep.
+ *
+ * Only when both sides hold a different category and the bank row's is
+ * settled, which on a fresh import means an import rule filed it. The rule is
+ * a habit ("IDM QRIS LIVIN is groceries") and the manual entry a decision
+ * about this one payment ("snacks for friends"); neither should beat the other
+ * silently. An unsettled bank row is the importer's guess and simply loses.
+ */
+export function needsCategoryChoice(
+  manual: { categoryId: string | null },
+  manualCategoryCashflow: CashflowType | null,
+  imported: { categoryId: string | null; cashflow: CashflowType; confirmedAt: Date | null },
+): boolean {
+  return (
+    manual.categoryId !== null &&
+    imported.categoryId !== null &&
+    manual.categoryId !== imported.categoryId &&
+    imported.confirmedAt !== null &&
+    fitsSides(manualCategoryCashflow, imported.cashflow)
+  )
+}
+
 /**
  * What survives when the two are merged.
  *
@@ -134,20 +169,22 @@ export interface MergeDecision {
  * written* and the one the bank row already has, not between the two rows.
  * The stored account sides belong to the bank row, and only a category whose
  * cashflow uses the same sides can be written onto them.
+ *
+ * A settled bank row keeps its category unless the person picked the manual
+ * one (`keep`), which `needsCategoryChoice` makes them do when the two differ.
  */
 export function planMerge(
   manual: MergeSide,
   manualCategoryCashflow: CashflowType | null,
   imported: MergeSide,
   now: Date,
+  keep?: MergeKeep,
 ): MergeDecision {
   const target = manualCategoryCashflow
-  const compatible =
-    target !== null &&
-    ACCOUNT_RULES[target].from === ACCOUNT_RULES[imported.cashflow].from &&
-    ACCOUNT_RULES[target].to === ACCOUNT_RULES[imported.cashflow].to
+  const compatible = fitsSides(target, imported.cashflow)
+  const takeCategory = keep === 'manual' || (keep !== 'imported' && imported.confirmedAt === null)
 
-  if (imported.confirmedAt === null && manual.categoryId && target && compatible) {
+  if (takeCategory && manual.categoryId && target && compatible) {
     return {
       importedPatch: {
         category_id: manual.categoryId,

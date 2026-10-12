@@ -18,7 +18,7 @@ import {
   type ActionResult,
 } from '@/lib/actions'
 import { toJakartaInstant } from '@/lib/datetime'
-import { planMerge } from '@/lib/ledger/conflicts'
+import { needsCategoryChoice, planMerge } from '@/lib/ledger/conflicts'
 import { findStaleAdjustments } from '@/lib/ledger/adjustments'
 import {
   adjustmentFor,
@@ -90,6 +90,7 @@ const adjustSchema = z.object({
 })
 
 const pairSchema = z.object({ manualId: z.uuid(), importedId: z.uuid() })
+const mergeSchema = pairSchema.extend({ keep: z.enum(['manual', 'imported']).optional() })
 
 function firstIssue(error: z.ZodError): string {
   return error.issues[0]?.message ?? 'Isiannya belum lengkap.'
@@ -448,16 +449,17 @@ export async function mergeDuplicate(
   _previous: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
-  const parsed = pairSchema.safeParse({
+  const parsed = mergeSchema.safeParse({
     manualId: formData.get('manualId'),
     importedId: formData.get('importedId'),
+    keep: formData.get('keep') ?? undefined,
   })
   if (!parsed.success) return fail('Pasangannya tidak dikenali.')
 
   const ctx = await context()
   if (!ctx) return fail(SESSION_EXPIRED)
   const { supabase, householdId } = ctx
-  const { manualId, importedId } = parsed.data
+  const { manualId, importedId, keep } = parsed.data
 
   const { data: rows } = await supabase
     .from('transactions')
@@ -491,23 +493,29 @@ export async function mergeDuplicate(
     categoryCashflow = (category?.cashflow as CashflowType | undefined) ?? null
   }
 
+  const manualSide = {
+    cashflow: manual.cashflow as CashflowType,
+    categoryId: (manual.category_id as string | null) ?? null,
+    note: (manual.note as string | null) ?? null,
+    confirmedAt: manual.confirmed_at ? new Date(manual.confirmed_at as string) : null,
+  }
+  const importedSide = {
+    cashflow: imported.cashflow as CashflowType,
+    categoryId: (imported.category_id as string | null) ?? null,
+    note: (imported.note as string | null) ?? null,
+    confirmedAt: imported.confirmed_at ? new Date(imported.confirmed_at as string) : null,
+  }
+  // Checked here too, not only by the form: a merge that silently picked a
+  // side is the thing the choice exists to prevent.
+  if (!keep && needsCategoryChoice(manualSide, categoryCashflow, importedSide)) {
+    return fail(
+      'Pilih kategori yang dipakai.',
+      'Kategori catatanmu dan kategori baris bank berbeda. Pilih salah satu, lalu gabungkan lagi.',
+    )
+  }
+
   const now = new Date()
-  const decision = planMerge(
-    {
-      cashflow: manual.cashflow as CashflowType,
-      categoryId: (manual.category_id as string | null) ?? null,
-      note: (manual.note as string | null) ?? null,
-      confirmedAt: manual.confirmed_at ? new Date(manual.confirmed_at as string) : null,
-    },
-    categoryCashflow,
-    {
-      cashflow: imported.cashflow as CashflowType,
-      categoryId: (imported.category_id as string | null) ?? null,
-      note: (imported.note as string | null) ?? null,
-      confirmedAt: imported.confirmed_at ? new Date(imported.confirmed_at as string) : null,
-    },
-    now,
-  )
+  const decision = planMerge(manualSide, categoryCashflow, importedSide, now, keep)
 
   if (decision.importedPatch) {
     const { error } = await supabase

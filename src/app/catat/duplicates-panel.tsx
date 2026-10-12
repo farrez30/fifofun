@@ -3,6 +3,7 @@
 import { useActionState } from 'react'
 import { useShowMore } from '@/components/show-more'
 import { useFormStatus } from 'react-dom'
+import { CHIP, CHIP_RADIO, PICKED_ACCENT } from './account-chips'
 import { keepBoth, mergeDuplicate } from './actions'
 import type { DuplicateView } from './duplicates-view'
 import type { ActionResult } from '@/lib/actions'
@@ -182,9 +183,47 @@ export function DuplicatesPanel({ pairs }: { pairs: DuplicateView[] }) {
               </table>
             </div>
 
+            {/*
+              No side is picked in advance: the import rule and the person
+              both made a decision, and which one fits this payment is only
+              the person's to say. The radios belong to the merge form by id,
+              so Gabungkan cannot go through until one is chosen.
+            */}
+            {pair.choice ? (
+              <div className="border-t border-line p-3">
+                <fieldset>
+                  <legend className="text-subhead font-medium text-ink">Kategori yang dipakai</legend>
+                  <p className="mt-0.5 text-footnote text-ink-muted">
+                    Catatanmu dan baris bank memakai kategori berbeda.
+                  </p>
+                  <div className="mt-1.5 flex flex-wrap gap-2">
+                    {(
+                      [
+                        ['manual', pair.choice.manual, 'catatanmu'],
+                        ['imported', pair.choice.imported, 'baris bank'],
+                      ] as const
+                    ).map(([value, name, from]) => (
+                      <label key={value} className={`${CHIP} ${PICKED_ACCENT}`}>
+                        <input
+                          type="radio"
+                          name="keep"
+                          value={value}
+                          required
+                          form={`gabung-${pair.manualId}`}
+                          className={`${CHIP_RADIO} accent-[var(--color-accent)]`}
+                        />
+                        {name}
+                        <span className="text-footnote text-ink-muted">{from}</span>
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+              </div>
+            ) : null}
+
             <div className="flex flex-wrap items-center gap-2 border-t border-line p-3">
               <span className="mr-auto text-footnote text-ink-muted">Selisih waktu {pair.drift}</span>
-              <form action={merge}>
+              <form id={`gabung-${pair.manualId}`} action={merge}>
                 <input type="hidden" name="manualId" value={pair.manualId} />
                 <input type="hidden" name="importedId" value={pair.importedId} />
                 <Action
@@ -208,8 +247,9 @@ export function DuplicatesPanel({ pairs }: { pairs: DuplicateView[] }) {
       {button ? <div className="mt-2">{button}</div> : null}
 
       <p className="mt-3 text-footnote text-ink-muted">
-        Gabungkan memakai baris dari bank dan memindahkan kategori serta catatan manualnya ke sana.
-        Bukan yang sama menyimpan keduanya sebagai dua transaksi berbeda.
+        Gabungkan memakai baris dari bank dan memindahkan kategori serta catatan manualnya ke sana;
+        kalau kategori keduanya berbeda, kamu yang memilih. Bukan yang sama menyimpan keduanya
+        sebagai dua transaksi berbeda.
       </p>
     </section>
   )

@@ -29,9 +29,9 @@ export interface AccountOption {
   logoUrl?: string | null
 }
 
-const CHIP =
+export const CHIP =
   'inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-sm border border-line bg-paper px-3 text-subhead text-ink transition-colors duration-150 hover:border-line-strong'
-const PICKED_ACCENT = 'has-checked:border-accent has-checked:bg-accent-wash'
+export const PICKED_ACCENT = 'has-checked:border-accent has-checked:bg-accent-wash'
 /*
   The chip is the target, and it already stands 44px tall. The global touch
   floor in globals.css would also blow the radio inside it up to 44px on a
