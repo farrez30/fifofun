@@ -166,7 +166,7 @@ export function GapPanel({
                   >
                     <span className="text-ink">{candidate.category}</span>
                     <span className="tnum font-mono text-footnote text-ink-muted">
-                      {formatIdr(candidate.current)} → {formatIdr(candidate.target)}
+                      {formatIdr(candidate.current)} ke {formatIdr(candidate.target)}
                       <span className="ml-2 text-ink">
                         hemat {formatIdr(candidate.saves)}
                       </span>
@@ -202,7 +202,7 @@ export function GapPanel({
               <span className="text-ink">{delta.category}</span>
               <span className="tnum font-mono text-footnote">
                 <span className="text-ink-muted">
-                  {formatIdr(delta.current)} → {formatIdr(delta.target)}
+                  {formatIdr(delta.current)} ke {formatIdr(delta.target)}
                 </span>
                 <span className={delta.difference > 0n ? 'ml-2 text-over' : 'ml-2 text-under'}>
                   <span aria-hidden="true">{delta.difference > 0n ? '▲' : '▼'}</span>{' '}

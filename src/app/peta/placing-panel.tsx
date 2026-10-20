@@ -224,7 +224,9 @@ function SaveForm({ merchantKey, locationId, validFrom, validTo, pending, label,
 
       <p className="text-footnote text-ink-muted" aria-live="polite">
         {pending
-          ? `Titik: ${pending.lat.toFixed(5)}, ${pending.lng.toFixed(5)}${pending.address ? ` · ${pending.address}` : ' · dipilih di peta'}`
+          ? pending.address
+            ? `Titik: ${pending.address}. Koordinat ${pending.lat.toFixed(5)}, ${pending.lng.toFixed(5)}.`
+            : `Titik dipilih di peta: ${pending.lat.toFixed(5)}, ${pending.lng.toFixed(5)}.`
           : 'Belum ada titik. Pilih hasil pencarian atau klik di peta.'}
       </p>
 

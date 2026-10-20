@@ -63,7 +63,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
     default: 'FiFoFun',
-    template: '%s · FiFoFun',
+    template: '%s | FiFoFun',
   },
   description:
     'Perencana keuangan pribadi yang mencocokkan setiap catatan dengan mutasi bank, lalu menghitung berapa yang sebaiknya masuk ke tiap pos.',

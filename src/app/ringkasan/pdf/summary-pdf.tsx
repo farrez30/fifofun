@@ -1,5 +1,6 @@
 import { Document, Page, StyleSheet, Text, View } from '@react-pdf/renderer'
 import type { SummaryLine } from '@/lib/ledger/summary'
+import { metaText } from '@/lib/meta'
 import type { SummaryData } from '../data'
 import { cell, money, monthShort, period } from '../format'
 
@@ -106,7 +107,7 @@ export function SummaryPdf({ data, printedAt }: { data: SummaryData; printedAt: 
       <Page size="A4" style={styles.page}>
         <Text style={styles.title}>Ringkasan 3 Bulan</Text>
         <Text style={styles.meta}>
-          {period(report.months)} · semua angka dalam rupiah (Rp) · dicetak {printedAt}
+          {metaText([period(report.months), 'semua angka dalam rupiah (Rp)', `dicetak ${printedAt}`])}
         </Text>
 
         <View style={styles.section}>

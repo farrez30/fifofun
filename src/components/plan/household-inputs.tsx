@@ -2,6 +2,7 @@
 
 import { formatIdr, formatIdrCompact } from '@/lib/money'
 import type { ActionResult } from '@/lib/actions'
+import { MetaRow } from '@/components/meta-row'
 import { MoneyInput, NumberField, Toggle } from './field'
 
 /**
@@ -89,12 +90,19 @@ export function HouseholdInputs({
   if (variant === 'minimised') {
     return (
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <p className="text-footnote text-ink">
-          <span className="tnum font-mono">{formatIdrCompact(income)}</span> per bulan ·{' '}
-          {adults} dewasa · {childCount} anak
-          {irregular ? ' · penghasilan tidak tetap' : ''}
-          {wantsZakat ? ' · zakat dipisah' : ''}
-        </p>
+        <MetaRow
+          as="p"
+          className="text-footnote text-ink"
+          parts={[
+            <span key="income">
+              <span className="tnum font-mono">{formatIdrCompact(income)}</span> per bulan
+            </span>,
+            `${adults} dewasa`,
+            `${childCount} anak`,
+            irregular && 'penghasilan tidak tetap',
+            wantsZakat && 'zakat dipisah',
+          ]}
+        />
         <button
           type="button"
           onClick={() => onVariantChange?.('compact')}

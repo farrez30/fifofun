@@ -5,6 +5,7 @@ import { CONTROL } from '@/components/field-base'
 import { SubmitButton } from '@/components/submit-button'
 import { CategoryMark } from '@/components/marks'
 import { DragHandle, ReorderScope, useReorderRow } from '@/components/reorder'
+import { metaText } from '@/lib/meta'
 import { formatIdr } from '@/lib/money'
 import { LOOKED_UP_NAMES, arrangeRows, isLookedUpByName } from '@/lib/ledger/settings'
 import { CASHFLOW_LABELS, CASHFLOW_TYPES, type CashflowType } from '@/lib/ledger/types'
@@ -387,7 +388,7 @@ function billSummary(category: CategoryView): string | null {
     category.billAmount ? formatIdr(BigInt(category.billAmount)) : null,
     category.billDueDay ? `tgl ${category.billDueDay}` : null,
   ].filter(Boolean)
-  return parts.length > 0 ? parts.join(' · ') : null
+  return parts.length > 0 ? metaText(parts) : null
 }
 
 interface RowProps {
@@ -482,13 +483,11 @@ function Card({
       </div>
 
       <p className="mt-0.5 text-footnote text-ink-faint">
-        {[
+        {metaText([
           `${category.usage} transaksi`,
-          isLookedUpByName(category.name) ? 'dicari impor' : null,
-          isGroup ? 'kelompok, tidak menampung transaksi' : null,
-        ]
-          .filter(Boolean)
-          .join(' · ')}
+          isLookedUpByName(category.name) && 'dicari impor',
+          isGroup && 'kelompok, tidak menampung transaksi',
+        ])}
       </p>
 
       {category.description ? (

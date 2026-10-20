@@ -9,6 +9,7 @@ import { Clock } from '@phosphor-icons/react/dist/ssr/Clock'
 import { Percent } from '@phosphor-icons/react/dist/ssr/Percent'
 import { PiggyBank } from '@phosphor-icons/react/dist/ssr/PiggyBank'
 import { CategoryMark } from '@/components/marks'
+import { MetaRow } from '@/components/meta-row'
 import { useReservedHeight, useStuck } from '@/components/use-stuck'
 import { categoryHue } from '@/lib/ledger/palette'
 import { formatIdr } from '@/lib/money'
@@ -217,20 +218,22 @@ export function BudgetSummary({ plan, lines }: Props) {
             {/* What the pointer is on, or the split when it is on nothing. */}
             <p className="mt-2 min-h-5 text-footnote text-ink-muted">
               {active ? (
-                <>
-                  <CategoryMark
-                    name={active.name}
-                    cashflow={active.cashflow}
-                    icon={active.icon}
-                    hue={active.hue}
-                    className="align-middle font-medium text-ink"
-                  />{' '}
-                  <span className="tnum font-mono text-ink">{formatIdr(active.amount)}</span>
-                  {income !== null ? (
-                    <> · {percentText(share(active.amount, income))} dari pemasukan</>
-                  ) : null}{' '}
-                  · {percentText(share(active.amount, total))} dari alokasi
-                </>
+                <MetaRow
+                  parts={[
+                    <>
+                      <CategoryMark
+                        name={active.name}
+                        cashflow={active.cashflow}
+                        icon={active.icon}
+                        hue={active.hue}
+                        className="align-middle font-medium text-ink"
+                      />{' '}
+                      <span className="tnum font-mono text-ink">{formatIdr(active.amount)}</span>
+                    </>,
+                    income !== null && `${percentText(share(active.amount, income))} dari pemasukan`,
+                    `${percentText(share(active.amount, total))} dari alokasi`,
+                  ]}
+                />
               ) : (
                 <>
                   Spending <span className="tnum font-mono">{formatIdr(totalOf('spending'))}</span>
@@ -239,7 +242,7 @@ export function BudgetSummary({ plan, lines }: Props) {
                   </span>
                   Bills <span className="tnum font-mono">{formatIdr(totalOf('bills'))}</span>
                   {segments.length > 0 ? (
-                    <span className="text-ink-faint"> · arahkan kursor ke warnanya</span>
+                    <span className="ml-2 inline-block text-ink-faint">Arahkan kursor atau ketuk warnanya.</span>
                   ) : null}
                 </>
               )}
@@ -305,13 +308,14 @@ export function BudgetSummary({ plan, lines }: Props) {
                           hue={line.hue}
                           className="min-w-0 text-ink"
                         />
-                        <span className="text-ink-muted">
-                          <span className="tnum font-mono text-ink">{formatIdr(line.amount)}</span>
-                          {income !== null ? (
-                            <> · {percentText(share(line.amount, income))} pemasukan</>
-                          ) : null}{' '}
-                          · {percentText(share(line.amount, total))} alokasi
-                        </span>
+                        <MetaRow
+                          className="text-ink-muted"
+                          parts={[
+                            <span key="amount" className="tnum font-mono text-ink">{formatIdr(line.amount)}</span>,
+                            income !== null && `${percentText(share(line.amount, income))} pemasukan`,
+                            `${percentText(share(line.amount, total))} alokasi`,
+                          ]}
+                        />
                       </span>
                       <span aria-hidden="true" className="mt-0.5 block h-1 w-full bg-sunken">
                         <span

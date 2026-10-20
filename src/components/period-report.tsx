@@ -5,6 +5,7 @@ import { formatJakarta } from '@/lib/datetime'
 import type { CategoryTotal, PeriodFilter, PeriodSummary } from '@/lib/ledger/period'
 import { CASHFLOW_LABELS, CASHFLOW_TYPES, type EntrySource } from '@/lib/ledger/types'
 import { SOURCE_LABELS } from '@/lib/ledger/edit'
+import { metaText } from '@/lib/meta'
 import { formatIdr } from '@/lib/money'
 import { CONTROL } from '@/components/field-base'
 
@@ -90,7 +91,7 @@ function appliedFilters(raw: Props['raw']): string {
   if (source && Object.hasOwn(SOURCE_LABELS, source)) parts.push(`Sumber: ${SOURCE_LABELS[source as EntrySource]}`)
   if (value(raw, 'cari')) parts.push(`cari “${value(raw, 'cari')}”`)
   if (value(raw, 'titipan') === 'ya') parts.push('dengan titipan')
-  return parts.length > 0 ? parts.join(' · ') : 'Semua transaksi'
+  return parts.length > 0 ? metaText(parts) : 'Semua transaksi'
 }
 
 /*

@@ -1,6 +1,7 @@
 'use client'
 
 import { BUTTON_PLAIN, BUTTON_PRIMARY } from '@/components/field-base'
+import { MetaRow } from '@/components/meta-row'
 import type { WaitingMerchant } from './view-model'
 import { PlacelessButton } from './waiting-list'
 
@@ -44,10 +45,18 @@ export function QueueCard({ next, remaining, mapped, placing, onPlace, onSkip }:
         <h2 id="antrean" className="text-subhead font-medium text-ink">
           Antrean menaruh
         </h2>
-        <p className="text-footnote text-ink-muted">
-          <span className="tnum font-mono text-ink">{mapped}%</span> tergambar ·{' '}
-          <span className="tnum font-mono text-ink">{remaining}</span> menunggu
-        </p>
+        <MetaRow
+          as="p"
+          className="text-footnote text-ink-muted"
+          parts={[
+            <>
+              <span className="tnum font-mono text-ink">{mapped}%</span> tergambar
+            </>,
+            <>
+              <span className="tnum font-mono text-ink">{remaining}</span> menunggu
+            </>,
+          ]}
+        />
       </div>
 
       {/* A thin bar of the same share, so progress reads at a glance. */}
@@ -67,9 +76,15 @@ export function QueueCard({ next, remaining, mapped, placing, onPlace, onSkip }:
           <div className="min-w-48 flex-1">
             <p className="text-footnote text-ink-muted">Berikutnya, terbesar dulu</p>
             <p className="truncate text-subhead text-ink">{next.label}</p>
-            <p className="text-footnote text-ink-muted">
-              <span className="tnum font-mono">{next.total}</span> · {next.visits} kali · terakhir {next.last}
-            </p>
+            <MetaRow
+              as="p"
+              className="text-footnote text-ink-muted"
+              parts={[
+                <span key="total" className="tnum font-mono">{next.total}</span>,
+                `${next.visits} kali`,
+                `terakhir ${next.last}`,
+              ]}
+            />
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-1">
             <button

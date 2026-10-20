@@ -116,7 +116,7 @@ export function Balances({
             <div>
               <dt className="text-footnote text-ink-faint">
                 Bank mencetak
-                {statementDate ? ` · ${formatJakarta(statementDate, 'date')}` : ''}
+                {statementDate ? ` per ${formatJakarta(statementDate, 'date')}` : ''}
               </dt>
               <dd className="tnum font-mono text-ink">{formatIdr(reconciliation.printed)}</dd>
             </div>

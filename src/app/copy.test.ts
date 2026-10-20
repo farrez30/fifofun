@@ -38,10 +38,24 @@ const EMOJI = /\p{Extended_Pictographic}/u
 const WRONG_SAPAAN = /\b(Anda|Silakan|Mohon|Oops)\b/
 const RAW_ERROR_MESSAGE = /\b[a-zA-Z]*[Ee]rror\??\.message\b/
 const SESSION_EXPIRED_LITERAL = /Sesi kamu sudah berakhir\. Masuk lagi lalu ulangi\./
+// A real arrow in text is read aloud as "panah kanan". The decorative ones
+// already sit in an `aria-hidden` span, so that line is let through.
+const ARROW = /→|&rarr;|\s->\s/
+// A middot inside one string or one run of JSX text joins two phrases that can
+// break apart on a narrow screen. Meta rows go through `<MetaRow>` (one element
+// per part) or `metaText()` in `src/lib/meta.ts` (NBSP inside each part); the
+// lone `·` in an `aria-hidden` span has no text on either side and never matches.
+const INLINE_MIDDOT = /\S[ \t]·|·[ \t]\S/
 
-/** Block comments, then line comments — never a `://` a link happens to carry. */
+/**
+ * Block comments, then line comments — never a `://` a link happens to carry.
+ * A block comment keeps its newlines so the `file:line` in a failure still
+ * points at the right line after it.
+ */
 function stripComments(source: string): string {
-  return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(?<!:)\/\/.*$/gm, '')
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, (comment) => comment.replace(/[^\n]/g, ''))
+    .replace(/(?<!:)\/\/.*$/gm, '')
 }
 
 async function sourceFiles(dir: string): Promise<string[]> {
@@ -52,7 +66,7 @@ async function sourceFiles(dir: string): Promise<string[]> {
 }
 
 describe('the app keeps to its own copywriting rules', () => {
-  it('never lets an em dash, an emoji, the wrong sapaan, a retyped session message, or a raw server error reach a reader', async () => {
+  it('never lets an em dash, an emoji, an arrow, an inline middot, the wrong sapaan, a retyped session message, or a raw server error reach a reader', async () => {
     const offenders: string[] = []
 
     for (const dir of SCOPE) {
@@ -69,6 +83,12 @@ describe('the app keeps to its own copywriting rules', () => {
           }
           if (RAW_ERROR_MESSAGE.test(line) && !ALLOWED_RAW_ERROR_MESSAGE.has(file)) {
             offenders.push(`${at} — pesan server mentah, pakai writeFailed(): ${line.trim()}`)
+          }
+          if (ARROW.test(line) && !line.includes('aria-hidden')) {
+            offenders.push(`${at} — panah dibacakan, pakai kata "ke"/"lalu": ${line.trim()}`)
+          }
+          if (INLINE_MIDDOT.test(line)) {
+            offenders.push(`${at} — titik tengah sebaris, pakai MetaRow/metaText() atau tanda baca: ${line.trim()}`)
           }
         })
       }

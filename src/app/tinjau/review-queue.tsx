@@ -3,6 +3,7 @@
 import { useActionState, useOptimistic, useState } from 'react'
 import { useFormStatus } from 'react-dom'
 import { AccountMark, CashflowChip, DirectionMark } from '@/components/marks'
+import { MetaRow } from '@/components/meta-row'
 import { SignedMoney } from '@/components/money'
 import { formatJakarta, formatMonthKey } from '@/lib/datetime'
 import {
@@ -266,12 +267,14 @@ function GroupCard({
             <DirectionMark direction={group.direction} className="translate-y-0.5" />
             <span className="block truncate text-subhead text-ink">{label}</span>
           </span>
-          <span className="mt-0.5 block text-footnote text-ink-muted">
-            {group.count} transaksi · {spanOf(group)}
-            {group.currentCategories.length > 0
-              ? ` · sekarang ${group.currentCategories.join(', ')}`
-              : ''}
-          </span>
+          <MetaRow
+            className="mt-0.5 text-footnote text-ink-muted"
+            parts={[
+              `${group.count} transaksi`,
+              spanOf(group),
+              group.currentCategories.length > 0 && `sekarang ${group.currentCategories.join(', ')}`,
+            ]}
+          />
         </span>
         <SignedMoney
           sen={group.total}

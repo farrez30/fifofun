@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useActionState, useState } from 'react'
 import { BUTTON_PLAIN, BUTTON_TINTED, CONTROL } from '@/components/field-base'
+import { MetaRow } from '@/components/meta-row'
 import { Pager } from '@/components/pager'
 import { useActionToast } from '@/components/use-action-toast'
 import type { ActionResult } from '@/lib/actions'
@@ -105,10 +106,15 @@ export function WaitingList({ waiting, initialQuery = '', initialPage = 1 }: Pro
                   under it instead of squeezing the name to a few letters. */}
               <div className="min-w-48 flex-1">
                 <p className="truncate text-subhead text-ink">{merchant.label}</p>
-                <p className="text-footnote text-ink-muted">
-                  <span className="tnum font-mono">{merchant.total}</span> · {merchant.visits} kali · terakhir{' '}
-                  {merchant.last}
-                </p>
+                <MetaRow
+                  as="p"
+                  className="text-footnote text-ink-muted"
+                  parts={[
+                    <span key="total" className="tnum font-mono">{merchant.total}</span>,
+                    `${merchant.visits} kali`,
+                    `terakhir ${merchant.last}`,
+                  ]}
+                />
               </div>
               <div className="flex shrink-0 items-center gap-1">
                 {/* Taruh is the job here, so it carries the tint; Tanpa tempat is the exception. */}

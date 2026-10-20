@@ -4,6 +4,7 @@ import { useActionState, useMemo, useState } from 'react'
 import { useFormStatus } from 'react-dom'
 import { CONTROL } from '@/components/field-base'
 import { CategoryMark } from '@/components/marks'
+import { MetaRow } from '@/components/meta-row'
 import { directionOf, type Direction } from '@/lib/ledger/direction'
 import { optionGroups, type OptionGroup } from '@/lib/ledger/settings'
 import { HOLD } from '@/lib/ledger/tidy'
@@ -253,12 +254,12 @@ function Move({
             hue={move.hue}
             tile
           />
-          <span className="mt-0.5 block text-footnote text-ink-muted">
-            {move.count} transaksi · sekarang di {move.from} ·{' '}
-            {/* Said in words rather than drawn as a caret, the way the report's
-                disclosures say what opening one gives you. */}
-            {open ? 'tutup' : 'lihat transaksinya'}
-          </span>
+          {/* The last part is said in words rather than drawn as a caret, the
+              way the report's disclosures say what opening one gives you. */}
+          <MetaRow
+            className="mt-0.5 text-footnote text-ink-muted"
+            parts={[`${move.count} transaksi`, `sekarang di ${move.from}`, open ? 'tutup' : 'lihat transaksinya']}
+          />
         </span>
         <span className="shrink-0 tabular-nums text-subhead text-ink">{move.amount}</span>
       </button>
@@ -272,16 +273,23 @@ function Move({
                   <span className="min-w-0 text-subhead text-ink">{entry.description}</span>
                   <span className="tabular-nums text-subhead text-ink">{entry.amount}</span>
                 </div>
-                <p className="mt-0.5 text-footnote text-ink-muted">
-                  <span className="tabular-nums">{entry.occurredAt}</span> · cocok dengan aturan
-                  &ldquo;{entry.pattern}&rdquo; ·{' '}
-                  <a
-                    href={`/transaksi/${entry.id}`}
-                    className="text-accent underline underline-offset-2"
-                  >
-                    buka transaksinya
-                  </a>
-                </p>
+                <MetaRow
+                  as="p"
+                  className="mt-0.5 text-footnote text-ink-muted"
+                  parts={[
+                    <span key="at" className="tabular-nums">
+                      {entry.occurredAt}
+                    </span>,
+                    `cocok dengan aturan “${entry.pattern}”`,
+                    <a
+                      key="open"
+                      href={`/transaksi/${entry.id}`}
+                      className="text-accent underline underline-offset-2"
+                    >
+                      buka transaksinya
+                    </a>,
+                  ]}
+                />
                 <EntryChoice
                   entry={entry}
                   move={move}

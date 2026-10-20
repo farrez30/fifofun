@@ -2,6 +2,7 @@
 
 import { formatIdr } from '@/lib/money'
 import { assessRatios, type FinancialSnapshot, type Verdict } from '@/lib/planning/ratios'
+import { MetaRow } from '@/components/meta-row'
 import { SourceNote } from './field'
 
 /**
@@ -168,9 +169,14 @@ export function RatioPanel({ snapshot }: { snapshot: FinancialSnapshot }) {
                 </p>
               ) : null}
 
-              <p className="mt-2 text-caption2 text-ink-faint">
-                {result.threshold.formula} · ambang {display(result.threshold.healthy, result.threshold.unit)}
-              </p>
+              <MetaRow
+                as="p"
+                className="mt-2 text-caption2 text-ink-faint"
+                parts={[
+                  result.threshold.formula,
+                  `ambang ${display(result.threshold.healthy, result.threshold.unit)}`,
+                ]}
+              />
             </li>
           )
         })}

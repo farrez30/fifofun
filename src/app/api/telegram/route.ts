@@ -254,7 +254,7 @@ export async function POST(request: Request) {
   const direction = isIncoming ? 'Masuk' : 'Keluar'
   await reply(
     message.chat.id,
-    `${direction} <b>${formatIdr(parsed.amount)}</b>${parsed.note ? ` · ${escapeHtml(parsed.note)}` : ''}\nTercatat, menunggu kategori dipastikan di aplikasi.`,
+    `${direction} <b>${formatIdr(parsed.amount)}</b>${parsed.note ? `, ${escapeHtml(parsed.note)}` : ''}\nTercatat, menunggu kategori dipastikan di aplikasi.`,
   )
 
   return NextResponse.json({ ok: true })

@@ -85,10 +85,8 @@ export function SparkCard({ view }: { view: SparkView }) {
       <p className="tnum mt-1 text-footnote text-ink-muted" role="status">
         {active ? (
           <>
-            {active.label} · {active.amount}
-            {active.share === null
-              ? ' · belum ada patokan'
-              : ` · ${active.share}% dari biasanya`}
+            {active.label}: {active.amount}
+            {active.share === null ? ', belum ada patokan' : `, ${active.share}% dari biasanya`}
           </>
         ) : null}
       </p>

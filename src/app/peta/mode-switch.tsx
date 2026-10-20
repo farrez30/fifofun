@@ -76,7 +76,7 @@ export function ModeSwitch({ mode, points }: { mode: PlaceMode; points: readonly
           <span className="text-ink">Teratas menurut {option?.label.toLowerCase()}:</span>{' '}
           {top.map((point, index) => (
             <span key={point.pointId}>
-              {index > 0 ? ' · ' : ''}
+              {index > 0 ? ', ' : ''}
               {point.label} <span className="tnum font-mono text-ink">{figure(point, mode)}</span>
             </span>
           ))}

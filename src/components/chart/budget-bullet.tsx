@@ -214,7 +214,7 @@ function Row({
         <span className="tnum font-mono text-footnote text-ink-muted">
           {formatIdr(line.actual)}
           <span className="text-ink-faint">
-            {' · '}
+            {', '}
             {line.budget === 0n ? words.none : words.against(formatIdr(line.budget))}
           </span>
           {line.share === null ? null : (

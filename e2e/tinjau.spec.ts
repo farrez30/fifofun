@@ -59,7 +59,7 @@ test.describe('antrean tinjau', () => {
     await expect(body.locator('[data-mark="cashflow"]').first()).toBeVisible()
 
     const header = await page.locator('button[aria-expanded]').first().innerText()
-    expect(header).toMatch(/\d+ transaksi · /)
+    expect(header).toMatch(/\d+ transaksi\s*·\s*/)
   })
 
   test('never truncates the per-row list, however large the group', async ({ page }) => {
@@ -132,7 +132,7 @@ test.describe('antrean tinjau', () => {
     await open(page, 'review-queue-bulan')
 
     const headers = await page.locator('button[aria-expanded]').allInnerTexts()
-    expect(headers[0]).toMatch(/Agu 2026\n?.*\d+ transaksi · Agu 2026/s)
+    expect(headers[0]).toMatch(/Agu 2026\n?.*\d+ transaksi\s*·\s*Agu 2026/s)
 
     // A month is not a pattern, so nothing here offers to save one as a rule.
     await expect(page.locator('input[name="pattern"]')).toHaveCount(0)

@@ -184,7 +184,7 @@ export function AccountForm({ account }: { account?: AccountView }) {
             <option value="">tidak diimpor</option>
             {ACCOUNT_KEYS.map((option) => (
               <option key={option} value={option}>
-                {option} · {ACCOUNT_KEY_LABELS[option]}
+                {option}: {ACCOUNT_KEY_LABELS[option]}
               </option>
             ))}
           </select>

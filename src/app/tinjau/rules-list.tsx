@@ -1,6 +1,7 @@
 'use client'
 
 import { useActionState } from 'react'
+import { MetaRow } from '@/components/meta-row'
 import { useShowMore } from '@/components/show-more'
 import { SubmitButton } from '@/components/submit-button'
 import { MATCH_LABELS, type MatchType } from '@/lib/ledger/rules'
@@ -47,9 +48,11 @@ export function RulesList({ rules }: { rules: RuleRow[] }) {
               </form>
             </div>
 
-            <p className="mt-0.5 text-footnote text-ink-muted">
-              {MATCH_LABELS[rule.matchType as MatchType]} · {rule.categoryName ?? 'tanpa kategori'}
-            </p>
+            <MetaRow
+              as="p"
+              className="mt-0.5 text-footnote text-ink-muted"
+              parts={[MATCH_LABELS[rule.matchType as MatchType], rule.categoryName ?? 'tanpa kategori']}
+            />
 
             <p className="mt-0.5 text-footnote text-ink-faint">
               {rule.hitCount === 0

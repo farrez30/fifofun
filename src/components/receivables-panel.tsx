@@ -72,9 +72,9 @@ export function ReceivablesPanel({ review, staleAfter = 30 }: Props) {
                   ? `, ${formatIdr(item.returned)} dari ${formatIdr(item.lent)}`
                   : ''}
                 {item.outstanding > 0n
-                  ? ` · ${item.age} hari${quiet ? ', sudah lama diam' : ''}`
+                  ? `, ${item.age} hari${quiet ? ', sudah lama diam' : ''}`
                   : item.settledOn
-                    ? ` · selesai dalam ${item.age} hari`
+                    ? `, selesai dalam ${item.age} hari`
                     : ''}
               </span>
             </li>

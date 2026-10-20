@@ -2,6 +2,7 @@
 
 import { useId } from 'react'
 import { CONTROL, CONTROL_TEXT, FieldLabel } from '@/components/field-base'
+import { MetaRow } from '@/components/meta-row'
 
 /**
  * Form primitives for the planner.
@@ -287,17 +288,28 @@ const CONFIDENCE_LABEL = {
  */
 export function SourceNote({ source, url, confidence, retrievedAt }: SourceNoteProps) {
   return (
-    <p className="text-footnote text-ink-faint">
-      <span className="text-ink-muted">{CONFIDENCE_LABEL[confidence]}</span>
-      {' · '}
-      {url ? (
-        <a href={url} target="_blank" rel="noreferrer noopener" className="underline underline-offset-2 hover:text-ink">
-          {source}
-        </a>
-      ) : (
-        source
-      )}
-      {retrievedAt ? ` · diperiksa ${retrievedAt}` : null}
-    </p>
+    <MetaRow
+      as="p"
+      className="text-footnote text-ink-faint"
+      parts={[
+        <span key="confidence" className="text-ink-muted">
+          {CONFIDENCE_LABEL[confidence]}
+        </span>,
+        url ? (
+          <a
+            key="source"
+            href={url}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="underline underline-offset-2 hover:text-ink"
+          >
+            {source}
+          </a>
+        ) : (
+          source
+        ),
+        retrievedAt && `diperiksa ${retrievedAt}`,
+      ]}
+    />
   )
 }

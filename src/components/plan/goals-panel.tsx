@@ -5,6 +5,7 @@ import { hajjPlan, monthlyContribution, suggestInstrument } from '@/lib/planning
 import { HAJJ, RETURNS_SOURCE } from '@/lib/planning/constants'
 import { emergencyFundTarget, type HouseholdProfile } from '@/lib/planning/allocation'
 import { GoalGlidepath } from '@/components/chart/goal-glidepath'
+import { MetaRow } from '@/components/meta-row'
 import { MoneyInput, NumberField, SourceNote } from './field'
 
 /**
@@ -65,9 +66,11 @@ export function GoalsPanel({
           <p className="tnum font-mono text-title2 font-semibold tracking-title2 text-ink">
             {formatIdr(emergency.amount)}
           </p>
-          <p className="text-subhead text-ink-muted">
-            {emergency.months} bulan pengeluaran · {emergency.rule}
-          </p>
+          <MetaRow
+            as="p"
+            className="text-subhead text-ink-muted"
+            parts={[`${emergency.months} bulan pengeluaran`, emergency.rule]}
+          />
         </div>
         <p className="mt-2 max-w-2xl text-subhead text-ink-muted">{emergency.rationale}</p>
       </div>

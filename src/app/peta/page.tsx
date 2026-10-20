@@ -10,6 +10,7 @@ import { ViewSwitch } from '@/components/view-switch'
 import { formatMonthKey } from '@/lib/datetime'
 import { summariseOnline } from '@/lib/ledger/online'
 import { summarisePlaces } from '@/lib/ledger/places'
+import { metaText } from '@/lib/meta'
 import { parsePage } from '@/lib/paging'
 import { getCategories, getHousehold, getMerchantLocations, getPlaceEntries } from '@/lib/queries/household'
 import { sectionHref, sectionOf } from '@/lib/sections'
@@ -121,8 +122,7 @@ async function MapView({ params }: { params: Params }) {
               />
               Saring
               <span className="min-w-0 truncate font-normal text-ink-muted">
-                {chosen || 'Semua kategori'} · {period}
-                {view.filter.includeBills ? ' · dengan tagihan' : ''}
+                {metaText([chosen || 'Semua kategori', period, view.filter.includeBills && 'dengan tagihan'])}
               </span>
             </summary>
             <form id="peta-saring" method="get" className="border-t border-line p-4">

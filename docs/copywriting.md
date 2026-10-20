@@ -58,6 +58,12 @@ memaksa pembaca menahan penjelasan di kepala untuk sesuatu yang belum dilihat.
   berarti ada pencatatan yang salah" ditulis sekali di bawah daftar, bukan
   ditempel di setiap barisnya.
 - **Tanpa em dash.** Pakai koma, titik dua, atau titik.
+- **Tanpa panah dan titik tengah di dalam kalimat.** "Rp1,2 jt ke Rp900 rb",
+  bukan "Rp1,2 jt → Rp900 rb": pembaca layar menyebut panahnya. Titik tengah
+  hanya untuk keterangan pendek berjajar (tanggal, jumlah, akun), lewat
+  `<MetaRow>` di JSX atau `metaText()` untuk string, supaya baris hanya patah
+  di antara bagian dan satu bagian tidak terbelah. Status atau kalimat yang
+  disambung titik tengah ditulis ulang dengan koma atau titik.
 - **Tanpa konstruksi "bukan X, tapi Y"** sebagai pemanis. Boleh kalau kontrasnya
   memang isi kalimatnya, bukan gaya.
 - **Tanpa emoji** sebagai judul, poin, atau elemen antarmuka.
@@ -96,7 +102,7 @@ memaksa pembaca menahan penjelasan di kepala untuk sesuatu yang belum dilihat.
   hanya perlu diubah sekali kalau suatu saat perlu diubah.
 
 `src/app/copy.test.ts` menjaga tiga aturan pertama bagian ini secara mekanis
-(dan em dash serta emoji dari bagian atas), atas seluruh `src/app` dan
+(dan em dash, emoji, panah, serta titik tengah sebaris dari bagian atas), atas seluruh `src/app` dan
 `src/components`. Aturan lain di halaman ini tetap penilaian manusia; regex
 tidak bisa membaca apakah sebuah paragraf mendahulukan vonis atau data.
 
