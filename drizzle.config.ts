@@ -7,7 +7,8 @@ export default defineConfig({
   dbCredentials: {
     url: process.env.DATABASE_URL ?? '',
   },
-  // Supabase owns these schemas; never diff or drop them.
+  // auth.* is created by hand (drizzle/prelude-neon.sql, 0016) and owned by
+  // Better Auth; drizzle-kit must never diff or drop it.
   schemaFilter: ['public'],
   verbose: true,
   strict: true,

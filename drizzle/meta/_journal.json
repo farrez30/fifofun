@@ -113,6 +113,13 @@
       "when": 1791113297125,
       "tag": "0015_account_brand",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1792575936991,
+      "tag": "0016_neon_auth",
+      "breakpoints": true
     }
   ]
 }

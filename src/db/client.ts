@@ -19,17 +19,24 @@ declare global {
 }
 
 function connectionString(): string {
-  // The transaction pooler is the right choice for serverless request handling;
-  // migrations use the session pooler instead (see migrate.ts).
+  // The -pooler endpoint is the right choice for serverless request handling;
+  // migrations use the direct endpoint instead (see migrate.ts).
   const url = process.env.DATABASE_POOL_URL ?? process.env.DATABASE_URL
-  if (!url) throw new Error('DATABASE_POOL_URL or DATABASE_URL must be set')
-  return url
+  if (url) return url
+  // `next build` imports every route with no runtime env. postgres.js does not
+  // connect until the first query, so a placeholder there touches nothing; at
+  // runtime a missing URL still fails loudly.
+  if (process.env.NEXT_PHASE === 'phase-production-build') return 'postgres://build@localhost/build'
+  throw new Error('DATABASE_POOL_URL or DATABASE_URL must be set')
 }
 
 function create() {
   const client = postgres(connectionString(), {
-    // Supabase's transaction pooler does not support prepared statements.
+    // Neon's pooler (PgBouncer, transaction mode) does not support prepared statements.
     prepare: false,
+    // Inside Next the pool lives as long as the instance; a script has nothing
+    // to reuse a connection for, and an idle socket keeps Node alive.
+    idle_timeout: process.env.NEXT_RUNTIME ? 20 : 1,
     types: {
       bigint: postgres.BigInt,
     },

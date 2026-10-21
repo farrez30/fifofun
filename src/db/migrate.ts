@@ -1,14 +1,18 @@
 import { config } from 'dotenv'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import { migrate } from 'drizzle-orm/postgres-js/migrator'
+import { readFileSync } from 'node:fs'
 import postgres from 'postgres'
 
 /**
  * Applies pending migrations.
  *
- * Run against the Supabase session-mode connection (port 5432), not the
- * transaction pooler on 6543: the pooler does not support the DDL and advisory
- * locks a migration needs.
+ * Run against Neon's DIRECT endpoint, not -pooler: PgBouncer in transaction
+ * mode does not support the DDL and advisory locks a migration needs.
+ *
+ * drizzle/prelude-neon.sql runs first, every time: it recreates what Supabase
+ * used to provide before 0000 (roles, the auth schema, auth.users, auth.uid())
+ * and is idempotent. The numbered migrations stay frozen.
  */
 async function main(): Promise<void> {
   config({ path: '.env.local', quiet: true })
@@ -21,11 +25,13 @@ async function main(): Promise<void> {
 
   const client = postgres(url, {
     max: 1,
-    // Supabase's pooler rejects prepared statements.
     prepare: false,
+    onnotice: () => {},
   })
 
   try {
+    console.log('Applying prelude...')
+    await client.unsafe(readFileSync('./drizzle/prelude-neon.sql', 'utf8'))
     console.log('Applying migrations...')
     await migrate(drizzle(client), { migrationsFolder: './drizzle' })
     console.log('Migrations applied.')
