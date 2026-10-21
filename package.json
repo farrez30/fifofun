@@ -17,8 +17,8 @@
     "db:seed": "tsx src/db/seed.ts",
     "db:verify": "tsx src/db/verify.ts",
     "db:import-supabase": "tsx src/db/import-supabase.ts",
-    "test:e2e": "tsx e2e/fixtures.tsx && playwright test",
-    "test:e2e:mobile": "tsx e2e/fixtures.tsx && playwright test --config playwright.mobile.config.ts",
+    "test:e2e": "tsx --env-file=e2e/fixtures.env e2e/fixtures.tsx && playwright test",
+    "test:e2e:mobile": "tsx --env-file=e2e/fixtures.env e2e/fixtures.tsx && playwright test --config playwright.mobile.config.ts",
     "test:e2e:pages": "playwright test --config playwright.pages.config.ts"
   },
   "dependencies": {
