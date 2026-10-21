@@ -17,7 +17,6 @@
     "db:seed": "tsx src/db/seed.ts",
     "db:verify": "tsx src/db/verify.ts",
     "db:import-supabase": "tsx src/db/import-supabase.ts",
-    "db:import-supabase": "tsx src/db/import-supabase.ts",
     "test:e2e": "tsx e2e/fixtures.tsx && playwright test",
     "test:e2e:mobile": "tsx e2e/fixtures.tsx && playwright test --config playwright.mobile.config.ts",
     "test:e2e:pages": "playwright test --config playwright.pages.config.ts"
@@ -66,6 +65,7 @@
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3",
+    "vite": "^8.3.4",
     "vitest": "^4.1.11"
   },
   "packageManager": "pnpm@11.9.0",
