@@ -19,20 +19,18 @@ import postgres from 'postgres'
  * What it does, in one transaction on the target:
  *   1. Refuses unless the target has migration 0016 and no users yet: this is a
  *      copy into an empty schema, never a merge.
- *   2. Turns off user triggers on every table it writes. Otherwise
- *      handle_new_user would create a second profile/subscription/settings for
- *      every imported user, notify_on_run_outcome would raise a notification for
- *      every historical run, and touch_* would rewrite every updated_at.
+ *   2. Turns off user triggers on every table it writes. Otherwise touch_*
+ *      would rewrite every updated_at, and the category nesting checks would
+ *      refuse a child that happens to arrive before its parent.
  *   3. auth.users from GoTrue's auth.users: same uuid, email lower-cased, name
  *      from the address, email_verified from email_confirmed_at. GoTrue bans are
  *      not carried (this app never used them). The bcrypt hash goes to auth.accounts
  *      as the credential password, which lib/auth/server.ts verifies, so nobody
- *      has to reset. Users who never set one (open invites) get no account row:
- *      exactly how an invite looks in Better Auth.
- *   4. Every public table in foreign-key order, all columns the target has,
- *      in batches (snapshots and action_plans carry large blobs).
- *   5. Every sequence set to the source's position, ticket_number_seq included,
- *      so the next ticket and every serial id continue where Supabase stopped.
+ *      has to reset. A user with no password gets no account row.
+ *   4. Every public table in foreign-key order, all columns the target has
+ *      except generated ones, in batches (accounts carries logos up to ~21 KB).
+ *   5. Every sequence set to the source's position, so serial ids continue
+ *      where Supabase stopped.
  *   6. Row counts AND an md5 of every row's content compared per table; any
  *      mismatch aborts the whole copy.
  *
@@ -42,7 +40,7 @@ import postgres from 'postgres'
 
 const BATCH = 200
 const BATCH_BLOB = 10
-const BLOB_TABLES = new Set(['snapshots', 'action_plans', 'run_debug', 'derived_cache'])
+const BLOB_TABLES = new Set(['accounts'])
 
 type Sql = ReturnType<typeof postgres>
 type Tx = postgres.TransactionSql
@@ -144,13 +142,21 @@ async function salinTabel(
   const sisip = target.map((c, i) => `$${i + 1}::text::${c.type}`).join(', ')
   const insertSql = `INSERT INTO public."${tabel}" (${kolom.map(q).join(', ')}) VALUES (${sisip})`
   const ukuran = BLOB_TABLES.has(tabel) ? BATCH_BLOB : BATCH
+  // FK checks stay on (only user triggers are off), so a row that points at its
+  // own table must arrive after its target: categories.parent_id. Nesting is one
+  // level deep (categories_one_level), so rows without a parent first is enough.
+  const induk = await t<{ col: string }[]>`
+    SELECT a.attname AS col FROM pg_constraint c
+    JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = c.conkey[1]
+    WHERE c.contype = 'f' AND c.conrelid = c.confrelid AND c.conrelid = ${'public.' + tabel}::regclass`
+  const urut = induk.length ? ` ORDER BY ${induk.map((r) => `${q(r.col)} IS NOT NULL`).join(', ')}` : ''
   let sumber = 0
-  // A cursor, so a 170 MB table never sits in memory at once. Iterated with
+  // A cursor, so a large table never sits in memory at once. Iterated with
   // for await, not cursor(n, callback): the callback form resolves before the
   // last batch's async work is done, which the dry run caught as "every full
   // batch copied, only the first row of the last one".
   await src.begin('read only', async (s) => {
-    for await (const rows of s.unsafe(`SELECT ${pilih} FROM public."${tabel}"`).cursor(ukuran)) {
+    for await (const rows of s.unsafe(`SELECT ${pilih} FROM public."${tabel}"${urut}`).cursor(ukuran)) {
       sumber += rows.length
       for (const r of rows as Row[]) {
         await t.unsafe(insertSql, kolom.map((k) => r[k]) as postgres.ParameterOrJSON<never>[])
