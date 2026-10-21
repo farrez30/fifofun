@@ -14,6 +14,7 @@ import {
 } from '@/lib/actions'
 import { diffBudgets } from '@/lib/ledger/budget-plan'
 import { formatMonthKey } from '@/lib/datetime'
+import { excludedSet, sql } from '@/db/query'
 
 /**
  * Setting what a month is allowed to cost.
@@ -58,34 +59,36 @@ export async function saveBudgets(
 
   const ctx = await context()
   if (!ctx) return fail(SESSION_EXPIRED)
-  const { supabase, householdId } = ctx
+  const { db, householdId } = ctx
 
   const ids = Object.keys(submitted)
   if (ids.length === 0) return { ok: true, message: 'Tidak ada yang berubah.' }
 
-  const { data: allowed } = await supabase
-    .from('categories')
-    .select('id')
-    .eq('household_id', householdId)
-    .in('id', ids)
-    .in('cashflow', ['spending', 'bills'])
-    .is('archived_at', null)
+  // Both reads fall back to nothing, as they always have: with no allowed ids
+  // nothing is written.
+  const allowed = await db
+    .rows<{ id: string }>(sql`
+      SELECT id FROM public.categories
+      WHERE household_id = ${householdId}
+        AND id = ANY(${sql.param(ids)}::uuid[])
+        AND cashflow IN ('spending', 'bills')
+        AND archived_at IS NULL`)
+    .catch(() => [])
+  const existingRows = await db
+    .rows<{ category_id: string; amount: unknown }>(sql`
+      SELECT category_id, amount FROM public.budgets
+      WHERE household_id = ${householdId} AND period = ${period.data}`)
+    .catch(() => [])
 
-  const allowedIds = new Set((allowed ?? []).map((row) => row.id as string))
+  const allowedIds = new Set(allowed.map((row) => row.id))
   const wanted: Record<string, bigint | null> = {}
   for (const [categoryId, amount] of Object.entries(submitted)) {
     if (allowedIds.has(categoryId)) wanted[categoryId] = amount
   }
 
-  const { data: existingRows } = await supabase
-    .from('budgets')
-    .select('category_id, amount')
-    .eq('household_id', householdId)
-    .eq('period', period.data)
-
   const existing: Record<string, bigint> = {}
-  for (const row of existingRows ?? []) {
-    existing[row.category_id as string] = BigInt(String(row.amount ?? '0'))
+  for (const row of existingRows) {
+    existing[row.category_id] = BigInt(String(row.amount ?? '0'))
   }
 
   const diff = diffBudgets(existing, wanted)
@@ -97,37 +100,38 @@ export async function saveBudgets(
 
   for (let at = 0; at < diff.upsert.length; at += CHUNK) {
     const chunk = diff.upsert.slice(at, at + CHUNK)
-    const { data, error } = await supabase
-      .from('budgets')
-      .upsert(
-        chunk.map((row) => ({
-          household_id: householdId,
-          period: period.data,
-          category_id: row.categoryId,
-          amount: row.amount.toString(),
-          source: 'manual',
-        })),
-        { onConflict: 'household_id,period,category_id' },
+    let data: { id: string }[]
+    try {
+      data = await db.rows<{ id: string }>(
+        upsertBudgets(
+          chunk.map((row) => ({
+            household_id: householdId,
+            period: period.data,
+            category_id: row.categoryId,
+            amount: row.amount.toString(),
+            source: 'manual',
+          })),
+        ),
       )
-      .select('id')
-
-    if (error) {
+    } catch (error) {
       console.error('[anggaran] gagal menulis sebagian batch anggaran', error)
       return partial(at, diff.upsert.length)
     }
-    if ((data?.length ?? 0) !== chunk.length) return partial(at + (data?.length ?? 0), diff.upsert.length)
+    if (data.length !== chunk.length) return partial(at + data.length, diff.upsert.length)
   }
 
   for (let at = 0; at < diff.remove.length; at += CHUNK) {
     const chunk = diff.remove.slice(at, at + CHUNK)
-    const { error } = await supabase
-      .from('budgets')
-      .delete()
-      .eq('household_id', householdId)
-      .eq('period', period.data)
-      .in('category_id', chunk)
-      .select('id')
-    if (error) return writeFailed('anggaran', 'Sebagian anggaran gagal dihapus.', error)
+    try {
+      await db.rows(sql`
+        DELETE FROM public.budgets
+        WHERE household_id = ${householdId}
+          AND period = ${period.data}
+          AND category_id = ANY(${sql.param(chunk)}::uuid[])
+        RETURNING id`)
+    } catch (error) {
+      return writeFailed('anggaran', 'Sebagian anggaran gagal dihapus.', error)
+    }
   }
 
   updateTag(budgetsTag(householdId))
@@ -143,6 +147,26 @@ export async function saveBudgets(
       .join(', '),
     applied: diff.upsert.length + diff.remove.length,
   }
+}
+
+/** The upsert both actions write with: one row per category and month. */
+function upsertBudgets(rows: BudgetWrite[]) {
+  const values = sql.join(
+    rows.map((r) => sql`(${r.household_id}, ${r.period}, ${r.category_id}, ${r.amount}, ${r.source})`),
+    sql`, `,
+  )
+  return sql`
+    INSERT INTO public.budgets (household_id, period, category_id, amount, source) VALUES ${values}
+    ON CONFLICT (household_id, period, category_id) DO UPDATE SET ${excludedSet(['amount', 'source'])}
+    RETURNING id`
+}
+
+interface BudgetWrite {
+  household_id: string
+  period: string
+  category_id: string
+  amount: string
+  source: string
 }
 
 /** A partly written batch, said as a number rather than as a failure. */
@@ -165,33 +189,33 @@ export async function copyBudgets(
 
   const ctx = await context()
   if (!ctx) return fail(SESSION_EXPIRED)
-  const { supabase, householdId } = ctx
+  const { db, householdId } = ctx
 
-  const { data: source } = await supabase
-    .from('budgets')
-    .select('category_id, amount')
-    .eq('household_id', householdId)
-    .eq('period', from.data)
+  const source = await db
+    .rows<{ category_id: string; amount: unknown }>(sql`
+      SELECT category_id, amount FROM public.budgets
+      WHERE household_id = ${householdId} AND period = ${from.data}`)
+    .catch(() => [])
 
-  if (!source || source.length === 0) {
+  if (source.length === 0) {
     return fail(`Tidak ada anggaran di ${formatMonthKey(from.data)} untuk disalin.`)
   }
 
-  const { data: target } = await supabase
-    .from('budgets')
-    .select('category_id')
-    .eq('household_id', householdId)
-    .eq('period', period.data)
+  const target = await db
+    .rows<{ category_id: string }>(sql`
+      SELECT category_id FROM public.budgets
+      WHERE household_id = ${householdId} AND period = ${period.data}`)
+    .catch(() => [])
 
   // Only the gaps. A month somebody has already decided is not overwritten by
   // a convenience button.
-  const taken = new Set((target ?? []).map((row) => row.category_id as string))
+  const taken = new Set(target.map((row) => row.category_id))
   const rows = source
-    .filter((row) => !taken.has(row.category_id as string))
+    .filter((row) => !taken.has(row.category_id))
     .map((row) => ({
       household_id: householdId,
       period: period.data,
-      category_id: row.category_id as string,
+      category_id: row.category_id,
       amount: String(row.amount ?? '0'),
       source: 'manual',
     }))
@@ -200,13 +224,10 @@ export async function copyBudgets(
     return { ok: true, message: 'Sudah disalin sebelumnya.', applied: 0 }
   }
 
-  const { error } = await supabase
-    .from('budgets')
-    .upsert(rows, { onConflict: 'household_id,period,category_id' })
-    .select('id')
-
-  if (error) {
-    if (error.code === '23505') return { ok: true, message: 'Sudah disalin sebelumnya.' }
+  try {
+    await db.rows(upsertBudgets(rows))
+  } catch (error) {
+    if ((error as { code?: string }).code === '23505') return { ok: true, message: 'Sudah disalin sebelumnya.' }
     return writeFailed('anggaran', 'Anggarannya gagal disalin.', error)
   }
 

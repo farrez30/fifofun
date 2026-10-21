@@ -1,6 +1,7 @@
 import { timingSafeEqual } from 'node:crypto'
 import { revalidateTag } from 'next/cache'
 import { NextResponse } from 'next/server'
+import { asService, sql } from '@/db/query'
 import { txTag } from '@/lib/queries/tags'
 import { formatIdr } from '@/lib/money'
 import { isFailure, parseQuickEntry } from '@/lib/telegram/parse'
@@ -20,9 +21,10 @@ import { CASHFLOW_TYPES } from '@/lib/ledger/types'
  *      Telegram alone.
  *   3. A rate limit, so a leaked token cannot be used to fill the ledger.
  *
- * Writes here use the service key and therefore bypass row level security,
- * which is exactly why the chat-to-household binding is configuration rather
- * than anything derived from the request.
+ * Writes here run as the database owner (`asService`) and therefore bypass row
+ * level security, which is exactly why the chat-to-household binding is
+ * configuration rather than anything derived from the request, and why every
+ * statement below names that household itself.
  */
 
 /*
@@ -171,18 +173,11 @@ export async function POST(request: Request) {
   }
 
   const householdId = process.env.TELEGRAM_HOUSEHOLD_ID
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const secret = process.env.SUPABASE_SECRET_KEY
 
-  if (!householdId || !url || !secret) {
+  if (!householdId) {
     await reply(message.chat.id, 'Bot belum terhubung ke rumah tangga mana pun.')
     return NextResponse.json({ ok: true })
   }
-
-  const { createClient } = await import('@supabase/supabase-js')
-  const supabase = createClient(url, secret, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  })
 
   const cashflow = CASHFLOW_TYPES.includes(parsed.cashflow) ? parsed.cashflow : 'spending'
 
@@ -198,13 +193,17 @@ export async function POST(request: Request) {
     row would still save, with both sides null, and the balance it was meant
     to move would never move.
   */
-  const { data: cashAccount } = await supabase
-    .from('accounts')
-    .select('id')
-    .eq('household_id', householdId)
-    .eq('key', 'cash')
-    .is('archived_at', null)
-    .maybeSingle()
+  let cashAccount: { id: string } | null
+  try {
+    cashAccount = await asService.maybeOne<{ id: string }>(sql`
+      SELECT id FROM public.accounts
+      WHERE household_id = ${householdId} AND key = 'cash' AND archived_at IS NULL`)
+  } catch (error) {
+    // Answered, not thrown: a 500 makes Telegram redeliver the same update.
+    console.error('[telegram] akun cash gagal dibaca', error)
+    await reply(message.chat.id, 'Gagal menyimpan. Coba lagi.')
+    return NextResponse.json({ ok: true })
+  }
 
   if (!cashAccount) {
     await reply(
@@ -216,27 +215,23 @@ export async function POST(request: Request) {
 
   const isIncoming = cashflow === 'income' || cashflow === 'from_asset'
 
-  const { error } = await supabase.from('transactions').upsert(
-    {
-      household_id: householdId,
-      occurred_at: new Date(message.date * 1000).toISOString(),
-      description: parsed.note || 'Catatan dari Telegram',
-      amount: parsed.amount.toString(),
-      cashflow,
-      from_account_id: isIncoming ? null : cashAccount.id,
-      to_account_id: isIncoming ? cashAccount.id : null,
-      source: 'telegram',
-      dedupe_key: dedupeKey,
-      note: parsed.note || null,
-      // A chat message is one person's shorthand, so the category is a guess
-      // until somebody confirms it in the app.
-      needs_review: true,
-      raw_description: text,
-    },
-    { onConflict: 'household_id,dedupe_key', ignoreDuplicates: true },
-  )
-
-  if (error) {
+  try {
+    // A chat message is one person's shorthand, so the category is a guess
+    // (needs_review) until somebody confirms it in the app. A replayed update
+    // hits the dedupe key and writes nothing.
+    await asService.rows(sql`
+      INSERT INTO public.transactions (
+        household_id, occurred_at, description, amount, cashflow, from_account_id, to_account_id,
+        source, dedupe_key, note, needs_review, raw_description
+      ) VALUES (
+        ${householdId}, ${new Date(message.date * 1000).toISOString()},
+        ${parsed.note || 'Catatan dari Telegram'}, ${parsed.amount.toString()}, ${cashflow},
+        ${isIncoming ? null : cashAccount.id}, ${isIncoming ? cashAccount.id : null},
+        'telegram', ${dedupeKey}, ${parsed.note || null}, true, ${text}
+      )
+      ON CONFLICT (household_id, dedupe_key) DO NOTHING`)
+  } catch (error) {
+    console.error('[telegram] transaksi gagal disimpan', error)
     await reply(message.chat.id, 'Gagal menyimpan. Coba lagi.')
     return NextResponse.json({ ok: true })
   }

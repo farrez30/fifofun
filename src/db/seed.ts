@@ -103,16 +103,11 @@ async function main(): Promise<void> {
 
   // Link a signed-up user so the app can actually see this data through RLS.
   if (args.email) {
-    const { createClient } = await import('@supabase/supabase-js')
-    const admin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SECRET_KEY!,
-      { auth: { autoRefreshToken: false, persistSession: false } },
+    // auth.users is outside RLS's reach anyway; the owner scope reads it directly.
+    const { asService, sql } = await import('./query')
+    const user = await asService.maybeOne<{ id: string }>(
+      sql`SELECT id FROM auth.users WHERE lower(email) = lower(${args.email}) LIMIT 1`,
     )
-    const { data, error } = await admin.auth.admin.listUsers()
-    if (error) throw error
-
-    const user = data.users.find((u) => u.email?.toLowerCase() === args.email!.toLowerCase())
     if (!user) {
       console.warn(
         `No account found for ${args.email}. Sign up in the app first, then re-run to link it.`,

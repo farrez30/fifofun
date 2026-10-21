@@ -2,6 +2,7 @@
 
 import { revalidatePath, updateTag } from 'next/cache'
 import { z } from 'zod'
+import { excludedSet, sql } from '@/db/query'
 import { SESSION_EXPIRED, context, fail, writeFailed, type ActionResult } from '@/lib/actions'
 import { summaryNoteTag } from '@/lib/queries/tags'
 import { NOTE_LIMIT } from './note'
@@ -25,11 +26,15 @@ export async function saveSummaryNote(_previous: ActionResult | null, formData: 
   const ctx = await context()
   if (!ctx) return fail(SESSION_EXPIRED)
 
-  const { error } = await ctx.supabase
-    .from('summary_notes')
-    .upsert({ household_id: ctx.householdId, body: parsed.data }, { onConflict: 'household_id' })
-    .select('household_id')
-  if (error) return writeFailed('ringkasan', 'Rencananya gagal disimpan.', error)
+  try {
+    await ctx.db.rows(sql`
+      INSERT INTO public.summary_notes (household_id, body)
+      VALUES (${ctx.householdId}, ${parsed.data})
+      ON CONFLICT (household_id) DO UPDATE SET ${excludedSet(['body'])}
+      RETURNING household_id`)
+  } catch (e) {
+    return writeFailed('ringkasan', 'Rencananya gagal disimpan.', e)
+  }
 
   updateTag(summaryNoteTag(ctx.householdId))
   revalidatePath('/ringkasan')

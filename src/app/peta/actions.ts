@@ -2,6 +2,7 @@
 
 import { revalidatePath, updateTag } from 'next/cache'
 import { z } from 'zod'
+import { excludedSet, setClause, sql } from '@/db/query'
 import { SESSION_EXPIRED, context, fail, writeFailed, type ActionResult } from '@/lib/actions'
 import { searchPlaces, type Candidate } from '@/lib/places/nominatim'
 import { placesTag } from '@/lib/queries/tags'
@@ -89,25 +90,28 @@ export async function saveMerchantLocation(
     point only, which a constraint could say too, but only with an extension
     and a message in Latin; here it is a sentence.
   */
-  const { data: others, error: readError } = await ctx.supabase
-    .from('merchant_locations')
-    .select('id, label, valid_from, valid_to')
-    .eq('household_id', ctx.householdId)
-    .eq('merchant_key', values.merchantKey)
-  if (readError) return writeFailed('peta', 'Lokasinya gagal disimpan.', readError)
+  type Other = { id: string; label: string; valid_from: string | null; valid_to: string | null }
+  let others: Other[]
+  try {
+    others = await ctx.db.rows<Other>(sql`
+      SELECT id, label, valid_from, valid_to FROM public.merchant_locations
+      WHERE household_id = ${ctx.householdId} AND merchant_key = ${values.merchantKey}`)
+  } catch (e) {
+    return writeFailed('peta', 'Lokasinya gagal disimpan.', e)
+  }
 
   const period = { from: values.validFrom, to: values.validTo }
-  const clash = (others ?? []).find(
+  const clash = others.find(
     (row) =>
       row.id !== values.id &&
       // An open-ended point is the one being replaced when no id was given.
       !(values.id === null && !values.validFrom && !row.valid_from) &&
-      overlaps(period, { from: row.valid_from as string | null, to: row.valid_to as string | null }),
+      overlaps(period, { from: row.valid_from, to: row.valid_to }),
   )
   if (clash) {
     return fail(
       'Periodenya bertabrakan dengan titik lain untuk pedagang ini.',
-      `${clash.label as string} sudah berlaku untuk sebagian tanggal itu. Ubah tanggalnya, atau pindahkan titik itu.`,
+      `${clash.label} sudah berlaku untuk sebagian tanggal itu. Ubah tanggalnya, atau pindahkan titik itu.`,
     )
   }
 
@@ -122,18 +126,31 @@ export async function saveMerchantLocation(
     valid_from: values.validFrom,
     valid_to: values.validTo,
   }
-  const { error } = values.id
-    ? await ctx.supabase
-        .from('merchant_locations')
-        .update(row)
-        .eq('id', values.id)
-        .eq('household_id', ctx.householdId)
-        .select('id')
-    : await ctx.supabase
-        .from('merchant_locations')
-        .upsert(row, { onConflict: 'household_id,merchant_key,valid_from' })
-        .select('id')
-  if (error) return writeFailed('peta', 'Lokasinya gagal disimpan.', error)
+  try {
+    if (values.id) {
+      await ctx.db.rows(sql`
+        UPDATE public.merchant_locations SET ${setClause(row)}
+        WHERE id = ${values.id} AND household_id = ${ctx.householdId}
+        RETURNING id`)
+    } else {
+      await ctx.db.rows(sql`
+        INSERT INTO public.merchant_locations
+          (household_id, merchant_key, label, address, lat, lng, source, valid_from, valid_to)
+        VALUES (${row.household_id}, ${row.merchant_key}, ${row.label}, ${row.address}, ${row.lat},
+          ${row.lng}, ${row.source}, ${row.valid_from}, ${row.valid_to})
+        ON CONFLICT (household_id, merchant_key, valid_from) DO UPDATE SET ${excludedSet([
+          'label',
+          'address',
+          'lat',
+          'lng',
+          'source',
+          'valid_to',
+        ])}
+        RETURNING id`)
+    }
+  } catch (e) {
+    return writeFailed('peta', 'Lokasinya gagal disimpan.', e)
+  }
 
   revalidatePlaces(ctx.householdId)
   return { ok: true, message: `${values.label} ditaruh di peta.` }
@@ -149,22 +166,22 @@ export async function markPlaceless(
   const ctx = await context()
   if (!ctx) return fail(SESSION_EXPIRED)
 
-  const { error } = await ctx.supabase
-    .from('merchant_locations')
-    .upsert(
-      {
-        household_id: ctx.householdId,
-        merchant_key: parsed.data.merchantKey,
-        label: parsed.data.label,
-        address: null,
-        lat: null,
-        lng: null,
-        source: 'manual',
-      },
-      { onConflict: 'household_id,merchant_key,valid_from' },
-    )
-    .select('id')
-  if (error) return writeFailed('peta', 'Tandanya gagal disimpan.', error)
+  // valid_to is not in the write, so a placeless mark keeps whatever end date the row had.
+  try {
+    await ctx.db.rows(sql`
+      INSERT INTO public.merchant_locations (household_id, merchant_key, label, address, lat, lng, source)
+      VALUES (${ctx.householdId}, ${parsed.data.merchantKey}, ${parsed.data.label}, NULL, NULL, NULL, 'manual')
+      ON CONFLICT (household_id, merchant_key, valid_from) DO UPDATE SET ${excludedSet([
+        'label',
+        'address',
+        'lat',
+        'lng',
+        'source',
+      ])}
+      RETURNING id`)
+  } catch (e) {
+    return writeFailed('peta', 'Tandanya gagal disimpan.', e)
+  }
 
   revalidatePlaces(ctx.householdId)
   return {
@@ -185,14 +202,16 @@ export async function deleteMerchantLocation(
   const ctx = await context()
   if (!ctx) return fail(SESSION_EXPIRED)
 
-  const { data, error } = await ctx.supabase
-    .from('merchant_locations')
-    .delete()
-    .eq('id', parsed.data)
-    .eq('household_id', ctx.householdId)
-    .select('id')
-  if (error) return writeFailed('peta', 'Lokasinya gagal dihapus.', error)
-  if (!data?.length) return fail('Lokasinya sudah tidak ada.', 'Mungkin sudah dihapus dari perangkat lain.')
+  let data: { id: string }[]
+  try {
+    data = await ctx.db.rows<{ id: string }>(sql`
+      DELETE FROM public.merchant_locations
+      WHERE id = ${parsed.data} AND household_id = ${ctx.householdId}
+      RETURNING id`)
+  } catch (e) {
+    return writeFailed('peta', 'Lokasinya gagal dihapus.', e)
+  }
+  if (!data.length) return fail('Lokasinya sudah tidak ada.', 'Mungkin sudah dihapus dari perangkat lain.')
 
   revalidatePlaces(ctx.householdId)
   return { ok: true, message: 'Lokasinya dihapus.', detail: 'Pedagangnya kembali ke daftar belum berlokasi.' }

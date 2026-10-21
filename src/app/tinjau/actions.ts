@@ -3,6 +3,7 @@
 import { updateTag } from 'next/cache'
 import { rulesTag, txTag } from '@/lib/queries/tags'
 import { z } from 'zod'
+import { insertInto, sql, type Scope } from '@/db/query'
 import { directionRefusal, ruleAgreesWithDirection } from '@/lib/ledger/direction'
 import { findConflict, matches, normalise, splitByDirection, type Rule } from '@/lib/ledger/rules'
 import { CASHFLOW_TYPES, type CashflowType } from '@/lib/ledger/types'
@@ -10,17 +11,14 @@ import { resolveTidy } from '@/lib/ledger/tidy'
 import { groupRefusal } from '@/lib/queries/categories'
 import { getRules, getUnconfirmed } from '@/lib/queries/household'
 import { planLedgerTidy } from '@/lib/queries/tidy'
-import { SESSION_EXPIRED, WRITE_FAILED } from '@/lib/actions'
-import { authedUser } from '@/lib/supabase/auth-user'
-import { createClient } from '@/lib/supabase/server'
+import { SESSION_EXPIRED, WRITE_FAILED, context } from '@/lib/actions'
 
 /**
  * Settling a category, and teaching the app to settle the next one by itself.
  *
- * Every write goes through PostgREST rather than Drizzle, for the same reason
- * the import does: Drizzle connects as the database owner and bypasses row level
- * security entirely. Going through the user's own token means the policies
- * decide what may be written.
+ * Every write runs in the signed-in user's own scope, for the same reason the
+ * import does: the database owner bypasses row level security entirely, and
+ * the user's scope means the policies decide what may be written.
  *
  * Patterns arrive from a form and are run against every row in the ledger, so
  * they are length-capped and restricted to literal matching. There is no regular
@@ -72,19 +70,20 @@ function fail(message: string, detail?: string): ActionResult {
   return { ok: false, message, detail }
 }
 
-async function context() {
-  const supabase = await createClient()
-  const user = await authedUser(supabase)
-  if (!user) return null
+interface CategoryRow {
+  id: string
+  name: string
+  cashflow: CashflowType
+}
 
-  const { data: household } = await supabase
-    .from('households')
-    .select('id')
-    .limit(1)
-    .maybeSingle()
-  if (!household) return null
-
-  return { supabase, householdId: household.id as string }
+/** A live category of this household, or null; a failed read answers like a missing one. */
+function liveCategory(db: Scope, householdId: string, categoryId: string) {
+  return db
+    .maybeOne<CategoryRow>(
+      sql`SELECT id, name, cashflow FROM public.categories
+          WHERE household_id = ${householdId} AND id = ${categoryId} AND archived_at IS NULL`,
+    )
+    .catch(() => null)
 }
 
 /**
@@ -115,7 +114,7 @@ export async function applyCategory(
 
   const ctx = await context()
   if (!ctx) return fail(SESSION_EXPIRED)
-  const { supabase, householdId } = ctx
+  const { db, householdId } = ctx
 
   const { pattern, matchType, categoryId, remember } = parsed.data
 
@@ -124,20 +123,14 @@ export async function applyCategory(
   // spending into income. Archived rows are refused the same way the entry and
   // edit forms refuse them: retired means retired everywhere, not everywhere
   // except here.
-  const { data: category } = await supabase
-    .from('categories')
-    .select('id, name, cashflow')
-    .eq('household_id', householdId)
-    .eq('id', categoryId)
-    .is('archived_at', null)
-    .maybeSingle()
+  const category = await liveCategory(db, householdId, categoryId)
 
   if (!category) return fail('Kategori itu tidak ada di rumah tangga ini.')
 
-  const isGroup = await groupRefusal(householdId, categoryId, category.name as string)
+  const isGroup = await groupRefusal(householdId, categoryId, category.name)
   if (isGroup) return fail('Kelompok tidak bisa dipakai langsung.', isGroup)
 
-  const cashflow = category.cashflow as (typeof CASHFLOW_TYPES)[number]
+  const cashflow: (typeof CASHFLOW_TYPES)[number] = category.cashflow
 
   const pending = await getUnconfirmed(householdId)
   const asRule: Rule = {
@@ -170,42 +163,20 @@ export async function applyCategory(
   if (agree.length === 0) {
     return fail(
       'Arah kategorinya tidak cocok dengan transaksinya.',
-      directionRefusal(category.name as string, cashflow, disagree[0].cashflow),
+      directionRefusal(category.name, cashflow, disagree[0].cashflow),
     )
   }
 
-  /*
-    Updated in chunks because PostgREST puts the id list in the query string.
-    One counterparty here already accounts for 128 rows, which is a URL of some
-    five kilobytes, and the limit at which a proxy starts refusing is neither
-    documented nor consistent. Failing at scale on a request that works fine in
-    testing is the kind of bug that only appears once the app is useful.
-  */
-  const CHUNK = 100
+  // One statement: the id list is a single array parameter, so there is no
+  // URL to outgrow, and the rows settle together or not at all.
   const settledAt = new Date().toISOString()
   const ids = agree.map((row) => row.id)
 
-  for (let start = 0; start < ids.length; start += CHUNK) {
-    const { error: writeError } = await supabase
-      .from('transactions')
-      .update({
-        category_id: categoryId,
-        cashflow,
-        needs_review: false,
-        confirmed_at: settledAt,
-        updated_at: settledAt,
-      })
-      .in('id', ids.slice(start, start + CHUNK))
-
-    if (writeError) {
-      console.error('[tinjau] gagal menyimpan kategori', writeError)
-      return fail(
-        'Gagal menyimpan kategorinya.',
-        start === 0
-          ? WRITE_FAILED
-          : `${start} transaksi sudah tersimpan sebelum gagal. Ulangi untuk melanjutkan sisanya.`,
-      )
-    }
+  try {
+    await settle(db, householdId, ids, { categoryId, cashflow }, settledAt)
+  } catch (e) {
+    console.error('[tinjau] gagal menyimpan kategori', e)
+    return fail('Gagal menyimpan kategorinya.', WRITE_FAILED)
   }
 
   let ruleNote: string | undefined
@@ -226,20 +197,24 @@ export async function applyCategory(
           ? `Aturan untuk "${conflict.existing.pattern}" sudah ada, jadi tidak ditambah lagi.`
           : `Aturan "${conflict.existing.pattern}" sudah lebih dulu menangkap pola ini, jadi aturan baru tidak akan pernah jalan dan tidak ditambahkan.`
     } else {
-      const { error: ruleError } = await supabase.from('categorization_rules').insert({
-        household_id: householdId,
-        priority: 100,
-        match_type: matchType,
-        pattern: normalise(pattern),
-        cashflow,
-        category_id: categoryId,
-        auto_apply: true,
-        hit_count: agree.length,
-      })
-      if (ruleError) console.error('[tinjau] gagal membuat aturan', ruleError)
-      ruleNote = ruleError
-        ? 'Kategorinya tersimpan, tapi aturannya gagal dibuat.'
-        : 'Impor berikutnya akan mengategorikan pola ini sendiri.'
+      try {
+        await db.rows(
+          insertInto('categorization_rules', {
+            household_id: householdId,
+            priority: 100,
+            match_type: matchType,
+            pattern: normalise(pattern),
+            cashflow,
+            category_id: categoryId,
+            auto_apply: true,
+            hit_count: agree.length,
+          }),
+        )
+        ruleNote = 'Impor berikutnya akan mengategorikan pola ini sendiri.'
+      } catch (e) {
+        console.error('[tinjau] gagal membuat aturan', e)
+        ruleNote = 'Kategorinya tersimpan, tapi aturannya gagal dibuat.'
+      }
     }
   }
 
@@ -254,7 +229,7 @@ export async function applyCategory(
 
   return {
     ok: true,
-    message: `${agree.length} transaksi masuk ke ${category.name as string}.`,
+    message: `${agree.length} transaksi masuk ke ${category.name}.`,
     detail: [ruleNote, left].filter(Boolean).join(' ') || undefined,
     applied: agree.length,
   }
@@ -273,58 +248,48 @@ export async function categoriseOne(
 
   const ctx = await context()
   if (!ctx) return fail(SESSION_EXPIRED)
-  const { supabase, householdId } = ctx
+  const { db, householdId } = ctx
 
-  const { data: category } = await supabase
-    .from('categories')
-    .select('id, name, cashflow')
-    .eq('household_id', householdId)
-    .eq('id', parsed.data.categoryId)
-    .is('archived_at', null)
-    .maybeSingle()
+  const category = await liveCategory(db, householdId, parsed.data.categoryId)
   if (!category) return fail('Kategori itu tidak ada di rumah tangga ini.')
 
-  const isGroup = await groupRefusal(householdId, parsed.data.categoryId, category.name as string)
+  const isGroup = await groupRefusal(householdId, parsed.data.categoryId, category.name)
   if (isGroup) return fail('Kelompok tidak bisa dipakai langsung.', isGroup)
 
   // The row's own direction is read from the database rather than taken from
   // the page, which may have been open since before somebody else changed it.
-  const { data: row } = await supabase
-    .from('transactions')
-    .select('id, cashflow')
-    .eq('household_id', householdId)
-    .eq('id', parsed.data.transactionId)
-    .is('deleted_at', null)
-    .maybeSingle()
+  const row = await db
+    .maybeOne<{ id: string; cashflow: CashflowType }>(
+      sql`SELECT id, cashflow FROM public.transactions
+          WHERE household_id = ${householdId} AND id = ${parsed.data.transactionId} AND deleted_at IS NULL`,
+    )
+    .catch(() => null)
   if (!row) return fail('Transaksinya tidak ditemukan.', 'Mungkin sudah dihapus atau dipisah.')
 
-  const rowCashflow = row.cashflow as CashflowType
-  const categoryCashflow = category.cashflow as CashflowType
+  const rowCashflow = row.cashflow
+  const categoryCashflow = category.cashflow
   if (!ruleAgreesWithDirection(categoryCashflow, rowCashflow)) {
     return fail(
       'Arah kategorinya tidak cocok dengan transaksinya.',
-      directionRefusal(category.name as string, categoryCashflow, rowCashflow),
+      directionRefusal(category.name, categoryCashflow, rowCashflow),
     )
   }
 
-  const { error } = await supabase
-    .from('transactions')
-    .update({
-      category_id: parsed.data.categoryId,
-      cashflow: category.cashflow,
-      needs_review: false,
-      confirmed_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', parsed.data.transactionId)
-
-  if (error) {
-    console.error('[tinjau] gagal menyimpan kategori', error)
+  try {
+    await settle(
+      db,
+      householdId,
+      [parsed.data.transactionId],
+      { categoryId: parsed.data.categoryId, cashflow: category.cashflow },
+      new Date().toISOString(),
+    )
+  } catch (e) {
+    console.error('[tinjau] gagal menyimpan kategori', e)
     return fail('Gagal menyimpan kategorinya.', WRITE_FAILED)
   }
 
   updateTag(txTag(householdId))
-  return { ok: true, message: `Masuk ke ${category.name as string}.`, applied: 1 }
+  return { ok: true, message: `Masuk ke ${category.name}.`, applied: 1 }
 }
 
 const deleteSchema = z.object({ ruleId: z.uuid() })
@@ -341,13 +306,13 @@ export async function deleteRule(
 
   // Deleting a rule deliberately leaves the rows it already settled alone. The
   // rule decided how future rows are read; it did not become their category.
-  const { error } = await ctx.supabase
-    .from('categorization_rules')
-    .delete()
-    .eq('id', parsed.data.ruleId)
-
-  if (error) {
-    console.error('[tinjau] gagal menghapus aturan', error)
+  try {
+    await ctx.db.rows(sql`
+      DELETE FROM public.categorization_rules
+      WHERE id = ${parsed.data.ruleId} AND household_id = ${ctx.householdId}
+      RETURNING id`)
+  } catch (e) {
+    console.error('[tinjau] gagal menghapus aturan', e)
     return fail('Gagal menghapus aturannya.', WRITE_FAILED)
   }
 
@@ -408,7 +373,7 @@ export async function tidyLedger(
 
   const ctx = await context()
   if (!ctx) return stop(SESSION_EXPIRED)
-  const { supabase, householdId } = ctx
+  const { db, householdId } = ctx
 
   const { plan, targets, groups } = await planLedgerTidy(householdId)
   const resolved = resolveTidy(plan, choices, targets, groups, scope === SCOPE_ALL ? null : scope)
@@ -427,47 +392,34 @@ export async function tidyLedger(
     }
   }
 
-  // Same chunking as applyCategory, for the same reason: PostgREST puts the id
-  // list in the query string.
-  const CHUNK = 100
+  // One statement per destination pot, so a failure stops between pots and
+  // the count of what already moved is exact.
   const settledAt = new Date().toISOString()
   let written = 0
 
   for (const write of resolved.writes) {
-    for (let start = 0; start < write.ids.length; start += CHUNK) {
-      const slice = write.ids.slice(start, start + CHUNK)
-      const { error } = await supabase
-        .from('transactions')
-        .update({
-          category_id: write.categoryId,
-          cashflow: write.cashflow,
-          needs_review: false,
-          confirmed_at: settledAt,
-          updated_at: settledAt,
-        })
-        .in('id', slice)
-
-      if (error) {
-        console.error('[tinjau] perapian berhenti', error)
-        return stop(
-          'Perapian berhenti di tengah jalan.',
-          `${written} transaksi sudah dipindahkan. Jalankan lagi untuk melanjutkan sisanya.`,
-        )
-      }
-      written += slice.length
+    try {
+      await settle(db, householdId, write.ids, write, settledAt)
+    } catch (e) {
+      console.error('[tinjau] perapian berhenti', e)
+      return stop(
+        'Perapian berhenti di tengah jalan.',
+        `${written} transaksi sudah dipindahkan. Jalankan lagi untuk melanjutkan sisanya.`,
+      )
     }
+    written += write.ids.length
   }
 
   // A held row keeps its category. The stamp only stops tidying from offering
   // to move it again, which is the difference between a decision and a default.
-  for (let start = 0; start < resolved.held.length; start += CHUNK) {
-    const { error } = await supabase
-      .from('transactions')
-      .update({ category_locked_at: settledAt, updated_at: settledAt })
-      .in('id', resolved.held.slice(start, start + CHUNK))
-
-    if (error) {
-      console.error('[tinjau] penandaan tahan gagal', error)
+  if (resolved.held.length > 0) {
+    try {
+      await db.rows(sql`
+        UPDATE public.transactions SET category_locked_at = ${settledAt}, updated_at = ${settledAt}
+        WHERE household_id = ${householdId} AND id = ANY(${sql.param(resolved.held)}::uuid[])
+        RETURNING id`)
+    } catch (e) {
+      console.error('[tinjau] penandaan tahan gagal', e)
       return stop(
         'Perpindahannya jadi, penandaannya tidak.',
         `${written} transaksi dipindahkan, tapi yang kamu tahan gagal ditandai dan akan ditawarkan lagi.`,
@@ -497,4 +449,20 @@ export async function tidyLedger(
     applied: written,
     scope,
   }
+}
+
+/** Files rows under a category and takes them out of the review queue. */
+function settle(
+  db: Scope,
+  householdId: string,
+  ids: string[],
+  to: { categoryId: string; cashflow: CashflowType },
+  settledAt: string,
+) {
+  return db.rows(sql`
+    UPDATE public.transactions
+    SET category_id = ${to.categoryId}, cashflow = ${to.cashflow}, needs_review = false,
+        confirmed_at = ${settledAt}, updated_at = ${settledAt}
+    WHERE household_id = ${householdId} AND id = ANY(${sql.param(ids)}::uuid[])
+    RETURNING id`)
 }

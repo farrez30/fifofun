@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createSupabaseStub } from '@/test/supabase-stub'
+import { createScopeStub, type RecordedCall } from '@/test/scope-stub'
 
 /**
  * What a hand-typed row is allowed to become.
@@ -11,9 +11,19 @@ import { createSupabaseStub } from '@/test/supabase-stub'
  * otherwise meet as a Postgres constraint name.
  */
 
-const stub = createSupabaseStub()
+const stub = createScopeStub()
+const signedIn = vi.hoisted(() => ({ value: true }))
 
-vi.mock('@/lib/supabase/server', () => ({ createClient: async () => stub.client }))
+vi.mock('@/db/client', () => ({ db: {} }))
+// groupRefusal reads through the user's scope, so it lands on the same stub.
+vi.mock('@/lib/auth/session', () => ({
+  getUser: async () => (signedIn.value ? { id: 'u1', email: null } : null),
+  userScope: async () => (signedIn.value ? stub.scope : null),
+}))
+vi.mock('@/lib/actions', async (importActual) => ({
+  ...(await importActual<typeof import('@/lib/actions')>()),
+  context: async () => (signedIn.value ? { db: stub.scope, householdId: 'h1', userId: 'u1' } : null),
+}))
 vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
   updateTag: vi.fn(),
@@ -39,7 +49,31 @@ const { adjustBalance, deleteEntry, keepBoth, mergeDuplicate, recomputeAdjustmen
   './actions'
 )
 
-const HOUSEHOLD = { id: 'h1' }
+/** The statements that touched one table, in order. */
+function on(table: string): RecordedCall[] {
+  const name = new RegExp(`(FROM|INTO|UPDATE) (public\\.|"public"\\.)"?${table}"?\\b`)
+  return stub.calls.filter((call) => name.test(call.sql))
+}
+
+/** What an INSERT wrote, as column to value, read back from its SQL and params. */
+function inserted(call: RecordedCall): Record<string, unknown> {
+  const match = /INSERT INTO \S+ \(([^)]*)\)/.exec(call.sql)
+  if (!match) throw new Error(`not an insert: ${call.sql}`)
+  const columns = match[1].split(',').map((c) => c.trim().replace(/"/g, ''))
+  return Object.fromEntries(columns.map((c, i) => [c, call.params[i]]))
+}
+
+/** What an UPDATE set, as column to value. */
+function updated(call: RecordedCall): Record<string, unknown> {
+  const match = /^\s*UPDATE \S+ SET ([\s\S]*?)\s+WHERE/.exec(call.sql)
+  if (!match) throw new Error(`not an update: ${call.sql}`)
+  return Object.fromEntries(
+    match[1].split(/,\s*/).map((part) => {
+      const [, column, , index] = /^"?(\w+)"? = (\$(\d+)|NULL)/.exec(part) ?? []
+      return [column, index ? call.params[Number(index) - 1] : null]
+    }),
+  )
+}
 const CLIENT = '00000000-0000-4000-8000-000000000001'
 const CATEGORY = '11111111-1111-4111-8111-111111111111'
 const ACCOUNT = '22222222-2222-4222-8222-222222222222'
@@ -69,10 +103,16 @@ function entryForm(over: Record<string, string> = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  stub.calls.length = 0
-  stub.setUser({ id: 'u1' })
+  stub.reset()
+  signedIn.value = true
   vi.useRealTimers()
 })
+
+/** The category row, then groupRefusal's count of its children (none). */
+function queueCategory(row: Record<string, unknown> | null) {
+  stub.queue(row)
+  if (row) stub.queue({ n: 0 })
+}
 
 describe('recordEntry', () => {
   it('asks for the category in words when none was picked', async () => {
@@ -84,20 +124,25 @@ describe('recordEntry', () => {
     expect(result.ok).toBe(false)
     expect(result.fieldErrors?.categoryId).toBe('Kategorinya belum dipilih.')
     expect(result.detail).toBe('Kategorinya belum dipilih.')
-    expect(stub.callsOn('transactions')).toHaveLength(0)
+    expect(stub.calls).toHaveLength(0)
   })
 
   it('takes the cashflow from the category row, not from the form', async () => {
-    stub.queue('households', { data: HOUSEHOLD })
-    stub.queue('categories', { data: { id: CATEGORY, name: 'Wifi', cashflow: 'bills' } })
-    stub.queue('accounts', { data: [{ id: ACCOUNT }] })
-    stub.queue('transactions', { data: null })
+    queueCategory({ id: CATEGORY, name: 'Wifi', cashflow: 'bills' })
+    stub.queue([{ id: ACCOUNT }])
+    stub.queue([{ id: 'tx' }])
 
     const result = await recordEntry(null, entryForm())
 
     expect(result.ok).toBe(true)
-    const write = stub.callsOn('transactions')[0]
-    expect(write.payload).toMatchObject({
+    // The category is re-read for this household, and it is the one asked about.
+    const [lookup, group] = on('categories')
+    expect(lookup.sql).toContain('household_id')
+    expect(lookup.params).toEqual(['h1', CATEGORY])
+    expect(group.sql).toContain('parent_id')
+    const write = on('transactions')[0]
+    expect(inserted(write)).toMatchObject({
+      household_id: 'h1',
       cashflow: 'bills',
       from_account_id: ACCOUNT,
       to_account_id: null,
@@ -109,54 +154,62 @@ describe('recordEntry', () => {
   })
 
   it('says the sen back when there are any', async () => {
-    stub.queue('households', { data: HOUSEHOLD })
-    stub.queue('categories', { data: { id: CATEGORY, name: 'Google Workspace', cashflow: 'bills' } })
-    stub.queue('accounts', { data: [{ id: ACCOUNT }] })
-    stub.queue('transactions', { data: null })
+    queueCategory({ id: CATEGORY, name: 'Google Workspace', cashflow: 'bills' })
+    stub.queue([{ id: ACCOUNT }])
+    stub.queue([{ id: 'tx' }])
 
     const result = await recordEntry(null, entryForm({ amount: '12125229' }))
     expect(result.message).toBe('Rp121.252,29 tercatat ke Google Workspace.')
   })
 
   it('puts an income category on the destination side', async () => {
-    stub.queue('households', { data: HOUSEHOLD })
-    stub.queue('categories', { data: { id: CATEGORY, name: 'Gaji', cashflow: 'income' } })
-    stub.queue('accounts', { data: [{ id: ACCOUNT }] })
-    stub.queue('transactions', { data: null })
+    queueCategory({ id: CATEGORY, name: 'Gaji', cashflow: 'income' })
+    stub.queue([{ id: ACCOUNT }])
+    stub.queue([{ id: 'tx' }])
 
     await recordEntry(null, entryForm())
 
-    expect(stub.callsOn('transactions')[0].payload).toMatchObject({
+    expect(inserted(on('transactions')[0])).toMatchObject({
       from_account_id: null,
       to_account_id: ACCOUNT,
     })
   })
 
   it('refuses a category from another household', async () => {
-    stub.queue('households', { data: HOUSEHOLD })
-    stub.queue('categories', { data: null })
+    queueCategory(null)
 
     const result = await recordEntry(null, entryForm())
     expect(result.ok).toBe(false)
     expect(result.message).toBe('Kategori itu tidak ada di rumah tangga ini.')
-    expect(stub.callsOn('transactions')).toHaveLength(0)
+    expect(on('transactions')).toHaveLength(0)
   })
 
   it('refuses an account the household does not own', async () => {
-    stub.queue('households', { data: HOUSEHOLD })
-    stub.queue('categories', { data: { id: CATEGORY, name: 'Wifi', cashflow: 'bills' } })
-    stub.queue('accounts', { data: [] })
+    queueCategory({ id: CATEGORY, name: 'Wifi', cashflow: 'bills' })
+    stub.queue([])
 
     const result = await recordEntry(null, entryForm())
     expect(result.ok).toBe(false)
     expect(result.message).toBe('Akun itu tidak ada di rumah tangga ini.')
+    const [owned] = on('accounts')
+    expect(owned.sql).toContain('household_id')
+    expect(owned.params).toEqual(['h1', [ACCOUNT]])
+    expect(on('transactions')).toHaveLength(0)
+  })
+
+  it('refuses a group, whose total is made of the categories inside it', async () => {
+    stub.queue({ id: CATEGORY, name: 'Rumah', cashflow: 'bills' })
+    stub.queue({ n: 3 })
+
+    const result = await recordEntry(null, entryForm())
+    expect(result.ok).toBe(false)
+    expect(result.message).toBe('Kelompok tidak bisa dipakai langsung.')
+    expect(result.detail).toContain('isinya 3 pos')
+    expect(on('transactions')).toHaveLength(0)
   })
 
   it('requires both accounts for a transfer', async () => {
-    stub.queue('households', { data: HOUSEHOLD })
-    stub.queue('categories', {
-      data: { id: CATEGORY, name: 'Antar Account', cashflow: 'transfer' },
-    })
+    queueCategory({ id: CATEGORY, name: 'Antar Account', cashflow: 'transfer' })
 
     const result = await recordEntry(
       null,
@@ -167,11 +220,8 @@ describe('recordEntry', () => {
   })
 
   it('checks both sides of a transfer against the household', async () => {
-    stub.queue('households', { data: HOUSEHOLD })
-    stub.queue('categories', {
-      data: { id: CATEGORY, name: 'Antar Account', cashflow: 'transfer' },
-    })
-    stub.queue('accounts', { data: [{ id: ACCOUNT }] })
+    queueCategory({ id: CATEGORY, name: 'Antar Account', cashflow: 'transfer' })
+    stub.queue([{ id: ACCOUNT }])
 
     const result = await recordEntry(
       null,
@@ -179,23 +229,23 @@ describe('recordEntry', () => {
     )
     expect(result.ok).toBe(false)
     expect(result.message).toBe('Akun itu tidak ada di rumah tangga ini.')
+    expect(on('accounts')[0].params).toContainEqual([ACCOUNT, OTHER_ACCOUNT])
   })
 
   it('refuses a date next month', async () => {
-    stub.queue('households', { data: HOUSEHOLD })
-    stub.queue('categories', { data: { id: CATEGORY, name: 'Wifi', cashflow: 'bills' } })
-    stub.queue('accounts', { data: [{ id: ACCOUNT }] })
+    queueCategory({ id: CATEGORY, name: 'Wifi', cashflow: 'bills' })
+    stub.queue([{ id: ACCOUNT }])
 
     const result = await recordEntry(null, entryForm({ date: '2099-01-01' }))
     expect(result.ok).toBe(false)
     expect(result.message).toBe('Tanggalnya di luar jangkauan.')
+    expect(on('transactions')).toHaveLength(0)
   })
 
   it('treats a repeated client id as already saved', async () => {
-    stub.queue('households', { data: HOUSEHOLD })
-    stub.queue('categories', { data: { id: CATEGORY, name: 'Wifi', cashflow: 'bills' } })
-    stub.queue('accounts', { data: [{ id: ACCOUNT }] })
-    stub.queue('transactions', { error: { message: 'duplicate key', code: '23505' } })
+    queueCategory({ id: CATEGORY, name: 'Wifi', cashflow: 'bills' })
+    stub.queue([{ id: ACCOUNT }])
+    stub.queueError('duplicate key', '23505')
 
     const result = await recordEntry(null, entryForm())
     expect(result.ok).toBe(true)
@@ -206,6 +256,7 @@ describe('recordEntry', () => {
     const result = await recordEntry(null, entryForm({ amount: '0' }))
     expect(result.ok).toBe(false)
     expect(result.detail).toBe('Nominalnya harus lebih dari nol.')
+    expect(stub.calls).toHaveLength(0)
   })
 })
 
@@ -217,23 +268,21 @@ describe('deleteEntry', () => {
   }
 
   it('hides a row rather than deleting it, and only a typed one', async () => {
-    stub.queue('households', { data: HOUSEHOLD })
-    stub.queue('transactions', { data: [{ id: MANUAL }] })
+    stub.queue([{ id: MANUAL }])
 
     const result = await deleteEntry(null, form())
     expect(result.ok).toBe(true)
 
-    const write = stub.callsOn('transactions')[0]
-    expect(write.chain).toContain('update')
-    expect(write.chain).not.toContain('delete')
-    expect(write.payload).toHaveProperty('deleted_at')
-    const sources = write.args[write.chain.indexOf('in')]
-    expect(sources[1]).toEqual(['manual', 'telegram'])
+    const write = on('transactions')[0]
+    expect(write.sql).not.toContain('DELETE')
+    expect(updated(write)).toHaveProperty('deleted_at')
+    expect(write.sql).toContain("source IN ('manual', 'telegram')")
+    expect(write.sql).toContain('household_id')
+    expect(write.params).toEqual(expect.arrayContaining([MANUAL, 'h1']))
   })
 
   it('says why a bank row cannot be deleted', async () => {
-    stub.queue('households', { data: HOUSEHOLD })
-    stub.queue('transactions', { data: [] })
+    stub.queue([])
 
     const result = await deleteEntry(null, form())
     expect(result.ok).toBe(false)
@@ -290,17 +339,19 @@ describe('adjustBalance', () => {
   ]
 
   it('writes Penyesuaian Spending when the real balance is lower', async () => {
-    stub.queue('households', { data: HOUSEHOLD })
     accounts.mockResolvedValue([account])
     transactions.mockResolvedValue(movement(90_367_950n))
-    stub.queue('categories', { data: { id: 'cat-adj' } })
-    stub.queue('transactions', { data: null })
+    stub.queue({ id: 'cat-adj' })
+    stub.queue([{ id: 'tx' }])
 
     const result = await adjustBalance(null, form())
 
     expect(result.ok).toBe(true)
-    const write = stub.callsOn('transactions')[0]
-    expect(write.payload).toMatchObject({
+    expect(accounts).toHaveBeenCalledWith('h1')
+    const write = on('transactions')[0]
+    expect(inserted(write)).toMatchObject({
+      household_id: 'h1',
+      category_id: 'cat-adj',
       cashflow: 'spending',
       from_account_id: ACCOUNT,
       to_account_id: null,
@@ -312,46 +363,44 @@ describe('adjustBalance', () => {
   })
 
   it('refuses when the balance moved since the page was opened', async () => {
-    stub.queue('households', { data: HOUSEHOLD })
     accounts.mockResolvedValue([account])
     transactions.mockResolvedValue(movement(50_000_00n))
 
     const result = await adjustBalance(null, form())
     expect(result.ok).toBe(false)
     expect(result.message).toBe('Saldo akun ini berubah sejak halaman dibuka.')
-    expect(stub.callsOn('transactions')).toHaveLength(0)
+    expect(stub.calls).toHaveLength(0)
   })
 
   it('writes nothing when the figures already agree', async () => {
-    stub.queue('households', { data: HOUSEHOLD })
     accounts.mockResolvedValue([account])
     transactions.mockResolvedValue(movement(12_000_000n))
 
     const result = await adjustBalance(null, form({ expectedComputed: '12000000' }))
     expect(result.ok).toBe(true)
     expect(result.message).toBe('Saldonya sudah sama. Tidak ada yang ditulis.')
-    expect(stub.callsOn('transactions')).toHaveLength(0)
+    expect(stub.calls).toHaveLength(0)
   })
 
   it('creates the adjustment category when the household lacks it', async () => {
-    stub.queue('households', { data: HOUSEHOLD })
     accounts.mockResolvedValue([account])
     transactions.mockResolvedValue(movement(90_367_950n))
-    stub.queue('categories', { data: null }, { data: { id: 'cat-new' } })
-    stub.queue('transactions', { data: null })
+    stub.queue(null)
+    stub.queue({ id: 'cat-new' })
+    stub.queue([{ id: 'tx' }])
 
     const result = await adjustBalance(null, form())
     expect(result.ok).toBe(true)
-    const created = stub.callsOn('categories')[1]
-    expect(created.payload).toMatchObject({
+    const created = on('categories')[1]
+    expect(inserted(created)).toMatchObject({
       name: 'Penyesuaian Spending',
       cashflow: 'spending',
       household_id: 'h1',
     })
+    expect(inserted(on('transactions')[0]).category_id).toBe('cat-new')
   })
 
   it('refuses an account the household does not own', async () => {
-    stub.queue('households', { data: HOUSEHOLD })
     accounts.mockResolvedValue([])
 
     const result = await adjustBalance(null, form())
@@ -393,81 +442,84 @@ describe('mergeDuplicate and keepBoth', () => {
   ]
 
   it('patches the bank row and hides the manual one', async () => {
-    stub.queue('households', { data: HOUSEHOLD })
-    stub.queue('transactions', { data: pair() }, { data: [{ id: IMPORTED }] }, { data: [{ id: MANUAL }] })
-    stub.queue('categories', { data: { cashflow: 'spending' } })
+    stub.queue(pair())
+    stub.queue({ cashflow: 'spending' })
+    stub.queue([{ id: IMPORTED }])
+    stub.queue([{ id: MANUAL }])
 
     const result = await mergeDuplicate(null, form())
 
     expect(result.ok).toBe(true)
-    const [, patch, hide] = stub.callsOn('transactions')
-    expect(patch.payload).toMatchObject({ category_id: CATEGORY, cashflow: 'spending' })
-    expect(hide.payload).toHaveProperty('deleted_at')
+    const [read, patch, hide] = on('transactions')
+    expect(read.params).toEqual(['h1', [MANUAL, IMPORTED]])
+    expect(updated(patch)).toMatchObject({ category_id: CATEGORY, cashflow: 'spending' })
+    expect(patch.params).toEqual(expect.arrayContaining([IMPORTED, 'h1']))
+    expect(updated(hide)).toHaveProperty('deleted_at')
+    expect(hide.params).toEqual(expect.arrayContaining([MANUAL, 'h1']))
   })
 
   it('refuses to pick a side for the person when a settled bank category disagrees', async () => {
-    stub.queue('households', { data: HOUSEHOLD })
     const [manualRow, importedRow] = pair()
     const rows = [manualRow, { ...importedRow, category_id: OTHER_CATEGORY, confirmed_at: '2026-10-12T12:00:00.000Z' }]
-    stub.queue('transactions', { data: rows })
-    stub.queue('categories', { data: { cashflow: 'spending' } })
+    stub.queue(rows)
+    stub.queue({ cashflow: 'spending' })
 
     const result = await mergeDuplicate(null, form())
 
     expect(result.ok).toBe(false)
     expect(result.message).toBe('Pilih kategori yang dipakai.')
     // Nothing written: only the read happened.
-    expect(stub.callsOn('transactions')).toHaveLength(1)
+    expect(on('transactions')).toHaveLength(1)
   })
 
   it('writes the kept manual category over a settled bank row', async () => {
-    stub.queue('households', { data: HOUSEHOLD })
     const [manualRow, importedRow] = pair()
     const rows = [manualRow, { ...importedRow, category_id: OTHER_CATEGORY, confirmed_at: '2026-10-12T12:00:00.000Z' }]
-    stub.queue('transactions', { data: rows }, { data: [{ id: IMPORTED }] }, { data: [{ id: MANUAL }] })
-    stub.queue('categories', { data: { cashflow: 'spending' } })
+    stub.queue(rows)
+    stub.queue({ cashflow: 'spending' })
+    stub.queue([{ id: IMPORTED }])
+    stub.queue([{ id: MANUAL }])
     const data = form()
     data.append('keep', 'manual')
 
     const result = await mergeDuplicate(null, data)
 
     expect(result.ok).toBe(true)
-    expect(stub.callsOn('transactions')[1].payload).toMatchObject({ category_id: CATEGORY })
+    expect(updated(on('transactions')[1])).toMatchObject({ category_id: CATEGORY })
   })
 
   it('is idempotent once the pair has already been merged', async () => {
-    stub.queue('households', { data: HOUSEHOLD })
-    stub.queue('transactions', {
-      data: pair({ deleted_at: '2026-08-21T05:00:00.000Z' }),
-    })
+    stub.queue(pair({ deleted_at: '2026-08-21T05:00:00.000Z' }))
 
     const result = await mergeDuplicate(null, form())
     expect(result.ok).toBe(true)
     expect(result.message).toBe('Sudah digabungkan sebelumnya.')
-    expect(stub.callsOn('transactions')).toHaveLength(1)
+    expect(stub.calls).toHaveLength(1)
   })
 
   it('refuses a pair the import never linked', async () => {
-    stub.queue('households', { data: HOUSEHOLD })
-    stub.queue('transactions', { data: pair({ duplicate_of: null }) })
+    stub.queue(pair({ duplicate_of: null }))
 
     const result = await mergeDuplicate(null, form())
     expect(result.ok).toBe(false)
     expect(result.message).toBe('Pasangan itu tidak ditemukan lagi.')
+    expect(stub.calls).toHaveLength(1)
   })
 
   it('clears the link and keeps both', async () => {
-    stub.queue('households', { data: HOUSEHOLD })
-    stub.queue('transactions', { data: [{ id: MANUAL }] })
+    stub.queue([{ id: MANUAL }])
 
     const result = await keepBoth(null, form())
     expect(result.ok).toBe(true)
-    expect(stub.callsOn('transactions')[0].payload).toEqual({ duplicate_of: null })
+    const write = on('transactions')[0]
+    expect(updated(write)).toEqual({ duplicate_of: null })
+    expect(write.sql).toContain("source = 'manual'")
+    expect(write.params).toEqual([MANUAL, 'h1', IMPORTED])
   })
 
   it('says the pair was already kept rather than failing on a second press', async () => {
-    stub.queue('households', { data: HOUSEHOLD })
-    stub.queue('transactions', { data: [] }, { data: { id: MANUAL, duplicate_of: null } })
+    stub.queue([])
+    stub.queue({ id: MANUAL, duplicate_of: null })
 
     const result = await keepBoth(null, form())
     expect(result.ok).toBe(true)
@@ -527,18 +579,17 @@ describe('recomputeAdjustments', () => {
   ]
 
   it('rewrites a stale correction so the balance lands on what was counted', async () => {
-    stub.queue('households', { data: HOUSEHOLD })
     accounts.mockResolvedValue([gopay])
     transactions.mockResolvedValue(ledger(10_000_000n))
     adjustments.mockResolvedValue([counted])
-    stub.queue('categories', { data: { id: 'cat-adj' } })
-    stub.queue('transactions', { data: [{ id: ADJUSTMENT }] })
+    stub.queue({ id: 'cat-adj' })
+    stub.queue([{ id: ADJUSTMENT }])
 
     const result = await recomputeAdjustments()
 
     expect(result).toMatchObject({ ok: true, applied: 1 })
-    const write = stub.callsOn('transactions')[0]
-    expect(write.payload).toEqual({
+    const write = on('transactions')[0]
+    expect(updated(write)).toEqual({
       amount: '603448100',
       cashflow: 'spending',
       category_id: 'cat-adj',
@@ -547,37 +598,32 @@ describe('recomputeAdjustments', () => {
       note: 'Penyesuaian saldo GoPay: tercatat Rp6.034.481, sebenarnya Rp0.',
     })
     // Scoped to this household and to hand-written rows, so a bank row can never be rewritten.
-    expect(write.args.filter((_, index) => write.chain[index] === 'eq')).toEqual([
-      ['id', ADJUSTMENT],
-      ['household_id', 'h1'],
-      ['source', 'manual'],
-    ])
+    expect(write.sql).toMatch(/WHERE id = \$\d+ AND household_id = \$\d+ AND source = 'manual'/)
+    expect(write.params.slice(-2)).toEqual([ADJUSTMENT, 'h1'])
   })
 
   it('writes nothing when every correction still lands where it should', async () => {
-    stub.queue('households', { data: HOUSEHOLD })
     accounts.mockResolvedValue([gopay])
     transactions.mockResolvedValue(ledger(0n))
     adjustments.mockResolvedValue([counted])
 
     const result = await recomputeAdjustments()
     expect(result.ok).toBe(true)
-    expect(stub.callsOn('transactions')).toHaveLength(0)
+    expect(stub.calls).toHaveLength(0)
   })
 
   it('hides a correction the balance no longer needs', async () => {
-    stub.queue('households', { data: HOUSEHOLD })
     accounts.mockResolvedValue([gopay])
     transactions.mockResolvedValue(ledger(613_448_100n))
     adjustments.mockResolvedValue([counted])
-    stub.queue('transactions', { data: [{ id: ADJUSTMENT }] })
+    stub.queue([{ id: ADJUSTMENT }])
 
     await recomputeAdjustments()
-    expect(stub.callsOn('transactions')[0].payload).toHaveProperty('deleted_at')
+    expect(updated(on('transactions')[0])).toHaveProperty('deleted_at')
   })
 
   it('asks a signed-out visitor to sign in again', async () => {
-    stub.setUser(null)
+    signedIn.value = false
     expect((await recomputeAdjustments()).ok).toBe(false)
     expect(adjustments).not.toHaveBeenCalled()
   })

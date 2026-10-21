@@ -1,5 +1,7 @@
+import type { SQL } from 'drizzle-orm'
+import { PgDialect } from 'drizzle-orm/pg-core'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createSupabaseStub, type SupabaseStub } from '@/test/supabase-stub'
+import type { Scope } from '@/db/query'
 
 /**
  * The dashboard as a whole, run against a ledger shaped like a real one.
@@ -17,13 +19,16 @@ import { createSupabaseStub, type SupabaseStub } from '@/test/supabase-stub'
  */
 
 const holder = vi.hoisted(() => ({
-  client: null as unknown,
+  scope: null as unknown,
   user: { id: 'u1', email: 'kamu@contoh.id' } as { id: string; email: string } | null,
 }))
 
-vi.mock('@/lib/supabase/server', () => ({
-  createClient: async () => holder.client,
+vi.mock('@/db/client', () => ({ db: {} }))
+// The shell's sign-out button pulls in the whole auth server; nothing here signs out.
+vi.mock('@/app/login/actions', () => ({ signOut: async () => {} }))
+vi.mock('@/lib/auth/session', () => ({
   getUser: async () => holder.user,
+  userScope: async () => (holder.user ? holder.scope : null),
 }))
 
 // Imported after the mock is declared, the way vitest hoists it anyway.
@@ -34,9 +39,9 @@ const BANK = '22222222-2222-4222-8222-222222222222'
 const CASH = '33333333-3333-4333-8333-333333333333'
 const WALLET = '44444444-4444-4444-8444-444444444444'
 
-/** Rupiah as the sen string PostgREST hands back for a bigint column. */
-function sen(rupiah: number): string {
-  return String(rupiah * 100)
+/** Rupiah as the sen number the query layer hands back for a bigint column. */
+function sen(rupiah: number): number {
+  return rupiah * 100
 }
 
 const ACCOUNTS = [
@@ -216,28 +221,49 @@ function transactionRows() {
     is_pass_through: entry.passThrough ?? false,
     duplicate_of: null,
     split_of: null,
-    categories: entry.category ? { name: NAME_BY_CATEGORY.get(entry.category) } : null,
+    category_name: entry.category ? (NAME_BY_CATEGORY.get(entry.category) ?? null) : null,
   }))
 }
 
-let stub: SupabaseStub
+/**
+ * A query scope that answers by what a statement reads rather than by call
+ * order: the dashboard starts its reads together under Promise.all, and the
+ * order they reach the database in is not something this test is about.
+ * A statement no answer matches gets no rows, as RLS would give it.
+ */
+const dialect = new PgDialect()
+let answers: [RegExp, unknown[]][] = []
+const statements: string[] = []
+
+function answer(q: SQL): unknown[] {
+  const { sql } = dialect.sqlToQuery(q)
+  statements.push(sql)
+  return answers.find(([pattern]) => pattern.test(sql))?.[1] ?? []
+}
+
+const scope: Scope = {
+  userId: 'u1',
+  rows: async <T>(q: SQL) => answer(q) as T[],
+  maybeOne: async <T>(q: SQL) => (answer(q)[0] as T | undefined) ?? null,
+  one: async <T>(q: SQL) => answer(q)[0] as T,
+  tx: async (fn) => fn(scope),
+}
 
 function queueLedger({ budgets = [] as unknown[] } = {}) {
-  stub.queue('households', {
-    data: { id: HOUSEHOLD, name: 'Rumah', timezone: 'Asia/Jakarta', currency: 'IDR' },
-  })
-  stub.queue('accounts', { data: ACCOUNTS })
-  stub.queue('categories', { data: CATEGORIES })
-  // Newest first, the way the real query orders it before the pager reverses.
-  stub.queue('transactions', { data: transactionRows().reverse() })
-  // Two reads, in the order the dashboard makes them: the first statement's
-  // opening balance, then the last reconciled statement's closing balance.
-  stub.queue(
-    'import_batches',
-    { data: { opening_balance: sen(5_000_000) } },
-    { data: { closing_balance: sen(7_250_000), period_end: '2026-08-31' } },
-  )
-  stub.queue('budgets', { data: budgets })
+  answers = [
+    [/FROM public\.households/, [{ id: HOUSEHOLD, name: 'Rumah', timezone: 'Asia/Jakarta', currency: 'IDR' }]],
+    [/FROM public\.accounts/, ACCOUNTS],
+    [/FROM public\.categories/, CATEGORIES],
+    // Newest first, the way the real query orders it before the page reverses.
+    [/FROM public\.transactions t/, transactionRows().reverse()],
+    // The first statement's opening balance, and the last reconciled one's closing balance.
+    [/SELECT opening_balance FROM public\.import_batches/, [{ opening_balance: sen(5_000_000) }]],
+    [
+      /SELECT closing_balance, period_end FROM public\.import_batches/,
+      [{ closing_balance: sen(7_250_000), period_end: '2026-08-31' }],
+    ],
+    [/FROM public\.budgets/, budgets],
+  ]
 }
 
 interface Element {
@@ -287,8 +313,8 @@ async function renderDashboard(akun?: string) {
 
 describe('halaman Ringkasan', () => {
   beforeEach(() => {
-    stub = createSupabaseStub({ user: { id: 'u1' } })
-    holder.client = stub.client
+    statements.length = 0
+    holder.scope = scope
     holder.user = { id: 'u1', email: 'kamu@contoh.id' }
     queueLedger()
   })
@@ -296,6 +322,13 @@ describe('halaman Ringkasan', () => {
   it('renders the whole month without throwing', async () => {
     const tree = await renderDashboard()
     expect(findAll(tree, 'Stat').length).toBeGreaterThan(0)
+  })
+
+  it('scopes every read past the household lookup to that household', async () => {
+    await renderDashboard()
+    const reads = statements.filter((text) => !text.includes('FROM public.households'))
+    expect(reads.length).toBeGreaterThan(0)
+    for (const text of reads) expect(text).toContain('household_id')
   })
 
   it('colours every category ribbon in the flow diagram', async () => {
@@ -366,8 +399,7 @@ describe('halaman Ringkasan', () => {
   })
 
   it('prefers a budget the household set over one derived from history', async () => {
-    stub.reset()
-    queueLedger({ budgets: [{ amount: sen(1_500_000), categories: { name: 'Belanja' } }] })
+    queueLedger({ budgets: [{ amount: sen(1_500_000), category_name: 'Belanja' }] })
 
     const bullet = findOne(await renderDashboard(), 'BudgetBullet')
     const review = bullet.props.review as { source: string; lines: { category: string }[] }

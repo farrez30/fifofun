@@ -4,6 +4,7 @@ import { revalidatePath, updateTag } from 'next/cache'
 import { cookies } from 'next/headers'
 import { accountsTag, categoriesTag, txTag } from '@/lib/queries/tags'
 import { z } from 'zod'
+import { insertInto, setClause, sql, table, type Row, type Scope } from '@/db/query'
 import {
   SESSION_EXPIRED,
   context,
@@ -43,9 +44,6 @@ import { ACCOUNT_KINDS, CASHFLOW_LABELS, CASHFLOW_TYPES, type CashflowType } fro
  * picker; the transactions filed against it stay exactly where they are, which
  * is the only way the totals for a past month can stay what they were.
  */
-
-/** The client `context()` hands back, so the helpers below can take it. */
-type SupabaseLike = NonNullable<Awaited<ReturnType<typeof context>>>['supabase']
 
 const MAX_NAME = 60
 
@@ -163,15 +161,16 @@ interface AccountRecord {
   reference: string | null
 }
 
-async function accountsOf(supabase: SupabaseLike, householdId: string): Promise<AccountRecord[]> {
-  const { data } = await supabase
-    .from('accounts')
-    .select('id, name, kind, key, sort_order, archived_at, opening_balance, reference')
-    .eq('household_id', householdId)
-    .order('sort_order')
-    .order('name')
+/** A failed read answers as an empty list, as it always has; the write that follows still runs under RLS. */
+async function accountsOf(db: Scope, householdId: string): Promise<AccountRecord[]> {
+  const data = await db
+    .rows(sql`
+      SELECT id, name, kind, key, sort_order, archived_at, opening_balance, reference
+      FROM public.accounts WHERE household_id = ${householdId}
+      ORDER BY sort_order, name`)
+    .catch((): Row[] => [])
 
-  return ((data ?? []) as Record<string, unknown>[]).map((row) => ({
+  return data.map((row) => ({
     id: row.id as string,
     name: row.name as string,
     kind: row.kind as string,
@@ -205,18 +204,15 @@ interface CategoryRecord {
   archivedAt: string | null
 }
 
-async function categoriesOf(
-  supabase: SupabaseLike,
-  householdId: string,
-): Promise<CategoryRecord[]> {
-  const { data } = await supabase
-    .from('categories')
-    .select('id, name, cashflow, parent_id, sort_order, archived_at')
-    .eq('household_id', householdId)
-    .order('sort_order')
-    .order('name')
+async function categoriesOf(db: Scope, householdId: string): Promise<CategoryRecord[]> {
+  const data = await db
+    .rows(sql`
+      SELECT id, name, cashflow, parent_id, sort_order, archived_at
+      FROM public.categories WHERE household_id = ${householdId}
+      ORDER BY sort_order, name`)
+    .catch((): Row[] => [])
 
-  return ((data ?? []) as Record<string, unknown>[]).map((row) => ({
+  return data.map((row) => ({
     id: row.id as string,
     name: row.name as string,
     cashflow: row.cashflow as CashflowType,
@@ -244,7 +240,7 @@ export async function createAccount(
 
   const values = parsed.data
   const reference = accountNumber(values.reference)
-  const existing = await accountsOf(ctx.supabase, ctx.householdId)
+  const existing = await accountsOf(ctx.db, ctx.householdId)
   if (existing.some((row) => sameName(row.name, values.name))) {
     return fail(
       `Sudah ada akun bernama ${values.name}.`,
@@ -254,29 +250,30 @@ export async function createAccount(
   const clash = referenceClash(existing, reference)
   if (clash) return clash
 
-  const { error } = await ctx.supabase
-    .from('accounts')
-    .insert({
-      household_id: ctx.householdId,
-      name: values.name,
-      kind: values.kind,
-      institution: values.institution || null,
-      key: values.key || null,
-      opening_balance: values.openingBalance.toString(),
-      opening_balance_at: values.openingBalanceAt || null,
-      own_identifiers: values.kind === 'bank' ? identifiers.values : [],
-      reference: reference || null,
-      color: values.color,
-      ...(logo.change ? { logo: logo.value } : {}),
-      sort_order: existing.length + 1,
-    })
-    .select('id')
-
-  if (error) return keyClash(error, values.key) ?? writeFailed('pengaturan', 'Akunnya gagal disimpan.', error)
+  try {
+    await ctx.db.rows(
+      insertInto('accounts', {
+        household_id: ctx.householdId,
+        name: values.name,
+        kind: values.kind,
+        institution: values.institution || null,
+        key: values.key || null,
+        opening_balance: values.openingBalance.toString(),
+        opening_balance_at: values.openingBalanceAt || null,
+        own_identifiers: values.kind === 'bank' ? identifiers.values : [],
+        reference: reference || null,
+        color: values.color,
+        ...(logo.change ? { logo: logo.value } : {}),
+        sort_order: existing.length + 1,
+      }),
+    )
+  } catch (e) {
+    return keyClash(e, values.key) ?? writeFailed('pengaturan', 'Akunnya gagal disimpan.', e)
+  }
 
   // A new account with a number may be the other side of transfers already
   // imported as income or spending.
-  const backfill = reference ? await backfillOwnMoney(ctx.supabase, ctx.householdId) : undefined
+  const backfill = reference ? await backfillOwnMoney(ctx.db, ctx.householdId) : undefined
 
   revalidateSettings(ctx.householdId)
   return { ok: true, message: `Akun ${values.name} dibuat.`, detail: backfill }
@@ -301,7 +298,7 @@ export async function updateAccount(
   if (!ctx) return fail(SESSION_EXPIRED)
 
   const values = parsed.data
-  const rows = await accountsOf(ctx.supabase, ctx.householdId)
+  const rows = await accountsOf(ctx.db, ctx.householdId)
   const current = rows.find((row) => row.id === values.id)
   if (!current) return fail('Akun itu tidak ditemukan.')
 
@@ -325,32 +322,33 @@ export async function updateAccount(
     )
   }
 
-  const { data, error } = await ctx.supabase
-    .from('accounts')
-    .update({
-      name: values.name,
-      kind: values.kind,
-      institution: values.institution || null,
-      key: values.key || null,
-      opening_balance: values.openingBalance.toString(),
-      opening_balance_at: values.openingBalanceAt || null,
-      own_identifiers: values.kind === 'bank' ? identifiers.values : [],
-      reference: reference || null,
-      color: values.color,
-      // Left out unless something was chosen: an empty file input means
-      // "keep the icon", not "remove it".
-      ...(logo.change ? { logo: logo.value } : {}),
-    })
-    .eq('id', values.id)
-    .eq('household_id', ctx.householdId)
-    .select('id')
-
-  if (error) return keyClash(error, values.key) ?? writeFailed('pengaturan', 'Akunnya gagal disimpan.', error)
-  if (!data || data.length === 0) return fail('Akun itu tidak ditemukan.')
+  let updated: Row[]
+  try {
+    updated = await ctx.db.rows(sql`
+      UPDATE public.accounts SET ${setClause({
+        name: values.name,
+        kind: values.kind,
+        institution: values.institution || null,
+        key: values.key || null,
+        opening_balance: values.openingBalance.toString(),
+        opening_balance_at: values.openingBalanceAt || null,
+        own_identifiers: values.kind === 'bank' ? identifiers.values : [],
+        reference: reference || null,
+        color: values.color,
+        // Left out unless something was chosen: an empty file input means
+        // "keep the icon", not "remove it".
+        ...(logo.change ? { logo: logo.value } : {}),
+      })}
+      WHERE id = ${values.id} AND household_id = ${ctx.householdId}
+      RETURNING id`)
+  } catch (e) {
+    return keyClash(e, values.key) ?? writeFailed('pengaturan', 'Akunnya gagal disimpan.', e)
+  }
+  if (updated.length === 0) return fail('Akun itu tidak ditemukan.')
 
   const backfill =
     reference || (values.kind === 'bank' && identifiers.values.length > 0)
-      ? await backfillOwnMoney(ctx.supabase, ctx.householdId)
+      ? await backfillOwnMoney(ctx.db, ctx.householdId)
       : undefined
 
   revalidateSettings(ctx.householdId)
@@ -366,11 +364,6 @@ export async function updateAccount(
     detail: details.length > 0 ? details.join(' ') : undefined,
   }
 }
-
-/** Rows read per request while looking for old own-money rows; PostgREST's own default cap. */
-const BACKFILL_PAGE = 1000
-/** Ids per update, the same chunk the review queue writes in. */
-const BACKFILL_CHUNK = 100
 
 /**
  * Turns old imported rows that moved money between the household's own
@@ -390,48 +383,37 @@ const BACKFILL_CHUNK = 100
  * The account itself is already saved when this runs, so a failure here is
  * reported as a sentence under Simpan, never as the save failing.
  */
-async function backfillOwnMoney(supabase: SupabaseLike, householdId: string): Promise<string | undefined> {
+async function backfillOwnMoney(db: Scope, householdId: string): Promise<string | undefined> {
   try {
-    const [{ data: accountRows, error: accountError }, categories] = await Promise.all([
-      supabase
-        .from('accounts')
-        .select('id, name, key, reference, own_identifiers, archived_at')
-        .eq('household_id', householdId),
-      categoriesOf(supabase, householdId),
+    const [accountRows, categories] = await Promise.all([
+      db.rows(sql`
+        SELECT id, name, key, reference, own_identifiers, archived_at
+        FROM public.accounts WHERE household_id = ${householdId}`),
+      categoriesOf(db, householdId),
     ])
-    if (accountError) throw accountError
-    const live = ((accountRows ?? []) as Record<string, unknown>[]).filter((row) => !row.archived_at)
+    const live = accountRows.filter((row) => !row.archived_at)
     const bank = live.find((row) => row.key === 'mandiri')
 
     const categoryName = new Map(categories.map((category) => [category.id, category.name]))
     const antarAccount =
       categories.find((c) => c.cashflow === 'transfer' && c.name === 'Antar Account' && !c.archivedAt)?.id ?? null
 
-    const rows: BackfillRow[] = []
-    for (let offset = 0; ; offset += BACKFILL_PAGE) {
-      const { data, error } = await supabase
-        .from('transactions')
-        .select('id, cashflow, raw_description, category_id, category_locked_at, split_of')
-        .eq('household_id', householdId)
-        .eq('source', 'xlsx')
-        .or('and(cashflow.eq.spending,to_account_id.is.null),and(cashflow.eq.income,from_account_id.is.null)')
-        .is('deleted_at', null)
-        .order('id')
-        .range(offset, offset + BACKFILL_PAGE - 1)
-      if (error) throw error
-      const page = (data ?? []) as Record<string, unknown>[]
-      for (const row of page) {
-        rows.push({
-          id: row.id as string,
-          direction: row.cashflow === 'income' ? 'in' : 'out',
-          rawDescription: (row.raw_description as string | null) ?? null,
-          categoryName: row.category_id ? (categoryName.get(row.category_id as string) ?? null) : null,
-          categoryLockedAt: (row.category_locked_at as string | null) ?? null,
-          splitOf: (row.split_of as string | null) ?? null,
-        })
-      }
-      if (page.length < BACKFILL_PAGE) break
-    }
+    // Six narrow columns of one-sided imported rows: one query, no paging.
+    const found = await db.rows(sql`
+      SELECT id, cashflow, raw_description, category_id, category_locked_at, split_of
+      FROM public.transactions
+      WHERE household_id = ${householdId} AND source = 'xlsx' AND deleted_at IS NULL
+        AND ((cashflow = 'spending' AND to_account_id IS NULL)
+          OR (cashflow = 'income' AND from_account_id IS NULL))
+      ORDER BY id`)
+    const rows: BackfillRow[] = found.map((row) => ({
+      id: row.id as string,
+      direction: row.cashflow === 'income' ? 'in' : 'out',
+      rawDescription: (row.raw_description as string | null) ?? null,
+      categoryName: row.category_id ? (categoryName.get(row.category_id as string) ?? null) : null,
+      categoryLockedAt: (row.category_locked_at as string | null) ?? null,
+      splitOf: (row.split_of as string | null) ?? null,
+    }))
 
     const plan = planOwnMoneyBackfill(rows, {
       walletNumbers: ((bank?.own_identifiers as string[] | null) ?? []).filter(Boolean),
@@ -454,24 +436,18 @@ async function backfillOwnMoney(supabase: SupabaseLike, householdId: string): Pr
         move.side === 'to'
           ? (['to_account_id', 'spending'] as const)
           : (['from_account_id', 'income'] as const)
-      for (let i = 0; i < move.ids.length; i += BACKFILL_CHUNK) {
-        const { data, error } = await supabase
-          .from('transactions')
-          .update({
-            cashflow: 'transfer',
-            [side]: move.accountId,
-            category_id: antarAccount,
-            needs_review: false,
-            confirmed_at: confirmedAt,
-          })
-          .in('id', move.ids.slice(i, i + BACKFILL_CHUNK))
-          .eq('household_id', householdId)
-          .eq('cashflow', was)
-          .is(side, null)
-          .select('id')
-        if (error) throw error
-        moved += data?.length ?? 0
-      }
+      const updated = await db.rows(sql`
+        UPDATE public.transactions SET ${setClause({
+          cashflow: 'transfer',
+          [side]: move.accountId,
+          category_id: antarAccount,
+          needs_review: false,
+          confirmed_at: confirmedAt,
+        })}
+        WHERE id = ANY(${sql.param(move.ids)}::uuid[]) AND household_id = ${householdId}
+          AND cashflow = ${was} AND ${sql.identifier(side)} IS NULL
+        RETURNING id`)
+      moved += updated.length
     }
 
     if (moved > 0) updateTag(txTag(householdId))
@@ -493,21 +469,23 @@ export async function setAccountArchived(
   const ctx = await context()
   if (!ctx) return fail(SESSION_EXPIRED)
 
-  const rows = await accountsOf(ctx.supabase, ctx.householdId)
+  const rows = await accountsOf(ctx.db, ctx.householdId)
   const current = rows.find((row) => row.id === id.data)
   if (!current) return fail('Akun itu tidak ditemukan.')
 
-  const { data, error } = await ctx.supabase
-    .from('accounts')
+  let updated: Row[]
+  try {
     // An archived account keeps no import key: the statement would otherwise
     // still be filed against an account nobody can see any more.
-    .update(archive ? { archived_at: new Date().toISOString(), key: null } : { archived_at: null })
-    .eq('id', id.data)
-    .eq('household_id', ctx.householdId)
-    .select('id')
-
-  if (error) return writeFailed('pengaturan', 'Akunnya gagal diarsipkan.', error)
-  if (!data || data.length === 0) return fail('Akun itu tidak ditemukan.')
+    updated = await ctx.db.rows(sql`
+      UPDATE public.accounts
+      SET ${setClause(archive ? { archived_at: new Date().toISOString(), key: null } : { archived_at: null })}
+      WHERE id = ${id.data} AND household_id = ${ctx.householdId}
+      RETURNING id`)
+  } catch (e) {
+    return writeFailed('pengaturan', 'Akunnya gagal diarsipkan.', e)
+  }
+  if (updated.length === 0) return fail('Akun itu tidak ditemukan.')
 
   revalidateSettings(ctx.householdId)
   return {
@@ -540,7 +518,7 @@ export async function reorderAccounts(ids: string[]): Promise<ActionResult> {
   const ctx = await context()
   if (!ctx) return fail(SESSION_EXPIRED)
 
-  const live = (await accountsOf(ctx.supabase, ctx.householdId)).filter((row) => row.archivedAt === null)
+  const live = (await accountsOf(ctx.db, ctx.householdId)).filter((row) => row.archivedAt === null)
   if (!sameMembers(live.map((row) => row.id), parsed.data)) return fail(STALE_ORDER, STALE_ORDER_DETAIL)
 
   return arrange(ctx, 'accounts', live, parsed.data)
@@ -553,7 +531,7 @@ export async function reorderCategories(ids: string[]): Promise<ActionResult> {
   const ctx = await context()
   if (!ctx) return fail(SESSION_EXPIRED)
 
-  const live = (await categoriesOf(ctx.supabase, ctx.householdId)).filter(
+  const live = (await categoriesOf(ctx.db, ctx.householdId)).filter(
     (row) => row.archivedAt === null,
   )
   // One heading, or one group's members: the same cashflow and the same parent.
@@ -573,7 +551,7 @@ function sameMembers(expected: string[], sent: string[]): boolean {
 
 async function arrange(
   ctx: NonNullable<Awaited<ReturnType<typeof context>>>,
-  table: 'accounts' | 'categories',
+  name: 'accounts' | 'categories',
   // Archived rows are not in the list a person is looking at, so they must not
   // be in the list the positions are computed from either.
   live: { id: string; sortOrder: number }[],
@@ -584,13 +562,14 @@ async function arrange(
   if (plan.length === 0) return { ok: true, message: 'Urutannya tidak berubah.' }
 
   for (const step of plan) {
-    const { error } = await ctx.supabase
-      .from(table)
-      .update({ sort_order: step.sortOrder })
-      .eq('id', step.id)
-      .eq('household_id', ctx.householdId)
-      .select('id')
-    if (error) return writeFailed('pengaturan', 'Urutannya gagal disimpan.', error)
+    try {
+      await ctx.db.rows(sql`
+        UPDATE ${table(name)} SET sort_order = ${step.sortOrder}
+        WHERE id = ${step.id} AND household_id = ${ctx.householdId}
+        RETURNING id`)
+    } catch (e) {
+      return writeFailed('pengaturan', 'Urutannya gagal disimpan.', e)
+    }
   }
 
   revalidateSettings(ctx.householdId)
@@ -613,7 +592,7 @@ export async function createCategory(
   if (!ctx) return fail(SESSION_EXPIRED)
 
   const values = parsed.data
-  const rows = await categoriesOf(ctx.supabase, ctx.householdId)
+  const rows = await categoriesOf(ctx.db, ctx.householdId)
   if (rows.some((row) => row.cashflow === values.cashflow && sameName(row.name, values.name))) {
     return fail(`Sudah ada kategori ${values.name} di ${CASHFLOW_LABELS[values.cashflow]}.`)
   }
@@ -623,26 +602,25 @@ export async function createCategory(
     if (problem) return fail('Kelompoknya tidak bisa dipakai.', problem)
   }
 
-  const { error } = await ctx.supabase
-    .from('categories')
-    .insert({
-      household_id: ctx.householdId,
-      name: values.name,
-      cashflow: values.cashflow,
-      parent_id: values.parentId || null,
-      icon: values.icon || null,
-      color: values.hue === null ? null : String(values.hue),
-      description: values.description || null,
-      ...billColumns(values),
-      sort_order: rows.length + 1,
-    })
-    .select('id')
-
-  if (error) {
-    if (error.code === '23505') {
+  try {
+    await ctx.db.rows(
+      insertInto('categories', {
+        household_id: ctx.householdId,
+        name: values.name,
+        cashflow: values.cashflow,
+        parent_id: values.parentId || null,
+        icon: values.icon || null,
+        color: values.hue === null ? null : String(values.hue),
+        description: values.description || null,
+        ...billColumns(values),
+        sort_order: rows.length + 1,
+      }),
+    )
+  } catch (e) {
+    if (codeOf(e) === '23505') {
       return fail(`Sudah ada kategori ${values.name} di ${CASHFLOW_LABELS[values.cashflow]}.`)
     }
-    return writeFailed('pengaturan', 'Kategorinya gagal disimpan.', error)
+    return writeFailed('pengaturan', 'Kategorinya gagal disimpan.', e)
   }
 
   revalidateSettings(ctx.householdId)
@@ -672,12 +650,12 @@ export async function updateCategory(
   if (!ctx) return fail(SESSION_EXPIRED)
 
   const values = parsed.data
-  const rows = await categoriesOf(ctx.supabase, ctx.householdId)
+  const rows = await categoriesOf(ctx.db, ctx.householdId)
   const current = rows.find((row) => row.id === values.id)
   if (!current) return fail('Kategori itu tidak ditemukan.')
 
   if (values.cashflow !== current.cashflow) {
-    const used = await countUsage(ctx.supabase, ctx.householdId, current.id)
+    const used = await countUsage(ctx.db, ctx.householdId, current.id)
     if (used > 0) {
       return fail(
         'Cashflow kategori ini sudah terkunci.',
@@ -720,31 +698,33 @@ export async function updateCategory(
     if (problem) return fail('Kelompoknya tidak bisa dipakai.', problem)
   }
 
-  const { data, error } = await ctx.supabase
-    .from('categories')
-    .update({
-      name: values.name,
-      cashflow: values.cashflow,
-      parent_id: values.parentId || null,
-      icon: values.icon || null,
-      color: values.hue === null ? null : String(values.hue),
-      description: values.description || null,
-      ...billColumns(values),
-    })
-    .eq('id', current.id)
-    .eq('household_id', ctx.householdId)
-    .select('id')
+  let updated: Row[]
+  try {
+    updated = await ctx.db.rows(sql`
+      UPDATE public.categories SET ${setClause({
+        name: values.name,
+        cashflow: values.cashflow,
+        parent_id: values.parentId || null,
+        icon: values.icon || null,
+        color: values.hue === null ? null : String(values.hue),
+        description: values.description || null,
+        ...billColumns(values),
+      })}
+      WHERE id = ${current.id} AND household_id = ${ctx.householdId}
+      RETURNING id`)
+  } catch (e) {
+    return writeFailed('pengaturan', 'Kategorinya gagal disimpan.', e)
+  }
+  if (updated.length === 0) return fail('Kategori itu tidak ditemukan.')
 
-  if (error) return writeFailed('pengaturan', 'Kategorinya gagal disimpan.', error)
-  if (!data || data.length === 0) return fail('Kategori itu tidak ditemukan.')
-
+  // Best effort, as it always was: the category the person edited is saved.
   for (const twin of twins) {
-    await ctx.supabase
-      .from('categories')
-      .update({ name: values.name })
-      .eq('id', twin.id)
-      .eq('household_id', ctx.householdId)
-      .select('id')
+    await ctx.db
+      .rows(sql`
+        UPDATE public.categories SET name = ${values.name}
+        WHERE id = ${twin.id} AND household_id = ${ctx.householdId}
+        RETURNING id`)
+      .catch(() => [])
   }
 
   revalidateSettings(ctx.householdId)
@@ -769,7 +749,7 @@ export async function setCategoryArchived(
   const ctx = await context()
   if (!ctx) return fail(SESSION_EXPIRED)
 
-  const rows = await categoriesOf(ctx.supabase, ctx.householdId)
+  const rows = await categoriesOf(ctx.db, ctx.householdId)
   const current = rows.find((row) => row.id === id.data)
   if (!current) return fail('Kategori itu tidak ditemukan.')
 
@@ -782,13 +762,14 @@ export async function setCategoryArchived(
 
   const stamp = archive ? new Date().toISOString() : null
   for (const row of [current, ...twins]) {
-    const { error } = await ctx.supabase
-      .from('categories')
-      .update({ archived_at: stamp })
-      .eq('id', row.id)
-      .eq('household_id', ctx.householdId)
-      .select('id')
-    if (error) return writeFailed('pengaturan', 'Kategorinya gagal diarsipkan.', error)
+    try {
+      await ctx.db.rows(sql`
+        UPDATE public.categories SET archived_at = ${stamp}
+        WHERE id = ${row.id} AND household_id = ${ctx.householdId}
+        RETURNING id`)
+    } catch (e) {
+      return writeFailed('pengaturan', 'Kategorinya gagal diarsipkan.', e)
+    }
   }
 
   revalidateSettings(ctx.householdId)
@@ -804,22 +785,24 @@ export async function setCategoryArchived(
 }
 
 /** How many transactions ever pointed at a category, deleted ones included. */
-async function countUsage(
-  supabase: SupabaseLike,
-  householdId: string,
-  categoryId: string,
-): Promise<number> {
-  const { count } = await supabase
-    .from('transactions')
-    .select('id', { count: 'exact', head: true })
-    .eq('household_id', householdId)
-    .eq('category_id', categoryId)
+async function countUsage(db: Scope, householdId: string, categoryId: string): Promise<number> {
+  const found = await db
+    .maybeOne<{ n: number }>(
+      sql`SELECT count(*)::int AS n FROM public.transactions
+          WHERE household_id = ${householdId} AND category_id = ${categoryId}`,
+    )
+    .catch(() => null)
 
-  return count ?? 0
+  return found?.n ?? 0
 }
 
-function keyClash(error: { code?: string }, key: string): ActionResult | null {
-  if (error.code !== '23505' || key === '') return null
+/** The SQLSTATE of a Postgres error, when it is one. */
+function codeOf(error: unknown): string | undefined {
+  return (error as { code?: string } | null)?.code
+}
+
+function keyClash(error: unknown, key: string): ActionResult | null {
+  if (codeOf(error) !== '23505' || key === '') return null
   return fail(
     `Kunci impor ${key} sudah dipakai akun lain.`,
     'Satu kunci hanya bisa dipegang satu akun. Lepas dulu dari akun yang memegangnya.',

@@ -15,9 +15,10 @@ describe('contentSecurityPolicy', () => {
 
   it('lets the map reach its tile host and nothing wider', () => {
     vi.stubEnv('NODE_ENV', 'production')
-    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://abcd.supabase.co')
     const connect = directives(contentSecurityPolicy('n0nce')).get('connect-src')
-    expect(connect).toEqual(["'self'", 'https://abcd.supabase.co', MAP_TILES])
+    // Nothing but this origin and the tiles: the browser no longer talks to an
+    // auth or database host directly (Supabase is gone; auth is server-side).
+    expect(connect).toEqual(["'self'", MAP_TILES])
     expect(connect?.some((source) => source.includes('*'))).toBe(false)
     expect(connect?.some((source) => source.includes('nominatim'))).toBe(false)
   })
@@ -33,11 +34,5 @@ describe('contentSecurityPolicy', () => {
     expect(policy.get('script-src')).toEqual(["'self'", "'nonce-n0nce'"])
     expect(policy.get('style-src-elem')).toEqual(["'self'", "'nonce-n0nce'"])
     expect(policy.has('upgrade-insecure-requests')).toBe(true)
-  })
-
-  it('never names a Supabase origin it could not parse', () => {
-    vi.stubEnv('NODE_ENV', 'production')
-    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'not a url')
-    expect(directives(contentSecurityPolicy('n0nce')).get('connect-src')).toEqual(["'self'", MAP_TILES])
   })
 })

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { getHousehold } from '@/lib/queries/household'
-import { getUser } from '@/lib/supabase/server'
+import { getUser } from '@/lib/auth/session'
 import { JoinForm } from './join-form'
 
 export const metadata: Metadata = { title: 'Gabung rumah tangga' }

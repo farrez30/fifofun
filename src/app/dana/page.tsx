@@ -11,7 +11,7 @@ import {
   getHousehold,
   getOpeningBalance,
 } from '@/lib/queries/household'
-import { getUser } from '@/lib/supabase/server'
+import { getUser } from '@/lib/auth/session'
 import { FundsPanel } from './funds-panel'
 import { FundsSkeleton } from './skeleton'
 

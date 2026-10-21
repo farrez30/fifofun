@@ -9,8 +9,8 @@ import { firstMatch, type Rule } from '@/lib/ledger/rules'
 import { DEFAULT_CATEGORY_BY_KIND } from '@/lib/ledger/seed-data'
 import { parseMandiriStatement, StatementParseError } from '@/lib/statement/mandiri-xlsx'
 import { statementToLedger, WALLET_ACCOUNT_KEYS } from '@/lib/statement/to-ledger'
-import { authedUser } from '@/lib/supabase/auth-user'
-import { createClient } from '@/lib/supabase/server'
+import { insertInto, json, sql, type Row, type Scope } from '@/db/query'
+import { userScope } from '@/lib/auth/session'
 import { SESSION_EXPIRED, WRITE_FAILED } from '@/lib/actions'
 import { readXlsx } from '@/lib/xlsx'
 import {
@@ -38,12 +38,11 @@ import {
  * it was picked rejects the same way every time, and the form flickered
  * "Koneksi terputus" without end. A plain fetch fails once and says so.
  *
- * The second is that every write goes through PostgREST rather than Drizzle.
- * Drizzle connects as the database owner and bypasses row level security
- * entirely, which is correct for a seed script run from a laptop and completely
- * wrong for a request arriving from a browser. Going through the user's own
- * token means the policies decide what may be written, so a mistake in this file
- * cannot reach another household's data.
+ * The second is that every statement runs in the signed-in user's own scope.
+ * The database owner bypasses row level security entirely, which is correct
+ * for a seed script run from a laptop and completely wrong for a request
+ * arriving from a browser. The user's scope means the policies decide what may
+ * be written, so a mistake in this file cannot reach another household's data.
  */
 
 /**
@@ -121,6 +120,18 @@ const STAGE_DETAIL: Record<Stage, string> = {
     'Transaksinya sudah tersimpan. Yang belum selesai hanya penghitungan aturan dan pencocokan ganda, dan keduanya menyusul sendiri di impor berikutnya.',
 }
 
+/**
+ * The SQLSTATE of an error Postgres answered with, or null for anything else.
+ *
+ * A refusal means nothing was written and gets its own sentence. A dropped
+ * connection may have landed after the commit, so it goes to the stage catch,
+ * which says data may already be there.
+ */
+function sqlState(error: unknown): string | null {
+  const code = (error as { code?: unknown } | null)?.code
+  return typeof code === 'string' && /^[0-9A-Z]{5}$/.test(code) ? code : null
+}
+
 function isoDate(date: { year: number; month: number; day: number }): string {
   return `${date.year}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`
 }
@@ -157,15 +168,12 @@ export async function importStatement(formData: FormData): Promise<ImportReport>
   let stage: Stage = 'memeriksa sesi'
 
   try {
-    const supabase = await createClient()
-    const user = await authedUser(supabase)
-    if (!user) return fail(SESSION_EXPIRED)
+    const db = await userScope()
+    if (!db) return fail(SESSION_EXPIRED)
 
-    const { data: household } = await supabase
-      .from('households')
-      .select('id')
-      .limit(1)
-      .maybeSingle()
+    // A failed read here, and in the lookups below, lands in the catch at the
+    // bottom, which names the stage and says nothing is saved yet.
+    const household = await db.maybeOne<{ id: string }>(sql`SELECT id FROM public.households LIMIT 1`)
     if (!household) {
       return fail('Akun ini belum terhubung ke rumah tangga mana pun.')
     }
@@ -256,37 +264,32 @@ export async function importStatement(formData: FormData): Promise<ImportReport>
 
     stage = 'mencocokkan'
 
-    const { data: accounts } = await supabase
-      .from('accounts')
-      .select('id, name, key, own_identifiers, reference')
-      .eq('household_id', household.id)
-      .is('archived_at', null)
+    const accounts = await db.rows(sql`
+      SELECT id, name, key, own_identifiers, reference FROM public.accounts
+      WHERE household_id = ${household.id} AND archived_at IS NULL`)
 
     // Live categories only. A rule or a name lookup that still points at an
     // archived category would quietly keep filling a pos the household retired;
     // filtered here, the rule simply stops matching and the row parks in the
     // kind's default with the review flag on, which is where an orphaned habit
     // belongs.
-    const { data: categories } = await supabase
-      .from('categories')
-      .select('id, name, cashflow')
-      .eq('household_id', household.id)
-      .is('archived_at', null)
+    const categories = await db.rows(sql`
+      SELECT id, name, cashflow FROM public.categories
+      WHERE household_id = ${household.id} AND archived_at IS NULL`)
 
     // What the household has already taught the app. Without this, the line shown
     // after teaching a rule, that the next import will file the pattern by itself,
     // was simply untrue: the import only ever read the defaults below.
-    const { data: ruleRows } = await supabase
-      .from('categorization_rules')
-      .select('id, priority, match_type, pattern, cashflow, category_id, hit_count')
-      .eq('household_id', household.id)
-      .eq('auto_apply', true)
+    const ruleRows = await db.rows(sql`
+      SELECT id, priority, match_type, pattern, cashflow, category_id, hit_count
+      FROM public.categorization_rules
+      WHERE household_id = ${household.id} AND auto_apply = true`)
 
     // A rule that targets a retired category is dropped for this run rather
     // than allowed to file rows into the archive; deleting it stays the
     // household's call, from the rules list.
-    const liveCategoryIds = new Set((categories ?? []).map((row) => row.id as string))
-    const rules: Rule[] = (ruleRows ?? [])
+    const liveCategoryIds = new Set(categories.map((row) => row.id as string))
+    const rules: Rule[] = ruleRows
       .filter((row) => row.category_id === null || liveCategoryIds.has(row.category_id as string))
       .map((row) => ({
         id: row.id as string,
@@ -306,7 +309,7 @@ export async function importStatement(formData: FormData): Promise<ImportReport>
       Gaji silently made every future import file its rows against nothing.
     */
     const idByKey = new Map(
-      (accounts ?? [])
+      accounts
         .filter((row) => row.key)
         .map((row) => [row.key as string, row.id as string]),
     )
@@ -318,7 +321,7 @@ export async function importStatement(formData: FormData): Promise<ImportReport>
       below resolve both kinds the same way.
     */
     const byNumber: Record<string, string> = {}
-    for (const row of accounts ?? []) {
+    for (const row of accounts) {
       if (!row.reference || row.key === 'mandiri') continue
       byNumber[row.reference as string] = row.id as string
       idByKey.set(row.id as string, row.id as string)
@@ -327,13 +330,13 @@ export async function importStatement(formData: FormData): Promise<ImportReport>
     // is. Two categories may share a name across cashflows, and a map keyed on the
     // name alone silently keeps whichever row came back last.
     const categoryByName = new Map(
-      (categories ?? []).map((row) => [
+      categories.map((row) => [
         `${row.cashflow as string} ${row.name as string}`,
         row.id as string,
       ]),
     )
 
-    const bank = (accounts ?? []).find((row) => row.key === 'mandiri')
+    const bank = accounts.find((row) => row.key === 'mandiri')
     if (!bank) {
       return {
         ...fail(
@@ -364,29 +367,30 @@ export async function importStatement(formData: FormData): Promise<ImportReport>
 
     stage = 'menyimpan'
 
-    const { data: batch, error: batchError } = await supabase
-      .from('import_batches')
-      .insert({
-        household_id: household.id,
-        account_id: bank.id as string,
-        filename: file.name,
-        file_hash: fileHash,
-        format: 'mandiri_livin_xlsx_v1',
-        period_start: isoDate(header.periodStart),
-        period_end: isoDate(header.periodEnd),
-        opening_balance: header.openingBalance.toString(),
-        closing_balance: header.closingBalance.toString(),
-        row_count: statement.rows.length,
-        status: 'reconciled',
-        issues: [],
-      })
-      .select('id')
-      .single()
-
-    if (batchError || !batch) {
+    let batch: { id: string }
+    try {
+      batch = await db.one<{ id: string }>(
+        insertInto('import_batches', {
+          household_id: household.id,
+          account_id: bank.id as string,
+          filename: file.name,
+          file_hash: fileHash,
+          format: 'mandiri_livin_xlsx_v1',
+          period_start: isoDate(header.periodStart),
+          period_end: isoDate(header.periodEnd),
+          opening_balance: header.openingBalance.toString(),
+          closing_balance: header.closingBalance.toString(),
+          row_count: statement.rows.length,
+          status: 'reconciled',
+          issues: json([]),
+        }),
+        'import_batches',
+      )
+    } catch (batchError) {
+      if (!sqlState(batchError)) throw batchError
       // The unique index on (household, file hash) is what makes re-uploading the
       // same statement harmless rather than duplicating it.
-      const duplicate = batchError?.code === '23505'
+      const duplicate = sqlState(batchError) === '23505'
       if (!duplicate) console.error('[impor] gagal menyimpan berkas impor', batchError)
       return {
         ok: duplicate,
@@ -474,24 +478,35 @@ export async function importStatement(formData: FormData): Promise<ImportReport>
       }
     })
 
-    const { data: written, error: writeError } = await supabase
-      .from('transactions')
-      .upsert(rows, { onConflict: 'household_id,dedupe_key', ignoreDuplicates: true })
-      // Only the rows that were actually inserted come back, which is exactly
-      // the set a manual entry can newly turn out to duplicate.
-      .select('id, occurred_at, amount, from_account_id, to_account_id')
-
-    if (writeError) {
-      console.error('[impor] transaksinya gagal disimpan', writeError)
-      return {
-        ok: false,
-        filename: file.name,
-        message: 'Transaksinya gagal disimpan.',
-        detail: WRITE_FAILED,
+    let written: WrittenRow[] = []
+    if (rows.length > 0) {
+      /*
+        The whole statement as one jsonb parameter, spread back into rows by the
+        table's own record type. A VALUES list binds twenty parameters a row and
+        runs into Postgres' limit of 65535 on a long statement. Only the rows
+        that were actually inserted come back, which is exactly the set a manual
+        entry can newly turn out to duplicate.
+      */
+      const columns = sql.raw(Object.keys(rows[0]).join(', '))
+      try {
+        written = await db.rows<WrittenRow>(sql`
+          INSERT INTO public.transactions (${columns})
+          SELECT ${columns} FROM jsonb_populate_recordset(NULL::public.transactions, ${json(rows)})
+          ON CONFLICT (household_id, dedupe_key) DO NOTHING
+          RETURNING id, occurred_at, amount, from_account_id, to_account_id`)
+      } catch (writeError) {
+        if (!sqlState(writeError)) throw writeError
+        console.error('[impor] transaksinya gagal disimpan', writeError)
+        return {
+          ok: false,
+          filename: file.name,
+          message: 'Transaksinya gagal disimpan.',
+          detail: WRITE_FAILED,
+        }
       }
     }
 
-    const inserted = written?.length ?? 0
+    const inserted = written.length
 
     stage = 'merapikan'
 
@@ -504,8 +519,8 @@ export async function importStatement(formData: FormData): Promise<ImportReport>
       changes what already landed in the ledger above.
     */
     const [duplicatesSuspected] = await Promise.all([
-      linkSuspectedDuplicates(supabase, household.id, header, written ?? [], inserted),
-      updateRuleHitCounts(supabase, rules, ruleHits),
+      linkSuspectedDuplicates(db, household.id, header, written, inserted),
+      updateRuleHitCounts(db, rules, ruleHits),
     ])
 
     // Rules too: the import bumps hit counts on the ones it applied. Expired
@@ -544,7 +559,13 @@ export async function importStatement(formData: FormData): Promise<ImportReport>
   }
 }
 
-type Supabase = Awaited<ReturnType<typeof createClient>>
+type WrittenRow = {
+  id: string
+  occurred_at: string
+  amount: number
+  from_account_id: string | null
+  to_account_id: string | null
+}
 
 /**
  * Manual entries this statement turns out to have imported.
@@ -558,10 +579,10 @@ type Supabase = Awaited<ReturnType<typeof createClient>>
  * inside the statement's period plus a few days either side.
  */
 async function linkSuspectedDuplicates(
-  supabase: Supabase,
+  db: Scope,
   householdId: string,
   header: { periodStart: { year: number; month: number; day: number }; periodEnd: { year: number; month: number; day: number } },
-  written: { id: string; occurred_at: string; amount: string; from_account_id: string | null; to_account_id: string | null }[],
+  written: WrittenRow[],
   inserted: number,
 ): Promise<number> {
   if (inserted === 0) return 0
@@ -572,35 +593,36 @@ async function linkSuspectedDuplicates(
     toJakartaInstant(header.periodEnd, { hour: 23, minute: 59, second: 59 }).getTime() + PAD_MS,
   )
 
-  const { data: manualRows } = await supabase
-    .from('transactions')
-    .select('id, occurred_at, amount, from_account_id, to_account_id')
-    .eq('household_id', householdId)
-    .eq('source', 'manual')
-    .is('deleted_at', null)
-    .is('duplicate_of', null)
-    .gte('occurred_at', from.toISOString())
-    .lte('occurred_at', to.toISOString())
+  // Best effort, like the links below: a failed read pairs nothing.
+  const manualRows = await db
+    .rows(sql`
+      SELECT id, occurred_at, amount, from_account_id, to_account_id FROM public.transactions
+      WHERE household_id = ${householdId} AND source = 'manual'
+        AND deleted_at IS NULL AND duplicate_of IS NULL
+        AND occurred_at >= ${from.toISOString()} AND occurred_at <= ${to.toISOString()}`)
+    .catch((): Row[] => [])
 
-  const pairable = (row: Record<string, unknown>) => ({
+  const pairable = (row: Row) => ({
     id: row.id as string,
     occurredAt: new Date(row.occurred_at as string),
-    amount: BigInt(row.amount as string),
+    amount: BigInt(row.amount as number),
     fromAccountId: (row.from_account_id as string | null) ?? null,
     toAccountId: (row.to_account_id as string | null) ?? null,
   })
 
-  const { pairs } = findLikelyDuplicates((manualRows ?? []).map(pairable), written.map(pairable))
+  const { pairs } = findLikelyDuplicates(manualRows.map(pairable), written.map(pairable))
 
   const linked = await Promise.all(
-    pairs.map(async (pair) => {
-      const { error } = await supabase
-        .from('transactions')
-        .update({ duplicate_of: pair.imported.id })
-        .eq('id', pair.manual.id)
-        .eq('household_id', householdId)
-      return error ? 0 : 1
-    }),
+    pairs.map((pair) =>
+      db
+        .rows(sql`
+          UPDATE public.transactions SET duplicate_of = ${pair.imported.id}
+          WHERE id = ${pair.manual.id} AND household_id = ${householdId}`)
+        .then(
+          () => 1,
+          () => 0,
+        ),
+    ),
   )
 
   return linked.reduce((sum: number, one) => sum + one, 0)
@@ -615,7 +637,7 @@ async function linkSuspectedDuplicates(
  * anyone discovers a pattern that was wrong from the day it was written.
  */
 async function updateRuleHitCounts(
-  supabase: Supabase,
+  db: Scope,
   rules: Rule[],
   ruleHits: Map<string, number>,
 ): Promise<void> {
@@ -623,10 +645,10 @@ async function updateRuleHitCounts(
     [...ruleHits].map(async ([ruleId, hits]) => {
       const rule = rules.find((candidate) => candidate.id === ruleId)
       if (!rule) return
-      await supabase
-        .from('categorization_rules')
-        .update({ hit_count: rule.hitCount + hits })
-        .eq('id', ruleId)
+      // Ignored on failure, as it always was: the count is a diagnostic.
+      await db
+        .rows(sql`UPDATE public.categorization_rules SET hit_count = ${rule.hitCount + hits} WHERE id = ${ruleId}`)
+        .catch(() => [])
     }),
   )
 }

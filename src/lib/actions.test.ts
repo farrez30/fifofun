@@ -1,9 +1,19 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
+import { createScopeStub } from '@/test/scope-stub'
 
-vi.mock('@/lib/supabase/server', () => ({ createClient: async () => ({}) }))
+const stub = createScopeStub()
+let user: { id: string; email: string | null } | null = null
+
+vi.mock('@/db/client', () => ({ db: {} }))
+vi.mock('@/lib/auth/session', () => ({ getUser: async () => user }))
+vi.mock('@/db/query', async (importActual) => ({
+  ...(await importActual<typeof import('@/db/query')>()),
+  asUser: (id: string) => ({ ...stub.scope, userId: id }),
+}))
 
 const {
+  context,
   fail,
   hhmmField,
   invalidFields,
@@ -15,6 +25,33 @@ const {
   rupiahField,
   senField,
 } = await import('./actions')
+
+describe('context', () => {
+  beforeEach(() => {
+    stub.reset()
+    user = null
+  })
+
+  it('is null for a signed-out visitor, without asking the database', async () => {
+    expect(await context()).toBeNull()
+    expect(stub.calls).toHaveLength(0)
+  })
+
+  it('is null when RLS shows the user no household', async () => {
+    user = { id: 'u1', email: null }
+    expect(await context()).toBeNull()
+    expect(stub.calls[0].sql).toContain('FROM public.households')
+  })
+
+  it('hands back the user scope, the household RLS shows, and the user id', async () => {
+    user = { id: 'u1', email: 'a@b.c' }
+    stub.queue({ id: 'h1' })
+    const ctx = await context()
+    expect(ctx?.householdId).toBe('h1')
+    expect(ctx?.userId).toBe('u1')
+    expect(ctx?.db.userId).toBe('u1')
+  })
+})
 
 describe('senField', () => {
   it('reads sen digits into a bigint without a float', () => {

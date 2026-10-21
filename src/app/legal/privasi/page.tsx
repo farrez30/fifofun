@@ -34,8 +34,8 @@ export default function PrivacyPage() {
         <ul className="list-disc space-y-1.5 pl-5">
           <li>
             <strong className="font-medium text-ink">Identitas akun.</strong> Alamat email dan
-            kata sandi yang sudah di-hash. Pengelolaannya oleh Supabase Auth; aplikasi ini tidak
-            pernah menyimpan kata sandi dalam bentuk apa pun.
+            kata sandi yang hanya disimpan sebagai hash satu arah; aplikasi ini tidak pernah
+            menyimpan kata sandi dalam bentuk yang bisa dibaca.
           </li>
           <li>
             <strong className="font-medium text-ink">Transaksi keuangan.</strong> Tanggal,
@@ -81,7 +81,8 @@ export default function PrivacyPage() {
 
       <Section title="Di mana disimpan">
         <p>
-          Pada Supabase, di atas PostgreSQL. Wilayah penyimpanannya di luar Indonesia. UU 27/2022
+          Pada Neon, di atas PostgreSQL, dengan server di Singapura. Wilayah penyimpanannya di
+          luar Indonesia. UU 27/2022
           tentang Pelindungan Data Pribadi mengizinkan pemrosesan di luar negeri sepanjang
           tingkat pelindungannya setara atau ada persetujuan; dengan memakai aplikasi ini kamu
           menyetujui penyimpanan tersebut. Kalau itu tidak dapat kamu terima, jangan memakainya.

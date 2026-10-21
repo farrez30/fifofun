@@ -11,7 +11,7 @@ import {
   getSuspectedDuplicates,
   getUnconfirmed,
 } from '@/lib/queries/household'
-import { getUser } from '@/lib/supabase/server'
+import { getUser } from '@/lib/auth/session'
 import { DuplicatesPanel } from '@/app/catat/duplicates-panel'
 import { toDuplicateView } from '@/app/catat/duplicates-view'
 import { planLedgerTidy } from '@/lib/queries/tidy'

@@ -13,7 +13,7 @@ import {
   getOpeningBalance,
   getPlan,
 } from '@/lib/queries/household'
-import { getUser } from '@/lib/supabase/server'
+import { getUser } from '@/lib/auth/session'
 import { PlannerSkeleton } from './skeleton'
 import { Target } from '@phosphor-icons/react/dist/ssr/Target'
 import { BUTTON_QUIET } from '@/components/field-base'

@@ -13,6 +13,7 @@ import {
   type ActionResult,
 } from '@/lib/actions'
 import { FUND_CASHFLOWS } from '@/lib/ledger/funds'
+import { setClause, sql } from '@/db/query'
 
 /**
  * What a pot is aiming at, and how it means to get there.
@@ -87,16 +88,18 @@ export async function setFundTarget(
     if (amount === null) patch.target_month = null
   }
 
-  const { data, error } = await ctx.supabase
-    .from('categories')
-    .update(patch)
-    .eq('id', categoryId)
-    .eq('household_id', ctx.householdId)
-    .in('cashflow', FUND_CASHFLOWS)
-    .select('id')
-
-  if (error) return writeFailed('dana', 'Targetnya gagal disimpan.', error)
-  if (!data || data.length === 0) return fail('Pos itu tidak bisa diberi target.')
+  let data: { id: string }[]
+  try {
+    data = await ctx.db.rows<{ id: string }>(sql`
+      UPDATE public.categories SET ${setClause(patch)}
+      WHERE id = ${categoryId}
+        AND household_id = ${ctx.householdId}
+        AND cashflow = ANY(${sql.param(FUND_CASHFLOWS)}::public.cashflow_type[])
+      RETURNING id`)
+  } catch (error) {
+    return writeFailed('dana', 'Targetnya gagal disimpan.', error)
+  }
+  if (data.length === 0) return fail('Pos itu tidak bisa diberi target.')
 
   // Fund targets live on category rows, so that is the tag that moved.
   updateTag(categoriesTag(ctx.householdId))
