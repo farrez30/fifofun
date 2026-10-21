@@ -11,7 +11,7 @@ import { defineConfig, devices } from '@playwright/test'
  * run, so a fixture cannot be wrong about them and cannot be right either.
  *
  * Only the routes that need neither a session nor a database are here. The rest
- * of the app is reachable only behind Supabase, and a suite that quietly skips
+ * of the app is reachable only behind a session, and a suite that quietly skips
  * itself when the environment is missing is worse than one that never claimed
  * to cover it.
  */
@@ -51,8 +51,9 @@ export default defineConfig({
       // Deliberately unreachable. Every route here renders without a session,
       // and pointing at a real project would make the suite depend on secrets
       // it has no business holding.
-      NEXT_PUBLIC_SUPABASE_URL: 'http://127.0.0.1:54321',
-      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_unused',
+      DATABASE_POOL_URL: 'postgres://pages@127.0.0.1:1/pages',
+      BETTER_AUTH_URL: 'http://localhost:3000',
+      BETTER_AUTH_SECRET: 'pages-placeholder-secret-not-used-for-anything',
     },
   },
 })

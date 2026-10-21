@@ -11,50 +11,32 @@ Semua perintah dijalankan dari akar repo.
 ## Yang harus ada sebelum mulai
 
 - Akun Vercel, sudah tertaut ke GitHub.
-- Project Supabase yang akan dipakai produksi. Boleh project yang sama dengan
-  yang dipakai `.env.local`, tapi lihat catatan di bawah sebelum memutuskan.
+- Project Neon `fifofun` (`silent-forest-61541759`, org VCC, Singapura, PG17).
+  Branch `main` untuk produksi, `dev` untuk pengembangan; `.env.local` menunjuk
+  `dev`, jadi seed dan migrasi coba-coba dari laptop tidak menyentuh data
+  sungguhan.
 - Repo sudah terdorong ke `origin`, dan `pnpm build` hijau di mesin sendiri.
-
-## Satu project Supabase, atau dua
-
-Yang paling murah adalah memakai satu project untuk lokal dan produksi. Yang
-paling benar adalah dua: begitu ada satu orang lain memakai aplikasinya,
-`pnpm db:seed` atau satu migrasi yang salah dari laptop menimpa data sungguhan,
-dan tidak ada yang mengingatkan sebelum itu terjadi.
-
-Rekomendasinya dua project sejak awal, karena memisahkannya belakangan berarti
-memindahkan data, bukan mengganti satu variabel. Kalau tetap satu, perlakukan
-`.env.local` sebagai kredensial produksi dan jangan pernah menjalankan seed di
-atasnya.
-
-Region project menentukan region fungsi di langkah berikutnya. Baca dari host
-pooler-nya: `aws-0-ap-northeast-1.pooler.supabase.com` berarti Tokyo.
 
 ## Region
 
-`vercel.json` memasang `regions: ["hnd1"]`, Tokyo, karena project Supabase-nya
-ada di `ap-northeast-1`.
+`vercel.json` memasang `regions: ["sin1"]`, Singapura, karena database Neon-nya
+ada di `aws-ap-southeast-1`.
 
 Ini bukan penyetelan halus. Default Vercel adalah `iad1` di Washington, dan
 setiap halaman di sini menjalankan beberapa query berurutan; dengan default itu
 tiap query membayar sekali perjalanan menyeberangi Pasifik, dan pemakainya
 menunggu jumlah dari semuanya. Menaruh fungsi di sebelah database menghapus
-ongkos itu seluruhnya.
-
-Kalau project Supabase-mu ada di region lain, ganti kodenya:
-Singapura `sin1`, Sydney `syd1`, Frankfurt `fra1`, Washington `iad1`. Paket
-Hobby hanya boleh satu region; kalau `vercel.json` ditolak, setel lewat
-Settings → Functions → Function Region di dashboard dan hapus kuncinya dari
-berkas.
+ongkos itu seluruhnya. Paket Hobby hanya boleh satu region; kalau `vercel.json`
+ditolak, setel lewat Settings → Functions → Function Region di dashboard dan
+hapus kuncinya dari berkas.
 
 ## Variabel lingkungan
 
 | Variabel | Environment | Dari mana |
 | --- | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Production, Preview | Supabase → Project Settings → Data API |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Production, Preview | idem, kunci `sb_publishable_…` |
-| `SUPABASE_SECRET_KEY` | Production | idem, kunci `sb_secret_…`. Server saja |
-| `DATABASE_POOL_URL` | Production, Preview | Connect → Transaction pooler, port 6543 |
+| `DATABASE_POOL_URL` | Production, Preview | `npx neonctl connection-string main --project-id silent-forest-61541759 --pooled` |
+| `BETTER_AUTH_URL` | Production, Preview | origin deployment itu sendiri, tanpa garis miring di ujung |
+| `BETTER_AUTH_SECRET` | Production, Preview | 32 byte acak; menggantinya mengeluarkan semua orang |
 | `NEXT_PUBLIC_SITE_URL` | Production | domain final, tanpa garis miring di ujung |
 | `TELEGRAM_BOT_TOKEN` | Production | @BotFather |
 | `TELEGRAM_WEBHOOK_SECRET` | Production | string acak panjang buatan sendiri |
@@ -64,23 +46,22 @@ berkas.
 Tiga hal yang mudah salah di tabel ini.
 
 **`DATABASE_URL` tidak ada di sana, dan itu disengaja.** Yang dipakai saat
-melayani permintaan adalah transaction pooler di port 6543; session pooler di
-5432 hanya untuk migrasi dan seed, yang dijalankan dari laptop.
+melayani permintaan adalah endpoint `-pooler`; endpoint langsung hanya untuk
+migrasi dan seed, yang dijalankan dari laptop.
 [`src/db/client.ts`](../src/db/client.ts) jatuh ke `DATABASE_URL` kalau
 `DATABASE_POOL_URL` kosong, jadi menyetel keduanya berarti salah ketik pada yang
-benar akan diam-diam ditutupi oleh yang salah, dan aplikasinya berjalan di
-pooler yang tidak sanggup menahan jumlah koneksi serverless sampai kehabisan.
-Tidak menyetelnya membuat kesalahan itu berisik, yang jauh lebih baik.
+benar akan diam-diam ditutupi oleh yang salah. Tidak menyetelnya membuat
+kesalahan itu berisik, yang jauh lebih baik.
 
-**Empat variabel Telegram itu satu paket.** Webhook menulis dengan kunci rahasia
-dan karena itu melewati row level security, jadi secret dan allowlist-lah yang
-berdiri antara URL publik dan baris orang lain. Setel keempatnya, atau kosongkan
-keempatnya: tanpa `TELEGRAM_WEBHOOK_SECRET` endpoint-nya menolak semua
-permintaan dengan 503, yang memang perilaku yang diinginkan.
+**Empat variabel Telegram itu satu paket.** Webhook menulis sebagai pemilik
+database dan karena itu melewati row level security, jadi secret dan
+allowlist-lah yang berdiri antara URL publik dan baris orang lain. Setel
+keempatnya, atau kosongkan keempatnya: tanpa `TELEGRAM_WEBHOOK_SECRET`
+endpoint-nya menolak semua permintaan dengan 503, yang memang perilaku yang
+diinginkan.
 
-**Yang berawalan `NEXT_PUBLIC_` dipanggang saat build.** Mengubahnya tidak
-berpengaruh sampai ada deploy baru. Ini juga sebabnya `NEXT_PUBLIC_SITE_URL`
-punya masalah ayam-dan-telur di deploy pertama, yang ditangani di bawah.
+**`BETTER_AUTH_URL` harus persis origin yang dibuka orang.** Better Auth menolak
+permintaan dari origin lain, jadi deployment pratinjau butuh nilainya sendiri.
 
 ## Jalur A — integrasi Git (rekomendasi)
 
@@ -130,7 +111,7 @@ vercel env add DATABASE_POOL_URL production
 ```
 
 Perintah itu membaca nilainya dari stdin, jadi kredensialnya tidak pernah masuk
-riwayat shell. Kesembilan baris di tabel sekaligus, dibaca dari `.env.local`
+riwayat shell. Semua baris di tabel sekaligus, dibaca dari `.env.local`
 dengan sifat yang sama:
 
 ```bash
@@ -172,8 +153,10 @@ Vercel tidak menjalankan migrasi, dan sebaiknya memang tidak: build berjalan
 paralel dan bisa diulang, dua di antaranya yang bertemu di satu database adalah
 cara yang bagus untuk merusaknya.
 
-Jalankan dari laptop, dengan `DATABASE_URL` di `.env.local` menunjuk session
-pooler project produksi:
+Jalankan dari laptop, dengan `DATABASE_URL` menunjuk endpoint langsung branch
+yang dituju (`main` untuk produksi). `drizzle/prelude-neon.sql` jalan lebih dulu
+setiap kali: ia membuat ulang yang dulu disediakan Supabase sebelum migrasi 0000
+(role, schema `auth`, `auth.users`, `auth.uid()`), dan aman diulang:
 
 ```bash
 pnpm db:migrate
@@ -186,11 +169,39 @@ melayani permintaan akan gagal di antara keduanya.
 
 Jangan jalankan `pnpm db:seed` terhadap produksi.
 
+## Pindah dari Supabase (sekali saja)
+
+`pnpm db:import-supabase` menyalin seluruh `public` dan `auth.users` dari
+Supabase ke branch Neon yang sudah dimigrasi dan masih kosong, dalam satu
+transaksi. Id user dan hash bcrypt ikut, jadi semua orang masuk dengan kata
+sandi lamanya. Sesi tidak ikut: semua orang masuk sekali lagi.
+
+1. `pnpm db:migrate` ke branch `main` Neon (endpoint langsung).
+2. Latihan dulu. Semua dibaca, ditulis, dan dicocokkan jumlah serta md5 isinya
+   per tabel, lalu di-rollback:
+
+   ```bash
+   SOURCE_DATABASE_URL=<supabase, koneksi langsung> DATABASE_URL=<neon main, langsung> \
+     IMPORT_ALLOW_REMOTE=1 pnpm db:import-supabase --kering
+   ```
+
+3. Kalau semua baris berakhir `isi sama`, jalankan lagi tanpa `--kering`. Satu
+   tabel yang beda membatalkan seluruh salinan, jadi tidak ada keadaan
+   setengah jadi.
+4. Ganti env Production di Vercel: `DATABASE_URL` (langsung),
+   `DATABASE_POOL_URL` (`-pooler`), `BETTER_AUTH_URL`, `BETTER_AUTH_SECRET`. Hapus env Supabase, lalu Redeploy.
+5. Periksa seperti bagian Verifikasi di bawah. Biarkan project Supabase hidup
+   sampai beberapa hari tanpa masalah; itulah jalan mundurnya (kembalikan env
+   lama, lalu promote deploy sebelumnya).
+
+Data yang dicatat di Neon setelah langkah 4 tidak ikut mundur kalau jalan mundur
+itu dipakai, jadi putuskan dalam hitungan jam, bukan hari.
+
 ## Setelah deploy pertama
 
-**Supabase Auth.** Authentication → URL Configuration → Site URL diisi domain
-produksi. Email konfirmasi pendaftaran memakai nilai ini, dan kalau masih
-`localhost` tautannya mati untuk semua orang selain kamu.
+**Auth.** `BETTER_AUTH_URL` di Production diisi domain produksi lalu Redeploy.
+Tidak ada lagi email konfirmasi pendaftaran: akun dibuat dari form daftar dengan
+kode undangan dan langsung bisa masuk.
 
 **Telegram.** Webhook menunjuk domain lama sampai didaftarkan ulang:
 

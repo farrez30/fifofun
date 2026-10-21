@@ -20,22 +20,17 @@ TARGET="${1:-production}"
 VERCEL="pnpm dlx vercel@latest"
 
 VARS=(
-  NEXT_PUBLIC_SUPABASE_URL
-  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
   DATABASE_POOL_URL
+  BETTER_AUTH_URL
+  BETTER_AUTH_SECRET
 )
 
-# The service key and the bot travel together, and neither goes to preview.
-#
-# The only thing that reads SUPABASE_SECRET_KEY at runtime is the Telegram
-# webhook, which bypasses row level security precisely because it has no user to
-# act as. Without the bot's own secret that route answers 503 before it ever
-# reaches the key, so a preview deployment has nothing to do with it — and a
-# preview is a second public URL onto the same rows. A key that grants
-# everything and is read by nothing should not be sitting there.
+# The bot's secrets go to production only. The Telegram webhook writes as the
+# database owner (RLS off) because it has no user to act as; without its own
+# secret the route answers 503, so a preview deployment has nothing to do with
+# it, and a preview is a second public URL onto the same rows.
 if [ "$TARGET" = "production" ]; then
   VARS+=(
-    SUPABASE_SECRET_KEY
     TELEGRAM_BOT_TOKEN
     TELEGRAM_WEBHOOK_SECRET
     TELEGRAM_ALLOWED_CHAT_IDS

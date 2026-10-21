@@ -25,8 +25,9 @@ jobs:
       # Deliberately fake. Nothing in the build connects to a database, and a CI
       # run that can reach the real project is a credential leak waiting for a
       # malicious pull request to happen.
-      NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
-      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
+      DATABASE_POOL_URL: postgres://ci@127.0.0.1:1/ci
+      BETTER_AUTH_URL: http://localhost:3000
+      BETTER_AUTH_SECRET: ci-placeholder-secret-not-used-for-anything
       NEXT_TELEMETRY_DISABLED: '1'
 
     steps:
@@ -120,8 +121,9 @@ jobs:
       - name: Build
         run: pnpm build
         env:
-          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
-          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_unused
+          DATABASE_POOL_URL: postgres://ci@127.0.0.1:1/ci
+          BETTER_AUTH_URL: http://localhost:3000
+          BETTER_AUTH_SECRET: ci-placeholder-secret-not-used-for-anything
 
       # Only the routes that need neither a session nor a database. The server
       # env is set by playwright.pages.config.ts and points nowhere real.

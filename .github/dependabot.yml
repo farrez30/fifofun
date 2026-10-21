@@ -26,8 +26,8 @@ updates:
       # Majors that have to move together, or the lockfile is half upgraded.
       next:
         patterns: ['next', '@next/*', 'react', 'react-dom', 'eslint-config-next']
-      supabase:
-        patterns: ['@supabase/*']
+      auth:
+        patterns: ['better-auth', '@better-auth/*']
       drizzle:
         patterns: ['drizzle-orm', 'drizzle-kit']
     ignore:
