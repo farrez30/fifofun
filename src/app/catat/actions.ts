@@ -34,6 +34,7 @@ import { validateEntry, type CashflowType } from '@/lib/ledger/types'
 import { formatIdr } from '@/lib/money'
 import { groupRefusal } from '@/lib/queries/categories'
 import { getAccounts, getAdjustments, getAllTransactions } from '@/lib/queries/household'
+import { insertInto, setClause, sql, type Scope } from '@/db/query'
 
 /**
  * The first write path in this app that creates a ledger row from a form.
@@ -96,6 +97,11 @@ function firstIssue(error: z.ZodError): string {
   return error.issues[0]?.message ?? 'Isiannya belum lengkap.'
 }
 
+/** A unique violation: the client key was already written, so the tap was a repeat. */
+function isDuplicate(error: unknown): boolean {
+  return (error as { code?: string } | null)?.code === '23505'
+}
+
 /**
  * A hand-typed row moves every page that shows money, and they all read the
  * ledger through the one tag. Expiring it also clears the client's router
@@ -127,22 +133,20 @@ export async function recordEntry(
 
   const ctx = await context()
   if (!ctx) return fail(SESSION_EXPIRED)
-  const { supabase, householdId } = ctx
+  const { db, householdId } = ctx
   const input = parsed.data
 
-  const { data: category } = await supabase
-    .from('categories')
-    .select('id, name, cashflow')
-    .eq('household_id', householdId)
-    .eq('id', input.categoryId)
-    .is('archived_at', null)
-    .maybeSingle()
+  const category = await db
+    .maybeOne<{ id: string; name: string; cashflow: CashflowType }>(sql`
+      SELECT id, name, cashflow FROM public.categories
+      WHERE household_id = ${householdId} AND id = ${input.categoryId} AND archived_at IS NULL`)
+    .catch(() => null)
   if (!category) return fail('Kategori itu tidak ada di rumah tangga ini.')
 
-  const isGroup = await groupRefusal(householdId, input.categoryId, category.name as string)
+  const isGroup = await groupRefusal(householdId, input.categoryId, category.name)
   if (isGroup) return fail('Kelompok tidak bisa dipakai langsung.', isGroup)
 
-  const cashflow = category.cashflow as CashflowType
+  const cashflow = category.cashflow
   const sides = sidesFor(cashflow, input)
 
   if (cashflow === 'transfer' && (!sides.fromAccountId || !sides.toAccountId)) {
@@ -163,13 +167,12 @@ export async function recordEntry(
   const ids = [
     ...new Set([sides.fromAccountId, sides.toAccountId].filter((id): id is string => Boolean(id))),
   ]
-  const { data: owned } = await supabase
-    .from('accounts')
-    .select('id')
-    .eq('household_id', householdId)
-    .in('id', ids)
-    .is('archived_at', null)
-  if ((owned?.length ?? 0) !== ids.length) {
+  const owned = await db
+    .rows(sql`
+      SELECT id FROM public.accounts
+      WHERE household_id = ${householdId} AND id = ANY(${sql.param(ids)}::uuid[]) AND archived_at IS NULL`)
+    .catch(() => [])
+  if (owned.length !== ids.length) {
     return fail('Akun itu tidak ada di rumah tangga ini.')
   }
 
@@ -193,7 +196,7 @@ export async function recordEntry(
   if (problems.length > 0) return fail(describeProblem(problems[0]))
 
   const now = new Date().toISOString()
-  const { error } = await supabase.from('transactions').insert({
+  const write = insertInto('transactions', {
     household_id: householdId,
     occurred_at: occurredAt.toISOString(),
     description: input.description,
@@ -211,8 +214,10 @@ export async function recordEntry(
     needs_review: false,
   })
 
-  if (error) {
-    if (error.code === '23505') {
+  try {
+    await db.rows(write)
+  } catch (error) {
+    if (isDuplicate(error)) {
       return {
         ok: true,
         message: 'Sudah tersimpan sebelumnya.',
@@ -225,7 +230,7 @@ export async function recordEntry(
   revalidateLedger(householdId)
   return {
     ok: true,
-    message: `${formatIdr(input.amount, { decimals: input.amount % 100n !== 0n })} tercatat ke ${category.name as string}.`,
+    message: `${formatIdr(input.amount, { decimals: input.amount % 100n !== 0n })} tercatat ke ${category.name}.`,
     applied: 1,
   }
 }
@@ -240,19 +245,21 @@ export async function deleteEntry(
   const ctx = await context()
   if (!ctx) return fail(SESSION_EXPIRED)
 
-  const { data, error } = await ctx.supabase
-    .from('transactions')
-    .update({ deleted_at: new Date().toISOString() })
-    .eq('id', parsed.data.transactionId)
-    .eq('household_id', ctx.householdId)
+  let data: unknown[]
+  try {
     // A bank row is a fact the running balance is reconciled against; hiding
     // one would make the only external check this app has stop adding up.
-    .in('source', ['manual', 'telegram'])
-    .is('deleted_at', null)
-    .select('id')
-
-  if (error) return writeFailed('catat', 'Gagal menghapus catatannya.', error)
-  if (!data || data.length === 0) {
+    data = await ctx.db.rows(sql`
+      UPDATE public.transactions SET deleted_at = ${new Date().toISOString()}
+      WHERE id = ${parsed.data.transactionId}
+        AND household_id = ${ctx.householdId}
+        AND source IN ('manual', 'telegram')
+        AND deleted_at IS NULL
+      RETURNING id`)
+  } catch (error) {
+    return writeFailed('catat', 'Gagal menghapus catatannya.', error)
+  }
+  if (data.length === 0) {
     return fail(
       'Catatan itu tidak ditemukan, atau berasal dari bank.',
       'Baris dari e-Statement tidak bisa dihapus karena rekonsiliasi saldo bergantung padanya.',
@@ -269,27 +276,29 @@ export async function deleteEntry(
 
 /** The category a correction is filed under, made on first use. Null if it could not be. */
 async function adjustmentCategory(
-  supabase: NonNullable<Awaited<ReturnType<typeof context>>>['supabase'],
+  db: Scope,
   householdId: string,
   adjustment: Pick<Adjustment, 'cashflow' | 'categoryName'>,
 ): Promise<string | null> {
-  const { data: existing } = await supabase
-    .from('categories')
-    .select('id')
-    .eq('household_id', householdId)
-    .eq('cashflow', adjustment.cashflow)
-    .eq('name', adjustment.categoryName)
-    .is('archived_at', null)
-    .maybeSingle()
-  if (existing) return existing.id as string
+  const existing = await db
+    .maybeOne<{ id: string }>(sql`
+      SELECT id FROM public.categories
+      WHERE household_id = ${householdId}
+        AND cashflow = ${adjustment.cashflow}
+        AND name = ${adjustment.categoryName}
+        AND archived_at IS NULL`)
+    .catch(() => null)
+  if (existing) return existing.id
 
-  const { data: created, error } = await supabase
-    .from('categories')
-    .insert({ household_id: householdId, name: adjustment.categoryName, cashflow: adjustment.cashflow })
-    .select('id')
-    .maybeSingle()
-  if (!created) console.error('[catat] kategori penyesuaian gagal dibuat', error)
-  return (created?.id as string | undefined) ?? null
+  try {
+    const created = await db.maybeOne<{ id: string }>(
+      insertInto('categories', { household_id: householdId, name: adjustment.categoryName, cashflow: adjustment.cashflow }),
+    )
+    return created?.id ?? null
+  } catch (error) {
+    console.error('[catat] kategori penyesuaian gagal dibuat', error)
+    return null
+  }
 }
 
 export async function adjustBalance(
@@ -307,7 +316,7 @@ export async function adjustBalance(
 
   const ctx = await context()
   if (!ctx) return fail(SESSION_EXPIRED)
-  const { supabase, householdId } = ctx
+  const { db, householdId } = ctx
   const input = parsed.data
 
   const accounts = await getAccounts(householdId)
@@ -330,7 +339,7 @@ export async function adjustBalance(
     return { ok: true, message: 'Saldonya sudah sama. Tidak ada yang ditulis.' }
   }
 
-  const categoryId = await adjustmentCategory(supabase, householdId, adjustment)
+  const categoryId = await adjustmentCategory(db, householdId, adjustment)
   if (!categoryId) return fail('Kategori penyesuaian belum ada dan gagal dibuat.', WRITE_FAILED)
 
   const [year, month, day] = input.date.split('-').map(Number)
@@ -344,7 +353,7 @@ export async function adjustBalance(
   const sides = sidesFor(adjustment.cashflow, { accountId: account.id })
   const now = new Date().toISOString()
 
-  const { error } = await supabase.from('transactions').insert({
+  const write = insertInto('transactions', {
     household_id: householdId,
     occurred_at: occurredAt.toISOString(),
     description: `Penyesuaian saldo ${account.name}`,
@@ -360,8 +369,10 @@ export async function adjustBalance(
     needs_review: false,
   })
 
-  if (error) {
-    if (error.code === '23505') {
+  try {
+    await db.rows(write)
+  } catch (error) {
+    if (isDuplicate(error)) {
       return { ok: true, message: 'Penyesuaiannya sudah tercatat sebelumnya.' }
     }
     return writeFailed('catat', 'Penyesuaiannya gagal disimpan.', error)
@@ -387,7 +398,7 @@ export async function adjustBalance(
 export async function recomputeAdjustments(): Promise<ActionResult> {
   const ctx = await context()
   if (!ctx) return fail(SESSION_EXPIRED)
-  const { supabase, householdId } = ctx
+  const { db, householdId } = ctx
 
   const [accounts, transactions, adjustments] = await Promise.all([
     getAccounts(householdId, { includeArchived: true }),
@@ -405,7 +416,7 @@ export async function recomputeAdjustments(): Promise<ActionResult> {
     let write: Record<string, string | null> = { deleted_at: now }
     if (row.amount > 0n) {
       const kind = adjustmentFor(0n, row.cashflow === 'income' ? 1n : -1n)
-      const categoryId = kind ? await adjustmentCategory(supabase, householdId, kind) : null
+      const categoryId = kind ? await adjustmentCategory(db, householdId, kind) : null
       if (!categoryId) return fail('Kategori penyesuaian belum ada dan gagal dibuat.', WRITE_FAILED)
       const signed = row.cashflow === 'income' ? row.amount : -row.amount
       const sides = sidesFor(row.cashflow, { accountId: row.accountId })
@@ -419,14 +430,14 @@ export async function recomputeAdjustments(): Promise<ActionResult> {
       }
     }
 
-    const { error } = await supabase
-      .from('transactions')
-      .update(write)
-      .eq('id', row.id)
-      .eq('household_id', householdId)
-      .eq('source', 'manual')
-      .select('id')
-    if (error) return writeFailed('catat', `Penyesuaian saldo ${name} gagal dihitung ulang.`, error)
+    try {
+      await db.rows(sql`
+        UPDATE public.transactions SET ${setClause(write)}
+        WHERE id = ${row.id} AND household_id = ${householdId} AND source = 'manual'
+        RETURNING id`)
+    } catch (error) {
+      return writeFailed('catat', `Penyesuaian saldo ${name} gagal dihitung ulang.`, error)
+    }
   }
 
   revalidateLedger(householdId)
@@ -458,17 +469,18 @@ export async function mergeDuplicate(
 
   const ctx = await context()
   if (!ctx) return fail(SESSION_EXPIRED)
-  const { supabase, householdId } = ctx
+  const { db, householdId } = ctx
   const { manualId, importedId, keep } = parsed.data
 
-  const { data: rows } = await supabase
-    .from('transactions')
-    .select('id, source, cashflow, category_id, note, confirmed_at, duplicate_of, deleted_at')
-    .eq('household_id', householdId)
-    .in('id', [manualId, importedId])
+  const rows = await db
+    .rows<Record<string, unknown>>(sql`
+      SELECT id, source, cashflow, category_id, note, confirmed_at, duplicate_of, deleted_at
+      FROM public.transactions
+      WHERE household_id = ${householdId} AND id = ANY(${sql.param([manualId, importedId])}::uuid[])`)
+    .catch(() => [])
 
-  const manual = rows?.find((row) => row.id === manualId)
-  const imported = rows?.find((row) => row.id === importedId)
+  const manual = rows.find((row) => row.id === manualId)
+  const imported = rows.find((row) => row.id === importedId)
 
   // Pressing the button twice, or having done it in another tab, is a state
   // that already holds rather than an error.
@@ -484,13 +496,12 @@ export async function mergeDuplicate(
 
   let categoryCashflow: CashflowType | null = null
   if (manual.category_id) {
-    const { data: category } = await supabase
-      .from('categories')
-      .select('cashflow')
-      .eq('household_id', householdId)
-      .eq('id', manual.category_id)
-      .maybeSingle()
-    categoryCashflow = (category?.cashflow as CashflowType | undefined) ?? null
+    const category = await db
+      .maybeOne<{ cashflow: CashflowType }>(sql`
+        SELECT cashflow FROM public.categories
+        WHERE household_id = ${householdId} AND id = ${manual.category_id as string}`)
+      .catch(() => null)
+    categoryCashflow = category?.cashflow ?? null
   }
 
   const manualSide = {
@@ -518,22 +529,22 @@ export async function mergeDuplicate(
   const decision = planMerge(manualSide, categoryCashflow, importedSide, now, keep)
 
   if (decision.importedPatch) {
-    const { error } = await supabase
-      .from('transactions')
-      .update(decision.importedPatch)
-      .eq('id', importedId)
-      .eq('household_id', householdId)
-      .select('id')
-    if (error) return writeFailed('catat', 'Gagal memindahkan kategorinya ke baris bank.', error)
+    try {
+      await db.rows(sql`
+        UPDATE public.transactions SET ${setClause({ ...decision.importedPatch })}
+        WHERE id = ${importedId} AND household_id = ${householdId}
+        RETURNING id`)
+    } catch (error) {
+      return writeFailed('catat', 'Gagal memindahkan kategorinya ke baris bank.', error)
+    }
   }
 
-  const { error: hideError } = await supabase
-    .from('transactions')
-    .update({ deleted_at: now.toISOString() })
-    .eq('id', manualId)
-    .eq('household_id', householdId)
-    .select('id')
-  if (hideError) {
+  try {
+    await db.rows(sql`
+      UPDATE public.transactions SET deleted_at = ${now.toISOString()}
+      WHERE id = ${manualId} AND household_id = ${householdId}
+      RETURNING id`)
+  } catch (hideError) {
     return writeFailed('catat', 'Kategorinya pindah, tapi catatan manualnya gagal dihapus.', hideError)
   }
 
@@ -558,28 +569,29 @@ export async function keepBoth(
 
   const ctx = await context()
   if (!ctx) return fail(SESSION_EXPIRED)
-  const { supabase, householdId } = ctx
+  const { db, householdId } = ctx
 
-  const { data, error } = await supabase
-    .from('transactions')
-    .update({ duplicate_of: null })
-    .eq('id', parsed.data.manualId)
-    .eq('household_id', householdId)
-    .eq('source', 'manual')
-    .eq('duplicate_of', parsed.data.importedId)
-    .select('id')
+  let data: unknown[]
+  try {
+    data = await db.rows(sql`
+      UPDATE public.transactions SET duplicate_of = NULL
+      WHERE id = ${parsed.data.manualId}
+        AND household_id = ${householdId}
+        AND source = 'manual'
+        AND duplicate_of = ${parsed.data.importedId}
+      RETURNING id`)
+  } catch (error) {
+    return writeFailed('catat', 'Gagal menyimpan keputusannya.', error)
+  }
 
-  if (error) return writeFailed('catat', 'Gagal menyimpan keputusannya.', error)
-
-  if (!data || data.length === 0) {
+  if (data.length === 0) {
     // Either it was already decided, or the pair never existed. Reading the row
     // tells the two apart, and only one of them is a failure.
-    const { data: manual } = await supabase
-      .from('transactions')
-      .select('id, duplicate_of')
-      .eq('household_id', householdId)
-      .eq('id', parsed.data.manualId)
-      .maybeSingle()
+    const manual = await db
+      .maybeOne<{ id: string; duplicate_of: string | null }>(sql`
+        SELECT id, duplicate_of FROM public.transactions
+        WHERE household_id = ${householdId} AND id = ${parsed.data.manualId}`)
+      .catch(() => null)
     if (manual && manual.duplicate_of === null) {
       return { ok: true, message: 'Keduanya sudah dipertahankan.' }
     }

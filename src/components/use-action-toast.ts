@@ -46,6 +46,15 @@ export function useActionToast(result: Outcome | null, pending: boolean, loading
       toast.dismiss(id)
     }
   }, [pending, result, loading, id])
+
+  // A form that leaves the screen mid-save (an action that redirects) never
+  // sees pending turn false, and the toaster outlives it in the layout.
+  useEffect(
+    () => () => {
+      if (spinning.current) toast.dismiss(id)
+    },
+    [id],
+  )
 }
 
 /**

@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { MAX_SEN, parseIdAmount } from '@/lib/money'
-import { authedUser } from '@/lib/supabase/auth-user'
-import { createClient } from '@/lib/supabase/server'
+import { asUser, sql, type Scope } from '@/db/query'
+import { getUser } from '@/lib/auth/session'
 
 /**
  * What every server action shares: the result shape, the session and household
@@ -66,25 +66,21 @@ export const SESSION_EXPIRED = 'Sesi kamu sudah berakhir. Masuk lagi lalu ulangi
 export const WRITE_FAILED =
   'Coba lagi sebentar lagi. Kalau tetap begini, kejadiannya sudah tercatat di server.'
 
-export function writeFailed(scope: string, message: string, error: { message: string }): ActionResult {
+export function writeFailed(scope: string, message: string, error: unknown): ActionResult {
   console.error(`[${scope}] ${message}`, error)
   return fail(message, WRITE_FAILED)
 }
 
 /** The signed-in user and the household RLS lets them see, or null for either missing. */
-export async function context() {
-  const supabase = await createClient()
-  const user = await authedUser(supabase)
+export async function context(): Promise<{ db: Scope; householdId: string; userId: string } | null> {
+  const user = await getUser()
   if (!user) return null
+  const db = asUser(user.id)
 
-  const { data: household } = await supabase
-    .from('households')
-    .select('id')
-    .limit(1)
-    .maybeSingle()
+  const household = await db.maybeOne<{ id: string }>(sql`SELECT id FROM public.households LIMIT 1`)
   if (!household) return null
 
-  return { supabase, householdId: household.id as string }
+  return { db, householdId: household.id, userId: user.id }
 }
 
 /** Sen as digits, bounded. '0' is a legal zero; whether zero is allowed is the caller's call. */

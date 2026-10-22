@@ -18,7 +18,7 @@ import {
   getHousehold,
   getMatchingTransactions,
 } from '@/lib/queries/household'
-import { getUser } from '@/lib/supabase/server'
+import { getUser } from '@/lib/auth/session'
 import { monthOnPage, monthPages, pageCount, pageHref, pageSlice, parsePage } from '@/lib/paging'
 import { sectionHref, sectionOf } from '@/lib/sections'
 import { ReportSkeleton } from './skeleton'

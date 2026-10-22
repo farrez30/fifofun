@@ -2,8 +2,9 @@
 
 import { redirect } from 'next/navigation'
 import { SESSION_EXPIRED } from '@/lib/actions'
+import { sql } from '@/db/query'
+import { userScope } from '@/lib/auth/session'
 import { hashCode, normaliseCode } from '@/lib/invites'
-import { createClient } from '@/lib/supabase/server'
 
 /**
  * Accepting an invitation.
@@ -47,12 +48,23 @@ export async function joinHousehold(
     }
   }
 
-  const supabase = await createClient()
-  const { data, error } = await supabase.rpc('redeem_invite', { p_code_hash: hashCode(code) })
+  // Signed out: the function would answer 'unauthenticated' anyway, so it is not asked.
+  const db = await userScope()
+  if (!db) return { ok: false, message: SESSION_EXPIRED }
 
-  if (error) return { ok: false, message: 'Kodenya gagal diproses. Coba lagi sebentar lagi.' }
-  if (data !== 'ok') {
-    return { ok: false, message: MESSAGES[data as string] ?? 'Kode itu tidak bisa dipakai.' }
+  let status: string | null
+  try {
+    const row = await db.one<{ status: string | null }>(
+      sql`SELECT public.redeem_invite(p_code_hash => ${hashCode(code)}) AS status`,
+      'redeem_invite',
+    )
+    status = row.status
+  } catch (e) {
+    console.error('[gabung] redeem_invite failed', e)
+    return { ok: false, message: 'Kodenya gagal diproses. Coba lagi sebentar lagi.' }
+  }
+  if (status !== 'ok') {
+    return { ok: false, message: MESSAGES[status ?? ''] ?? 'Kode itu tidak bisa dipakai.' }
   }
 
   redirect('/')

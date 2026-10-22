@@ -140,7 +140,7 @@ pnpm test:e2e:mobile  # the same fixtures at 390px, with a finger instead of a m
 
 ## Deployment
 
-Vercel, with the functions pinned to the same region as the Supabase project so
+Vercel in Singapore (`sin1`), next to the Neon database (`aws-ap-southeast-1`), so
 a server-rendered page is not paying for a round trip across an ocean per query.
 The runbook, including which environment variable belongs where and why
 `DATABASE_URL` deliberately does not belong on the platform, is in

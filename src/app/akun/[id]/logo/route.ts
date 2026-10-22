@@ -1,9 +1,10 @@
-import { createClient, getUser } from '@/lib/supabase/server'
+import { sql } from '@/db/query'
+import { userScope } from '@/lib/auth/session'
 
 /**
  * One account's icon, as the WebP the settings form stored.
  *
- * Read with the signed-in member's own client, so the accounts row-level
+ * Read in the signed-in member's own scope, so the accounts row-level
  * policy decides who sees which icon; another household's id answers exactly
  * like a missing one. The bytes were re-encoded on the way in
  * (src/lib/brand-logo.ts), and `nosniff` plus a `default-src 'none'` policy
@@ -20,11 +21,16 @@ const NOT_FOUND = () => new Response(null, { status: 404, headers: { 'Cache-Cont
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   if (!UUID.test(id)) return NOT_FOUND()
-  if (!(await getUser())) return new Response(null, { status: 401, headers: { 'Cache-Control': 'no-store' } })
+  const db = await userScope()
+  if (!db) return new Response(null, { status: 401, headers: { 'Cache-Control': 'no-store' } })
 
-  const supabase = await createClient()
-  const { data } = await supabase.from('accounts').select('logo').eq('id', id).maybeSingle()
-  const logo = (data?.logo as string | null | undefined) ?? null
+  let logo: string | null = null
+  try {
+    const row = await db.maybeOne<{ logo: string | null }>(sql`SELECT logo FROM public.accounts WHERE id = ${id}`)
+    logo = row?.logo ?? null
+  } catch (e) {
+    console.error('[akun/logo] read failed', e)
+  }
   if (!logo) return NOT_FOUND()
 
   return new Response(Buffer.from(logo, 'base64'), {

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { AppShell } from '@/components/app-shell'
-import { getUser } from '@/lib/supabase/server'
+import { getUser } from '@/lib/auth/session'
 import { ImportForm } from './import-form'
 
 export const metadata: Metadata = { title: 'Impor' }

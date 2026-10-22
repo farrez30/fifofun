@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { argsFor, createSupabaseStub } from '@/test/supabase-stub'
+import { createScopeStub, type RecordedCall } from '@/test/scope-stub'
 
 /**
  * What settings will and will not let happen.
@@ -10,9 +10,15 @@ import { argsFor, createSupabaseStub } from '@/test/supabase-stub'
  * halves have to keep the same name.
  */
 
-const stub = createSupabaseStub()
+const stub = createScopeStub()
+let signedIn = true
 
-vi.mock('@/lib/supabase/server', () => ({ createClient: async () => stub.client }))
+vi.mock('@/db/client', () => ({ db: {} }))
+vi.mock('@/lib/auth/session', () => ({ getUser: async () => null, userScope: async () => null }))
+vi.mock('@/lib/actions', async (importActual) => ({
+  ...(await importActual<typeof import('@/lib/actions')>()),
+  context: async () => (signedIn ? { db: stub.scope, householdId: 'h1', userId: 'u1' } : null),
+}))
 vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
   updateTag: vi.fn(),
@@ -75,18 +81,40 @@ const CATEGORY_FIELDS = {
 }
 
 beforeEach(() => {
-  stub.calls.length = 0
-  stub.setUser({ id: 'u1' })
+  stub.reset()
+  signedIn = true
 })
 
-function household() {
-  stub.queue('households', { data: { id: 'h1' } })
+/** The table a statement reads or writes: the first one it names. */
+function tableOf(sql: string): string | undefined {
+  return /(?:public\.|"public"\.")(\w+)/.exec(sql)?.[1]
+}
+
+/** Every statement against one table, in order. */
+function on(table: string): RecordedCall[] {
+  return stub.calls.filter((call) => tableOf(call.sql) === table)
+}
+
+/** What an INSERT or UPDATE wrote, rebuilt as the object it was built from. */
+function written(call: RecordedCall): Record<string, unknown> {
+  const value = (n: string) => call.params[Number(n) - 1]
+  if (call.sql.startsWith('INSERT')) {
+    const columns = /\(([^)]*)\) VALUES \(([^)]*)\)/.exec(call.sql)
+    if (!columns) throw new Error(`not an insert: ${call.sql}`)
+    const names = columns[1].split(', ').map((c) => c.replaceAll('"', ''))
+    const slots = columns[2].split(', ').map((v) => v.slice(1))
+    return Object.fromEntries(names.map((name, i) => [name, value(slots[i])]))
+  }
+  const set = call.sql.slice(call.sql.indexOf(' SET ') + 5, call.sql.search(/\s+WHERE /))
+  const patch: Record<string, unknown> = {}
+  for (const m of set.matchAll(/"?(\w+)"? = \$(\d+)/g)) patch[m[1]] = value(m[2])
+  return patch
 }
 
 describe('createAccount', () => {
   it('numbers the new account after the ones already there', async () => {
-    household()
-    stub.queue('accounts', { data: ACCOUNTS }, { data: [{ id: '00000000-0000-4000-8000-0000000000a4' }] })
+    stub.queue(ACCOUNTS)
+    stub.queue([{ id: '00000000-0000-4000-8000-0000000000a4' }])
 
     const result = await createAccount(
       null,
@@ -94,31 +122,26 @@ describe('createAccount', () => {
     )
 
     expect(result.ok).toBe(true)
-    const insert = stub.callsOn('accounts')[1]
-    const payload = insert.payload as Record<string, unknown>
+    const insert = on('accounts')[1]
+    const payload = written(insert) as Record<string, unknown>
     expect(payload.sort_order).toBe(4)
     expect(payload.key).toBeNull()
     expect(payload.household_id).toBe('h1')
   })
 
   it('refuses a name another account already has, whatever the case', async () => {
-    household()
-    stub.queue('accounts', { data: ACCOUNTS })
+    stub.queue(ACCOUNTS)
 
     const result = await createAccount(null, form({ ...ACCOUNT_FIELDS, name: 'bank mandiri' }))
     expect(result.ok).toBe(false)
     expect(result.message).toContain('Sudah ada akun bernama')
     // Nothing written: the refusal happens before the insert.
-    expect(stub.callsOn('accounts')).toHaveLength(1)
+    expect(on('accounts')).toHaveLength(1)
   })
 
   it('names the key when two accounts claim the same one', async () => {
-    household()
-    stub.queue(
-      'accounts',
-      { data: ACCOUNTS },
-      { error: { message: 'duplicate key', code: '23505' } },
-    )
+    stub.queue(ACCOUNTS)
+    stub.queueError('duplicate key', '23505')
 
     const result = await createAccount(null, form({ ...ACCOUNT_FIELDS, name: 'Mandiri baru' }))
     expect(result.message).toBe('Kunci impor mandiri sudah dipakai akun lain.')
@@ -135,8 +158,8 @@ describe('createAccount', () => {
   })
 
   it('keeps e-wallet numbers off accounts that are not the bank', async () => {
-    household()
-    stub.queue('accounts', { data: ACCOUNTS }, { data: [{ id: '00000000-0000-4000-8000-0000000000a4' }] })
+    stub.queue(ACCOUNTS)
+    stub.queue([{ id: '00000000-0000-4000-8000-0000000000a4' }])
 
     await createAccount(
       null,
@@ -149,7 +172,7 @@ describe('createAccount', () => {
       }),
     )
 
-    const payload = stub.callsOn('accounts')[1].payload as Record<string, unknown>
+    const payload = written(on('accounts')[1]) as Record<string, unknown>
     // The numbers answer "is this top-up mine", which is a question only the
     // statement asks, and the statement is the bank account.
     expect(payload.own_identifiers).toEqual([])
@@ -158,13 +181,13 @@ describe('createAccount', () => {
 
 describe('updateAccount', () => {
   it('warns when the opening balance changes and stays quiet otherwise', async () => {
-    household()
-    stub.queue('accounts', { data: ACCOUNTS }, { data: [{ id: '00000000-0000-4000-8000-0000000000a1' }] })
+    stub.queue(ACCOUNTS)
+    stub.queue([{ id: '00000000-0000-4000-8000-0000000000a1' }])
     const quiet = await updateAccount(null, form({ ...ACCOUNT_FIELDS, id: '00000000-0000-4000-8000-0000000000a1' }))
     expect(quiet.detail).toBeUndefined()
 
-    household()
-    stub.queue('accounts', { data: ACCOUNTS }, { data: [{ id: '00000000-0000-4000-8000-0000000000a1' }] })
+    stub.queue(ACCOUNTS)
+    stub.queue([{ id: '00000000-0000-4000-8000-0000000000a1' }])
     const loud = await updateAccount(
       null,
       form({ ...ACCOUNT_FIELDS, id: '00000000-0000-4000-8000-0000000000a1', openingBalance: '250000' }),
@@ -173,8 +196,7 @@ describe('updateAccount', () => {
   })
 
   it('refuses to turn the statement account into a wallet', async () => {
-    household()
-    stub.queue('accounts', { data: ACCOUNTS })
+    stub.queue(ACCOUNTS)
 
     const result = await updateAccount(
       null,
@@ -184,14 +206,14 @@ describe('updateAccount', () => {
   })
 
   it('stores the colour in one spelling and keeps the icon when no file was chosen', async () => {
-    household()
-    stub.queue('accounts', { data: ACCOUNTS }, { data: [{ id: '00000000-0000-4000-8000-0000000000a1' }] })
+    stub.queue(ACCOUNTS)
+    stub.queue([{ id: '00000000-0000-4000-8000-0000000000a1' }])
 
     const data = form({ ...ACCOUNT_FIELDS, id: '00000000-0000-4000-8000-0000000000a1', color: '#003D79' })
     data.append('logo', new File([], ''))
     const result = await updateAccount(null, data)
     expect(result.ok).toBe(true)
-    const patch = stub.callsOn('accounts')[1].payload as Record<string, unknown>
+    const patch = written(on('accounts')[1]) as Record<string, unknown>
     expect(patch.color).toBe('#003d79')
     expect('logo' in patch).toBe(false)
   })
@@ -200,15 +222,15 @@ describe('updateAccount', () => {
     const sharp = (await import('sharp')).default
     const png = await sharp({ create: { width: 128, height: 128, channels: 3, background: '#ee4d2d' } }).png().toBuffer()
 
-    household()
-    stub.queue('accounts', { data: ACCOUNTS }, { data: [{ id: '00000000-0000-4000-8000-0000000000a2' }] })
+    stub.queue(ACCOUNTS)
+    stub.queue([{ id: '00000000-0000-4000-8000-0000000000a2' }])
     const data = form({ ...ACCOUNT_FIELDS, id: '00000000-0000-4000-8000-0000000000a2', name: 'GoPay', kind: 'ewallet', key: 'gopay' })
     data.append('logo', new File([new Uint8Array(png)], 'gopay.png', { type: 'image/png' }))
     expect((await updateAccount(null, data)).ok).toBe(true)
-    const stored = (stub.callsOn('accounts')[1].payload as Record<string, string>).logo
+    const stored = (written(on('accounts')[1]) as Record<string, string>).logo
     expect((await sharp(Buffer.from(stored, 'base64')).metadata()).format).toBe('webp')
 
-    stub.calls.length = 0
+    stub.reset()
     const svg = form({ ...ACCOUNT_FIELDS, id: '00000000-0000-4000-8000-0000000000a2', name: 'GoPay', kind: 'ewallet', key: 'gopay' })
     svg.append('logo', new File(['<svg xmlns="http://www.w3.org/2000/svg"/>'], 'x.png', { type: 'image/png' }))
     const refused = await updateAccount(null, svg)
@@ -218,11 +240,11 @@ describe('updateAccount', () => {
   })
 
   it('removes the icon when asked, and refuses a colour the database would', async () => {
-    household()
-    stub.queue('accounts', { data: ACCOUNTS }, { data: [{ id: '00000000-0000-4000-8000-0000000000a1' }] })
+    stub.queue(ACCOUNTS)
+    stub.queue([{ id: '00000000-0000-4000-8000-0000000000a1' }])
     const data = form({ ...ACCOUNT_FIELDS, id: '00000000-0000-4000-8000-0000000000a1', removeLogo: 'on', color: '' })
     expect((await updateAccount(null, data)).ok).toBe(true)
-    const patch = stub.callsOn('accounts')[1].payload as Record<string, unknown>
+    const patch = written(on('accounts')[1]) as Record<string, unknown>
     expect(patch.logo).toBeNull()
     expect(patch.color).toBeNull()
 
@@ -232,15 +254,15 @@ describe('updateAccount', () => {
   })
 
   it('lets an account be renamed freely', async () => {
-    household()
-    stub.queue('accounts', { data: ACCOUNTS }, { data: [{ id: '00000000-0000-4000-8000-0000000000a1' }] })
+    stub.queue(ACCOUNTS)
+    stub.queue([{ id: '00000000-0000-4000-8000-0000000000a1' }])
 
     const result = await updateAccount(
       null,
       form({ ...ACCOUNT_FIELDS, id: '00000000-0000-4000-8000-0000000000a1', name: 'Rekening Gaji' }),
     )
     expect(result.ok).toBe(true)
-    const patch = stub.callsOn('accounts')[1].payload as Record<string, unknown>
+    const patch = written(on('accounts')[1]) as Record<string, unknown>
     // The key stays put, which is the entire reason renaming is safe.
     expect(patch.name).toBe('Rekening Gaji')
     expect(patch.key).toBe('mandiri')
@@ -286,45 +308,46 @@ describe('own money moved between accounts, on save', () => {
   }
 
   it('turns old own top-ups into transfers to the wallet account, and says so', async () => {
-    household()
-    stub.queue('accounts', { data: ACCOUNTS }, { data: [{ id: BANK_ID }] }, { data: backfillAccounts() })
-    stub.queue('categories', { data: [...CATEGORIES, ANTAR_ACCOUNT] })
-    stub.queue('transactions', { data: [OWN_TOP_UP, SOMEONE_ELSE] }, { data: [{ id: OWN_TOP_UP.id }] })
+    stub.queue(ACCOUNTS)
+    stub.queue([{ id: BANK_ID }])
+    stub.queue(backfillAccounts())
+    stub.queue([...CATEGORIES, ANTAR_ACCOUNT])
+    stub.queue([OWN_TOP_UP, SOMEONE_ELSE])
+    stub.queue([{ id: OWN_TOP_UP.id }])
 
     const result = await saveBank('085800000001')
 
     expect(result.ok).toBe(true)
     expect(result.detail).toContain('1 transaksi lama dengan GoPay ternyata pindah dana')
 
-    const [read, write] = stub.callsOn('transactions')
+    const [read, write] = on('transactions')
     // Only rows the import left with one side empty, and only imported ones.
-    expect(argsFor(read, 'eq')).toEqual(expect.arrayContaining([['source', 'xlsx']]))
-    expect(argsFor(read, 'or')).toEqual([
-      ['and(cashflow.eq.spending,to_account_id.is.null),and(cashflow.eq.income,from_account_id.is.null)'],
-    ])
+    expect(read.sql).toContain("source = 'xlsx' AND deleted_at IS NULL")
+    expect(read.sql.replace(/\s+/g, ' ')).toContain(
+      "((cashflow = 'spending' AND to_account_id IS NULL) OR (cashflow = 'income' AND from_account_id IS NULL))",
+    )
+    expect(read.params).toEqual(['h1'])
 
-    expect(write.payload).toMatchObject({
+    expect(written(write)).toMatchObject({
       cashflow: 'transfer',
       to_account_id: GOPAY_ID,
       category_id: ANTAR_ACCOUNT.id,
       needs_review: false,
     })
-    expect(argsFor(write, 'in')).toEqual([['id', [OWN_TOP_UP.id]]])
+    expect(write.params).toContainEqual([OWN_TOP_UP.id])
+    expect(write.params).toContain('h1')
     // Repeated on the write, so a row changed since the read is skipped.
-    expect(argsFor(write, 'eq')).toEqual(expect.arrayContaining([['cashflow', 'spending']]))
-    expect(argsFor(write, 'is')).toEqual([['to_account_id', null]])
+    expect(write.sql).toMatch(/AND cashflow = \$\d+ AND "to_account_id" IS NULL/)
+    expect(write.params).toContain('spending')
   })
 
   it('gives old income from a new own account its source, as soon as the account is created', async () => {
-    household()
-    stub.queue(
-      'accounts',
-      { data: ACCOUNTS },
-      { data: [{ id: JAGO_ID }] },
-      { data: backfillAccounts([{ id: JAGO_ID, name: 'Bank Jago', key: null, reference: '103000000001', own_identifiers: [], archived_at: null }]) },
-    )
-    stub.queue('categories', { data: [...CATEGORIES, ANTAR_ACCOUNT, PENYESUAIAN] })
-    stub.queue('transactions', { data: [FROM_JAGO] }, { data: [{ id: FROM_JAGO.id }] })
+    stub.queue(ACCOUNTS)
+    stub.queue([{ id: JAGO_ID }])
+    stub.queue(backfillAccounts([{ id: JAGO_ID, name: 'Bank Jago', key: null, reference: '103000000001', own_identifiers: [], archived_at: null }]))
+    stub.queue([...CATEGORIES, ANTAR_ACCOUNT, PENYESUAIAN])
+    stub.queue([FROM_JAGO])
+    stub.queue([{ id: FROM_JAGO.id }])
 
     const result = await createAccount(
       null,
@@ -334,19 +357,16 @@ describe('own money moved between accounts, on save', () => {
     expect(result.ok).toBe(true)
     expect(result.detail).toContain('1 transaksi lama dengan Bank Jago ternyata pindah dana')
     // Stored as digits, however it was typed.
-    expect((stub.callsOn('accounts')[1].payload as Record<string, unknown>).reference).toBe('103000000001')
+    expect((written(on('accounts')[1]) as Record<string, unknown>).reference).toBe('103000000001')
 
-    const write = stub.callsOn('transactions')[1]
-    expect(write.payload).toMatchObject({ cashflow: 'transfer', from_account_id: JAGO_ID, category_id: ANTAR_ACCOUNT.id })
-    expect(argsFor(write, 'eq')).toEqual(expect.arrayContaining([['cashflow', 'income']]))
-    expect(argsFor(write, 'is')).toEqual([['from_account_id', null]])
+    const write = on('transactions')[1]
+    expect(written(write)).toMatchObject({ cashflow: 'transfer', from_account_id: JAGO_ID, category_id: ANTAR_ACCOUNT.id })
+    expect(write.sql).toMatch(/AND cashflow = \$\d+ AND "from_account_id" IS NULL/)
+    expect(write.params).toContain('income')
   })
 
   it('refuses a number another account already holds', async () => {
-    household()
-    stub.queue('accounts', {
-      data: ACCOUNTS.map((account) => (account.id === GOPAY_ID ? { ...account, reference: '103000000001' } : account)),
-    })
+    stub.queue(ACCOUNTS.map((account) => (account.id === GOPAY_ID ? { ...account, reference: '103000000001' } : account)))
 
     const result = await createAccount(
       null,
@@ -355,7 +375,7 @@ describe('own money moved between accounts, on save', () => {
 
     expect(result.ok).toBe(false)
     expect(result.message).toBe('Nomor rekening 103000000001 sudah dipakai akun GoPay.')
-    expect(stub.callsOn('accounts')).toHaveLength(1)
+    expect(on('accounts')).toHaveLength(1)
   })
 
   it('refuses a number that is not one, before touching anything', async () => {
@@ -368,20 +388,21 @@ describe('own money moved between accounts, on save', () => {
   })
 
   it('does not look at transactions when there is no number to go on', async () => {
-    household()
-    stub.queue('accounts', { data: ACCOUNTS }, { data: [{ id: BANK_ID }] })
+    stub.queue(ACCOUNTS)
+    stub.queue([{ id: BANK_ID }])
 
     const result = await saveBank('')
 
     expect(result.ok).toBe(true)
-    expect(stub.callsOn('transactions')).toHaveLength(0)
+    expect(on('transactions')).toHaveLength(0)
   })
 
   it('keeps the save when the backfill fails, and says what did not happen', async () => {
-    household()
-    stub.queue('accounts', { data: ACCOUNTS }, { data: [{ id: BANK_ID }] }, { data: backfillAccounts() })
-    stub.queue('categories', { data: CATEGORIES })
-    stub.queue('transactions', { data: null, error: { message: 'boom' } })
+    stub.queue(ACCOUNTS)
+    stub.queue([{ id: BANK_ID }])
+    stub.queue(backfillAccounts())
+    stub.queue(CATEGORIES)
+    stub.queueError('boom')
 
     const result = await saveBank('085800000001')
 
@@ -393,24 +414,24 @@ describe('own money moved between accounts, on save', () => {
 
 describe('setAccountArchived', () => {
   it('lets go of the import key and says so', async () => {
-    household()
-    stub.queue('accounts', { data: ACCOUNTS }, { data: [{ id: '00000000-0000-4000-8000-0000000000a2' }] })
+    stub.queue(ACCOUNTS)
+    stub.queue([{ id: '00000000-0000-4000-8000-0000000000a2' }])
 
     const result = await setAccountArchived(null, form({ id: '00000000-0000-4000-8000-0000000000a2', archived: '1' }))
 
     expect(result.ok).toBe(true)
     expect(result.detail).toContain('Kunci impornya, gopay, dilepas.')
-    const patch = stub.callsOn('accounts')[1].payload as Record<string, unknown>
+    const patch = written(on('accounts')[1]) as Record<string, unknown>
     expect(patch.key).toBeNull()
     expect(patch.archived_at).toBeTruthy()
   })
 
   it('brings one back without inventing a key for it', async () => {
-    household()
-    stub.queue('accounts', { data: ACCOUNTS }, { data: [{ id: '00000000-0000-4000-8000-0000000000a3' }] })
+    stub.queue(ACCOUNTS)
+    stub.queue([{ id: '00000000-0000-4000-8000-0000000000a3' }])
 
     const result = await setAccountArchived(null, form({ id: '00000000-0000-4000-8000-0000000000a3', archived: '0' }))
-    const patch = stub.callsOn('accounts')[1].payload as Record<string, unknown>
+    const patch = written(on('accounts')[1]) as Record<string, unknown>
     expect(patch).toEqual({ archived_at: null })
     expect(result.detail).toContain('pasang lagi kunci impornya')
   })
@@ -418,34 +439,33 @@ describe('setAccountArchived', () => {
 
 describe('reorderAccounts', () => {
   it('writes only the rows whose place changed', async () => {
-    household()
-    stub.queue('accounts', { data: ACCOUNTS }, { data: [{ id: '00000000-0000-4000-8000-0000000000a2' }] }, { data: [{ id: '00000000-0000-4000-8000-0000000000a1' }] })
+    stub.queue(ACCOUNTS)
+    stub.queue([{ id: '00000000-0000-4000-8000-0000000000a2' }])
+    stub.queue([{ id: '00000000-0000-4000-8000-0000000000a1' }])
 
     const result = await reorderAccounts(['00000000-0000-4000-8000-0000000000a2', '00000000-0000-4000-8000-0000000000a1'])
 
     expect(result.ok).toBe(true)
-    const writes = stub.callsOn('accounts').slice(1)
+    const writes = on('accounts').slice(1)
     expect(writes).toHaveLength(2)
-    expect((writes[0].payload as Record<string, unknown>).sort_order).toBe(1)
-    expect((writes[1].payload as Record<string, unknown>).sort_order).toBe(2)
+    expect((written(writes[0]) as Record<string, unknown>).sort_order).toBe(1)
+    expect((written(writes[1]) as Record<string, unknown>).sort_order).toBe(2)
   })
 
   it('refuses an order that leaves a live account out, as a stale screen would send', async () => {
-    household()
-    stub.queue('accounts', { data: [...ACCOUNTS, { ...ACCOUNTS[1], id: '00000000-0000-4000-8000-0000000000a4', name: 'OVO', sort_order: 4 }] })
+    stub.queue([...ACCOUNTS, { ...ACCOUNTS[1], id: '00000000-0000-4000-8000-0000000000a4', name: 'OVO', sort_order: 4 }])
 
     const result = await reorderAccounts(['00000000-0000-4000-8000-0000000000a2', '00000000-0000-4000-8000-0000000000a1'])
     expect(result.message).toBe('Urutannya tidak disimpan.')
-    expect(stub.callsOn('accounts')).toHaveLength(1)
+    expect(on('accounts')).toHaveLength(1)
   })
 
   it('refuses an archived account, which has no place in the order', async () => {
-    household()
-    stub.queue('accounts', { data: ACCOUNTS })
+    stub.queue(ACCOUNTS)
 
     const result = await reorderAccounts(['00000000-0000-4000-8000-0000000000a3', '00000000-0000-4000-8000-0000000000a2', '00000000-0000-4000-8000-0000000000a1'])
     expect(result.ok).toBe(false)
-    expect(stub.callsOn('accounts')).toHaveLength(1)
+    expect(on('accounts')).toHaveLength(1)
   })
 
   it('refuses anything that is not a list of ids, before touching anything', async () => {
@@ -455,8 +475,7 @@ describe('reorderAccounts', () => {
   })
 
   it('says nothing changed when the order is the same', async () => {
-    household()
-    stub.queue('accounts', { data: ACCOUNTS })
+    stub.queue(ACCOUNTS)
 
     const result = await reorderAccounts(['00000000-0000-4000-8000-0000000000a1', '00000000-0000-4000-8000-0000000000a2'])
     expect(result).toEqual({ ok: true, message: 'Urutannya tidak berubah.' })
@@ -476,28 +495,27 @@ describe('reorderCategories', () => {
   ]
 
   it('reorders the members of one group among themselves', async () => {
-    household()
-    stub.queue('categories', { data: TREE }, { data: [{ id: M2 }] }, { data: [{ id: M1 }] })
+    stub.queue(TREE)
+    stub.queue([{ id: M2 }])
+    stub.queue([{ id: M1 }])
 
     const result = await reorderCategories([M2, M1])
 
     expect(result.ok).toBe(true)
-    const writes = stub.callsOn('categories').slice(1).map((call) => call.payload)
+    const writes = on('categories').slice(1).map((call) => written(call))
     expect(writes).toEqual([{ sort_order: 3 }, { sort_order: 4 }])
   })
 
   it('refuses to mix a member in among the groups', async () => {
-    household()
-    stub.queue('categories', { data: TREE })
+    stub.queue(TREE)
 
     const result = await reorderCategories([C3, M1, G])
     expect(result.ok).toBe(false)
-    expect(stub.callsOn('categories')).toHaveLength(1)
+    expect(on('categories')).toHaveLength(1)
   })
 
   it('refuses categories from another cashflow in the same run', async () => {
-    household()
-    stub.queue('categories', { data: [...TREE, ...CATEGORIES] })
+    stub.queue([...TREE, ...CATEGORIES])
 
     const result = await reorderCategories([G, C3, '00000000-0000-4000-8000-0000000000c1'])
     expect(result.ok).toBe(false)
@@ -506,13 +524,13 @@ describe('reorderCategories', () => {
 
 describe('createCategory', () => {
   it('stores the hue as text and the icon by name', async () => {
-    household()
-    stub.queue('categories', { data: CATEGORIES }, { data: [{ id: '00000000-0000-4000-8000-0000000000c5' }] })
+    stub.queue(CATEGORIES)
+    stub.queue([{ id: '00000000-0000-4000-8000-0000000000c5' }])
 
     const result = await createCategory(null, form({ ...CATEGORY_FIELDS, name: 'Kopi', cashflow: 'spending' }))
 
     expect(result.ok).toBe(true)
-    const payload = stub.callsOn('categories')[1].payload as Record<string, unknown>
+    const payload = written(on('categories')[1]) as Record<string, unknown>
     expect(payload.color).toBe('120')
     expect(payload.icon).toBe('PiggyBank')
     expect(payload.sort_order).toBe(5)
@@ -520,8 +538,8 @@ describe('createCategory', () => {
   })
 
   it('stores a blank kamus as null rather than an empty string', async () => {
-    household()
-    stub.queue('categories', { data: CATEGORIES }, { data: [{ id: '00000000-0000-4000-8000-0000000000c5' }] })
+    stub.queue(CATEGORIES)
+    stub.queue([{ id: '00000000-0000-4000-8000-0000000000c5' }])
 
     const result = await createCategory(
       null,
@@ -529,7 +547,7 @@ describe('createCategory', () => {
     )
 
     expect(result.ok).toBe(true)
-    const payload = stub.callsOn('categories')[1].payload as Record<string, unknown>
+    const payload = written(on('categories')[1]) as Record<string, unknown>
     expect(payload.description).toBeNull()
   })
 
@@ -543,8 +561,8 @@ describe('createCategory', () => {
   })
 
   it('allows the same name under a different cashflow', async () => {
-    household()
-    stub.queue('categories', { data: CATEGORIES }, { data: [{ id: '00000000-0000-4000-8000-0000000000c5' }] })
+    stub.queue(CATEGORIES)
+    stub.queue([{ id: '00000000-0000-4000-8000-0000000000c5' }])
 
     // Tabungan the goal is not Tabungan the savings pot, and the unique index
     // is on the pair rather than on the name.
@@ -556,12 +574,11 @@ describe('createCategory', () => {
   })
 
   it('refuses a duplicate under the same cashflow', async () => {
-    household()
-    stub.queue('categories', { data: CATEGORIES })
+    stub.queue(CATEGORIES)
 
     const result = await createCategory(null, form(CATEGORY_FIELDS))
     expect(result.message).toContain('Sudah ada kategori Tabungan di')
-    expect(stub.callsOn('categories')).toHaveLength(1)
+    expect(on('categories')).toHaveLength(1)
   })
 
   it('refuses an icon that is not in the registry', async () => {
@@ -571,8 +588,8 @@ describe('createCategory', () => {
   })
 
   it('stores a bill with the amount it costs and the day it is due', async () => {
-    household()
-    stub.queue('categories', { data: CATEGORIES }, { data: [{ id: '00000000-0000-4000-8000-0000000000c5' }] })
+    stub.queue(CATEGORIES)
+    stub.queue([{ id: '00000000-0000-4000-8000-0000000000c5' }])
 
     const result = await createCategory(
       null,
@@ -580,14 +597,14 @@ describe('createCategory', () => {
     )
 
     expect(result.ok).toBe(true)
-    const payload = stub.callsOn('categories')[1].payload as Record<string, unknown>
+    const payload = written(on('categories')[1]) as Record<string, unknown>
     expect(payload.bill_amount).toBe('27800000')
     expect(payload.bill_due_day).toBe(5)
   })
 
   it('stores a bill with neither half stated as nulls', async () => {
-    household()
-    stub.queue('categories', { data: CATEGORIES }, { data: [{ id: '00000000-0000-4000-8000-0000000000c5' }] })
+    stub.queue(CATEGORIES)
+    stub.queue([{ id: '00000000-0000-4000-8000-0000000000c5' }])
 
     // A MoneyInput left empty posts '0', which means "not stated", not a free bill.
     const result = await createCategory(
@@ -596,14 +613,14 @@ describe('createCategory', () => {
     )
 
     expect(result.ok).toBe(true)
-    const payload = stub.callsOn('categories')[1].payload as Record<string, unknown>
+    const payload = written(on('categories')[1]) as Record<string, unknown>
     expect(payload.bill_amount).toBeNull()
     expect(payload.bill_due_day).toBeNull()
   })
 
   it('drops a schedule posted for something that is not a bill', async () => {
-    household()
-    stub.queue('categories', { data: CATEGORIES }, { data: [{ id: '00000000-0000-4000-8000-0000000000c5' }] })
+    stub.queue(CATEGORIES)
+    stub.queue([{ id: '00000000-0000-4000-8000-0000000000c5' }])
 
     const result = await createCategory(
       null,
@@ -611,7 +628,7 @@ describe('createCategory', () => {
     )
 
     expect(result.ok).toBe(true)
-    const payload = stub.callsOn('categories')[1].payload as Record<string, unknown>
+    const payload = written(on('categories')[1]) as Record<string, unknown>
     expect(payload.bill_amount).toBeNull()
     expect(payload.bill_due_day).toBeNull()
   })
@@ -629,8 +646,9 @@ describe('createCategory', () => {
 
 describe('updateCategory', () => {
   it('renames both halves of a savings pot', async () => {
-    household()
-    stub.queue('categories', { data: CATEGORIES }, { data: [{ id: '00000000-0000-4000-8000-0000000000c1' }] }, { data: [{ id: '00000000-0000-4000-8000-0000000000c2' }] })
+    stub.queue(CATEGORIES)
+    stub.queue([{ id: '00000000-0000-4000-8000-0000000000c1' }])
+    stub.queue([{ id: '00000000-0000-4000-8000-0000000000c2' }])
 
     const result = await updateCategory(
       null,
@@ -639,17 +657,15 @@ describe('updateCategory', () => {
 
     expect(result.ok).toBe(true)
     expect(result.detail).toContain('Sisi pengambilannya ikut diganti nama')
-    const writes = stub.callsOn('categories').slice(1)
+    const writes = on('categories').slice(1)
     expect(writes).toHaveLength(2)
-    expect((writes[1].payload as Record<string, unknown>).name).toBe('Tabungan Utama')
-    expect(writes[1].args[writes[1].chain.indexOf('eq')]).toEqual(['id', '00000000-0000-4000-8000-0000000000c2'])
+    expect((written(writes[1]) as Record<string, unknown>).name).toBe('Tabungan Utama')
+    expect(writes[1].sql).toContain('WHERE id = $2 AND household_id = $3')
+    expect(writes[1].params.slice(1)).toEqual(['00000000-0000-4000-8000-0000000000c2', 'h1'])
   })
 
   it('refuses to rename onto a name a twin already holds', async () => {
-    household()
-    stub.queue('categories', {
-      data: [...CATEGORIES, { id: '00000000-0000-4000-8000-0000000000c5', name: 'Dana Menikah', cashflow: 'from_asset', sort_order: 5, archived_at: null }],
-    })
+    stub.queue([...CATEGORIES, { id: '00000000-0000-4000-8000-0000000000c5', name: 'Dana Menikah', cashflow: 'from_asset', sort_order: 5, archived_at: null }])
 
     // Renaming the savings pot to Dana Menikah would need its withdrawal side
     // to take a name the goal withdrawal side already has.
@@ -662,9 +678,8 @@ describe('updateCategory', () => {
   })
 
   it('freezes the cashflow once anything has been filed under it', async () => {
-    household()
-    stub.queue('categories', { data: CATEGORIES })
-    stub.queue('transactions', { count: 12 })
+    stub.queue(CATEGORIES)
+    stub.queue({ n: 12 })
 
     const result = await updateCategory(
       null,
@@ -675,9 +690,9 @@ describe('updateCategory', () => {
   })
 
   it('allows the cashflow to move on a category nothing uses yet', async () => {
-    household()
-    stub.queue('categories', { data: CATEGORIES }, { data: [{ id: '00000000-0000-4000-8000-0000000000c3' }] })
-    stub.queue('transactions', { count: 0 })
+    stub.queue(CATEGORIES)
+    stub.queue({ n: 0 })
+    stub.queue([{ id: '00000000-0000-4000-8000-0000000000c3' }])
 
     const result = await updateCategory(
       null,
@@ -687,9 +702,9 @@ describe('updateCategory', () => {
   })
 
   it('changes a bill amount and clears its due day', async () => {
-    household()
     const bills = [...CATEGORIES, { id: '00000000-0000-4000-8000-0000000000c6', name: 'Internet', cashflow: 'bills', sort_order: 5, archived_at: null }]
-    stub.queue('categories', { data: bills }, { data: [{ id: '00000000-0000-4000-8000-0000000000c6' }] })
+    stub.queue(bills)
+    stub.queue([{ id: '00000000-0000-4000-8000-0000000000c6' }])
 
     const result = await updateCategory(
       null,
@@ -704,7 +719,7 @@ describe('updateCategory', () => {
     )
 
     expect(result.ok).toBe(true)
-    const payload = stub.callsOn('categories')[1].payload as Record<string, unknown>
+    const payload = written(on('categories')[1]) as Record<string, unknown>
     expect(payload.bill_amount).toBe('41600000')
     expect(payload.bill_due_day).toBeNull()
   })
@@ -712,24 +727,25 @@ describe('updateCategory', () => {
 
 describe('setCategoryArchived', () => {
   it('archives a pot together with the side money leaves it by', async () => {
-    household()
-    stub.queue('categories', { data: CATEGORIES }, { data: [{ id: '00000000-0000-4000-8000-0000000000c1' }] }, { data: [{ id: '00000000-0000-4000-8000-0000000000c2' }] })
+    stub.queue(CATEGORIES)
+    stub.queue([{ id: '00000000-0000-4000-8000-0000000000c1' }])
+    stub.queue([{ id: '00000000-0000-4000-8000-0000000000c2' }])
 
     const result = await setCategoryArchived(null, form({ id: '00000000-0000-4000-8000-0000000000c1', archived: '1' }))
 
     expect(result.ok).toBe(true)
-    const writes = stub.callsOn('categories').slice(1)
+    const writes = on('categories').slice(1)
     expect(writes).toHaveLength(2)
     for (const write of writes) {
-      expect((write.payload as Record<string, unknown>).archived_at).toBeTruthy()
+      expect(written(write).archived_at).toBeTruthy()
     }
   })
 
   it('leaves an ordinary category on its own', async () => {
-    household()
-    stub.queue('categories', { data: CATEGORIES }, { data: [{ id: '00000000-0000-4000-8000-0000000000c3' }] })
+    stub.queue(CATEGORIES)
+    stub.queue([{ id: '00000000-0000-4000-8000-0000000000c3' }])
 
     await setCategoryArchived(null, form({ id: '00000000-0000-4000-8000-0000000000c3', archived: '1' }))
-    expect(stub.callsOn('categories').slice(1)).toHaveLength(1)
+    expect(on('categories').slice(1)).toHaveLength(1)
   })
 })

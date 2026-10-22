@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SESSION_EXPIRED } from '@/lib/actions'
 import { readXlsx } from '@/lib/xlsx'
 import { ENCRYPTED_WORKBOOK, ENCRYPTED_WORKBOOK_PASSWORD } from '@/lib/xlsx/fixtures/encrypted-workbook'
-import { createSupabaseStub } from '@/test/supabase-stub'
+import { createScopeStub } from '@/test/scope-stub'
 
 /**
  * The failure paths that would otherwise escape the route as a bare 500:
@@ -13,11 +13,11 @@ import { createSupabaseStub } from '@/test/supabase-stub'
  * already covers.
  */
 
-const stub = createSupabaseStub()
-const stubFrom = stub.client.from
+const stub = createScopeStub()
 
-let createClientImpl: () => Promise<unknown> = async () => stub.client
-vi.mock('@/lib/supabase/server', () => ({ createClient: () => createClientImpl() }))
+let userScopeImpl: () => Promise<unknown> = async () => stub.scope
+vi.mock('@/db/client', () => ({ db: {} }))
+vi.mock('@/lib/auth/session', () => ({ getUser: async () => null, userScope: () => userScopeImpl() }))
 const revalidateTag = vi.fn()
 vi.mock('next/cache', () => ({ revalidateTag: (...args: unknown[]) => revalidateTag(...args) }))
 
@@ -64,9 +64,7 @@ function formWith(file: File): FormData {
 beforeEach(() => {
   vi.clearAllMocks()
   stub.reset()
-  stub.setUser({ id: 'u1' })
-  createClientImpl = async () => stub.client
-  stub.client.from = stubFrom
+  userScopeImpl = async () => stub.scope
   parseMandiriStatement.mockReturnValue(VALID_STATEMENT)
   statementToLedger.mockReturnValue({
     entries: [],
@@ -76,6 +74,14 @@ beforeEach(() => {
     walletCoverage: { seen: 0, matchedOwn: 0 },
   })
 })
+
+/** The four reads before anything is written: household, accounts, categories, rules. */
+function lookups(accounts: unknown[] = [BANK], categories: unknown[] = []) {
+  stub.queue({ id: 'h1' })
+  stub.queue(accounts)
+  stub.queue(categories)
+  stub.queue([])
+}
 
 describe('importStatement', () => {
   it('rejects a file with no ZIP magic the same way it always has', async () => {
@@ -92,13 +98,13 @@ describe('importStatement', () => {
 
   it('passes the parser own sentence through, but not what the ZIP reader throws', async () => {
     const { StatementParseError } = await import('@/lib/statement/mandiri-xlsx')
-    stub.queue('households', { data: { id: 'h1' } })
+    stub.queue({ id: 'h1' })
     parseMandiriStatement.mockImplementation(() => {
       throw new StatementParseError('Kolom saldo tidak ditemukan.')
     })
     const parser = await importStatement(formWith(statementFile()))
 
-    stub.queue('households', { data: { id: 'h1' } })
+    stub.queue({ id: 'h1' })
     parseMandiriStatement.mockImplementation(() => {
       throw new Error('invalid zip data')
     })
@@ -120,7 +126,7 @@ describe('importStatement', () => {
     }
 
     it('asks for the password instead of calling it "not an .xlsx"', async () => {
-      stub.queue('households', { data: { id: 'h1' } })
+      stub.queue({ id: 'h1' })
 
       const result = await importStatement(formWithPassword(encrypted()))
 
@@ -134,7 +140,7 @@ describe('importStatement', () => {
     })
 
     it('asks again, saying so, when the password is wrong', async () => {
-      stub.queue('households', { data: { id: 'h1' } })
+      stub.queue({ id: 'h1' })
 
       const result = await importStatement(formWithPassword(encrypted(), 'salah'))
 
@@ -143,12 +149,9 @@ describe('importStatement', () => {
     })
 
     it('opens it with the right password and imports the plain workbook inside', async () => {
-      stub.queue('households', { data: { id: 'h1' } })
-      stub.queue('accounts', { data: [BANK] })
-      stub.queue('categories', { data: [] })
-      stub.queue('categorization_rules', { data: [] })
-      stub.queue('import_batches', { data: { id: 'batch1' } })
-      stub.queue('transactions', { data: [] })
+      lookups()
+      stub.queue({ id: 'batch1' })
+      stub.queue([])
 
       const result = await importStatement(formWithPassword(encrypted(), ENCRYPTED_WORKBOOK_PASSWORD))
 
@@ -158,7 +161,7 @@ describe('importStatement', () => {
     })
 
     it('does not spend a single hash round before the session is known', async () => {
-      stub.setUser(null)
+      userScopeImpl = async () => null
 
       const result = await importStatement(formWithPassword(encrypted(), ENCRYPTED_WORKBOOK_PASSWORD))
 
@@ -167,7 +170,7 @@ describe('importStatement', () => {
     })
 
     it('never echoes the password back in the report', async () => {
-      stub.queue('households', { data: { id: 'h1' } })
+      stub.queue({ id: 'h1' })
       const secret = 'kata-sandi-rahasia-sekali'
 
       const result = await importStatement(formWithPassword(encrypted(), secret))
@@ -176,7 +179,7 @@ describe('importStatement', () => {
     })
 
     it('names a legacy .xls for what it is', async () => {
-      stub.queue('households', { data: { id: 'h1' } })
+      stub.queue({ id: 'h1' })
       const legacy = new Uint8Array(1024)
       legacy.set([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1])
 
@@ -187,7 +190,7 @@ describe('importStatement', () => {
   })
 
   it('reports the "memeriksa sesi" stage, not a throw, when the client cannot be created', async () => {
-    createClientImpl = async () => {
+    userScopeImpl = async () => {
       throw new Error('ECONNREFUSED')
     }
 
@@ -199,10 +202,7 @@ describe('importStatement', () => {
   })
 
   it('reports the "mencocokkan" stage when classifying the statement throws', async () => {
-    stub.queue('households', { data: { id: 'h1' } })
-    stub.queue('accounts', { data: [BANK] })
-    stub.queue('categories', { data: [] })
-    stub.queue('categorization_rules', { data: [] })
+    lookups()
     statementToLedger.mockImplementation(() => {
       throw new Error('unexpected shape')
     })
@@ -213,29 +213,33 @@ describe('importStatement', () => {
     expect(result.message).toBe('Impor berhenti saat mencocokkan.')
     // The transactions table was never reached, so nothing is saved yet.
     expect(result.detail).toBe('Belum ada yang tersimpan.')
-    expect(stub.callsOn('transactions')).toHaveLength(0)
+    expect(stub.calls.some((call) => call.sql.includes('public.transactions'))).toBe(false)
   })
 
   it('reports the "menyimpan" stage, and that data may already be there, when the write throws', async () => {
-    stub.queue('households', { data: { id: 'h1' } })
-    stub.queue('accounts', { data: [BANK] })
-    stub.queue('categories', { data: [] })
-    stub.queue('categorization_rules', { data: [] })
-    stub.queue('import_batches', { data: { id: 'batch1' } })
-    // The stub always resolves; a thrown network error is simulated by
-    // having the next call on `transactions` reject instead of settling.
-    stub.client.from = ((table: string) => {
-      if (table === 'transactions') {
-        return {
-          upsert: () => ({
-            select: () => Promise.reject(new Error('stream cut off')),
-          }),
-        }
-      }
-      return stubFrom(table)
-    }) as typeof stub.client.from
+    statementToLedger.mockReturnValue({
+      entries: [
+        { id: 'e1', occurredAt: new Date('2026-03-02T02:00:00Z'), description: 'Kopi', amount: 50_000_00n, cashflow: 'spending', fromAccountId: 'mandiri', toAccountId: null },
+      ],
+      classifications: [{ kind: 'purchase' }],
+      passThroughIds: [],
+      review: [],
+      walletCoverage: { seen: 0, matchedOwn: 0 },
+    })
+    parseMandiriStatement.mockReturnValue({ ...VALID_STATEMENT, rows: [{ description: 'Kopi' }] })
+    lookups()
+    stub.queue({ id: 'batch1' })
+    // A thrown network error, not a Postgres refusal: the write itself rejects.
+    const rows = stub.scope.rows
+    stub.scope.rows = async (q) => {
+      const result = await rows(q)
+      if (stub.calls.at(-1)?.sql.includes('INSERT INTO public.transactions')) throw new Error('stream cut off')
+      return result as never
+    }
 
-    const result = await importStatement(formWith(statementFile()))
+    const result = await importStatement(formWith(statementFile())).finally(() => {
+      stub.scope.rows = rows
+    })
 
     expect(result.ok).toBe(false)
     expect(result.message).toBe('Impor berhenti saat menyimpan.')
@@ -243,12 +247,9 @@ describe('importStatement', () => {
   })
 
   it('still saves normally when nothing throws', async () => {
-    stub.queue('households', { data: { id: 'h1' } })
-    stub.queue('accounts', { data: [BANK] })
-    stub.queue('categories', { data: [] })
-    stub.queue('categorization_rules', { data: [] })
-    stub.queue('import_batches', { data: { id: 'batch1' } })
-    stub.queue('transactions', { data: [] })
+    lookups()
+    stub.queue({ id: 'batch1' })
+    stub.queue([])
 
     const result = await importStatement(formWith(statementFile()))
 
@@ -285,22 +286,74 @@ describe('importStatement', () => {
       review: [],
       walletCoverage: { seen: 1, matchedOwn: 1 },
     })
-    stub.queue('households', { data: { id: 'h1' } })
     // No GoPay account, so the transfer has nowhere to land.
-    stub.queue('accounts', { data: [BANK] })
-    stub.queue('categories', { data: [{ id: 'cat-antar', name: 'Antar Account', cashflow: 'transfer' }] })
-    stub.queue('categorization_rules', { data: [] })
-    stub.queue('import_batches', { data: { id: 'batch1' } })
-    stub.queue('transactions', { data: [] })
+    lookups([BANK], [{ id: 'cat-antar', name: 'Antar Account', cashflow: 'transfer' }])
+    stub.queue({ id: 'batch1' })
+    stub.queue([])
 
     await importStatement(formWith(statementFile()))
 
-    const [written] = stub.callsOn('transactions')[0].payload as Record<string, unknown>[]
-    expect(written).toMatchObject({ cashflow: 'spending', category_id: null, needs_review: true })
+    const insert = stub.calls.find((call) => call.sql.includes('INSERT INTO public.transactions'))
+    expect(insert?.sql).toContain('ON CONFLICT (household_id, dedupe_key) DO NOTHING')
+    const [written] = JSON.parse(String(insert?.params[0])) as Record<string, unknown>[]
+    expect(written).toMatchObject({
+      household_id: 'h1',
+      import_batch_id: 'batch1',
+      cashflow: 'spending',
+      category_id: null,
+      needs_review: true,
+    })
+  })
+
+  it('says the write was refused, not that data may be there, when Postgres refuses it', async () => {
+    statementToLedger.mockReturnValue({
+      entries: [
+        { id: 'e1', occurredAt: new Date('2026-03-02T02:00:00Z'), description: 'Kopi', amount: 50_000_00n, cashflow: 'spending', fromAccountId: 'mandiri', toAccountId: null },
+      ],
+      classifications: [{ kind: 'purchase' }],
+      passThroughIds: [],
+      review: [],
+      walletCoverage: { seen: 0, matchedOwn: 0 },
+    })
+    parseMandiriStatement.mockReturnValue({ ...VALID_STATEMENT, rows: [{ description: 'Kopi' }] })
+    lookups()
+    stub.queue({ id: 'batch1' })
+    stub.queueError('new row violates check constraint "transactions_account_sides"', '23514')
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const result = await importStatement(formWith(statementFile()))
+
+    expect(result.message).toBe('Transaksinya gagal disimpan.')
+    expect(JSON.stringify(result)).not.toContain('transactions_account_sides')
+    spy.mockRestore()
+  })
+
+  it('says a statement uploaded twice changes nothing', async () => {
+    lookups()
+    stub.queueError('duplicate key value violates unique constraint', '23505')
+
+    const result = await importStatement(formWith(statementFile()))
+
+    expect(result).toMatchObject({ ok: true, message: 'Berkas ini sudah pernah diimpor.' })
+    const batch = stub.calls.at(-1)
+    expect(batch?.sql).toContain('INSERT INTO "public"."import_batches"')
+    expect(batch?.params[0]).toBe('h1')
+  })
+
+  it('scopes every lookup to the household', async () => {
+    lookups()
+    stub.queue({ id: 'batch1' })
+    stub.queue([])
+
+    await importStatement(formWith(statementFile()))
+
+    for (const call of stub.calls.slice(1, 4)) expect(call.params).toEqual(['h1'])
+    expect(stub.calls[1].sql).toContain('archived_at IS NULL')
+    expect(stub.calls[3].sql).toContain('auto_apply = true')
   })
 
   it('leaves the cache alone when nothing was saved', async () => {
-    createClientImpl = async () => {
+    userScopeImpl = async () => {
       throw new Error('ECONNREFUSED')
     }
 

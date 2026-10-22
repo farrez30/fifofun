@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createSupabaseStub } from '@/test/supabase-stub'
-import { POST } from './route'
+import { createScopeStub } from '@/test/scope-stub'
 
 /**
  * These tests are about the gates, not the bookkeeping.
@@ -14,18 +13,54 @@ const SECRET = 'a-long-webhook-secret-value'
 const CHAT = 987654321
 
 /*
-  The shared recorder rather than a bespoke mock. The bot looks the cash
-  account up by its import key now, which is one `.is` more than the old stub
-  could chain, and every other action test already answers through this one.
+  The shared recorder stands in for asService. The cash lookup is the only
+  maybeOne the route makes, so it answers from `cash` and the insert is the
+  only rows call; a test breaks either by setting `failing`.
 */
-const stub = createSupabaseStub()
-
-vi.mock('@supabase/supabase-js', () => ({ createClient: () => stub.client }))
-
+const stub = createScopeStub(null)
 const CASH = { id: 'cash-account' }
+let cash: { id: string } | null = CASH
+let failing: 'lookup' | 'insert' | null = null
 
-/** Rows the client was asked to write. */
-const written = () => stub.callsOn('transactions').map((call) => call.payload)
+const recordLookup = stub.scope.maybeOne
+stub.scope.maybeOne = async (q) => {
+  await recordLookup(q)
+  if (failing === 'lookup') throw new Error('connection reset')
+  return cash as never
+}
+const recordInsert = stub.scope.rows
+stub.scope.rows = async (q) => {
+  await recordInsert(q)
+  if (failing === 'insert') throw new Error('connection reset')
+  return []
+}
+
+vi.mock('@/db/client', () => ({ db: {} }))
+vi.mock('@/db/query', async (importActual) => ({
+  ...(await importActual<typeof import('@/db/query')>()),
+  asService: stub.scope,
+}))
+
+const { POST } = await import('./route')
+
+/** One literal from a VALUES list: a bound parameter, a quoted string, or true/false/NULL. */
+function literal(token: string, params: unknown[]): unknown {
+  if (token.startsWith('$')) return params[Number(token.slice(1)) - 1]
+  if (token.startsWith("'")) return token.slice(1, -1)
+  return { true: true, false: false, NULL: null }[token]
+}
+
+/** Rows the route asked to insert, rebuilt from the statement and its parameters. */
+const written = () =>
+  stub.calls
+    .filter((call) => call.sql.includes('INSERT INTO public.transactions'))
+    .map((call) => {
+      const flat = call.sql.replace(/\s+/g, ' ')
+      const [, columns, values] = /\(([^)]*)\) VALUES \(([^)]*)\)/.exec(flat) ?? []
+      const names = columns.split(',').map((c) => c.trim())
+      const tokens = values.split(',').map((v) => v.trim())
+      return Object.fromEntries(names.map((name, i) => [name, literal(tokens[i], call.params)]))
+    })
 
 function request(body: unknown, secret: string | null = SECRET): Request {
   return new Request('https://example.test/api/telegram', {
@@ -51,13 +86,11 @@ function message(text: string, chatId = CHAT, messageId = 1) {
 
 beforeEach(() => {
   stub.reset()
-  // Every message reads the cash account first, so every test has one.
-  for (let i = 0; i < 25; i++) stub.queue('accounts', { data: CASH })
+  cash = CASH
+  failing = null
   vi.stubEnv('TELEGRAM_WEBHOOK_SECRET', SECRET)
   vi.stubEnv('TELEGRAM_ALLOWED_CHAT_IDS', String(CHAT))
   vi.stubEnv('TELEGRAM_HOUSEHOLD_ID', 'household-1')
-  vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://project.supabase.co')
-  vi.stubEnv('SUPABASE_SECRET_KEY', 'sb_secret_test')
   vi.stubEnv('TELEGRAM_BOT_TOKEN', 'bot-token')
   vi.stubGlobal('fetch', vi.fn(async () => new Response('{}')))
 })
@@ -126,14 +159,15 @@ describe('the account the bot writes against', () => {
   it('finds it by import key, not by being called Cash', async () => {
     await POST(request(message('50rb makan siang')))
 
-    const lookup = stub.callsOn('accounts')[0]
-    expect(lookup.args[lookup.chain.indexOf('eq') + 1]).toEqual(['key', 'cash'])
+    const [lookup] = stub.calls
+    expect(lookup.sql).toContain("household_id = $1 AND key = 'cash' AND archived_at IS NULL")
+    // The configured household, never one taken from the message.
+    expect(lookup.params).toEqual(['household-1'])
     expect(written()).toHaveLength(1)
   })
 
   it('writes nothing when no account holds that key', async () => {
-    stub.reset()
-    stub.queue('accounts', { data: null })
+    cash = null
 
     const response = await POST(request(message('50rb makan siang')))
 
@@ -167,6 +201,19 @@ describe('recording an entry', () => {
   it('keys on the Telegram message id so a redelivery cannot duplicate it', async () => {
     await POST(request(message('50rb kopi', CHAT, 42)))
     expect(written()[0]).toMatchObject({ dedupe_key: `telegram:${CHAT}:42` })
+    expect(stub.calls.at(-1)?.sql).toContain('ON CONFLICT (household_id, dedupe_key) DO NOTHING')
+  })
+
+  it.each(['lookup', 'insert'] as const)('answers a failed %s with a sentence, never a 500', async (where) => {
+    // A 500 would make Telegram redeliver the update.
+    failing = where
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const response = await POST(request(message('50rb kopi')))
+    expect(response.status).toBe(200)
+    const [, options] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit]
+    expect(String(options.body)).toContain('Gagal menyimpan')
+    expect(String(options.body)).not.toContain('connection')
+    spy.mockRestore()
   })
 
   it('keeps the original text, since the parser will change', async () => {

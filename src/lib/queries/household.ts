@@ -1,6 +1,8 @@
 import { cache } from 'react'
 import { cacheLife, cacheTag } from 'next/cache'
-import { createClient } from '@/lib/supabase/server'
+import type { SQL } from 'drizzle-orm'
+import { sql, type Scope } from '@/db/query'
+import { userScope } from '@/lib/auth/session'
 import { accountsTag, budgetsTag, categoriesTag, importsTag, placesTag, planTag, rulesTag, summaryNoteTag, txTag } from '@/lib/queries/tags'
 import { parseHue } from '@/lib/ledger/palette'
 import { logoUrl } from '@/lib/brand'
@@ -20,16 +22,18 @@ import type { LifestyleTier } from '@/lib/planning/lifestyle'
 /**
  * Reads for the signed-in user.
  *
- * These go through supabase-js rather than Drizzle on purpose. Drizzle connects
- * as the database owner, which bypasses row level security entirely; that is
- * correct for migrations and seeding, and completely wrong for serving a
- * request. Going through PostgREST means every read carries the user's token
- * and the policies decide what comes back, so a mistake in this file cannot
- * expose another household's data.
+ * Every read runs in the user's scope (`userScope`), never as the owner: the
+ * owner bypasses row level security entirely, which is correct for migrations
+ * and seeding and completely wrong for serving a request. In the user's scope
+ * the policies decide what comes back, so a mistake in this file cannot expose
+ * another household's data.
  *
- * PostgREST returns `bigint` columns as strings, since JSON numbers cannot hold
- * them safely. Every amount is converted back to `bigint` here, at the boundary,
- * so no string ever reaches the money functions.
+ * Amounts arrive as numbers of sen. Every one is converted to `bigint` here, at
+ * the boundary, so no number ever reaches the money functions.
+ *
+ * A read that fails, or a request with nobody signed in, answers with the empty
+ * value rather than throwing, as these always have: the pages render an empty
+ * state, and the error goes to the server log.
  */
 
 export interface HouseholdSummary {
@@ -94,6 +98,22 @@ export interface ListOptions {
   includeArchived?: boolean
 }
 
+type Row = Record<string, unknown>
+
+/** Run a read in the user's scope; the fallback when signed out or when it fails. */
+async function read<T>(fallback: T, query: (db: Scope) => Promise<T>): Promise<T> {
+  const db = await userScope()
+  if (!db) return fallback
+  try {
+    return await query(db)
+  } catch (e) {
+    console.error('[household] read failed', e)
+    return fallback
+  }
+}
+
+const where = (conditions: SQL[]): SQL => sql.join(conditions, sql` AND `)
+
 function toBigInt(value: unknown): bigint {
   if (typeof value === 'bigint') return value
   if (typeof value === 'string') return BigInt(value)
@@ -109,15 +129,9 @@ function toBigInt(value: unknown): bigint {
  * `cookies()` this read needs for RLS. Per-request memoisation only.
  */
 export const getHousehold = cache(async (): Promise<HouseholdSummary | null> => {
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('households')
-    .select('id, name, timezone, currency')
-    .limit(1)
-    .maybeSingle()
-
-  if (error || !data) return null
-  return data as HouseholdSummary
+  return read(null, (db) =>
+    db.maybeOne<HouseholdSummary>(sql`SELECT id, name, timezone, currency FROM public.households LIMIT 1`),
+  )
 })
 
 export async function getAccounts(
@@ -128,22 +142,17 @@ export async function getAccounts(
   cacheTag(accountsTag(householdId))
   cacheLife({ stale: 300 })
 
-  const supabase = await createClient()
-  let query = supabase
-    .from('accounts')
-    .select(
-      // logo_hash, not logo: the icon itself is served once by /akun/[id]/logo
-      // rather than riding along in every page that lists accounts.
-      'id, name, kind, opening_balance, opening_balance_at, key, institution, own_identifiers, reference, sort_order, archived_at, color, logo_hash',
-    )
-    .eq('household_id', householdId)
-    .order('sort_order')
-    .order('name')
-
-  if (!options.includeArchived) query = query.is('archived_at', null)
-
-  const { data, error } = await query
-  if (error || !data) return []
+  // logo_hash, not logo: the icon itself is served once by /akun/[id]/logo
+  // rather than riding along in every page that lists accounts.
+  const data = await read<Row[]>([], (db) =>
+    db.rows(sql`
+      SELECT id, name, kind, opening_balance, opening_balance_at, key, institution, own_identifiers,
+             reference, sort_order, archived_at, color, logo_hash
+      FROM public.accounts
+      WHERE household_id = ${householdId}
+        ${options.includeArchived ? sql`` : sql`AND archived_at IS NULL`}
+      ORDER BY sort_order, name`),
+  )
   return data.map((row) => ({
     id: row.id as string,
     name: row.name as string,
@@ -169,33 +178,26 @@ export async function getCategories(
   cacheTag(categoriesTag(householdId))
   cacheLife({ stale: 300 })
 
-  const supabase = await createClient()
-  let query = supabase
-    .from('categories')
-    .select(
-      'id, name, cashflow, parent_id, opening_balance, target_amount, target_month, planned_monthly, planned_share_bp, bill_amount, bill_due_day, icon, color, description, sort_order, archived_at',
-    )
-    .eq('household_id', householdId)
-    // Ordered by the household's own arrangement, with the name as the
-    // tiebreak. Before the numbering migration every row carried zero, so the
-    // tiebreak alone reproduces the alphabetical order this used to have.
-    .order('sort_order')
-    .order('name')
+  // Ordered by the household's own arrangement, with the name as the
+  // tiebreak. Before the numbering migration every row carried zero, so the
+  // tiebreak alone reproduces the alphabetical order this used to have.
+  const data = await read<Row[]>([], (db) =>
+    db.rows(sql`
+      SELECT id, name, cashflow, parent_id, opening_balance, target_amount, target_month, planned_monthly,
+             planned_share_bp, bill_amount, bill_due_day, icon, color, description, sort_order, archived_at
+      FROM public.categories
+      WHERE household_id = ${householdId}
+        ${options.includeArchived ? sql`` : sql`AND archived_at IS NULL`}
+      ORDER BY sort_order, name`),
+  )
 
-  if (!options.includeArchived) query = query.is('archived_at', null)
-
-  const { data, error } = await query
-  if (error || !data) return []
-
-  // PostgREST returns bigint columns as strings, because JSON numbers cannot
-  // hold them. Converting here keeps every amount in the app a bigint of sen.
   return data.map((row) => ({
     id: row.id as string,
     name: row.name as string,
     cashflow: row.cashflow as CashflowType,
     parentId: (row.parent_id as string | null) ?? null,
-    openingBalance: BigInt(row.opening_balance ?? 0),
-    target: row.target_amount === null ? null : BigInt(row.target_amount),
+    openingBalance: toBigInt(row.opening_balance ?? 0),
+    target: row.target_amount === null ? null : toBigInt(row.target_amount),
     targetMonth: (row.target_month as string | null) ?? null,
     plannedMonthly: row.planned_monthly === null ? null : toBigInt(row.planned_monthly),
     plannedShareBp: (row.planned_share_bp as number | null) ?? null,
@@ -220,15 +222,14 @@ export interface TransactionRow extends LedgerEntry {
 }
 
 /** Every column the ledger reads, in one place, so a new one is added once. */
-const TRANSACTION_COLUMNS =
-  'id, occurred_at, description, amount, cashflow, category_id, from_account_id, to_account_id, source, external_ref, note, needs_review, is_pass_through, duplicate_of, split_of, categories(name)'
+const TRANSACTION_COLUMNS = sql`t.id, t.occurred_at, t.description, t.amount, t.cashflow, t.category_id,
+  t.from_account_id, t.to_account_id, t.source, t.external_ref, t.note, t.needs_review, t.is_pass_through,
+  t.duplicate_of, t.split_of, c.name AS category_name`
 
-type Row = Record<string, unknown>
+/** Transactions as `t`, with the category's name beside each row. */
+const TRANSACTIONS = sql`public.transactions t LEFT JOIN public.categories c ON c.id = t.category_id`
 
-function joinedName(value: unknown): string | null {
-  const joined = value as { name: string } | { name: string }[] | null
-  return Array.isArray(joined) ? (joined[0]?.name ?? null) : (joined?.name ?? null)
-}
+const categoryName = (row: Row): string | null => (row.category_name as string | null) ?? null
 
 function toTransactionRow(row: Row): TransactionRow {
   return {
@@ -243,7 +244,7 @@ function toTransactionRow(row: Row): TransactionRow {
     source: row.source as EntrySource,
     externalRef: (row.external_ref as string | null) ?? null,
     note: (row.note as string | null) ?? null,
-    categoryName: joinedName(row.categories),
+    categoryName: categoryName(row),
     needsReview: Boolean(row.needs_review),
     isPassThrough: Boolean(row.is_pass_through),
     duplicateOf: (row.duplicate_of as string | null) ?? null,
@@ -287,75 +288,57 @@ export async function getTransactions(
   householdId: string,
   options: FetchOptions = {},
 ): Promise<TransactionRow[]> {
-  const supabase = await createClient()
+  const conditions = [sql`t.household_id = ${householdId}`, sql`t.deleted_at IS NULL`]
 
-  let query = supabase
-    .from('transactions')
-    .select(TRANSACTION_COLUMNS)
-    .eq('household_id', householdId)
-    .is('deleted_at', null)
-    .order('occurred_at', { ascending: false })
-
-  if (options.from) query = query.gte('occurred_at', options.from.toISOString())
-  if (options.to) query = query.lt('occurred_at', options.to.toISOString())
-  if (options.cashflows?.length) query = query.in('cashflow', options.cashflows)
-  if (options.sources?.length) query = query.in('source', options.sources)
+  if (options.from) conditions.push(sql`t.occurred_at >= ${options.from.toISOString()}::timestamptz`)
+  if (options.to) conditions.push(sql`t.occurred_at < ${options.to.toISOString()}::timestamptz`)
+  if (options.cashflows?.length) {
+    conditions.push(sql`t.cashflow = ANY(${sql.param(options.cashflows)}::public.cashflow_type[])`)
+  }
+  if (options.sources?.length) {
+    conditions.push(sql`t.source = ANY(${sql.param(options.sources)}::public.entry_source[])`)
+  }
 
   if (options.categoryIds?.length) {
     const ids = options.categoryIds.filter((id): id is string => id !== null)
     const wantsNull = options.categoryIds.includes(null)
-    // Ids are uuids, so the `or` list needs no quoting.
-    if (ids.length && wantsNull) {
-      query = query.or(`category_id.in.(${ids.join(',')}),category_id.is.null`)
-    } else if (ids.length) {
-      query = query.in('category_id', ids)
-    } else {
-      query = query.is('category_id', null)
-    }
+    const inIds = sql`t.category_id = ANY(${sql.param(ids)}::uuid[])`
+    if (ids.length && wantsNull) conditions.push(sql`(${inIds} OR t.category_id IS NULL)`)
+    else if (ids.length) conditions.push(inIds)
+    else conditions.push(sql`t.category_id IS NULL`)
   }
 
   if (options.accountIds?.length) {
-    const ids = options.accountIds.join(',')
-    query = query.or(`from_account_id.in.(${ids}),to_account_id.in.(${ids})`)
+    const ids = sql.param(options.accountIds)
+    conditions.push(sql`(t.from_account_id = ANY(${ids}::uuid[]) OR t.to_account_id = ANY(${ids}::uuid[]))`)
   }
 
   if (options.search?.trim()) {
-    query = query.ilike('description', `%${escapeLike(options.search.trim())}%`)
+    conditions.push(sql`t.description ILIKE ${`%${escapeLike(options.search.trim())}%`}`)
   }
 
-  if (options.includePassThrough === false) query = query.eq('is_pass_through', false)
+  if (options.includePassThrough === false) conditions.push(sql`t.is_pass_through = false`)
 
-  if (options.limit !== undefined) {
-    const start = options.offset ?? 0
-    // `range` is inclusive at both ends, so the end index is one short.
-    query = query.range(start, start + options.limit - 1)
-  }
+  const page =
+    options.limit !== undefined ? sql`LIMIT ${options.limit} OFFSET ${options.offset ?? 0}` : sql``
 
-  const { data, error } = await query
-  if (error || !data) return []
-
+  const data = await read<Row[]>([], (db) =>
+    db.rows(sql`
+      SELECT ${TRANSACTION_COLUMNS} FROM ${TRANSACTIONS}
+      WHERE ${where(conditions)}
+      ORDER BY t.occurred_at DESC ${page}`),
+  )
   return data.map(toTransactionRow)
 }
 
 /**
- * PostgREST caps a response at 1000 rows regardless of the limit asked for, and
- * does so silently. A truncated ledger still renders perfectly happily, just
- * with months missing from the totals, so every full read pages explicitly
- * rather than trusting a single request to return everything.
+ * Every transaction, used by the yearly views. Ordered oldest first.
+ *
+ * One query. PostgREST capped a response at 1000 rows, so the full reads here
+ * used to page; a direct query returns everything it is asked for.
  */
-const PAGE_SIZE = 1000
-
-/** Every transaction, used by the yearly views. Ordered oldest first. */
 export async function getAllTransactions(householdId: string): Promise<TransactionRow[]> {
-  const all: TransactionRow[] = []
-
-  for (let offset = 0; ; offset += PAGE_SIZE) {
-    const page = await getTransactions(householdId, { offset, limit: PAGE_SIZE })
-    all.push(...page)
-    if (page.length < PAGE_SIZE) break
-  }
-
-  return all.reverse()
+  return (await getTransactions(householdId)).reverse()
 }
 
 /**
@@ -377,28 +360,17 @@ export async function getMatchingTransactions(
 ): Promise<TransactionRow[]> {
   if (options.categoryIds?.length === 0 || options.accountIds?.length === 0) return []
 
-  const all: TransactionRow[] = []
-
-  for (let offset = 0; ; offset += PAGE_SIZE) {
-    const page = await getTransactions(householdId, { ...options, offset, limit: PAGE_SIZE })
-    all.push(...page)
-    if (page.length < PAGE_SIZE) break
-  }
-
-  return all
+  return getTransactions(householdId, { ...options, offset: undefined, limit: undefined })
 }
 
 /** How many live rows the ledger holds, without fetching any of them. */
 export async function countLedger(householdId: string): Promise<number> {
-  const supabase = await createClient()
-  const { count, error } = await supabase
-    .from('transactions')
-    .select('id', { head: true, count: 'exact' })
-    .eq('household_id', householdId)
-    .is('deleted_at', null)
-
-  if (error || count === null) return 0
-  return count
+  const found = await read(null, (db) =>
+    db.maybeOne<{ n: number }>(
+      sql`SELECT count(*)::int AS n FROM public.transactions WHERE household_id = ${householdId} AND deleted_at IS NULL`,
+    ),
+  )
+  return found?.n ?? 0
 }
 
 /**
@@ -411,16 +383,14 @@ export async function getOpeningBalance(householdId: string): Promise<bigint> {
   cacheTag(importsTag(householdId))
   cacheLife({ stale: 30 })
 
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('import_batches')
-    .select('opening_balance')
-    .eq('household_id', householdId)
-    .order('period_start', { ascending: true })
-    .limit(1)
-    .maybeSingle()
-
-  if (error || !data) return 0n
+  const data = await read(null, (db) =>
+    db.maybeOne<Row>(sql`
+      SELECT opening_balance FROM public.import_batches
+      WHERE household_id = ${householdId}
+      ORDER BY period_start ASC
+      LIMIT 1`),
+  )
+  if (!data) return 0n
   return toBigInt(data.opening_balance)
 }
 
@@ -440,19 +410,16 @@ export async function getBudgets(
   cacheTag(budgetsTag(householdId))
   cacheLife({ stale: 30 })
 
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('budgets')
-    .select('amount, categories(name)')
-    .eq('household_id', householdId)
-    .eq('period', period)
-
-  if (error || !data) return {}
+  const data = await read<Row[]>([], (db) =>
+    db.rows(sql`
+      SELECT b.amount, c.name AS category_name
+      FROM public.budgets b LEFT JOIN public.categories c ON c.id = b.category_id
+      WHERE b.household_id = ${householdId} AND b.period = ${period}`),
+  )
 
   const budgets: Record<string, bigint> = {}
   for (const row of data) {
-    const joined = row.categories as { name: string } | { name: string }[] | null
-    const name = Array.isArray(joined) ? joined[0]?.name : joined?.name
+    const name = categoryName(row)
     if (name) budgets[name] = toBigInt(row.amount)
   }
   return budgets
@@ -466,17 +433,15 @@ export async function getLatestClosingBalance(
   cacheTag(importsTag(householdId))
   cacheLife({ stale: 30 })
 
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('import_batches')
-    .select('closing_balance, period_end')
-    .eq('household_id', householdId)
-    .eq('status', 'reconciled')
-    .order('period_end', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+  const data = await read(null, (db) =>
+    db.maybeOne<Row>(sql`
+      SELECT closing_balance, period_end FROM public.import_batches
+      WHERE household_id = ${householdId} AND status = 'reconciled'
+      ORDER BY period_end DESC
+      LIMIT 1`),
+  )
 
-  if (error || !data?.period_end) return null
+  if (!data?.period_end) return null
   return { closing: toBigInt(data.closing_balance), periodEnd: new Date(data.period_end as string) }
 }
 
@@ -497,29 +462,26 @@ export async function getRules(householdId: string): Promise<RuleRow[]> {
   cacheTag(rulesTag(householdId))
   cacheLife({ stale: 300 })
 
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('categorization_rules')
-    .select('id, priority, match_type, pattern, cashflow, category_id, auto_apply, hit_count, categories(name)')
-    .eq('household_id', householdId)
-    .order('priority')
+  const data = await read<Row[]>([], (db) =>
+    db.rows(sql`
+      SELECT r.id, r.priority, r.match_type, r.pattern, r.cashflow, r.category_id, r.auto_apply, r.hit_count,
+             c.name AS category_name
+      FROM public.categorization_rules r LEFT JOIN public.categories c ON c.id = r.category_id
+      WHERE r.household_id = ${householdId}
+      ORDER BY r.priority`),
+  )
 
-  if (error || !data) return []
-
-  return data.map((row) => {
-    const joined = row.categories as { name: string } | { name: string }[] | null
-    return {
-      id: row.id as string,
-      priority: row.priority as number,
-      matchType: row.match_type as RuleRow['matchType'],
-      pattern: row.pattern as string,
-      cashflow: (row.cashflow as CashflowType | null) ?? null,
-      categoryId: (row.category_id as string | null) ?? null,
-      categoryName: Array.isArray(joined) ? (joined[0]?.name ?? null) : (joined?.name ?? null),
-      autoApply: Boolean(row.auto_apply),
-      hitCount: (row.hit_count as number) ?? 0,
-    }
-  })
+  return data.map((row) => ({
+    id: row.id as string,
+    priority: row.priority as number,
+    matchType: row.match_type as RuleRow['matchType'],
+    pattern: row.pattern as string,
+    cashflow: (row.cashflow as CashflowType | null) ?? null,
+    categoryId: (row.category_id as string | null) ?? null,
+    categoryName: categoryName(row),
+    autoApply: Boolean(row.auto_apply),
+    hitCount: (row.hit_count as number) ?? 0,
+  }))
 }
 
 export interface MerchantLocationRow {
@@ -541,13 +503,12 @@ export async function getMerchantLocations(householdId: string): Promise<Merchan
   cacheTag(placesTag(householdId))
   cacheLife({ stale: 300 })
 
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('merchant_locations')
-    .select('id, merchant_key, label, address, lat, lng, source, valid_from, valid_to')
-    .eq('household_id', householdId)
-
-  if (error || !data) return []
+  const data = await read<Row[]>([], (db) =>
+    db.rows(sql`
+      SELECT id, merchant_key, label, address, lat, lng, source, valid_from, valid_to
+      FROM public.merchant_locations
+      WHERE household_id = ${householdId}`),
+  )
 
   return data.map((row) => ({
     id: row.id as string,
@@ -568,9 +529,10 @@ export async function getSummaryNote(householdId: string): Promise<string> {
   cacheTag(summaryNoteTag(householdId))
   cacheLife({ stale: 300 })
 
-  const supabase = await createClient()
-  const { data } = await supabase.from('summary_notes').select('body').eq('household_id', householdId).maybeSingle()
-  return (data?.body as string | undefined) ?? ''
+  const data = await read(null, (db) =>
+    db.maybeOne<{ body: string }>(sql`SELECT body FROM public.summary_notes WHERE household_id = ${householdId}`),
+  )
+  return data?.body ?? ''
 }
 
 /**
@@ -579,38 +541,28 @@ export async function getSummaryNote(householdId: string): Promise<string> {
  * was somebody else's. Uncached for the same reason as the other ledger reads.
  */
 export async function getPlaceEntries(householdId: string): Promise<PlaceEntry[]> {
-  const supabase = await createClient()
-  const all: PlaceEntry[] = []
+  const data = await read<Row[]>([], (db) =>
+    db.rows(sql`
+      SELECT t.id, t.occurred_at, t.description, t.raw_description, t.amount, t.cashflow, t.source,
+             c.name AS category_name
+      FROM ${TRANSACTIONS}
+      WHERE t.household_id = ${householdId}
+        AND t.deleted_at IS NULL
+        AND t.is_pass_through = false
+        AND t.cashflow IN ('spending', 'bills')
+      ORDER BY t.occurred_at ASC, t.id ASC`),
+  )
 
-  for (let offset = 0; ; offset += PAGE_SIZE) {
-    const { data, error } = await supabase
-      .from('transactions')
-      .select('id, occurred_at, description, raw_description, amount, cashflow, source, categories(name)')
-      .eq('household_id', householdId)
-      .is('deleted_at', null)
-      .eq('is_pass_through', false)
-      .in('cashflow', ['spending', 'bills'])
-      .order('occurred_at', { ascending: true })
-      .order('id', { ascending: true })
-      .range(offset, offset + PAGE_SIZE - 1)
-    if (error || !data) break
-
-    for (const row of data) {
-      all.push({
-        id: row.id as string,
-        occurredAt: new Date(row.occurred_at as string),
-        description: row.description as string,
-        rawDescription: (row.raw_description as string | null) ?? null,
-        amount: toBigInt(row.amount),
-        cashflow: row.cashflow as CashflowType,
-        source: row.source as EntrySource,
-        categoryName: joinedName(row.categories),
-      })
-    }
-    if (data.length < PAGE_SIZE) break
-  }
-
-  return all
+  return data.map((row) => ({
+    id: row.id as string,
+    occurredAt: new Date(row.occurred_at as string),
+    description: row.description as string,
+    rawDescription: (row.raw_description as string | null) ?? null,
+    amount: toBigInt(row.amount),
+    cashflow: row.cashflow as CashflowType,
+    source: row.source as EntrySource,
+    categoryName: categoryName(row),
+  }))
 }
 
 /**
@@ -619,16 +571,16 @@ export async function getPlaceEntries(householdId: string): Promise<PlaceEntry[]
  * like every other read a balance depends on.
  */
 export async function getAdjustments(householdId: string): Promise<AdjustmentRow[]> {
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('transactions')
-    .select('id, occurred_at, created_at, amount, cashflow, from_account_id, to_account_id, note')
-    .eq('household_id', householdId)
-    .is('deleted_at', null)
-    .eq('source', 'manual')
-    .in('cashflow', ['income', 'spending'])
-    .like('description', 'Penyesuaian saldo %')
-  if (error || !data) return []
+  const data = await read<Row[]>([], (db) =>
+    db.rows(sql`
+      SELECT id, occurred_at, created_at, amount, cashflow, from_account_id, to_account_id, note
+      FROM public.transactions
+      WHERE household_id = ${householdId}
+        AND deleted_at IS NULL
+        AND source = 'manual'
+        AND cashflow IN ('income', 'spending')
+        AND description LIKE ${'Penyesuaian saldo %'}`),
+  )
 
   return data.map((row) => ({
     id: row.id as string,
@@ -675,8 +627,7 @@ export interface UnconfirmedRow {
  * For the badge on the tab bar. The shell starts this without awaiting it, so
  * the page paints and the figure streams in behind it, which is why it
  * resolves the household itself and why it never rejects: nothing upstream is
- * positioned to catch it, and a badge is not worth an error page. `head: true`
- * makes PostgREST return the count header without a single row.
+ * positioned to catch it, and a badge is not worth an error page.
  *
  * The filters must be the ones `getUnconfirmed` uses below: a badge that
  * counts rows the queue will not list is a door that says occupied over an
@@ -687,17 +638,16 @@ export async function countUnconfirmed(): Promise<number> {
     const household = await getHousehold()
     if (!household) return 0
 
-    const supabase = await createClient()
-    const { count, error } = await supabase
-      .from('transactions')
-      .select('id', { count: 'exact', head: true })
-      .eq('household_id', household.id)
-      .is('deleted_at', null)
-      .neq('cashflow', 'transfer')
-      .neq('source', 'manual')
-      .is('confirmed_at', null)
-
-    return error ? 0 : (count ?? 0)
+    const found = await read(null, (db) =>
+      db.maybeOne<{ n: number }>(sql`
+        SELECT count(*)::int AS n FROM public.transactions
+        WHERE household_id = ${household.id}
+          AND deleted_at IS NULL
+          AND cashflow <> 'transfer'
+          AND source <> 'manual'
+          AND confirmed_at IS NULL`),
+    )
+    return found?.n ?? 0
   } catch {
     // The fixture harness renders the shell with no request to read cookies
     // from. It shows the badge's absence, which is also what it asserts on.
@@ -713,55 +663,33 @@ export async function getUnconfirmed(
   cacheTag(txTag(householdId))
   cacheLife({ stale: 30 })
 
-  const supabase = await createClient()
-  const all: UnconfirmedRow[] = []
+  // The id makes the order total: amounts repeat constantly in a ledger.
+  const data = await read<Row[]>([], (db) =>
+    db.rows(sql`
+      SELECT t.id, t.description, t.raw_description, t.amount, t.cashflow, t.occurred_at, t.from_account_id,
+             t.to_account_id, t.source, t.category_locked_at, c.name AS category_name
+      FROM ${TRANSACTIONS}
+      WHERE t.household_id = ${householdId}
+        AND t.deleted_at IS NULL
+        AND t.cashflow <> 'transfer'
+        AND t.source <> 'manual'
+        ${options.includeSettled ? sql`` : sql`AND t.confirmed_at IS NULL`}
+      ORDER BY t.amount DESC, t.id`),
+  )
 
-  for (let offset = 0; ; offset += PAGE_SIZE) {
-    const filtered = supabase
-      .from('transactions')
-      .select(
-        'id, description, raw_description, amount, cashflow, occurred_at, from_account_id, to_account_id, source, category_locked_at, categories(name)',
-      )
-      .eq('household_id', householdId)
-      .is('deleted_at', null)
-      .neq('cashflow', 'transfer')
-      .neq('source', 'manual')
-
-    const { data, error } = await (options.includeSettled
-      ? filtered
-      : filtered.is('confirmed_at', null)
-    )
-      // Paging on a non-unique sort key lets rows swap between pages, so a row
-      // can appear twice or not at all. Amounts repeat constantly in a ledger,
-      // so the id is there purely to make the order total.
-      .order('amount', { ascending: false })
-      .order('id')
-      .range(offset, offset + PAGE_SIZE - 1)
-
-    if (error || !data) break
-
-    for (const row of data) {
-      all.push({
-        id: row.id as string,
-        description: row.description as string,
-        rawDescription: (row.raw_description as string | null) ?? null,
-        amount: toBigInt(row.amount),
-        cashflow: row.cashflow as CashflowType,
-        categoryName: joinedName(row.categories),
-        occurredAt: new Date(row.occurred_at as string),
-        fromAccountId: (row.from_account_id as string | null) ?? null,
-        toAccountId: (row.to_account_id as string | null) ?? null,
-        source: row.source as EntrySource,
-        categoryLockedAt: row.category_locked_at
-          ? new Date(row.category_locked_at as string)
-          : null,
-      })
-    }
-
-    if (data.length < PAGE_SIZE) break
-  }
-
-  return all
+  return data.map((row) => ({
+    id: row.id as string,
+    description: row.description as string,
+    rawDescription: (row.raw_description as string | null) ?? null,
+    amount: toBigInt(row.amount),
+    cashflow: row.cashflow as CashflowType,
+    categoryName: categoryName(row),
+    occurredAt: new Date(row.occurred_at as string),
+    fromAccountId: (row.from_account_id as string | null) ?? null,
+    toAccountId: (row.to_account_id as string | null) ?? null,
+    source: row.source as EntrySource,
+    categoryLockedAt: row.category_locked_at ? new Date(row.category_locked_at as string) : null,
+  }))
 }
 
 export interface TransactionDetail {
@@ -793,16 +721,21 @@ export async function getTransaction(
   cacheTag(txTag(householdId))
   cacheLife({ stale: 30 })
 
-  const supabase = await createClient()
+  const db = await userScope()
+  if (!db) return null
 
-  const { data: row, error } = await supabase
-    .from('transactions')
-    .select(`${TRANSACTION_COLUMNS}, deleted_at, confirmed_at, raw_description`)
-    .eq('household_id', householdId)
-    .eq('id', id)
-    .maybeSingle()
-
-  if (error || !row) return null
+  let row: Row | null
+  try {
+    row = await db.maybeOne<Row>(sql`
+      SELECT ${TRANSACTION_COLUMNS}, t.deleted_at, t.confirmed_at, t.raw_description
+      FROM ${TRANSACTIONS}
+      WHERE t.household_id = ${householdId} AND t.id = ${id}`)
+  } catch (e) {
+    // Also what a malformed id in the address bar lands on.
+    console.error('[household] read failed', e)
+    return null
+  }
+  if (!row) return null
 
   const detail = {
     ...toTransactionRow(row),
@@ -811,29 +744,30 @@ export async function getTransaction(
     rawDescription: (row.raw_description as string | null) ?? null,
   }
 
-  const { data: related } = await supabase
-    .from('transactions')
-    .select(`${TRANSACTION_COLUMNS}, fee_parent_id`)
-    .eq('household_id', householdId)
-    .is('deleted_at', null)
-    .or(`split_of.eq.${id},fee_parent_id.eq.${id}`)
-    .order('dedupe_key')
+  const related = await db
+    .rows<Row>(sql`
+      SELECT ${TRANSACTION_COLUMNS}, t.fee_parent_id
+      FROM ${TRANSACTIONS}
+      WHERE t.household_id = ${householdId}
+        AND t.deleted_at IS NULL
+        AND (t.split_of = ${id} OR t.fee_parent_id = ${id})
+      ORDER BY t.dedupe_key`)
+    .catch(() => [] as Row[])
 
   const children: TransactionRow[] = []
   const fees: TransactionRow[] = []
-  for (const candidate of related ?? []) {
+  for (const candidate of related) {
     if (candidate.split_of === id) children.push(toTransactionRow(candidate))
     else fees.push(toTransactionRow(candidate))
   }
 
   let parent: TransactionDetail['parent'] = null
   if (detail.splitOf) {
-    const { data: found } = await supabase
-      .from('transactions')
-      .select('id, description, amount')
-      .eq('household_id', householdId)
-      .eq('id', detail.splitOf)
-      .maybeSingle()
+    const found = await db
+      .maybeOne<Row>(sql`
+        SELECT id, description, amount FROM public.transactions
+        WHERE household_id = ${householdId} AND id = ${detail.splitOf}`)
+      .catch(() => null)
     if (found) {
       parent = {
         id: found.id as string,
@@ -858,18 +792,16 @@ export async function getManualEntries(
   cacheTag(txTag(householdId))
   cacheLife({ stale: 30 })
 
-  const supabase = await createClient()
-  const { data, error, count } = await supabase
-    .from('transactions')
-    .select(TRANSACTION_COLUMNS, { count: 'exact' })
-    .eq('household_id', householdId)
-    .eq('source', 'manual')
-    .is('deleted_at', null)
-    .order('created_at', { ascending: false })
-    .limit(limit)
-
-  if (error || !data) return { rows: [], total: 0 }
-  return { rows: data.map(toTransactionRow), total: count ?? data.length }
+  // The window count is taken before LIMIT, so it counts every manual row.
+  const data = await read<Row[]>([], (db) =>
+    db.rows(sql`
+      SELECT ${TRANSACTION_COLUMNS}, count(*) OVER ()::int AS total
+      FROM ${TRANSACTIONS}
+      WHERE t.household_id = ${householdId} AND t.source = 'manual' AND t.deleted_at IS NULL
+      ORDER BY t.created_at DESC
+      LIMIT ${limit}`),
+  )
+  return { rows: data.map(toTransactionRow), total: (data[0]?.total as number | undefined) ?? 0 }
 }
 
 export interface DuplicateSide {
@@ -890,8 +822,8 @@ export interface DuplicatePair {
   imported: DuplicateSide
 }
 
-const DUPLICATE_COLUMNS =
-  'id, occurred_at, description, amount, cashflow, source, category_id, note, confirmed_at, duplicate_of, categories(name)'
+const DUPLICATE_COLUMNS = sql`t.id, t.occurred_at, t.description, t.amount, t.cashflow, t.source, t.category_id,
+  t.note, t.confirmed_at, t.duplicate_of, c.name AS category_name`
 
 function toDuplicateSide(row: Row): DuplicateSide {
   return {
@@ -902,7 +834,7 @@ function toDuplicateSide(row: Row): DuplicateSide {
     cashflow: row.cashflow as CashflowType,
     source: row.source as EntrySource,
     categoryId: (row.category_id as string | null) ?? null,
-    categoryName: joinedName(row.categories),
+    categoryName: categoryName(row),
     note: (row.note as string | null) ?? null,
     confirmedAt: row.confirmed_at ? new Date(row.confirmed_at as string) : null,
   }
@@ -912,41 +844,44 @@ function toDuplicateSide(row: Row): DuplicateSide {
  * Manual entries the import thinks it has already seen, paired with the bank
  * row that looks like the same movement.
  *
- * Two queries rather than an embed: a self reference has no unambiguous hint
- * in PostgREST, and joining two small lists in JavaScript is cheaper than
- * arguing with it. A pair whose bank row has since vanished is dropped rather
- * than half rendered.
+ * Two queries rather than a self join, kept from when this went through
+ * PostgREST: joining two small lists in JavaScript is simple enough. A pair
+ * whose bank row has since vanished is dropped rather than half rendered.
  */
 export async function getSuspectedDuplicates(householdId: string): Promise<DuplicatePair[]> {
   'use cache: private'
   cacheTag(txTag(householdId))
   cacheLife({ stale: 30 })
 
-  const supabase = await createClient()
+  const db = await userScope()
+  if (!db) return []
 
-  const { data: manual, error } = await supabase
-    .from('transactions')
-    .select(DUPLICATE_COLUMNS)
-    .eq('household_id', householdId)
-    .eq('source', 'manual')
-    .is('deleted_at', null)
-    .not('duplicate_of', 'is', null)
-    .order('occurred_at', { ascending: false })
-    // A hundred open pairs is already a state nobody reaches, and the cap keeps
-    // the second query's id list inside what PostgREST puts in a query string.
-    .limit(100)
+  // A hundred open pairs is already a state nobody reaches.
+  const manual = await db
+    .rows<Row>(sql`
+      SELECT ${DUPLICATE_COLUMNS}
+      FROM ${TRANSACTIONS}
+      WHERE t.household_id = ${householdId}
+        AND t.source = 'manual'
+        AND t.deleted_at IS NULL
+        AND t.duplicate_of IS NOT NULL
+      ORDER BY t.occurred_at DESC
+      LIMIT 100`)
+    .catch(() => [] as Row[])
 
-  if (error || !manual || manual.length === 0) return []
+  if (manual.length === 0) return []
 
   const ids = [...new Set(manual.map((row) => row.duplicate_of as string))]
-  const { data: imported } = await supabase
-    .from('transactions')
-    .select(DUPLICATE_COLUMNS)
-    .eq('household_id', householdId)
-    .is('deleted_at', null)
-    .in('id', ids)
+  const imported = await db
+    .rows<Row>(sql`
+      SELECT ${DUPLICATE_COLUMNS}
+      FROM ${TRANSACTIONS}
+      WHERE t.household_id = ${householdId}
+        AND t.deleted_at IS NULL
+        AND t.id = ANY(${sql.param(ids)}::uuid[])`)
+    .catch(() => [] as Row[])
 
-  const byId = new Map((imported ?? []).map((row) => [row.id as string, toDuplicateSide(row)]))
+  const byId = new Map(imported.map((row) => [row.id as string, toDuplicateSide(row)]))
 
   const pairs: DuplicatePair[] = []
   for (const row of manual) {
@@ -969,28 +904,20 @@ export interface Usage {
  * rows are hidden must not become free to move to another cashflow.
  */
 export async function getUsage(householdId: string): Promise<Usage> {
-  const supabase = await createClient()
   const usage: Usage = { categories: {}, accounts: {} }
+  const data = await read<Row[]>([], (db) =>
+    db.rows(sql`
+      SELECT category_id, from_account_id, to_account_id
+      FROM public.transactions
+      WHERE household_id = ${householdId}`),
+  )
 
-  for (let offset = 0; ; offset += PAGE_SIZE) {
-    const { data, error } = await supabase
-      .from('transactions')
-      .select('category_id, from_account_id, to_account_id')
-      .eq('household_id', householdId)
-      .order('id')
-      .range(offset, offset + PAGE_SIZE - 1)
-
-    if (error || !data) break
-
-    for (const row of data) {
-      const category = row.category_id as string | null
-      if (category) usage.categories[category] = (usage.categories[category] ?? 0) + 1
-      for (const side of [row.from_account_id, row.to_account_id] as (string | null)[]) {
-        if (side) usage.accounts[side] = (usage.accounts[side] ?? 0) + 1
-      }
+  for (const row of data) {
+    const category = row.category_id as string | null
+    if (category) usage.categories[category] = (usage.categories[category] ?? 0) + 1
+    for (const side of [row.from_account_id, row.to_account_id] as (string | null)[]) {
+      if (side) usage.accounts[side] = (usage.accounts[side] ?? 0) + 1
     }
-
-    if (data.length < PAGE_SIZE) break
   }
 
   return usage
@@ -1011,14 +938,11 @@ export async function getBudgetRows(householdId: string, period: string): Promis
   cacheTag(budgetsTag(householdId))
   cacheLife({ stale: 30 })
 
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('budgets')
-    .select('category_id, amount')
-    .eq('household_id', householdId)
-    .eq('period', period)
-
-  if (error || !data) return []
+  const data = await read<Row[]>([], (db) =>
+    db.rows(sql`
+      SELECT category_id, amount FROM public.budgets
+      WHERE household_id = ${householdId} AND period = ${period}`),
+  )
   return data.map((row) => ({
     categoryId: row.category_id as string,
     amount: toBigInt(row.amount),
@@ -1039,14 +963,11 @@ export async function getBudgetsForPeriods(
   cacheTag(budgetsTag(householdId))
   cacheLife({ stale: 30 })
 
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('budgets')
-    .select('period, amount')
-    .eq('household_id', householdId)
-    .in('period', periods)
-
-  if (error || !data) return []
+  const data = await read<Row[]>([], (db) =>
+    db.rows(sql`
+      SELECT period, amount FROM public.budgets
+      WHERE household_id = ${householdId} AND period = ANY(${sql.param(periods)}::text[])`),
+  )
   return data.map((row) => ({
     period: row.period as string,
     amount: toBigInt(row.amount),
@@ -1067,16 +988,15 @@ export async function getPlan(householdId: string): Promise<PlanValues | null> {
   cacheTag(planTag(householdId))
   cacheLife({ stale: 300 })
 
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from('plans')
-    .select(
-      'income, adults, children, irregular_income, wants_zakat, framework_id, track, target_tier, target_savings, child_plans, goal_target, goal_years, goal_saved, hajj_monthly',
-    )
-    .eq('household_id', householdId)
-    .maybeSingle()
+  const data = await read(null, (db) =>
+    db.maybeOne<Row>(sql`
+      SELECT income, adults, children, irregular_income, wants_zakat, framework_id, track, target_tier,
+             target_savings, child_plans, goal_target, goal_years, goal_saved, hajj_monthly
+      FROM public.plans
+      WHERE household_id = ${householdId}`),
+  )
 
-  if (error || !data) return null
+  if (!data) return null
 
   const track = data.track as SchoolTrack
   const targetTier = data.target_tier as LifestyleTier

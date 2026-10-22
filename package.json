@@ -15,8 +15,10 @@
     "db:migrate": "tsx src/db/migrate.ts",
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx src/db/seed.ts",
-    "test:e2e": "tsx e2e/fixtures.tsx && playwright test",
-    "test:e2e:mobile": "tsx e2e/fixtures.tsx && playwright test --config playwright.mobile.config.ts",
+    "db:verify": "tsx src/db/verify.ts",
+    "db:import-supabase": "tsx src/db/import-supabase.ts",
+    "test:e2e": "tsx --env-file=e2e/fixtures.env e2e/fixtures.tsx && playwright test",
+    "test:e2e:mobile": "tsx --env-file=e2e/fixtures.env e2e/fixtures.tsx && playwright test --config playwright.mobile.config.ts",
     "test:e2e:pages": "playwright test --config playwright.pages.config.ts"
   },
   "dependencies": {
@@ -28,8 +30,8 @@
     "@hookform/resolvers": "^5.9.1",
     "@phosphor-icons/react": "^2.1.10",
     "@react-pdf/renderer": "^4.9.0",
-    "@supabase/ssr": "^0.12.7",
-    "@supabase/supabase-js": "^2.117.3",
+    "bcryptjs": "3.0.2",
+    "better-auth": "1.7.7",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.4",
@@ -63,6 +65,7 @@
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3",
+    "vite": "^8.3.4",
     "vitest": "^4.1.11"
   },
   "packageManager": "pnpm@11.9.0",

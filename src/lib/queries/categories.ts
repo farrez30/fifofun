@@ -1,4 +1,5 @@
-import { createClient } from '@/lib/supabase/server'
+import { sql } from '@/db/query'
+import { userScope } from '@/lib/auth/session'
 
 /**
  * Why a group cannot take a transaction.
@@ -17,13 +18,17 @@ export async function groupRefusal(
   categoryId: string,
   name: string,
 ): Promise<string | null> {
-  const supabase = await createClient()
-  const { count } = await supabase
-    .from('categories')
-    .select('id', { count: 'exact', head: true })
-    .eq('household_id', householdId)
-    .eq('parent_id', categoryId)
+  const db = await userScope()
+  if (!db) return null
+  // A failed count lets the write through, as it always has: the write runs
+  // under the same policies, and this check is about bookkeeping, not access.
+  const found = await db
+    .maybeOne<{ n: number }>(
+      sql`SELECT count(*)::int AS n FROM public.categories WHERE household_id = ${householdId} AND parent_id = ${categoryId}`,
+    )
+    .catch(() => null)
 
+  const count = found?.n ?? 0
   if (!count) return null
   return `${name} adalah kelompok, isinya ${count} pos. Pilih salah satu pos di dalamnya, supaya angkanya tidak terhitung dua kali.`
 }

@@ -3,6 +3,7 @@
 import { updateTag } from 'next/cache'
 import { txTag } from '@/lib/queries/tags'
 import { z } from 'zod'
+import { excludedSet, setClause, sql, type Row } from '@/db/query'
 import {
   SESSION_EXPIRED,
   context,
@@ -67,10 +68,17 @@ interface Existing {
   importBatchId: string | null
 }
 
-const ROW_COLUMNS =
-  'id, occurred_at, amount, cashflow, source, description, from_account_id, to_account_id, is_pass_through, import_batch_id, deleted_at'
+const ROW_COLUMNS = sql.raw(
+  'id, occurred_at, amount, cashflow, source, description, from_account_id, to_account_id, is_pass_through, import_batch_id, deleted_at',
+)
 
-function toExisting(row: Record<string, unknown>): Existing {
+interface CategoryRow {
+  id: string
+  name: string
+  cashflow: CashflowType
+}
+
+function toExisting(row: Row): Existing {
   return {
     id: row.id as string,
     amount: BigInt(String(row.amount ?? '0')),
@@ -108,16 +116,16 @@ export async function updateEntry(
 
   const ctx = await context()
   if (!ctx) return fail(SESSION_EXPIRED)
-  const { supabase, householdId } = ctx
+  const { db, householdId } = ctx
   const input = parsed.data
 
-  const { data: found } = await supabase
-    .from('transactions')
-    .select(ROW_COLUMNS)
-    .eq('id', input.id)
-    .eq('household_id', householdId)
-    .is('deleted_at', null)
-    .maybeSingle()
+  // Reads here answer a failure the way they answer nothing found, as they always have.
+  const found = await db
+    .maybeOne(
+      sql`SELECT ${ROW_COLUMNS} FROM public.transactions
+          WHERE id = ${input.id} AND household_id = ${householdId} AND deleted_at IS NULL`,
+    )
+    .catch(() => null)
   if (!found) return fail('Transaksinya tidak ditemukan.')
 
   const row = toExisting(found)
@@ -138,19 +146,18 @@ export async function updateEntry(
   if (row.cashflow !== 'transfer') {
     if (!input.categoryId) return fail('Pilih kategorinya.')
 
-    const { data: category } = await supabase
-      .from('categories')
-      .select('id, name, cashflow')
-      .eq('id', input.categoryId)
-      .eq('household_id', householdId)
-      .is('archived_at', null)
-      .maybeSingle()
+    const category = await db
+      .maybeOne<CategoryRow>(
+        sql`SELECT id, name, cashflow FROM public.categories
+            WHERE id = ${input.categoryId} AND household_id = ${householdId} AND archived_at IS NULL`,
+      )
+      .catch(() => null)
     if (!category) return fail('Kategori itu tidak ada di rumah tangga ini.')
 
-    const isGroup = await groupRefusal(householdId, input.categoryId, category.name as string)
+    const isGroup = await groupRefusal(householdId, input.categoryId, category.name)
     if (isGroup) return fail('Kelompok tidak bisa dipakai langsung.', isGroup)
 
-    const cashflow = category.cashflow as CashflowType
+    const cashflow = category.cashflow
     if (directionOf(cashflow) !== directionOf(row.cashflow)) {
       return fail(
         'Arah kategorinya tidak cocok dengan transaksinya.',
@@ -194,13 +201,13 @@ export async function updateEntry(
     const ids = [
       ...new Set([sides.fromAccountId, sides.toAccountId].filter((id): id is string => Boolean(id))),
     ]
-    const { data: owned } = await supabase
-      .from('accounts')
-      .select('id')
-      .eq('household_id', householdId)
-      .in('id', ids)
-      .is('archived_at', null)
-    if ((owned?.length ?? 0) !== ids.length) {
+    const owned = await db
+      .rows(
+        sql`SELECT id FROM public.accounts
+            WHERE household_id = ${householdId} AND id = ANY(${sql.param(ids)}::uuid[]) AND archived_at IS NULL`,
+      )
+      .catch(() => [])
+    if (owned.length !== ids.length) {
       return fail('Akun itu tidak ada di rumah tangga ini.')
     }
 
@@ -229,15 +236,16 @@ export async function updateEntry(
     patch.to_account_id = sides.toAccountId
   }
 
-  const { data, error } = await supabase
-    .from('transactions')
-    .update(patch)
-    .eq('id', row.id)
-    .eq('household_id', householdId)
-    .select('id')
-
-  if (error) return writeFailed('transaksi', 'Perubahannya gagal disimpan.', error)
-  if (!data || data.length === 0) return fail('Transaksinya tidak ditemukan.')
+  let updated: Row[]
+  try {
+    updated = await db.rows(sql`
+      UPDATE public.transactions SET ${setClause(patch)}
+      WHERE id = ${row.id} AND household_id = ${householdId}
+      RETURNING id`)
+  } catch (e) {
+    return writeFailed('transaksi', 'Perubahannya gagal disimpan.', e)
+  }
+  if (updated.length === 0) return fail('Transaksinya tidak ditemukan.')
 
   revalidateEverywhere(householdId)
   return {
@@ -286,16 +294,13 @@ export async function splitEntry(
 
   const ctx = await context()
   if (!ctx) return fail(SESSION_EXPIRED)
-  const { supabase, householdId } = ctx
+  const { db, householdId } = ctx
 
   // Without the deleted filter: a parent that is already split is hidden, and
   // splitting it again has to be recognised rather than reported as missing.
-  const { data: found } = await supabase
-    .from('transactions')
-    .select(ROW_COLUMNS)
-    .eq('id', id.data)
-    .eq('household_id', householdId)
-    .maybeSingle()
+  const found = await db
+    .maybeOne(sql`SELECT ${ROW_COLUMNS} FROM public.transactions WHERE id = ${id.data} AND household_id = ${householdId}`)
+    .catch(() => null)
   if (!found) return fail('Transaksinya tidak ditemukan.')
 
   const parent = toExisting(found)
@@ -306,40 +311,36 @@ export async function splitEntry(
     )
   }
 
-  const { data: existingChildren } = await supabase
-    .from('transactions')
-    .select('id')
-    .eq('household_id', householdId)
-    .eq('split_of', parent.id)
-    .is('deleted_at', null)
+  const existingChildren = await db
+    .rows(
+      sql`SELECT id FROM public.transactions
+          WHERE household_id = ${householdId} AND split_of = ${parent.id} AND deleted_at IS NULL`,
+    )
+    .catch(() => [])
 
-  if (found.deleted_at && (existingChildren?.length ?? 0) > 0) {
-    return { ok: true, message: 'Sudah dipisah sebelumnya.', applied: existingChildren?.length }
+  if (found.deleted_at && existingChildren.length > 0) {
+    return { ok: true, message: 'Sudah dipisah sebelumnya.', applied: existingChildren.length }
   }
 
-  const { data: categories } = await supabase
-    .from('categories')
-    .select('id, name, cashflow')
-    .eq('household_id', householdId)
-    .in(
-      'id',
-      parts.map((part) => part.categoryId),
+  const categoryIds = sql.param(parts.map((part) => part.categoryId))
+  const categories = await db
+    .rows<CategoryRow>(
+      sql`SELECT id, name, cashflow FROM public.categories
+          WHERE household_id = ${householdId} AND id = ANY(${categoryIds}::uuid[]) AND archived_at IS NULL`,
     )
-    .is('archived_at', null)
+    .catch(() => [])
 
-  const byId = new Map((categories ?? []).map((row) => [row.id as string, row]))
+  const byId = new Map(categories.map((row) => [row.id, row]))
 
   // One query for all six parts rather than one apiece: a group is a category
   // something else names as its parent.
-  const { data: groups } = await supabase
-    .from('categories')
-    .select('parent_id')
-    .eq('household_id', householdId)
-    .in(
-      'parent_id',
-      parts.map((part) => part.categoryId),
+  const groups = await db
+    .rows<{ parent_id: string }>(
+      sql`SELECT parent_id FROM public.categories
+          WHERE household_id = ${householdId} AND parent_id = ANY(${categoryIds}::uuid[])`,
     )
-  const isGroup = new Set((groups ?? []).map((row) => row.parent_id as string))
+    .catch(() => [])
+  const isGroup = new Set(groups.map((row) => row.parent_id))
 
   const wanted = directionOf(parent.cashflow)
   for (const part of parts) {
@@ -351,10 +352,10 @@ export async function splitEntry(
         `${category.name} adalah kelompok. Pilih salah satu pos di dalamnya, supaya angkanya tidak terhitung dua kali.`,
       )
     }
-    if (directionOf(category.cashflow as CashflowType) !== wanted) {
+    if (directionOf(category.cashflow) !== wanted) {
       return fail(
         'Arah kategorinya tidak cocok dengan transaksinya.',
-        `${category.name} untuk uang ${DIRECTION_LABELS[directionOf(category.cashflow as CashflowType)]}, sedangkan transaksi ini uang ${DIRECTION_LABELS[wanted]}.`,
+        `${category.name} untuk uang ${DIRECTION_LABELS[directionOf(category.cashflow)]}, sedangkan transaksi ini uang ${DIRECTION_LABELS[wanted]}.`,
       )
     }
   }
@@ -400,11 +401,21 @@ export async function splitEntry(
     before reuses the same keys, and ignoring them would leave the old parts
     in place while reporting a success.
   */
-  const { error: childError } = await supabase
-    .from('transactions')
-    .upsert(children, { onConflict: 'household_id,dedupe_key' })
-    .select('id')
-  if (childError) return writeFailed('transaksi', 'Bagian-bagiannya gagal disimpan.', childError)
+  const columns = Object.keys(children[0]) as (keyof (typeof children)[number])[]
+  try {
+    await db.rows(sql`
+      INSERT INTO public.transactions (${sql.join(columns.map((c) => sql.identifier(c)), sql`, `)})
+      VALUES ${sql.join(
+        children.map((child) => sql`(${sql.join(columns.map((c) => sql`${child[c]}`), sql`, `)})`),
+        sql`, `,
+      )}
+      ON CONFLICT (household_id, dedupe_key) DO UPDATE SET ${excludedSet(
+        columns.filter((c) => c !== 'household_id' && c !== 'dedupe_key'),
+      )}
+      RETURNING id`)
+  } catch (e) {
+    return writeFailed('transaksi', 'Bagian-bagiannya gagal disimpan.', e)
+  }
 
   /*
     A bank fee charged for the original belongs to its first part now, which is
@@ -413,29 +424,30 @@ export async function splitEntry(
     the day it does fill it in is not the day to remember that splitting
     orphans it.
   */
-  const { data: firstChild } = await supabase
-    .from('transactions')
-    .select('id')
-    .eq('household_id', householdId)
-    .eq('dedupe_key', plan.children[0].dedupeKey)
-    .maybeSingle()
+  const firstChild = await db
+    .maybeOne<{ id: string }>(
+      sql`SELECT id FROM public.transactions
+          WHERE household_id = ${householdId} AND dedupe_key = ${plan.children[0].dedupeKey}`,
+    )
+    .catch(() => null)
 
   if (firstChild) {
-    await supabase
-      .from('transactions')
-      .update({ fee_parent_id: firstChild.id })
-      .eq('household_id', householdId)
-      .eq('fee_parent_id', parent.id)
-      .select('id')
+    await db
+      .rows(sql`
+        UPDATE public.transactions SET fee_parent_id = ${firstChild.id}
+        WHERE household_id = ${householdId} AND fee_parent_id = ${parent.id}
+        RETURNING id`)
+      .catch(() => [])
   }
 
-  const { error: parentError } = await supabase
-    .from('transactions')
-    .update({ deleted_at: now })
-    .eq('id', parent.id)
-    .eq('household_id', householdId)
-    .select('id')
-  if (parentError) return writeFailed('transaksi', 'Transaksi aslinya gagal disembunyikan.', parentError)
+  try {
+    await db.rows(sql`
+      UPDATE public.transactions SET deleted_at = ${now}
+      WHERE id = ${parent.id} AND household_id = ${householdId}
+      RETURNING id`)
+  } catch (e) {
+    return writeFailed('transaksi', 'Transaksi aslinya gagal disembunyikan.', e)
+  }
 
   revalidateEverywhere(householdId)
   return {
@@ -455,29 +467,29 @@ export async function unsplitEntry(
 
   const ctx = await context()
   if (!ctx) return fail(SESSION_EXPIRED)
-  const { supabase, householdId } = ctx
+  const { db, householdId } = ctx
 
-  const { data: children } = await supabase
-    .from('transactions')
-    .select('id')
-    .eq('household_id', householdId)
-    .eq('split_of', id.data)
-    .is('deleted_at', null)
+  const children = await db
+    .rows<{ id: string }>(
+      sql`SELECT id FROM public.transactions
+          WHERE household_id = ${householdId} AND split_of = ${id.data} AND deleted_at IS NULL`,
+    )
+    .catch(() => [])
 
-  if (!children || children.length === 0) {
+  if (children.length === 0) {
     // Already whole, which is the state the caller wanted.
     return { ok: true, message: 'Transaksinya sudah utuh.' }
   }
 
-  const childIds = children.map((child) => child.id as string)
-  const { data: grandchildren } = await supabase
-    .from('transactions')
-    .select('id')
-    .eq('household_id', householdId)
-    .in('split_of', childIds)
-    .is('deleted_at', null)
+  const childIds = children.map((child) => child.id)
+  const grandchildren = await db
+    .rows(
+      sql`SELECT id FROM public.transactions
+          WHERE household_id = ${householdId} AND split_of = ANY(${sql.param(childIds)}::uuid[]) AND deleted_at IS NULL`,
+    )
+    .catch(() => [])
 
-  if ((grandchildren?.length ?? 0) > 0) {
+  if (grandchildren.length > 0) {
     return fail(
       'Ada bagian yang dipisah lagi.',
       'Gabungkan dulu bagian itu, lalu gabungkan yang ini.',
@@ -485,30 +497,33 @@ export async function unsplitEntry(
   }
 
   const now = new Date().toISOString()
-  const { error: childError } = await supabase
-    .from('transactions')
-    .update({ deleted_at: now })
-    .eq('household_id', householdId)
-    .in('id', childIds)
-    .select('id')
-  if (childError) return writeFailed('transaksi', 'Bagian-bagiannya gagal disembunyikan.', childError)
+  try {
+    await db.rows(sql`
+      UPDATE public.transactions SET deleted_at = ${now}
+      WHERE household_id = ${householdId} AND id = ANY(${sql.param(childIds)}::uuid[])
+      RETURNING id`)
+  } catch (e) {
+    return writeFailed('transaksi', 'Bagian-bagiannya gagal disembunyikan.', e)
+  }
 
   // Fees that followed the parts go back to the row they were charged for.
-  await supabase
-    .from('transactions')
-    .update({ fee_parent_id: id.data })
-    .eq('household_id', householdId)
-    .in('fee_parent_id', childIds)
-    .select('id')
+  await db
+    .rows(sql`
+      UPDATE public.transactions SET fee_parent_id = ${id.data}
+      WHERE household_id = ${householdId} AND fee_parent_id = ANY(${sql.param(childIds)}::uuid[])
+      RETURNING id`)
+    .catch(() => [])
 
-  const { data, error } = await supabase
-    .from('transactions')
-    .update({ deleted_at: null })
-    .eq('id', id.data)
-    .eq('household_id', householdId)
-    .select('id')
-  if (error) return writeFailed('transaksi', 'Transaksi aslinya gagal dikembalikan.', error)
-  if (!data || data.length === 0) return fail('Transaksinya tidak ditemukan.')
+  let restored: Row[]
+  try {
+    restored = await db.rows(sql`
+      UPDATE public.transactions SET deleted_at = NULL
+      WHERE id = ${id.data} AND household_id = ${householdId}
+      RETURNING id`)
+  } catch (e) {
+    return writeFailed('transaksi', 'Transaksi aslinya gagal dikembalikan.', e)
+  }
+  if (restored.length === 0) return fail('Transaksinya tidak ditemukan.')
 
   revalidateEverywhere(householdId)
   return {
@@ -539,33 +554,33 @@ export async function restoreEntry(
 
   const ctx = await context()
   if (!ctx) return fail(SESSION_EXPIRED)
-  const { supabase, householdId } = ctx
+  const { db, householdId } = ctx
 
-  const { data: children } = await supabase
-    .from('transactions')
-    .select('id')
-    .eq('household_id', householdId)
-    .eq('split_of', id.data)
-    .is('deleted_at', null)
+  const children = await db
+    .rows(
+      sql`SELECT id FROM public.transactions
+          WHERE household_id = ${householdId} AND split_of = ${id.data} AND deleted_at IS NULL`,
+    )
+    .catch(() => [])
 
-  if ((children?.length ?? 0) > 0) {
+  if (children.length > 0) {
     return fail(
       'Transaksi ini sedang dipisah.',
       'Gabungkan kembali bagian-bagiannya kalau mau barisnya utuh lagi.',
     )
   }
 
-  const { data, error } = await supabase
-    .from('transactions')
-    .update({ deleted_at: null })
-    .eq('id', id.data)
-    .eq('household_id', householdId)
-    .in('source', ['manual', 'telegram'])
-    .not('deleted_at', 'is', null)
-    .select('id')
-
-  if (error) return writeFailed('transaksi', 'Transaksinya gagal dikembalikan.', error)
-  if (!data || data.length === 0) {
+  let restored: Row[]
+  try {
+    restored = await db.rows(sql`
+      UPDATE public.transactions SET deleted_at = NULL
+      WHERE id = ${id.data} AND household_id = ${householdId}
+        AND source IN ('manual', 'telegram') AND deleted_at IS NOT NULL
+      RETURNING id`)
+  } catch (e) {
+    return writeFailed('transaksi', 'Transaksinya gagal dikembalikan.', e)
+  }
+  if (restored.length === 0) {
     return fail('Transaksi itu tidak ditemukan, atau memang tidak terhapus.')
   }
 

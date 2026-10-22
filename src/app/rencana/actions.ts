@@ -3,6 +3,7 @@
 import { updateTag } from 'next/cache'
 import { planTag } from '@/lib/queries/tags'
 import { z } from 'zod'
+import { excludedSet, json, sql } from '@/db/query'
 import { SESSION_EXPIRED, context, fail, senField, writeFailed, type ActionResult } from '@/lib/actions'
 import {
   LIFESTYLE_TIERS,
@@ -107,33 +108,42 @@ export async function savePlan(
   if (!ctx) return fail(SESSION_EXPIRED)
 
   const values = parsed.data
-  const { data, error } = await ctx.supabase
-    .from('plans')
-    .upsert(
-      {
-        household_id: ctx.householdId,
-        income: values.income.toString(),
-        adults: values.adults,
-        children: values.children,
-        irregular_income: values.irregularIncome,
-        wants_zakat: values.wantsZakat,
-        framework_id: values.frameworkId,
-        track: values.track,
-        target_tier: values.targetTier,
-        target_savings: values.targetSavings.toString(),
-        child_plans: values.childPlans,
-        goal_target: values.goalTarget.toString(),
-        goal_years: values.goalYears,
-        goal_saved: values.goalSaved.toString(),
-        hajj_monthly: values.hajjMonthly.toString(),
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'household_id' },
-    )
-    .select('updated_at')
-
-  if (error) return writeFailed('rencana', 'Rencananya gagal disimpan.', error)
-  if (!data || data.length === 0) {
+  let data: { updated_at: string }[]
+  try {
+    data = await ctx.db.rows<{ updated_at: string }>(sql`
+      INSERT INTO public.plans (
+        household_id, income, adults, children, irregular_income, wants_zakat, framework_id,
+        track, target_tier, target_savings, child_plans, goal_target, goal_years, goal_saved,
+        hajj_monthly, updated_at
+      ) VALUES (
+        ${ctx.householdId}, ${values.income.toString()}, ${values.adults}, ${values.children},
+        ${values.irregularIncome}, ${values.wantsZakat}, ${values.frameworkId}, ${values.track},
+        ${values.targetTier}, ${values.targetSavings.toString()}, ${json(values.childPlans)},
+        ${values.goalTarget.toString()}, ${values.goalYears}, ${values.goalSaved.toString()},
+        ${values.hajjMonthly.toString()}, ${new Date().toISOString()}
+      )
+      ON CONFLICT (household_id) DO UPDATE SET ${excludedSet([
+        'income',
+        'adults',
+        'children',
+        'irregular_income',
+        'wants_zakat',
+        'framework_id',
+        'track',
+        'target_tier',
+        'target_savings',
+        'child_plans',
+        'goal_target',
+        'goal_years',
+        'goal_saved',
+        'hajj_monthly',
+        'updated_at',
+      ])}
+      RETURNING updated_at`)
+  } catch (e) {
+    return writeFailed('rencana', 'Rencananya gagal disimpan.', e)
+  }
+  if (data.length === 0) {
     return fail('Rencananya tidak tersimpan.', 'Coba muat ulang halaman, lalu simpan lagi.')
   }
 
@@ -149,19 +159,20 @@ export async function resetPlan(): Promise<ActionResult> {
   const ctx = await context()
   if (!ctx) return fail(SESSION_EXPIRED)
 
-  const { data, error } = await ctx.supabase
-    .from('plans')
-    .delete()
-    .eq('household_id', ctx.householdId)
-    .select('id')
-
-  if (error) return writeFailed('rencana', 'Rencananya gagal dihapus.', error)
+  let data: { id: string }[]
+  try {
+    data = await ctx.db.rows<{ id: string }>(
+      sql`DELETE FROM public.plans WHERE household_id = ${ctx.householdId} RETURNING id`,
+    )
+  } catch (e) {
+    return writeFailed('rencana', 'Rencananya gagal dihapus.', e)
+  }
 
   updateTag(planTag(ctx.householdId))
   // Deleting a plan that is not there is the state the caller wanted anyway.
   return {
     ok: true,
-    message: data && data.length > 0 ? 'Rencana tersimpan dihapus.' : 'Belum ada rencana tersimpan.',
+    message: data.length > 0 ? 'Rencana tersimpan dihapus.' : 'Belum ada rencana tersimpan.',
     detail: 'Angkanya kembali ke turunan dari riwayatmu.',
   }
 }

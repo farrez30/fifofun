@@ -2,7 +2,8 @@ import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { AppShell } from '@/components/app-shell'
 import { getHousehold } from '@/lib/queries/household'
-import { createClient, getUser } from '@/lib/supabase/server'
+import { sql } from '@/db/query'
+import { getUser, userScope } from '@/lib/auth/session'
 import { InvitesPanel } from './invites-panel'
 
 export const metadata: Metadata = { title: 'Undangan' }
@@ -25,16 +26,19 @@ export default async function InvitesPage() {
   const household = await getHousehold()
   if (!household) redirect('/gabung')
 
-  const supabase = await createClient()
+  const db = await userScope()
+  if (!db) redirect('/login')
   // The hash is deliberately not selected. Nothing on this page needs it, and a
   // column that never leaves the database cannot leak from a page that never
   // asked for it.
-  const { data } = await supabase
-    .from('household_invites')
-    .select('id, created_at, expires_at, redeemed_at')
-    .order('created_at', { ascending: false })
+  const data = await db
+    .rows<Record<string, unknown>>(
+      sql`SELECT id, created_at, expires_at, redeemed_at FROM public.household_invites
+          WHERE household_id = ${household.id} ORDER BY created_at DESC`,
+    )
+    .catch(() => [])
 
-  const invites = (data ?? []).map((row) => ({
+  const invites = data.map((row) => ({
     id: row.id as string,
     createdAt: row.created_at as string,
     expiresAt: row.expires_at as string,

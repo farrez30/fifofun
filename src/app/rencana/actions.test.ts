@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createSupabaseStub } from '@/test/supabase-stub'
+import { createScopeStub } from '@/test/scope-stub'
 import { planFields } from '@/lib/planning/plan'
 
 /**
@@ -11,9 +11,15 @@ import { planFields } from '@/lib/planning/plan'
  * refused here first, in the same words the fields use.
  */
 
-const stub = createSupabaseStub()
+const stub = createScopeStub()
+let signedIn = true
 
-vi.mock('@/lib/supabase/server', () => ({ createClient: async () => stub.client }))
+vi.mock('@/db/client', () => ({ db: {} }))
+vi.mock('@/lib/auth/session', () => ({ getUser: async () => null, userScope: async () => null }))
+vi.mock('@/lib/actions', async (importActual) => ({
+  ...(await importActual<typeof import('@/lib/actions')>()),
+  context: async () => (signedIn ? { db: stub.scope, householdId: 'h1', userId: 'u1' } : null),
+}))
 vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
   updateTag: vi.fn(),
@@ -50,36 +56,34 @@ function form(overrides: Partial<typeof VALID> = {}) {
 }
 
 beforeEach(() => {
-  stub.calls.length = 0
-  stub.setUser({ id: 'u1' })
+  stub.reset()
+  signedIn = true
 })
 
 describe('savePlan', () => {
   it('writes one row per household and says the figures will come back', async () => {
-    stub.queue('households', { data: { id: 'h1' } })
-    stub.queue('plans', { data: [{ updated_at: '2026-08-22T03:00:00Z' }] })
+    stub.queue([{ updated_at: '2026-08-22T03:00:00Z' }])
 
     const result = await savePlan(null, form())
 
     expect(result.ok).toBe(true)
     expect(result.message).toBe('Rencana tersimpan.')
 
-    const write = stub.callsOn('plans')[0]
-    expect(write.chain).toContain('upsert')
-    expect(write.args[write.chain.indexOf('upsert')][1]).toEqual({ onConflict: 'household_id' })
+    expect(stub.calls).toHaveLength(1)
+    const write = stub.calls[0]
+    expect(write.sql).toContain('INSERT INTO public.plans')
+    expect(write.sql).toContain('ON CONFLICT (household_id) DO UPDATE')
 
-    const payload = write.payload as Record<string, unknown>
-    expect(payload.household_id).toBe('h1')
-    // Money goes as digits, not as a number: a bigint through JSON is a float
-    // with a rounding error waiting in it.
-    expect(payload.income).toBe('817162900')
-    expect(payload.irregular_income).toBe(true)
-    expect(payload.child_plans).toEqual([{ birthYear: 2027, track: 'swasta' }])
+    expect(write.params[0]).toBe('h1')
+    // Money goes as digits, not as a number: a float would carry a rounding
+    // error waiting in it.
+    expect(write.params[1]).toBe('817162900')
+    expect(write.params[4]).toBe(true)
+    expect(write.params).toContain(JSON.stringify([{ birthYear: 2027, track: 'swasta' }]))
   })
 
   it('accepts exactly what the planner serialises', async () => {
-    stub.queue('households', { data: { id: 'h1' } })
-    stub.queue('plans', { data: [{ updated_at: '2026-08-22T03:00:00Z' }] })
+    stub.queue([{ updated_at: '2026-08-22T03:00:00Z' }])
 
     const fields = planFields({
       income: 5_000_000_00n,
@@ -129,37 +133,43 @@ describe('savePlan', () => {
   })
 
   it('says the session ended rather than failing silently', async () => {
-    stub.setUser(null)
+    signedIn = false
     const result = await savePlan(null, form())
     expect(result.message).toBe('Sesi kamu sudah berakhir. Masuk lagi lalu ulangi.')
   })
 
   it('reports a refused write instead of claiming a save', async () => {
-    stub.queue('households', { data: { id: 'h1' } })
-    stub.queue('plans', { data: [] })
+    stub.queue([])
 
     const result = await savePlan(null, form())
     expect(result.ok).toBe(false)
     expect(result.message).toBe('Rencananya tidak tersimpan.')
   })
+
+  it('reports a failed write without the Postgres sentence', async () => {
+    stub.queueError('new row violates check constraint "plans_adults_check"', '23514')
+
+    const result = await savePlan(null, form())
+    expect(result.ok).toBe(false)
+    expect(result.message).toBe('Rencananya gagal disimpan.')
+    expect(result.detail).not.toContain('constraint')
+  })
 })
 
 describe('resetPlan', () => {
   it('deletes the household own row and nothing else', async () => {
-    stub.queue('households', { data: { id: 'h1' } })
-    stub.queue('plans', { data: [{ id: 'p1' }] })
+    stub.queue([{ id: 'p1' }])
 
     const result = await resetPlan()
 
     expect(result.ok).toBe(true)
-    const call = stub.callsOn('plans')[0]
-    expect(call.chain).toContain('delete')
-    expect(call.args[call.chain.indexOf('eq')]).toEqual(['household_id', 'h1'])
+    const call = stub.calls[0]
+    expect(call.sql).toContain('DELETE FROM public.plans WHERE household_id = $1')
+    expect(call.params).toEqual(['h1'])
   })
 
   it('treats a household with no saved plan as already reset', async () => {
-    stub.queue('households', { data: { id: 'h1' } })
-    stub.queue('plans', { data: [] })
+    stub.queue([])
 
     const result = await resetPlan()
     expect(result.ok).toBe(true)

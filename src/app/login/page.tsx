@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { getUser } from '@/lib/supabase/server'
+import { getUser } from '@/lib/auth/session'
 import { LoginForm } from './login-form'
 
 export const metadata: Metadata = {

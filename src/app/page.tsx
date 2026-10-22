@@ -47,7 +47,7 @@ import {
   getLatestClosingBalance,
   getOpeningBalance,
 } from '@/lib/queries/household'
-import { getUser } from '@/lib/supabase/server'
+import { getUser } from '@/lib/auth/session'
 import { DashboardSkeleton } from './skeleton'
 import { RecomputeAdjustments } from './recompute-adjustments'
 import { findStaleAdjustments } from '@/lib/ledger/adjustments'

@@ -2,7 +2,7 @@ import { renderToBuffer } from '@react-pdf/renderer'
 import { createElement } from 'react'
 import { formatJakarta } from '@/lib/datetime'
 import { getHousehold } from '@/lib/queries/household'
-import { getUser } from '@/lib/supabase/server'
+import { getUser } from '@/lib/auth/session'
 import { loadSummary } from '../data'
 import { SummaryPdf } from './summary-pdf'
 

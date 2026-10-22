@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createSupabaseStub } from '@/test/supabase-stub'
+import { createScopeStub } from '@/test/scope-stub'
 
-const stub = createSupabaseStub()
+const stub = createScopeStub()
 let signedIn = true
 
-vi.mock('@/lib/supabase/server', () => ({
-  createClient: async () => stub.client,
+vi.mock('@/db/client', () => ({ db: {} }))
+vi.mock('@/lib/auth/session', () => ({
   getUser: async () => (signedIn ? { id: 'u1', email: 'a@b.c' } : null),
+  userScope: async () => (signedIn ? stub.scope : null),
 }))
 
 const { GET } = await import('./route')
@@ -15,14 +16,16 @@ const ID = '00000000-0000-4000-8000-0000000000a1'
 const call = (id: string) => GET(new Request(`http://localhost/akun/${id}/logo`), { params: Promise.resolve({ id }) })
 
 beforeEach(() => {
-  stub.calls.length = 0
+  stub.reset()
   signedIn = true
 })
 
 describe('GET /akun/[id]/logo', () => {
   it('serves the stored icon as a picture that cannot be sniffed into anything else', async () => {
-    stub.queue('accounts', { data: { logo: Buffer.from('RIFFxxxxWEBP').toString('base64') } })
+    stub.queue({ logo: Buffer.from('RIFFxxxxWEBP').toString('base64') })
     const response = await call(ID)
+    expect(stub.calls[0].sql).toContain('FROM public.accounts WHERE id =')
+    expect(stub.calls[0].params).toEqual([ID])
     expect(response.status).toBe(200)
     expect(response.headers.get('Content-Type')).toBe('image/webp')
     expect(response.headers.get('X-Content-Type-Options')).toBe('nosniff')
@@ -32,7 +35,12 @@ describe('GET /akun/[id]/logo', () => {
   })
 
   it('answers an account without an icon, or one the policy hides, the same way', async () => {
-    stub.queue('accounts', { data: null })
+    stub.queue(null)
+    expect((await call(ID)).status).toBe(404)
+  })
+
+  it('answers a failed read like a missing icon', async () => {
+    stub.queueError('connection reset')
     expect((await call(ID)).status).toBe(404)
   })
 

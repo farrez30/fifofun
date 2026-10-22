@@ -6,26 +6,8 @@
 /** Where the spending map's vector tiles come from. */
 export const MAP_TILES = 'https://tiles.openfreemap.org'
 
-/**
- * Where the browser is allowed to talk to.
- *
- * Derived from the configured project rather than a wildcard over
- * `*.supabase.co`, so a bug or an injected script cannot reach somebody else's
- * project on the same platform.
- */
-function supabaseOrigin(): string {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  if (!url) return ''
-  try {
-    return new URL(url).origin
-  } catch {
-    return ''
-  }
-}
-
 export function contentSecurityPolicy(nonce: string): string {
   const isDev = process.env.NODE_ENV === 'development'
-  const supabase = supabaseOrigin()
 
   return [
     `default-src 'self'`,
@@ -83,7 +65,7 @@ export function contentSecurityPolicy(nonce: string): string {
       named host. Searching for a place is not here: it runs on the server
       (src/lib/places/nominatim.ts), so the browser never talks to Nominatim.
     */
-    `connect-src 'self'${supabase ? ` ${supabase}` : ''} ${MAP_TILES}${isDev ? ' ws: http://localhost:*' : ''}`,
+    `connect-src 'self' ${MAP_TILES}${isDev ? ' ws: http://localhost:*' : ''}`,
     /*
       Still only 'self', with no `blob:`. MapLibre falls back to a blob worker
       when its worker file is on another origin; served from public/vendor by
