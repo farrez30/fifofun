@@ -1,0 +1,75 @@
+#!/bin/sh
+# Menolak jejak AI di pesan commit.
+#
+# Aturannya sudah tertulis di CLAUDE.md, tapi aturan yang hanya tertulis
+# bergantung pada ingatan model yang kebetulan membacanya. Ini menegakkannya di
+# tooling: yang lolos cuma pesan yang benar-benar bersih.
+#
+# Sumber kebenaran: standar/hooks/commit-msg di coderoach-app. Repo lain
+# menariknya dari sini, tidak menyalin sendiri-sendiri.
+#
+# Dipasang dengan: powershell -File scripts/pasang-hook.ps1
+#
+# Yang dinilai POSISI, bukan sekadar keberadaan kata. "Co-Authored-By" hanya
+# ditolak kalau ia benar-benar sebuah trailer di awal baris - kalau tidak, commit
+# yang MENJELASKAN hook ini (seperti commit yang menambahkannya) akan menolak
+# dirinya sendiri, dan aturan yang tidak bisa dibicarakan bukan aturan yang baik.
+pesan="$1"
+
+# Baris komentar dibuang git sebelum disimpan, jadi contoh terlarang di template
+# commit tidak boleh ikut memblokir.
+isi=$(grep -v '^#' "$pesan" 2>/dev/null)
+
+tolak() {
+  echo "" >&2
+  echo "Commit ditolak: $1" >&2
+  echo "" >&2
+  echo "  Pesan commit tidak boleh memuat atribusi AI dalam bentuk apa pun." >&2
+  echo "  Hapus barisnya, lalu commit lagi." >&2
+  echo "" >&2
+  exit 1
+}
+
+if echo "$isi" | grep -qiE '^[[:space:]]*co-authored-by:.*(claude|anthropic)'; then
+  tolak "ada trailer Co-Authored-By ke Claude/Anthropic"
+fi
+
+if echo "$isi" | grep -qiE '^[^A-Za-z]*generated with.*claude'; then
+  tolak "ada baris \"Generated with Claude\""
+fi
+
+# Alamat email domain ini tidak pernah punya alasan sah muncul di pesan commit,
+# di posisi mana pun.
+if echo "$isi" | grep -qiE '@anthropic\.com'; then
+  tolak "ada alamat email @anthropic.com"
+fi
+
+# --- bentuk judul: Conventional Commits ---
+#
+# Daftar tipenya bukan salinan spec: dari 1.046 commit ber-prefix di 7 repo
+# Coderoach, 96% sudah memakai sebelas tipe di bawah. Sisanya - web:, spv:,
+# recon:, koreksi: - masing-masing muncul sekali atau dua kali, dan itu persis
+# yang hook ini ada untuk menghentikan.
+judul=$(echo "$isi" | grep -v '^[[:space:]]*$' | head -n 1)
+
+# Merge, revert, fixup, dan squash ditulis git sendiri. Menolaknya berarti
+# menolak `git merge` dan `git rebase -i`, bukan menolak kecerobohan orang.
+case "$judul" in
+  "Merge "*|"Revert "*|"fixup! "*|"squash! "*) exit 0 ;;
+esac
+
+if ! echo "$judul" | grep -qE '^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([^)]+\))?!?: .'; then
+  echo "" >&2
+  echo "Commit ditolak: judulnya tidak berbentuk Conventional Commits." >&2
+  echo "" >&2
+  echo "  Judul ini:  $judul" >&2
+  echo "  Bentuknya:  <tipe>(<cakupan opsional>): <subjek>" >&2
+  echo "  Tipe:       build chore ci docs feat fix perf refactor revert style test" >&2
+  echo "" >&2
+  echo "  Contoh:     feat: tombol masuk tanpa password, hanya di next dev" >&2
+  echo "              fix(masuk): email hilang tiap password salah" >&2
+  echo "" >&2
+  exit 1
+fi
+
+exit 0

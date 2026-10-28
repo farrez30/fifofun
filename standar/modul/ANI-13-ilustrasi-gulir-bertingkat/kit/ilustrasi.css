@@ -1,0 +1,92 @@
+/* ANI-13 adegan ilustrasi bertingkat.
+
+   Keadaan per adegan di data-tampil (ditulis ilustrasi.js):
+   - tanpa atribut (tanpa JS) dan "diam" (reduced-motion): SVG di keadaan
+     akhirnya, tanpa gerak;
+   - "svg": SVG digerakkan --p (timeline CSS, atau JS bila tidak didukung);
+   - "lottie" / "rive": kanvas runtime tampil, SVG disembunyikan.
+   Semua aturan yang membaca --p hanya berlaku di bawah data-tampil="svg"
+   (dijaga ilustrasi.test.mjs), jadi gagal di tengah jalan selalu jatuh ke
+   gambar yang utuh. */
+
+@property --p {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+.ilustrasi {
+  /* Panjang gulir adegan; --p 0..1 = tinggi ini dikurangi satu layar. */
+  --tinggi-ilustrasi: 300vh;
+  position: relative;
+  min-height: var(--tinggi-ilustrasi);
+  view-timeline-name: --ilustrasi;
+}
+.panggung-ilustrasi {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  /* biome-ignore lint/suspicious/noDuplicateProperties: vh cadangan untuk browser tanpa svh */
+  height: 100svh;
+  display: grid;
+  place-items: center;
+  overflow: clip;
+}
+.ilustrasi-svg,
+.ilustrasi-kanvas {
+  grid-area: 1 / 1;
+  width: min(100%, 40rem);
+  aspect-ratio: var(--rasio-ilustrasi, 4 / 3);
+}
+.ilustrasi-svg svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.ilustrasi-kanvas {
+  display: none;
+}
+.ilustrasi:is([data-tampil="lottie"], [data-tampil="rive"]) .ilustrasi-kanvas {
+  display: block;
+}
+/* Lottie: kanvas aria-hidden, jadi SVG tetap di pohon aksesibilitas sebagai
+   nama gambarnya, hanya disembunyikan secara visual. Rive: kanvasnya sendiri
+   yang jadi slider berlabel, jadi SVG dikeluarkan sepenuhnya. */
+.ilustrasi[data-tampil="lottie"] .ilustrasi-svg {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.ilustrasi[data-tampil="rive"] .ilustrasi-svg {
+  display: none;
+}
+.ilustrasi-kanvas:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 4px;
+}
+
+/* Timeline native; properti longhand supaya minifier tidak meringkasnya jadi
+   animation: none. Tanpa dukungan, ilustrasi.js menulis --p sendiri. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .ilustrasi[data-tampil="svg"] {
+      animation-name: ilustrasi-p;
+      animation-duration: 1ms;
+      animation-timing-function: linear;
+      animation-fill-mode: both;
+      animation-timeline: --ilustrasi;
+      animation-range-start: contain 0%;
+      animation-range-end: contain 100%;
+    }
+  }
+}
+@keyframes ilustrasi-p {
+  from {
+    --p: 0;
+  }
+  to {
+    --p: 1;
+  }
+}

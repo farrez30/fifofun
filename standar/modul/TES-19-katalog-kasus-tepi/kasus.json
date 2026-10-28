@@ -1,0 +1,3577 @@
+{
+  "versi": 1,
+  "diperbarui": "2026-10-22",
+  "kasus": [
+    {
+      "id": "TK-001",
+      "judul": "Hari ini menurut server bukan hari ini menurut WIB",
+      "domain": "waktu-tanggal",
+      "stack": [
+        "next",
+        "postgres"
+      ],
+      "rujukan": [
+        "CWE-682",
+        "SFDIPOT:Time"
+      ],
+      "pemicu": "Akses antara 00.00 dan 07.00 WIB; sesi DB Neon lewat pooler yang selalu GMT.",
+      "kenapa_gagal": "Tanggal dari CURRENT_DATE, now()::date, atau toISOString().slice(0,10) dianggap tanggal pengguna. Pooler mengabaikan TimeZone dari klien.",
+      "dampak": {
+        "s": 6,
+        "o": 8,
+        "d": 7
+      },
+      "reproduksi": "Set TimeZone sesi ke GMT, Asia/Bangkok, America/Los_Angeles, lalu bandingkan HARI_INI di SQL dengan hariIniISO() untuk 2026-12-31T17:30Z.",
+      "harapan": "SQL dan app memberi tanggal WIB yang sama di zona sesi mana pun; pola tanggal bawaan dilarang di src/.",
+      "sumber_harapan": "ADR 0003 coderoach-app, tes asal",
+      "jenis_cek": "integrasi",
+      "otomasi": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/hari-ini.test.ts"
+      },
+      "asal": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "src/db/wib.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-002",
+      "judul": "Tanggal jangkar 31 bergeser permanen setelah Februari",
+      "domain": "waktu-tanggal",
+      "stack": [
+        "node"
+      ],
+      "rujukan": [
+        "SFDIPOT:Time"
+      ],
+      "pemicu": "Langganan bulanan mulai 31 Januari.",
+      "kenapa_gagal": "Tambah satu bulan dari tanggal sebelumnya, bukan dari jangkar, sehingga 31 Jan menjadi 28 Feb lalu 28 Mar selamanya.",
+      "dampak": {
+        "s": 5,
+        "o": 7,
+        "d": 7
+      },
+      "reproduksi": "jadwal({mulai: 2031-01-31, siklusBulan: 1}) untuk Januari sampai April.",
+      "harapan": "2031-01-31, 2031-02-28, 2031-03-31, 2031-04-30; tahun kabisat 2032-02-29.",
+      "sumber_harapan": "ADR 0021 coderoach-app, tes asal",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/langganan.test.ts"
+      },
+      "asal": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/langganan.test.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-003",
+      "judul": "Nomor urut per tahun dihitung di tahun UTC",
+      "domain": "waktu-tanggal",
+      "stack": [
+        "postgres"
+      ],
+      "rujukan": [
+        "SFDIPOT:Time"
+      ],
+      "pemicu": "Izin dibuat 31 Desember pukul 00.30 sampai 06.59 WIB.",
+      "kenapa_gagal": "Tahun dokumen diambil dari tahun UTC, padahal di Jakarta tahun sudah berganti.",
+      "dampak": {
+        "s": 4,
+        "o": 3,
+        "d": 8
+      },
+      "reproduksi": "Buat dua izin di sekitar tengah malam tahun baru WIB.",
+      "harapan": "Tahun baru di Jakarta memulai nomor 001 lagi.",
+      "sumber_harapan": "ADR 0018 coderoach-app",
+      "jenis_cek": "integrasi",
+      "otomasi": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/izin-portofolio.test.ts"
+      },
+      "asal": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/izin-portofolio.test.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-004",
+      "judul": "Ulang tahun 29 Februari meluap ke 1 Maret",
+      "domain": "waktu-tanggal",
+      "stack": [
+        "next"
+      ],
+      "rujukan": [
+        "SFDIPOT:Time"
+      ],
+      "pemicu": "Lahir 2000-02-29, dilihat di tahun bukan kabisat.",
+      "kenapa_gagal": "Date JS menormalkan 29 Feb 2026 menjadi 1 Mar tanpa galat.",
+      "dampak": {
+        "s": 4,
+        "o": 3,
+        "d": 8
+      },
+      "reproduksi": "jarakUlangTahun(lahir 2000-02-29, hari 2026-02-28).",
+      "harapan": "Diperingati 28 Februari; pada 1 Maret acara berikutnya tahun 2027.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "farrez30/AkarKita",
+        "jalur": "tests/kalender.test.ts"
+      },
+      "asal": {
+        "repo": "farrez30/AkarKita",
+        "jalur": "tests/kalender.test.ts",
+        "tanggal": "2026-08-25"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-005",
+      "judul": "Usia dengan bulan pinjaman dari bulan yang salah",
+      "domain": "waktu-tanggal",
+      "stack": [
+        "next"
+      ],
+      "rujukan": [
+        "SFDIPOT:Time"
+      ],
+      "pemicu": "Lahir tanggal 31 atau 29 Feb; tanggal akhir di bulan pendek.",
+      "kenapa_gagal": "Hari pinjaman diambil dari bulan lahir, bukan bulan sebelum tanggal akhir.",
+      "dampak": {
+        "s": 4,
+        "o": 4,
+        "d": 8
+      },
+      "reproduksi": "Uji properti 3000 pasangan tanggal: bulan < 12, hari < 7, tidak pernah negatif.",
+      "harapan": "Komponen usia selalu dalam rentang.",
+      "sumber_harapan": "tes asal (uji properti)",
+      "jenis_cek": "properti",
+      "otomasi": {
+        "repo": "farrez30/AkarKita",
+        "jalur": "tests/usia.test.ts"
+      },
+      "asal": {
+        "repo": "farrez30/AkarKita",
+        "jalur": "lib/usia.ts",
+        "tanggal": "2026-08-24"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-006",
+      "judul": "Kunci tanggal dan grup bulan memakai zona pemilik",
+      "domain": "waktu-tanggal",
+      "stack": [
+        "next"
+      ],
+      "rujukan": [
+        "SFDIPOT:Time"
+      ],
+      "pemicu": "Catatan pukul 2026-09-30T18:00Z (01.00 WIB 1 Okt).",
+      "kenapa_gagal": "Tanggal dari UTC menaruh catatan di bulan dan hari sebelumnya.",
+      "dampak": {
+        "s": 5,
+        "o": 6,
+        "d": 7
+      },
+      "reproduksi": "Kelompokkan sesi dengan zona Asia/Jakarta dan UTC.",
+      "harapan": "Oktober 2026 di Jakarta, September 2026 di UTC; hari tanpa catatan tetap muncul.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "farrez30/jeda",
+        "jalur": "src/lib/sessions.test.ts"
+      },
+      "asal": {
+        "repo": "farrez30/jeda",
+        "jalur": "src/lib/dates.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-007",
+      "judul": "Pengingat di zona WITA dan jendela terlambat",
+      "domain": "waktu-tanggal",
+      "stack": [
+        "next"
+      ],
+      "rujukan": [
+        "SFDIPOT:Time"
+      ],
+      "pemicu": "Pengguna di Asia/Makassar; cron telat; zona tidak sah seperti Mars/Olympus.",
+      "kenapa_gagal": "Jam pengingat dianggap WIB untuk semua orang dan cron dianggap tepat waktu.",
+      "dampak": {
+        "s": 4,
+        "o": 5,
+        "d": 6
+      },
+      "reproduksi": "Panggil logika pengingat untuk 21.05 WIB dengan zona Makassar dan zona palsu.",
+      "harapan": "Terkirim sekali per hari lokal, tidak lebih awal, tidak lebih dari 180 menit terlambat; zona palsu ditolak.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "farrez30/jeda",
+        "jalur": "src/lib/reminder.test.ts"
+      },
+      "asal": {
+        "repo": "farrez30/jeda",
+        "jalur": "src/lib/reminder.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-008",
+      "judul": "Jam tenang melewati tengah malam",
+      "domain": "waktu-tanggal",
+      "stack": [
+        "express",
+        "postgres"
+      ],
+      "rujukan": [
+        "SFDIPOT:Time"
+      ],
+      "pemicu": "Jendela 22.00 sampai 07.00, jendela nol menit, zona palsu.",
+      "kenapa_gagal": "Jendela dianggap selalu start < end di hari yang sama.",
+      "dampak": {
+        "s": 4,
+        "o": 5,
+        "d": 6
+      },
+      "reproduksi": "Instan yang sama di Asia/Jakarta 23.00 dan UTC 16.00.",
+      "harapan": "Waktu lokal per zona; zona palsu jatuh ke bawaan tanpa melempar; notifikasi keamanan tetap terkirim.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "farrez30/ViralyticsV2",
+        "jalur": "apps/api/src/services/notif-prefs.test.ts"
+      },
+      "asal": {
+        "repo": "farrez30/ViralyticsV2",
+        "jalur": "apps/api/src/services/notif-prefs.test.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-009",
+      "judul": "Cron GitHub Actions melewatkan tick",
+      "domain": "waktu-tanggal",
+      "stack": [
+        "github-actions"
+      ],
+      "rujukan": [
+        "SFDIPOT:Time",
+        "CWE-754"
+      ],
+      "pemicu": "Jadwal per jam di GitHub Actions; tick 00.xx UTC tidak jalan.",
+      "kenapa_gagal": "Tick dianggap menyala tepat di jamnya. Scrape 11 dan 18 September hilang tanpa suara.",
+      "dampak": {
+        "s": 7,
+        "o": 6,
+        "d": 8
+      },
+      "reproduksi": "Jalankan keputusan jadwal dengan tick 3 jam terlambat dan tick tengah malam.",
+      "harapan": "Ada jendela susulan; tick terlambat tetap memicu, tetapi tidak meluber ke malam berikutnya.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "skrip-cek",
+      "otomasi": {
+        "repo": "farrez30/NDS-ETL",
+        "jalur": "scripts/scheduleCheck.ts"
+      },
+      "asal": {
+        "repo": "farrez30/NDS-ETL",
+        "jalur": "scripts/scheduleCheck.ts",
+        "tanggal": "2026-09-18"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-010",
+      "judul": "Jam perangkat maju memenangkan sinkron",
+      "domain": "waktu-tanggal",
+      "stack": [
+        "next"
+      ],
+      "rujukan": [
+        "CWE-367",
+        "SFDIPOT:Time"
+      ],
+      "pemicu": "Jam HP maju satu jam; sinkron last-write-wins.",
+      "kenapa_gagal": "Stempel waktu perangkat dipercaya.",
+      "dampak": {
+        "s": 6,
+        "o": 4,
+        "d": 8
+      },
+      "reproduksi": "Kirim catatan dengan updatedAt satu jam di depan.",
+      "harapan": "Dijepit ke waktu server + 5 menit; tulisan lama atau setara tidak menang.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "farrez30/jeda",
+        "jalur": "src/lib/crypto.test.ts"
+      },
+      "asal": {
+        "repo": "farrez30/jeda",
+        "jalur": "src/lib/sync-merge.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-011",
+      "judul": "Bar belum tertutup lolos karena jam lokal cepat",
+      "domain": "waktu-tanggal",
+      "stack": [
+        "node"
+      ],
+      "rujukan": [
+        "SFDIPOT:Time"
+      ],
+      "pemicu": "Jam VPS beberapa detik lebih cepat dari bursa; recvWindow > 60000.",
+      "kenapa_gagal": "Jam lokal dipakai untuk memutuskan bar sudah tertutup.",
+      "dampak": {
+        "s": 8,
+        "o": 3,
+        "d": 8
+      },
+      "reproduksi": "Klien dengan selisih jam dan recvWindow di luar batas.",
+      "harapan": "Waktu server yang dipakai; recvWindow divalidasi saat klien dibuat.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "farrez30/d-day",
+        "jalur": "runtime/test/binance.test.ts"
+      },
+      "asal": {
+        "repo": "farrez30/d-day",
+        "jalur": "runtime/src/binance.ts",
+        "tanggal": "2026-09-09"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-012",
+      "judul": "Proyeksi kas bulan ke-2 dan ke-3 tanpa biaya",
+      "domain": "waktu-tanggal",
+      "stack": [
+        "postgres"
+      ],
+      "rujukan": [
+        "SFDIPOT:Time"
+      ],
+      "pemicu": "Proyeksi tiga bulan ke depan.",
+      "kenapa_gagal": "Biaya berulang diambil dari bulan sebelum bulan yang diproyeksikan; untuk bulan ke-2 dan ke-3 bulan itu belum terjadi.",
+      "dampak": {
+        "s": 7,
+        "o": 8,
+        "d": 9
+      },
+      "reproduksi": "Proyeksi Mei 2031 dengan langganan aktif.",
+      "harapan": "Bulan ke-2 dan ke-3 tetap menanggung biaya berulang; yang sudah dibayar tidak dihitung dua kali.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "integrasi",
+      "otomasi": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/proyeksi-kas.test.ts"
+      },
+      "asal": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/proyeksi-kas.test.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-013",
+      "judul": "Desimal mesin 55.5 tampil sebagai 555",
+      "domain": "angka-lokal",
+      "stack": [
+        "next"
+      ],
+      "rujukan": [
+        "CWE-681"
+      ],
+      "pemicu": "Nilai awal input dari kode berformat mesin (titik desimal) masuk ke input ber-locale id-ID.",
+      "kenapa_gagal": "Titik dianggap pemisah ribuan.",
+      "dampak": {
+        "s": 7,
+        "o": 5,
+        "d": 6
+      },
+      "reproduksi": "formatRibuanKetik(dariMesin(\"55.5\")).",
+      "harapan": "55,5; bilangan bulat dan pemisah ribuan id-ID tidak berubah; hasilnya terbaca utuh oleh parseAngka.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/angka-input.test.ts"
+      },
+      "asal": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "src/lib/angka-input.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-014",
+      "judul": "ID 19 digit dibulatkan JSON.parse",
+      "domain": "angka-lokal",
+      "stack": [
+        "node"
+      ],
+      "rujukan": [
+        "CWE-681",
+        "CWE-197"
+      ],
+      "pemicu": "ID delivery webhook GitHub melewati 2^53.",
+      "kenapa_gagal": "Angka JSON dianggap aman di Number; ...46272 menjadi ...46300 dan kirim ulang menembak delivery lain.",
+      "dampak": {
+        "s": 6,
+        "o": 6,
+        "d": 9
+      },
+      "reproduksi": "Parse fixture ber-ID 19 digit dengan dan tanpa reviver.",
+      "harapan": "ID dibaca utuh sebagai string dari teks sumber; runtime tanpa teks sumber melempar.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/repo-kiriman.test.ts"
+      },
+      "asal": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "src/lib/repo/kiriman.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-015",
+      "judul": "Dua locale angka di satu halaman",
+      "domain": "angka-lokal",
+      "stack": [
+        "node"
+      ],
+      "rujukan": [
+        "CWE-681"
+      ],
+      "pemicu": "Sel poin berformat AS, sel rupiah berformat Indonesia di tabel yang sama.",
+      "kenapa_gagal": "Satu parser untuk semua sel; 1.200.000 terbaca 1.",
+      "dampak": {
+        "s": 8,
+        "o": 5,
+        "d": 7
+      },
+      "reproduksi": "Fixture halaman portal dengan kedua format.",
+      "harapan": "carried.L 780000, dayCycleRp 1200000, jumlah harian sama dengan total Rp12.000.000.",
+      "sumber_harapan": "tes asal (fixture insiden)",
+      "jenis_cek": "skrip-cek",
+      "otomasi": {
+        "repo": "farrez30/NDS-ETL",
+        "jalur": "scripts/parseCheck.ts"
+      },
+      "asal": {
+        "repo": "farrez30/NDS-ETL",
+        "jalur": "scripts/parseCheck.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-016",
+      "judul": "Titik dua fullwidth tidak cocok regex",
+      "domain": "angka-lokal",
+      "stack": [
+        "node"
+      ],
+      "rujukan": [
+        "CWE-20"
+      ],
+      "pemicu": "Portal mencetak U+FF1A.",
+      "kenapa_gagal": "Pemisah selalu ':' ASCII; tidak cocok terlihat seperti minggu sepi, bukan galat.",
+      "dampak": {
+        "s": 6,
+        "o": 3,
+        "d": 9
+      },
+      "reproduksi": "Fixture dengan U+FF1A.",
+      "harapan": "joins = 13, bukan 0.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "skrip-cek",
+      "otomasi": {
+        "repo": "farrez30/NDS-ETL",
+        "jalur": "scripts/parseCheck.ts"
+      },
+      "asal": {
+        "repo": "farrez30/NDS-ETL",
+        "jalur": "src/scraper/ndsScraper.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-017",
+      "judul": "Offset pecahan dan 1e21 memicu 500",
+      "domain": "angka-lokal",
+      "stack": [
+        "express",
+        "postgres"
+      ],
+      "rujukan": [
+        "CWE-20",
+        "CWE-1284",
+        "WSTG-INPV"
+      ],
+      "pemicu": "GET /kols?paged=1&offset=1.5 atau offset=1e21.",
+      "kenapa_gagal": "Angka dari query dianggap bilangan bulat; Postgres melempar galat parse bigint.",
+      "dampak": {
+        "s": 4,
+        "o": 4,
+        "d": 4
+      },
+      "reproduksi": "Panggil rute dengan offset 1.5, 1e21, limit 2.9.",
+      "harapan": "Nilai dipangkas, rute membalas 200.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "http",
+      "otomasi": {
+        "repo": "farrez30/ViralyticsV2",
+        "jalur": "apps/api/src/kol-ronde2-routes.itest.ts"
+      },
+      "asal": {
+        "repo": "farrez30/ViralyticsV2",
+        "jalur": "apps/api/src/kol-ronde2-routes.itest.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-018",
+      "judul": "Backoff kunci akun meluap di hitungan besar",
+      "domain": "angka-lokal",
+      "stack": [
+        "express"
+      ],
+      "rujukan": [
+        "CWE-190"
+      ],
+      "pemicu": "failedLoginCount 100000 atau Number.MAX_SAFE_INTEGER.",
+      "kenapa_gagal": "Perkalian dua tidak pernah meluap.",
+      "dampak": {
+        "s": 6,
+        "o": 2,
+        "d": 8
+      },
+      "reproduksi": "Hitung durasi kunci di ambang, ambang+1, +50, 100000, MAX_SAFE_INTEGER.",
+      "harapan": "Berlipat dari BASE_LOCK_MS, dijepit MAX_LOCK_MS, tidak pernah jadi 0.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "farrez30/ViralyticsV2",
+        "jalur": "apps/api/src/services/login-throttle.test.ts"
+      },
+      "asal": {
+        "repo": "farrez30/ViralyticsV2",
+        "jalur": "apps/api/src/services/login-throttle.test.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-019",
+      "judul": "Diskon baris membuat nilai baris minus",
+      "domain": "angka-lokal",
+      "stack": [
+        "postgres"
+      ],
+      "rujukan": [
+        "CWE-20"
+      ],
+      "pemicu": "Diskon baris lebih besar dari qty x harga; diskon dokumen melebihi subtotal.",
+      "kenapa_gagal": "Diskon dianggap selalu lebih kecil dari bruto.",
+      "dampak": {
+        "s": 7,
+        "o": 3,
+        "d": 6
+      },
+      "reproduksi": "netBarisInvoice dan hitungTotalInvoice dengan diskon berlebih.",
+      "harapan": "Diskon dipangkas di bruto; diskon dokumen berlebih ditolak; jurnal balance di nilai netto.",
+      "sumber_harapan": "tes asal, prinsip double-entry",
+      "jenis_cek": "integrasi",
+      "otomasi": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/invoice-diskon.test.ts"
+      },
+      "asal": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/invoice-diskon.test.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-020",
+      "judul": "Nomor HP Indonesia dalam banyak bentuk",
+      "domain": "angka-lokal",
+      "stack": [
+        "next"
+      ],
+      "rujukan": [
+        "CWE-20"
+      ],
+      "pemicu": "08..., 62..., +62, 0062, dengan spasi dan tanda baca.",
+      "kenapa_gagal": "Satu bentuk masukan; akun ganda karena nomor yang sama ditulis berbeda.",
+      "dampak": {
+        "s": 5,
+        "o": 7,
+        "d": 6
+      },
+      "reproduksi": "Normalisasi setiap bentuk.",
+      "harapan": "Satu bentuk E.164; lebih dari 15 digit ditolak; username wajib diawali huruf supaya tidak bentrok dengan nomor.",
+      "sumber_harapan": "tes asal, ITU-T E.164 (belum diverifikasi ke sumber primer)",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "farrez30/AkarKita",
+        "jalur": "tests/sandi.test.ts"
+      },
+      "asal": {
+        "repo": "farrez30/AkarKita",
+        "jalur": "tests/sandi.test.ts",
+        "tanggal": "2026-08-25"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-021",
+      "judul": "Tebakan PIN paralel melewati batas",
+      "domain": "konkurensi",
+      "stack": [
+        "next",
+        "postgres"
+      ],
+      "rujukan": [
+        "CWE-362",
+        "CWE-307",
+        "WSTG-ATHN-03"
+      ],
+      "pemicu": "8 tab mengirim PIN salah bersamaan.",
+      "kenapa_gagal": "Penghitung baca-lalu-tulis aman; semua permintaan membaca hitungan lama.",
+      "dampak": {
+        "s": 8,
+        "o": 4,
+        "d": 8
+      },
+      "reproduksi": "Kirim 8 PIN salah paralel lalu PIN benar.",
+      "harapan": "Increment atomik sebelum rahasia diperiksa; PIN benar tetap ditolak selama 15 menit.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "e2e",
+      "otomasi": {
+        "repo": "farrez30/jeda",
+        "jalur": "e2e/share.spec.ts"
+      },
+      "asal": {
+        "repo": "farrez30/jeda",
+        "jalur": "src/lib/throttle.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-022",
+      "judul": "Penghitung gagal login ditimpa permintaan paralel",
+      "domain": "konkurensi",
+      "stack": [
+        "next",
+        "postgres"
+      ],
+      "rujukan": [
+        "CWE-362",
+        "CWE-307"
+      ],
+      "pemicu": "Percobaan login gagal bersamaan.",
+      "kenapa_gagal": "UPDATE dengan nilai yang dibaca sebelumnya aman.",
+      "dampak": {
+        "s": 6,
+        "o": 3,
+        "d": 9
+      },
+      "reproduksi": "Belum ada tes paralel; satu upsert failed + 1 di kode.",
+      "harapan": "Satu upsert atomik per percobaan.",
+      "sumber_harapan": "komentar kode asal",
+      "jenis_cek": "manual",
+      "otomasi": null,
+      "asal": {
+        "repo": "farrez30/AkarKita",
+        "jalur": "lib/auth/sandi.server.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22",
+        "risiko_sisa": "Tidak ada tes paralel; diterima sementara sampai tes ditulis."
+      }
+    },
+    {
+      "id": "TK-023",
+      "judul": "Edit saat push sinkron masih berjalan",
+      "domain": "konkurensi",
+      "stack": [
+        "next"
+      ],
+      "rujukan": [
+        "CWE-362"
+      ],
+      "pemicu": "Catatan disimpan ulang selama fetch pertama.",
+      "kenapa_gagal": "Baris dianggap bersih begitu push selesai.",
+      "dampak": {
+        "s": 7,
+        "o": 5,
+        "d": 8
+      },
+      "reproduksi": "Tahan fetch pertama, simpan v2, lepaskan.",
+      "harapan": "Baris tetap kotor dan push kedua mengirim v2; tiga requestSync jadi tepat dua panggilan server.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "farrez30/jeda",
+        "jalur": "src/lib/sync.test.ts"
+      },
+      "asal": {
+        "repo": "farrez30/jeda",
+        "jalur": "src/lib/sync.test.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-024",
+      "judul": "Proses mati sesudah order diterima, sebelum state disimpan",
+      "domain": "konkurensi",
+      "stack": [
+        "node",
+        "postgres"
+      ],
+      "rujukan": [
+        "CWE-362",
+        "SFDIPOT:Operations"
+      ],
+      "pemicu": "SIGKILL di antara placeOrder dan saveEngineState.",
+      "kenapa_gagal": "clientOrderId yang sama ditolak sebagai duplikat; nyatanya bursa melepas ID begitu order MARKET tertutup.",
+      "dampak": {
+        "s": 9,
+        "o": 2,
+        "d": 9
+      },
+      "reproduksi": "Ulangi tick setelah mati di titik itu.",
+      "harapan": "getOrder({clientOrderId}) dulu, pakai jawabannya; tidak membeli dua kali.",
+      "sumber_harapan": "ADR 0018 d-day",
+      "jenis_cek": "integrasi",
+      "otomasi": {
+        "repo": "farrez30/d-day",
+        "jalur": "packages/core/test/backtest.test.ts"
+      },
+      "asal": {
+        "repo": "farrez30/d-day",
+        "jalur": "docs/decisions/0018-rekonsiliasi-yang-benar-benar-berjalan.md",
+        "tanggal": "2026-09-10"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-025",
+      "judul": "Impor massal bersamaan membuat baris kembar",
+      "domain": "konkurensi",
+      "stack": [
+        "express",
+        "postgres"
+      ],
+      "rujukan": [
+        "CWE-362"
+      ],
+      "pemicu": "Dua unggahan CSV yang sama berjalan bersamaan; platform kosong.",
+      "kenapa_gagal": "Impor dianggap selalu tunggal; platform bawaan tiktok membuat handle kedua.",
+      "dampak": {
+        "s": 5,
+        "o": 4,
+        "d": 6
+      },
+      "reproduksi": "Unggah ulang dan unggah paralel.",
+      "harapan": "Unggah ulang idempoten; impor bersamaan ditolak tanpa baris kembar; > 500 baris ditolak.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "http",
+      "otomasi": {
+        "repo": "farrez30/ViralyticsV2",
+        "jalur": "apps/api/src/kols-bulk-route.itest.ts"
+      },
+      "asal": {
+        "repo": "farrez30/ViralyticsV2",
+        "jalur": "apps/api/src/kols-bulk-route.itest.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-026",
+      "judul": "Satu login portal dipakai dua tenant",
+      "domain": "konkurensi",
+      "stack": [
+        "node",
+        "postgres"
+      ],
+      "rujukan": [
+        "CWE-362"
+      ],
+      "pemicu": "Kredensial portal yang sama dipegang dua tenant.",
+      "kenapa_gagal": "Satu login hanya dipakai satu tenant; yang kedua dianggap gagal dan dicap sudah jalan.",
+      "dampak": {
+        "s": 6,
+        "o": 3,
+        "d": 7
+      },
+      "reproduksi": "Jalankan jadwal saat login sedang dipakai.",
+      "harapan": "Status sibuk ditunda dan tidak dicap jalan hari ini; login lain tidak terblokir.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "skrip-cek",
+      "otomasi": {
+        "repo": "farrez30/NDS-ETL",
+        "jalur": "scripts/scheduleCheck.ts"
+      },
+      "asal": {
+        "repo": "farrez30/NDS-ETL",
+        "jalur": "scripts/scheduleCheck.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-027",
+      "judul": "Jurnal tak-balance lolos bila dicek per baris",
+      "domain": "konkurensi",
+      "stack": [
+        "postgres"
+      ],
+      "rujukan": [
+        "CWE-20"
+      ],
+      "pemicu": "Insert baris jurnal satu per satu dalam satu transaksi.",
+      "kenapa_gagal": "Cek balance per baris atau di app cukup.",
+      "dampak": {
+        "s": 9,
+        "o": 2,
+        "d": 7
+      },
+      "reproduksi": "Insert baris tak-balance lalu COMMIT.",
+      "harapan": "Ditolak saat COMMIT (constraint tertunda); nomor berlubang tidak membuat tabrakan.",
+      "sumber_harapan": "prinsip double-entry, tes asal",
+      "jenis_cek": "integrasi",
+      "otomasi": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/accounting.test.ts"
+      },
+      "asal": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/accounting.test.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-028",
+      "judul": "Kirim ulang laporan hasil tes menggandakan baris",
+      "domain": "konkurensi",
+      "stack": [
+        "next",
+        "postgres"
+      ],
+      "rujukan": [
+        "CWE-837"
+      ],
+      "pemicu": "Reporter CI mengirim ulang kunci yang sama atau run_attempt baru.",
+      "kenapa_gagal": "Setiap kiriman adalah laporan baru.",
+      "dampak": {
+        "s": 4,
+        "o": 6,
+        "d": 6
+      },
+      "reproduksi": "POST dua kali dengan kunci sama, lalu dengan run_attempt baru.",
+      "harapan": "Kunci sama satu baris dengan hasil diganti; attempt baru baris baru; > batas per menit 429.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "http",
+      "otomasi": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/ci-terima.test.ts"
+      },
+      "asal": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/ci-terima.test.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-029",
+      "judul": "Pesan galat login membedakan email dan password",
+      "domain": "auth-otorisasi",
+      "stack": [
+        "next"
+      ],
+      "rujukan": [
+        "CWE-204",
+        "WSTG-IDNT-04"
+      ],
+      "pemicu": "Email tidak terdaftar dibanding password salah.",
+      "kenapa_gagal": "Pesan yang berbeda dianggap lebih membantu; form jadi pemeriksa keanggotaan.",
+      "dampak": {
+        "s": 6,
+        "o": 7,
+        "d": 5
+      },
+      "reproduksi": "Bandingkan teks galat kedua jalur.",
+      "harapan": "Pesan sama persis; action tidak pernah mengembalikan password.",
+      "sumber_harapan": "AGENTS.base.md bagian pesan galat",
+      "jenis_cek": "statis",
+      "otomasi": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/masuk.test.ts"
+      },
+      "asal": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/masuk.test.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-030",
+      "judul": "Waktu respons login membocorkan keberadaan akun",
+      "domain": "auth-otorisasi",
+      "stack": [
+        "express"
+      ],
+      "rujukan": [
+        "CWE-208",
+        "WSTG-IDNT-04"
+      ],
+      "pemicu": "Email tidak dikenal, password salah, akun terkunci.",
+      "kenapa_gagal": "Badan respons identik sudah cukup; kode lama melewati Argon2id bila akun tidak ada (3,3 ms banding 30,4 ms).",
+      "dampak": {
+        "s": 7,
+        "o": 6,
+        "d": 9
+      },
+      "reproduksi": "Ukur median berpasangan bergantian tiap jalur.",
+      "harapan": "Setiap penolakan membayar hash pengganti dan lantai waktu; rasio di bawah 1,6.",
+      "sumber_harapan": "AGENTS.base.md, tes asal",
+      "jenis_cek": "http",
+      "otomasi": {
+        "repo": "farrez30/ViralyticsV2",
+        "jalur": "apps/api/src/auth/login-timing.itest.ts"
+      },
+      "asal": {
+        "repo": "farrez30/ViralyticsV2",
+        "jalur": "apps/api/src/auth/login-timing.itest.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-031",
+      "judul": "Jalur gagal login tidak membayar hash yang sama",
+      "domain": "auth-otorisasi",
+      "stack": [
+        "next",
+        "postgres"
+      ],
+      "rujukan": [
+        "CWE-208"
+      ],
+      "pemicu": "Email tidak dikenal atau akun nonaktif.",
+      "kenapa_gagal": "Jalur yang menolak lebih cepat tidak terlihat.",
+      "dampak": {
+        "s": 7,
+        "o": 6,
+        "d": 9
+      },
+      "reproduksi": "Hitung perbandingan bcrypt per jalur gagal.",
+      "harapan": "Tepat satu perbandingan dengan biaya BIAYA_BCRYPT; email belum terdaftar ikut dihitung pembatas.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "integrasi",
+      "otomasi": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/masuk-kredensial.test.ts"
+      },
+      "asal": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/masuk-kredensial.test.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-032",
+      "judul": "Akun terkunci membalas 423",
+      "domain": "auth-otorisasi",
+      "stack": [
+        "express"
+      ],
+      "rujukan": [
+        "CWE-204",
+        "WSTG-ATHN-03"
+      ],
+      "pemicu": "Login ke akun yang sedang terkunci.",
+      "kenapa_gagal": "Status terkunci boleh diberitahukan; 423 atau penolakan cepat membuktikan akunnya ada.",
+      "dampak": {
+        "s": 6,
+        "o": 4,
+        "d": 7
+      },
+      "reproduksi": "Akun dengan lockedUntil di depan.",
+      "harapan": "401 dengan badan INVALID_CREDENTIALS yang sama, tanpa Set-Cookie.",
+      "sumber_harapan": "AGENTS.base.md, tes asal",
+      "jenis_cek": "http",
+      "otomasi": {
+        "repo": "farrez30/ViralyticsV2",
+        "jalur": "apps/api/src/auth/login-timing.itest.ts"
+      },
+      "asal": {
+        "repo": "farrez30/ViralyticsV2",
+        "jalur": "apps/api/src/auth/login-timing.itest.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-033",
+      "judul": "Matcher proxy salah escape membuang semua rute",
+      "domain": "auth-otorisasi",
+      "stack": [
+        "next"
+      ],
+      "rujukan": [
+        "CWE-693"
+      ],
+      "pemicu": "Pola matcher berisi backslash di dalam string JS.",
+      "kenapa_gagal": "Proxy yang ter-compile pasti dipanggil; '\\.' terurai jadi '.' dan polanya hanya menjaga '/'.",
+      "dampak": {
+        "s": 9,
+        "o": 3,
+        "d": 10
+      },
+      "reproduksi": "Cocokkan daftar rute contoh dengan matcher.",
+      "harapan": "Sub-rute terlindung dan /masuk tetap dijaga.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/proxy-matcher.test.ts"
+      },
+      "asal": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/proxy-matcher.test.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-034",
+      "judul": "Bypass login dev ikut ke produksi",
+      "domain": "auth-otorisasi",
+      "stack": [
+        "next"
+      ],
+      "rujukan": [
+        "CWE-489",
+        "CWE-284"
+      ],
+      "pemicu": "NODE_ENV bukan production tetapi DATABASE_URL menunjuk DB remote.",
+      "kenapa_gagal": "NODE_ENV cukup sebagai gerbang.",
+      "dampak": {
+        "s": 10,
+        "o": 2,
+        "d": 8
+      },
+      "reproduksi": "Panggil masukDev dengan DATABASE_URL non-lokal.",
+      "harapan": "Provider dev berupa array kosong; masukDev berhenti sebelum signIn; ketiga tempat memakai predikat yang sama.",
+      "sumber_harapan": "AGENTS.base.md bagian otorisasi",
+      "jenis_cek": "integrasi",
+      "otomasi": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/masuk.test.ts"
+      },
+      "asal": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/masuk.test.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-035",
+      "judul": "Notifikasi broadcast per peran bocor antar KOL",
+      "domain": "auth-otorisasi",
+      "stack": [
+        "express",
+        "postgres"
+      ],
+      "rujukan": [
+        "CWE-639",
+        "WSTG-ATHZ-04"
+      ],
+      "pemicu": "Baris notifikasi userId null dengan role kol.",
+      "kenapa_gagal": "Broadcast per peran aman; peristiwa satu KOL sampai ke semua KOL.",
+      "dampak": {
+        "s": 7,
+        "o": 5,
+        "d": 7
+      },
+      "reproduksi": "Ambil kotak masuk dua KOL.",
+      "harapan": "KOL hanya menerima baris untuk userId-nya; staf tetap menerima broadcast.",
+      "sumber_harapan": "tes asal (temuan E2E)",
+      "jenis_cek": "integrasi",
+      "otomasi": {
+        "repo": "farrez30/ViralyticsV2",
+        "jalur": "apps/api/src/db/notification-leak.itest.ts"
+      },
+      "asal": {
+        "repo": "farrez30/ViralyticsV2",
+        "jalur": "apps/api/src/db/notification-leak.itest.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-036",
+      "judul": "UUID milik orang lain di URL ringkasan",
+      "domain": "auth-otorisasi",
+      "stack": [
+        "next"
+      ],
+      "rujukan": [
+        "CWE-639",
+        "WSTG-ATHZ-04"
+      ],
+      "pemicu": "Klien membuka /ringkasan/<uuid lain> dan PDF-nya.",
+      "kenapa_gagal": "UUID sulit ditebak menggantikan cek kepemilikan.",
+      "dampak": {
+        "s": 8,
+        "o": 4,
+        "d": 6
+      },
+      "reproduksi": "Login sebagai klien A, buka milik klien B.",
+      "harapan": "404, sama dengan tidak ada; psikolog yang diputus langsung 404.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "e2e",
+      "otomasi": {
+        "repo": "farrez30/jeda",
+        "jalur": "e2e/theme-and-summary.spec.ts"
+      },
+      "asal": {
+        "repo": "farrez30/jeda",
+        "jalur": "e2e/psychologist.spec.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-037",
+      "judul": "Staff menerima kolom keuangan yang tidak ditampilkan",
+      "domain": "auth-otorisasi",
+      "stack": [
+        "next",
+        "postgres"
+      ],
+      "rujukan": [
+        "CWE-200",
+        "CWE-863"
+      ],
+      "pemicu": "Staff membuka daftar dan detail klien, proyek, beranda.",
+      "kenapa_gagal": "Kolom yang tidak dirender dianggap tidak bocor; ia tetap ada di payload RSC.",
+      "dampak": {
+        "s": 7,
+        "o": 5,
+        "d": 8
+      },
+      "reproduksi": "Panggil query sebagai staff dan periksa kunci objek.",
+      "harapan": "Kolom piutang, margin, termin, biaya tidak ada di objek; nilai kontrak sengaja tetap ada.",
+      "sumber_harapan": "keputusan 13 Okt 2026 coderoach-app, tes asal",
+      "jenis_cek": "integrasi",
+      "otomasi": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/keuangan-staff.test.ts"
+      },
+      "asal": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/keuangan-staff.test.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-038",
+      "judul": "Header x-middleware-subrequest melewati paywall",
+      "domain": "auth-otorisasi",
+      "stack": [
+        "next"
+      ],
+      "rujukan": [
+        "CWE-285"
+      ],
+      "pemicu": "Next 14.2.15 menerima header internal dari klien (CVE-2025-29927).",
+      "kenapa_gagal": "Middleware satu-satunya gerbang.",
+      "dampak": {
+        "s": 9,
+        "o": 3,
+        "d": 8
+      },
+      "reproduksi": "Kirim header itu ke halaman berbayar.",
+      "harapan": "Setiap halaman dan route menggerbangi di badannya sendiri.",
+      "sumber_harapan": "AGENTS.base.md bagian otorisasi, advisori Next (belum diverifikasi ke sumber primer)",
+      "jenis_cek": "statis",
+      "otomasi": {
+        "repo": "farrez30/NDS-ETL",
+        "jalur": "scripts/gateCheck.ts"
+      },
+      "asal": {
+        "repo": "farrez30/NDS-ETL",
+        "jalur": "scripts/gateCheck.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-039",
+      "judul": "Unduh bukti hanya memeriksa login, bukan hak atas induknya",
+      "domain": "auth-otorisasi",
+      "stack": [
+        "next",
+        "postgres"
+      ],
+      "rujukan": [
+        "CWE-639",
+        "CWE-862",
+        "WSTG-ATHZ-04"
+      ],
+      "pemicu": "Pengguna yang login meminta /api/unduh-bukti/<id> milik entitas yang tidak boleh ia lihat.",
+      "kenapa_gagal": "Login sama dengan berhak; id tidak divalidasi sebagai UUID.",
+      "dampak": {
+        "s": 7,
+        "o": 3,
+        "d": 7
+      },
+      "reproduksi": "Login sebagai staff, minta id bukti biaya atau invoice.",
+      "harapan": "Hak akses mengikuti modul induk bukti; id bukan UUID ditolak 400 atau 404.",
+      "sumber_harapan": "AGENTS.base.md bagian otorisasi; perbaikan direncanakan di sesi sendiri",
+      "jenis_cek": "http",
+      "otomasi": null,
+      "asal": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "src/app/api/unduh-bukti/[id]/route.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22",
+        "risiko_sisa": "Terbuka per 22 Okt 2026; perbaikan dan tes mutasi dijadwalkan sebagai PR sendiri."
+      }
+    },
+    {
+      "id": "TK-040",
+      "judul": "Peran pemilik menembus RLS tenant",
+      "domain": "auth-otorisasi",
+      "stack": [
+        "postgres",
+        "next"
+      ],
+      "rujukan": [
+        "CWE-863",
+        "CWE-284"
+      ],
+      "pemicu": "Query memakai role owner atau service; RLS berisi OR is_super_admin().",
+      "kenapa_gagal": "RLS cukup sebagai pagar; tujuh pernyataan tanpa filter tenant ditemukan, satu menghapus semua.",
+      "dampak": {
+        "s": 9,
+        "o": 4,
+        "d": 8
+      },
+      "reproduksi": "Pindai setiap pernyataan terhadap tabel tenant.",
+      "harapan": "Setiap pernyataan menyebut user_id, run_id, atau nds_account_id, atau membawa alasan tenancy-ok.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "statis",
+      "otomasi": {
+        "repo": "farrez30/NDS-ETL",
+        "jalur": "web/scripts/tenancyCheck.ts"
+      },
+      "asal": {
+        "repo": "farrez30/NDS-ETL",
+        "jalur": "web/scripts/tenancyCheck.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-041",
+      "judul": "Ganti password tidak mengeluarkan perangkat lain",
+      "domain": "auth-otorisasi",
+      "stack": [
+        "next"
+      ],
+      "rujukan": [
+        "CWE-613"
+      ],
+      "pemicu": "Password diganti dari satu perangkat.",
+      "kenapa_gagal": "Sesi lain ikut tidak sah dengan sendirinya.",
+      "dampak": {
+        "s": 6,
+        "o": 4,
+        "d": 6
+      },
+      "reproduksi": "Dua konteks browser, ganti password di satu.",
+      "harapan": "Sinkron sesi lain 401, sesi ini 200; password lama berhenti bekerja.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "e2e",
+      "otomasi": {
+        "repo": "farrez30/jeda",
+        "jalur": "e2e/password.spec.ts"
+      },
+      "asal": {
+        "repo": "farrez30/jeda",
+        "jalur": "e2e/password.spec.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-042",
+      "judul": "Token dan kunci ikut tercetak di pesan galat",
+      "domain": "auth-otorisasi",
+      "stack": [
+        "node"
+      ],
+      "rujukan": [
+        "CWE-209",
+        "CWE-532"
+      ],
+      "pemicu": "Galat API GitHub memantulkan header Authorization atau private key.",
+      "kenapa_gagal": "Pesan galat aman disimpan apa adanya.",
+      "dampak": {
+        "s": 8,
+        "o": 4,
+        "d": 7
+      },
+      "reproduksi": "Lewatkan galat berisi PAT klasik, fine-grained, header, PEM.",
+      "harapan": "Disamarkan dan dipotong sebelum masuk log atau kolom galat.",
+      "sumber_harapan": "AGENTS.base.md bagian rahasia",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/repo-kripto.test.ts"
+      },
+      "asal": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/repo-kripto.test.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-043",
+      "judul": "Kunci enkripsi diturunkan dari session secret",
+      "domain": "auth-otorisasi",
+      "stack": [
+        "express"
+      ],
+      "rujukan": [
+        "CWE-755"
+      ],
+      "pemicu": "SESSION_SECRET dirotasi setelah kebocoran.",
+      "kenapa_gagal": "Kunci data boleh menumpang session secret; rotasi menghapus senyap nomor rekening.",
+      "dampak": {
+        "s": 9,
+        "o": 2,
+        "d": 9
+      },
+      "reproduksi": "Rotasi SESSION_SECRET lalu baca baris v2; dekripsi dengan kunci salah.",
+      "harapan": "Baris tetap terbaca; dekripsi gagal melempar DecryptionError, bukan string kosong.",
+      "sumber_harapan": "AGENTS.base.md bagian rahasia",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "farrez30/ViralyticsV2",
+        "jalur": "apps/api/src/services/crypto.test.ts"
+      },
+      "asal": {
+        "repo": "farrez30/ViralyticsV2",
+        "jalur": "apps/api/src/services/crypto.test.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-044",
+      "judul": "HTML di alamat email masuk badan surel",
+      "domain": "input-jahat",
+      "stack": [
+        "next"
+      ],
+      "rujukan": [
+        "CWE-79",
+        "CWE-116",
+        "WSTG-INPV-01"
+      ],
+      "pemicu": "Identitas email a\"><script>@contoh.com; URL berisi &.",
+      "kenapa_gagal": "Alamat email yang lolos validasi aman disisipkan ke HTML.",
+      "dampak": {
+        "s": 6,
+        "o": 2,
+        "d": 6
+      },
+      "reproduksi": "Render badan surel masuk.",
+      "harapan": "Tidak ada <script>; & menjadi &amp;; opsi raw dan attachments tidak dipakai.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "farrez30/AkarKita",
+        "jalur": "tests/mail.test.ts"
+      },
+      "asal": {
+        "repo": "farrez30/AkarKita",
+        "jalur": "tests/mail.test.ts",
+        "tanggal": "2026-08-25"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-045",
+      "judul": "Endpoint push menunjuk jaringan internal",
+      "domain": "input-jahat",
+      "stack": [
+        "express"
+      ],
+      "rujukan": [
+        "CWE-918",
+        "WSTG-INPV-19"
+      ],
+      "pemicu": "Endpoint langganan push atau URL avatar dari JSON pihak ketiga.",
+      "kenapa_gagal": "Cukup typeof string.",
+      "dampak": {
+        "s": 8,
+        "o": 3,
+        "d": 7
+      },
+      "reproduksi": "Daftarkan 169.254.169.254, loopback, 10.x, skema non-https, URL berkredensial.",
+      "harapan": "Ditolak; hanya host push dan CDN di allowlist yang diterima.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "farrez30/ViralyticsV2",
+        "jalur": "apps/api/src/services/push-endpoint.test.ts"
+      },
+      "asal": {
+        "repo": "farrez30/ViralyticsV2",
+        "jalur": "apps/api/src/services/push-endpoint.test.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-046",
+      "judul": "Open redirect dari klik notifikasi",
+      "domain": "input-jahat",
+      "stack": [
+        "next"
+      ],
+      "rujukan": [
+        "CWE-601",
+        "WSTG-CLNT-04"
+      ],
+      "pemicu": "URL tujuan notifikasi //jahat.com, ///x, javascript:, data:.",
+      "kenapa_gagal": "Jalur yang diawali '/' selalu lokal.",
+      "dampak": {
+        "s": 6,
+        "o": 2,
+        "d": 6
+      },
+      "reproduksi": "jalurAman untuk setiap bentuk.",
+      "harapan": "Semua bentuk itu dan non-string ditolak.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "farrez30/AkarKita",
+        "jalur": "tests/push.test.ts"
+      },
+      "asal": {
+        "repo": "farrez30/AkarKita",
+        "jalur": "lib/jalurAman.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-047",
+      "judul": "Content-Type palsu dan bom dimensi gambar",
+      "domain": "input-jahat",
+      "stack": [
+        "express"
+      ],
+      "rujukan": [
+        "CWE-434",
+        "CWE-409",
+        "WSTG-BUSL-08"
+      ],
+      "pemicu": "Byte HTML dengan Content-Type gambar; SVG; PNG berdimensi raksasa; buffer terpotong.",
+      "kenapa_gagal": "Header Content-Type dari klien dipercaya.",
+      "dampak": {
+        "s": 8,
+        "o": 3,
+        "d": 6
+      },
+      "reproduksi": "Unggah tiap jenis ke rute storage.",
+      "harapan": "415 untuk tipe palsu, 413 untuk bom, null tanpa melempar untuk buffer terpotong.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "farrez30/ViralyticsV2",
+        "jalur": "apps/api/src/services/file-sniff.test.ts"
+      },
+      "asal": {
+        "repo": "farrez30/ViralyticsV2",
+        "jalur": "apps/api/src/services/file-sniff.test.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-048",
+      "judul": "Path traversal di jalur objek storage",
+      "domain": "input-jahat",
+      "stack": [
+        "express"
+      ],
+      "rujukan": [
+        "CWE-22",
+        "WSTG-ATHZ-01"
+      ],
+      "pemicu": "Jalur berisi .. atau segmen kosong setelah percent-decoding; token lintas bucket.",
+      "kenapa_gagal": "Decode sekali lalu cek cukup.",
+      "dampak": {
+        "s": 8,
+        "o": 3,
+        "d": 6
+      },
+      "reproduksi": "sanitizeObjectPath dengan muatan ter-encode; token kedaluwarsa dan diubah.",
+      "harapan": "Ditolak; bucket privat 404 seragam; kedaluwarsa 403 TOKEN_EXPIRED.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "farrez30/ViralyticsV2",
+        "jalur": "apps/api/src/services/file-tokens.test.ts"
+      },
+      "asal": {
+        "repo": "farrez30/ViralyticsV2",
+        "jalur": "apps/api/src/storage-routes.itest.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-049",
+      "judul": "Header Link upstream menunjuk host lain",
+      "domain": "input-jahat",
+      "stack": [
+        "node"
+      ],
+      "rujukan": [
+        "CWE-918"
+      ],
+      "pemicu": "Respons GitHub dengan rel=next ke host selain api.github.com.",
+      "kenapa_gagal": "Header dari upstream tepercaya; token ikut terkirim ke host itu.",
+      "dampak": {
+        "s": 8,
+        "o": 1,
+        "d": 8
+      },
+      "reproduksi": "Paginasi dengan Link palsu.",
+      "harapan": "URL lanjutan di luar api.github.com ditolak; redirect manual.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/repo-gh.test.ts"
+      },
+      "asal": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/repo-gh.test.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-050",
+      "judul": "Ekspresi ${{ }} payload dispatch di baris run",
+      "domain": "input-jahat",
+      "stack": [
+        "github-actions"
+      ],
+      "rujukan": [
+        "CWE-78",
+        "CWE-94"
+      ],
+      "pemicu": "repository_dispatch dengan client_payload.user_id berisi metakarakter shell.",
+      "kenapa_gagal": "Payload dispatch berasal dari pihak tepercaya; nilai disisipkan sebelum shell mengurai.",
+      "dampak": {
+        "s": 8,
+        "o": 2,
+        "d": 8
+      },
+      "reproduksi": "Kirim dispatch dengan user_id berisi ; dan $( ).",
+      "harapan": "Nilai masuk lewat env: lalu dikutip di skrip; secrets tidak ditulis di baris run.",
+      "sumber_harapan": "dokumentasi GitHub Actions security hardening (belum diverifikasi ke sumber primer)",
+      "jenis_cek": "statis",
+      "otomasi": null,
+      "asal": {
+        "repo": "farrez30/NDS-ETL",
+        "jalur": ".github/workflows/scrape.yml"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22",
+        "risiko_sisa": "Terbuka per 22 Okt 2026; belum ada pemeriksa."
+      }
+    },
+    {
+      "id": "TK-051",
+      "judul": "CRLF di subjek surel ringkasan",
+      "domain": "input-jahat",
+      "stack": [
+        "node"
+      ],
+      "rujukan": [
+        "CWE-93",
+        "CWE-113"
+      ],
+      "pemicu": "Label akun berisi CR/LF atau HTML.",
+      "kenapa_gagal": "Label buatan pengguna aman di header dan badan surel.",
+      "dampak": {
+        "s": 6,
+        "o": 2,
+        "d": 6
+      },
+      "reproduksi": "Buat ringkasan dengan label jahat.",
+      "harapan": "CR/LF dibuang dari subjek; label di-escape di HTML.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "skrip-cek",
+      "otomasi": {
+        "repo": "farrez30/NDS-ETL",
+        "jalur": "web/scripts/roDigestCheck.ts"
+      },
+      "asal": {
+        "repo": "farrez30/NDS-ETL",
+        "jalur": "web/scripts/roDigestCheck.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-052",
+      "judul": "CF-Connecting-IP kiriman klien dipercaya",
+      "domain": "input-jahat",
+      "stack": [
+        "next"
+      ],
+      "rujukan": [
+        "CWE-348"
+      ],
+      "pemicu": "Klien mengirim header CF-Connecting-IP sendiri saat app tidak di belakang Cloudflare.",
+      "kenapa_gagal": "Header itu selalu dari Cloudflare; pembatas laju per IP bisa dikelabui.",
+      "dampak": {
+        "s": 6,
+        "o": 3,
+        "d": 7
+      },
+      "reproduksi": "Request dengan header palsu dengan dan tanpa PERCAYA_CF_CONNECTING_IP.",
+      "harapan": "Diabaikan tanpa flag; header kosong jatuh ke X-Forwarded-For.",
+      "sumber_harapan": "ADR 0002 coderoach-app",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/self-host.test.ts"
+      },
+      "asal": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/self-host.test.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-053",
+      "judul": "Alat CLI @latest dieksekusi tanpa dibaca",
+      "domain": "input-jahat",
+      "stack": [
+        "github-actions",
+        "node"
+      ],
+      "rujukan": [
+        "CWE-829",
+        "CWE-494"
+      ],
+      "pemicu": "npx --yes paket@latest di skrip berkredensial atau workflow.",
+      "kenapa_gagal": "Rilis npm terbaru aman; neonctl merilis puluhan versi dalam dua minggu.",
+      "dampak": {
+        "s": 8,
+        "o": 3,
+        "d": 8
+      },
+      "reproduksi": "Pindai scripts/ dan workflow.",
+      "harapan": "Versi dipaku persis; menaikkannya lewat review.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "statis",
+      "otomasi": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/versi-terkunci.test.ts"
+      },
+      "asal": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/versi-terkunci.test.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-054",
+      "judul": "CSP longgar karena unsafe-inline",
+      "domain": "input-jahat",
+      "stack": [
+        "next"
+      ],
+      "rujukan": [
+        "CWE-79",
+        "CWE-693",
+        "WSTG-CONF-12"
+      ],
+      "pemicu": "Script inline untuk tema atau analitik.",
+      "kenapa_gagal": "unsafe-inline diperlukan untuk script inline.",
+      "dampak": {
+        "s": 7,
+        "o": 5,
+        "d": 8
+      },
+      "reproduksi": "Bangun header produksi; jalankan halaman statis dan ber-nonce.",
+      "harapan": "script-src memakai nonce atau hash tanpa unsafe-inline dan unsafe-eval di produksi; tanpa galat CSP di console.",
+      "sumber_harapan": "tes asal; CSP Level 3 W3C (belum diverifikasi ke sumber primer)",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/header-keamanan.test.ts"
+      },
+      "asal": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/header-keamanan.test.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-055",
+      "judul": "Pertanyaan jebakan ke chatbot klaim kesehatan",
+      "domain": "input-jahat",
+      "stack": [
+        "node"
+      ],
+      "rujukan": [
+        "CWE-1427",
+        "OWASP LLM01"
+      ],
+      "pemicu": "Pengunjung bertanya soal penyembuhan penyakit, dosis, atau peluang MLM.",
+      "kenapa_gagal": "Model menjawab sendiri dengan aman; jawaban klaim sembuh melanggar aturan iklan suplemen.",
+      "dampak": {
+        "s": 8,
+        "o": 6,
+        "d": 7
+      },
+      "reproduksi": "Jalankan setiap kasus red-team.",
+      "harapan": "Setiap kasus berakhir di rute tertulis (kesehatan, peluang) dan diserahkan ke manusia.",
+      "sumber_harapan": "ADR 0009 dan 0015 nds-ads-pilot, kebijakan Meta Health and Wellness",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "lokal/nds-ads-pilot",
+        "jalur": "chatbot/guard.test.ts"
+      },
+      "asal": {
+        "repo": "lokal/nds-ads-pilot",
+        "jalur": "chatbot/tests/redteam.yaml"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-056",
+      "judul": "Konten luar dirender sebagai HTML",
+      "domain": "input-jahat",
+      "stack": [
+        "next"
+      ],
+      "rujukan": [
+        "CWE-79",
+        "WSTG-INPV-01"
+      ],
+      "pemicu": "Judul PR, pesan commit, atau isi issue berisi markup.",
+      "kenapa_gagal": "Data dari GitHub kita sendiri tepercaya.",
+      "dampak": {
+        "s": 7,
+        "o": 3,
+        "d": 6
+      },
+      "reproduksi": "Sinkron PR berjudul <img onerror>.",
+      "harapan": "Teks polos, tanpa dangerouslySetInnerHTML, tanpa render Markdown.",
+      "sumber_harapan": "AGENTS.base.md bagian UI",
+      "jenis_cek": "manual",
+      "otomasi": null,
+      "asal": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "standar/AGENTS.base.md"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22",
+        "risiko_sisa": "Belum ada pemindai khusus; dijaga review."
+      }
+    },
+    {
+      "id": "TK-057",
+      "judul": "localStorage melempar di mode privat",
+      "domain": "ui-perangkat",
+      "stack": [
+        "next"
+      ],
+      "rujukan": [
+        "SFDIPOT:Platform"
+      ],
+      "pemicu": "Safari privat, kuota penuh, storage diblokir.",
+      "kenapa_gagal": "Storage selalu bisa ditulis.",
+      "dampak": {
+        "s": 6,
+        "o": 5,
+        "d": 6
+      },
+      "reproduksi": "Ganti localStorage dengan versi yang melempar QuotaExceededError dan SecurityError.",
+      "harapan": "Fungsi draf tidak pernah melempar; baca mengembalikan null; data rusak dihapus.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "farrez30/AkarKita",
+        "jalur": "tests/draf.test.ts"
+      },
+      "asal": {
+        "repo": "farrez30/AkarKita",
+        "jalur": "lib/draf.ts",
+        "tanggal": "2026-08-28"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-058",
+      "judul": "requestAnimationFrame tidak menyala di tab tersembunyi",
+      "domain": "ui-perangkat",
+      "stack": [
+        "react"
+      ],
+      "rujukan": [
+        "SFDIPOT:Platform"
+      ],
+      "pemicu": "Browser pane in-app atau tab latar (visibilityState hidden).",
+      "kenapa_gagal": "rAF hanya terlambat; nyatanya tidak pernah dipanggil.",
+      "dampak": {
+        "s": 5,
+        "o": 6,
+        "d": 9
+      },
+      "reproduksi": "Buka halaman di browser pane, picu scrollIntoView smooth.",
+      "harapan": "Gambar rutin tidak digantung ke rAF; setTimeout untuk yang harus jalan saat tersembunyi.",
+      "sumber_harapan": "AGENTS.base.md bagian jebakan",
+      "jenis_cek": "manual",
+      "otomasi": null,
+      "asal": {
+        "repo": "farrez30/AkarKita",
+        "jalur": "lib/camera.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22",
+        "risiko_sisa": "Hanya dijaga aturan; belum ada tes."
+      }
+    },
+    {
+      "id": "TK-059",
+      "judul": "Target sentuh di bawah 44px",
+      "domain": "ui-perangkat",
+      "stack": [
+        "next",
+        "react"
+      ],
+      "rujukan": [
+        "WCAG 2.2 SC 2.5.8",
+        "WCAG 2.2 SC 2.5.5"
+      ],
+      "pemicu": "Kelas min-h-9 atau resep tombol yang kehilangan min-h-11; tautan merek 28px.",
+      "kenapa_gagal": "Ukuran yang terlihat cukup di desktop cukup juga untuk jari.",
+      "dampak": {
+        "s": 5,
+        "o": 7,
+        "d": 5
+      },
+      "reproduksi": "Pindai kelas tinggi di komponen.",
+      "harapan": "Tidak ada target di bawah 44px; label pembungkus checkbox ikut.",
+      "sumber_harapan": "AGENTS.base.md bagian UI",
+      "jenis_cek": "statis",
+      "otomasi": {
+        "repo": "farrez30/AkarKita",
+        "jalur": "tests/tokenUi.test.ts"
+      },
+      "asal": {
+        "repo": "farrez30/AkarKita",
+        "jalur": "tests/tokenUi.test.ts",
+        "tanggal": "2026-08-28"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-060",
+      "judul": "Tirai mode gelap mencerahkan halaman",
+      "domain": "ui-perangkat",
+      "stack": [
+        "react"
+      ],
+      "rujukan": [
+        "WCAG 2.2 SC 1.4.3",
+        "WCAG 2.2 SC 1.4.11"
+      ],
+      "pemicu": "Overlay bg-ink/40 di tema gelap, --ink hampir putih.",
+      "kenapa_gagal": "Token yang berarti gelap di tema terang tetap gelap di tema gelap.",
+      "dampak": {
+        "s": 4,
+        "o": 6,
+        "d": 6
+      },
+      "reproduksi": "Pindai kelas overlay dan nilai --tirai per tema.",
+      "harapan": "Tidak ada bg-ink, black, white dengan alfa; --tirai ada di setiap blok tema.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "statis",
+      "otomasi": {
+        "repo": "farrez30/AkarKita",
+        "jalur": "tests/tokenUi.test.ts"
+      },
+      "asal": {
+        "repo": "farrez30/AkarKita",
+        "jalur": "tests/charts/tokenKontras.test.ts",
+        "tanggal": "2026-08-26"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-061",
+      "judul": "Kontras teks terlihat baik tetapi 2,4:1",
+      "domain": "ui-perangkat",
+      "stack": [
+        "next"
+      ],
+      "rujukan": [
+        "WCAG 2.2 SC 1.4.3"
+      ],
+      "pemicu": "mist-500 di atas kertas.",
+      "kenapa_gagal": "Mata developer menilai kontras dengan benar.",
+      "dampak": {
+        "s": 5,
+        "o": 7,
+        "d": 7
+      },
+      "reproduksi": "Hitung rasio setiap pasangan token yang dipakai dari globals.css.",
+      "harapan": "Teks normal minimal 4,5:1; token sinyal tidak dipakai jadi isian grafis.",
+      "sumber_harapan": "WCAG 2.2 SC 1.4.3",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/kontras.test.ts"
+      },
+      "asal": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/kontras.test.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-062",
+      "judul": "Transisi Tailwind v4 menunjuk transform",
+      "domain": "ui-perangkat",
+      "stack": [
+        "next"
+      ],
+      "rujukan": [
+        "SFDIPOT:Platform"
+      ],
+      "pemicu": "transition-[...,transform] yang ditulis untuk v3.",
+      "kenapa_gagal": "translate dan scale masih bagian dari transform; di v4 properti sendiri sehingga transisi diam.",
+      "dampak": {
+        "s": 3,
+        "o": 6,
+        "d": 9
+      },
+      "reproduksi": "Pindai kelas transisi.",
+      "harapan": "Tidak ada yang menunjuk transform; elemen bergeser memakai translate; reduced-motion dihormati kecuali spinner.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "statis",
+      "otomasi": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/gerak.test.ts"
+      },
+      "asal": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/gerak.test.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-063",
+      "judul": "Konten tersembunyi tanpa JS atau saat reduced motion",
+      "domain": "ui-perangkat",
+      "stack": [
+        "next"
+      ],
+      "rujukan": [
+        "WCAG 2.2 SC 2.3.3",
+        "WCAG 2.2 SC 2.2.2"
+      ],
+      "pemicu": "JS gagal dimuat, atau prefers-reduced-motion berubah setelah halaman terbuka.",
+      "kenapa_gagal": "Status awal tersembunyi akan selalu dibuka skrip; preferensi cukup dibaca sekali.",
+      "dampak": {
+        "s": 6,
+        "o": 4,
+        "d": 6
+      },
+      "reproduksi": "Muat landing tanpa JS; ubah preferensi saat berjalan.",
+      "harapan": "Status tersembunyi hanya di bawah [data-gerak-siap]; judul hero dan CTA tidak pernah tersembunyi; preferensi didengar lewat change.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "statis",
+      "otomasi": {
+        "repo": "farrez30/AkarKita",
+        "jalur": "tests/landing.test.ts"
+      },
+      "asal": {
+        "repo": "farrez30/AkarKita",
+        "jalur": "tests/landing.test.ts",
+        "tanggal": "2026-09-14"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-064",
+      "judul": "Em dash, panah, dan titik tengah di teks UI",
+      "domain": "ui-perangkat",
+      "stack": [
+        "next",
+        "react"
+      ],
+      "rujukan": [
+        "WCAG 2.2 SC 1.3.1"
+      ],
+      "pemicu": "Status atau label yang menyambung frasa dengan simbol.",
+      "kenapa_gagal": "Simbol netral; di layar sempit bagian sesudahnya terbelah dan pembaca layar membacakannya.",
+      "dampak": {
+        "s": 3,
+        "o": 8,
+        "d": 4
+      },
+      "reproduksi": "Pindai teks yang dilihat pengguna.",
+      "harapan": "Tanda baca biasa; titik tengah hanya lewat meta() dengan spasi tak-putus.",
+      "sumber_harapan": "aturan teks UI Coderoach, tes asal",
+      "jenis_cek": "statis",
+      "otomasi": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/teks-ui.test.ts"
+      },
+      "asal": {
+        "repo": "farrez30/jeda",
+        "jalur": "src/copy.test.ts",
+        "tanggal": "2026-10-20"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-065",
+      "judul": "Keyboard Android menutupi tombol Simpan",
+      "domain": "ui-perangkat",
+      "stack": [
+        "next"
+      ],
+      "rujukan": [
+        "WCAG 2.2 SC 2.4.11"
+      ],
+      "pemicu": "Lembar isian di HP; keyboard terbuka.",
+      "kenapa_gagal": "Viewport tidak berubah saat keyboard muncul; iOS dan Android sama.",
+      "dampak": {
+        "s": 5,
+        "o": 7,
+        "d": 5
+      },
+      "reproduksi": "E2E profil Android 390x844, fokus field terakhir.",
+      "harapan": "interactiveWidget resizes-content di Android; lembar mengikuti visualViewport di iOS; footer tetap terlihat.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "e2e",
+      "otomasi": {
+        "repo": "farrez30/jeda",
+        "jalur": "e2e/client.spec.ts"
+      },
+      "asal": {
+        "repo": "farrez30/jeda",
+        "jalur": "src/app/layout.tsx"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-066",
+      "judul": "Kanvas melebihi batas browser memberi gambar kosong",
+      "domain": "ui-perangkat",
+      "stack": [
+        "react"
+      ],
+      "rujukan": [
+        "SFDIPOT:Platform"
+      ],
+      "pemicu": "Poster raksasa melewati batas ukuran kanvas.",
+      "kenapa_gagal": "Kanvas besar melempar galat; nyatanya kosong tanpa suara.",
+      "dampak": {
+        "s": 5,
+        "o": 3,
+        "d": 8
+      },
+      "reproduksi": "Hitung ukuran poster besar.",
+      "harapan": "Skala dijepit dengan tanda dipangkas; ukuran kertas tetap.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "farrez30/AkarKita",
+        "jalur": "tests/poster.test.ts"
+      },
+      "asal": {
+        "repo": "farrez30/AkarKita",
+        "jalur": "tests/poster.test.ts",
+        "tanggal": "2026-08-25"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-067",
+      "judul": "Lightning CSS membuang backdrop-filter tanpa awalan",
+      "domain": "ui-perangkat",
+      "stack": [
+        "next"
+      ],
+      "rujukan": [
+        "SFDIPOT:Platform"
+      ],
+      "pemicu": "Build produksi dengan Lightning CSS.",
+      "kenapa_gagal": "CSS sumber sama dengan CSS terkirim; efek kaca hilang di Chrome dan Edge.",
+      "dampak": {
+        "s": 3,
+        "o": 4,
+        "d": 9
+      },
+      "reproduksi": "Baca CSS hasil build.",
+      "harapan": "Properti tanpa awalan ada di keluaran.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "statis",
+      "otomasi": {
+        "repo": "farrez30/d-day",
+        "jalur": "dashboard/test/kaca.test.ts"
+      },
+      "asal": {
+        "repo": "farrez30/d-day",
+        "jalur": "docs/journal/2026-09-11.md",
+        "tanggal": "2026-09-11"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-068",
+      "judul": "React mengosongkan form uncontrolled setelah action",
+      "domain": "ui-perangkat",
+      "stack": [
+        "next",
+        "react"
+      ],
+      "rujukan": [
+        "SFDIPOT:Function"
+      ],
+      "pemicu": "Password salah diketik sekali.",
+      "kenapa_gagal": "Nilai form bertahan setelah server action; nyatanya email ikut terhapus.",
+      "dampak": {
+        "s": 3,
+        "o": 8,
+        "d": 6
+      },
+      "reproduksi": "Periksa input email dan password di form masuk.",
+      "harapan": "Email terkendali; password tidak pernah ditahan di state klien.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "statis",
+      "otomasi": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/masuk.test.ts"
+      },
+      "asal": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/masuk.test.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-069",
+      "judul": "Rute intercepted menelan segmen statis saudara",
+      "domain": "ui-perangkat",
+      "stack": [
+        "next"
+      ],
+      "rujukan": [
+        "SFDIPOT:Structure"
+      ],
+      "pemicu": "Navigasi dalam app ke /anggota/baru di samping (.)anggota/[id].",
+      "kenapa_gagal": "Reload dan navigasi klien memakai rute yang sama; navigasi klien jadi 404.",
+      "dampak": {
+        "s": 6,
+        "o": 4,
+        "d": 7
+      },
+      "reproduksi": "Periksa bentuk folder app.",
+      "harapan": "Segmen dinamis intercepted tidak bersaudara dengan segmen statis.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "statis",
+      "otomasi": {
+        "repo": "farrez30/AkarKita",
+        "jalur": "tests/rute.test.ts"
+      },
+      "asal": {
+        "repo": "farrez30/AkarKita",
+        "jalur": "tests/rute.test.ts",
+        "tanggal": "2026-08-26"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-070",
+      "judul": "ZodError tampil sebagai JSON di layar",
+      "domain": "ui-perangkat",
+      "stack": [
+        "next"
+      ],
+      "rujukan": [
+        "CWE-209"
+      ],
+      "pemicu": "Validasi server action gagal.",
+      "kenapa_gagal": "error.message selalu kalimat; ZodError.message berupa JSON array.",
+      "dampak": {
+        "s": 3,
+        "o": 7,
+        "d": 4
+      },
+      "reproduksi": "Lempar ZodError satu nilai, objek, bersarang, tanpa issue.",
+      "harapan": "Kalimat pertama dengan nama field; redirect dilempar ulang.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/jalankan.test.ts"
+      },
+      "asal": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/jalankan.test.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-071",
+      "judul": "Promise fetch yang tidak pernah selesai",
+      "domain": "jaringan-server",
+      "stack": [
+        "node"
+      ],
+      "rujukan": [
+        "CWE-400"
+      ],
+      "pemicu": "Satu fetch Instagram tidak pernah resolve dan menahan mutex lebih dari 20 menit.",
+      "kenapa_gagal": "AbortController atau timeout klien selalu memutus.",
+      "dampak": {
+        "s": 7,
+        "o": 3,
+        "d": 8
+      },
+      "reproduksi": "Fetch palsu yang menggantung.",
+      "harapan": "Tenggat milik loop maju dan baris tetap bisa dicoba ulang; withTimeout membersihkan timernya.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "farrez30/ViralyticsV2",
+        "jalur": "apps/api/src/services/with-timeout.test.ts"
+      },
+      "asal": {
+        "repo": "farrez30/ViralyticsV2",
+        "jalur": "apps/api/src/services/apify-cron-guardrails.itest.ts",
+        "tanggal": "2026-08-22"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-072",
+      "judul": "Redirect meneruskan API key ke host lain",
+      "domain": "jaringan-server",
+      "stack": [
+        "node"
+      ],
+      "rujukan": [
+        "CWE-200",
+        "CWE-601"
+      ],
+      "pemicu": "fetch dengan redirect follow ke host lain.",
+      "kenapa_gagal": "Redirect tidak membawa header.",
+      "dampak": {
+        "s": 9,
+        "o": 1,
+        "d": 9
+      },
+      "reproduksi": "Server palsu membalas 302.",
+      "harapan": "Redirect tidak pernah diikuti.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "farrez30/d-day",
+        "jalur": "runtime/test/binance.test.ts"
+      },
+      "asal": {
+        "repo": "farrez30/d-day",
+        "jalur": "docs/journal/2026-09-09.md",
+        "tanggal": "2026-09-09"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-073",
+      "judul": "Detak basi di balik status hijau",
+      "domain": "jaringan-server",
+      "stack": [
+        "node",
+        "postgres"
+      ],
+      "rujukan": [
+        "SFDIPOT:Operations"
+      ],
+      "pemicu": "Detak 16 jam tidak masuk, status hanya membaca halt_level.",
+      "kenapa_gagal": "Status satu sumber mencerminkan kesehatan.",
+      "dampak": {
+        "s": 8,
+        "o": 4,
+        "d": 9
+      },
+      "reproduksi": "Hitung status dengan detak basi.",
+      "harapan": "Ambil yang terburuk dari empat sumber; kuning sesudah satu kadens + 15 menit, merah sesudah dua.",
+      "sumber_harapan": "ADR 0019 d-day",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "farrez30/d-day",
+        "jalur": "dashboard/test/status.test.ts"
+      },
+      "asal": {
+        "repo": "farrez30/d-day",
+        "jalur": "docs/decisions/0019-status-dashboard-dan-heartbeat-basi.md"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-074",
+      "judul": "Kait gangguan buatan menyala di host produksi",
+      "domain": "jaringan-server",
+      "stack": [
+        "node"
+      ],
+      "rujukan": [
+        "CWE-489"
+      ],
+      "pemicu": "DDAY_UJI_GANGGUAN terisi tetapi base URL bukan testnet.",
+      "kenapa_gagal": "Variabel uji tidak akan terbawa ke produksi; cek substring host cukup.",
+      "dampak": {
+        "s": 10,
+        "o": 1,
+        "d": 8
+      },
+      "reproduksi": "Jalankan dengan api1.binance.com, testnet.binance.vision.evil.com, evil.com/testnet.binance.vision.",
+      "harapan": "Tick menolak mulai (exit 5).",
+      "sumber_harapan": "ADR 0020 d-day",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "farrez30/d-day",
+        "jalur": "runtime/test/uji-gangguan.test.ts"
+      },
+      "asal": {
+        "repo": "farrez30/d-day",
+        "jalur": "runtime/src/uji-gangguan.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-075",
+      "judul": "DNS ISP mengalihkan ke sinkhole",
+      "domain": "jaringan-server",
+      "stack": [
+        "node"
+      ],
+      "rujukan": [
+        "SFDIPOT:Platform"
+      ],
+      "pemicu": "DNS Biznet membalas 202.169.44.80; GitHub runner di AS menerima 451.",
+      "kenapa_gagal": "Galat koneksi berarti layanan mati.",
+      "dampak": {
+        "s": 5,
+        "o": 4,
+        "d": 6
+      },
+      "reproduksi": "Jalankan diagnosa ping.",
+      "harapan": "Membedakan DNS diblok, yurisdiksi 451, dan selisih jam.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "farrez30/d-day",
+        "jalur": "runtime/test/ping.test.ts"
+      },
+      "asal": {
+        "repo": "farrez30/d-day",
+        "jalur": "docs/decisions/0002-runtime-vps-singapura.md"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-076",
+      "judul": "Redirect absolut ke localhost di belakang tunnel",
+      "domain": "jaringan-server",
+      "stack": [
+        "node"
+      ],
+      "rujukan": [
+        "SFDIPOT:Interfaces"
+      ],
+      "pemicu": "Akses lewat Cloudflare Quick Tunnel.",
+      "kenapa_gagal": "req.url adalah URL publik.",
+      "dampak": {
+        "s": 5,
+        "o": 5,
+        "d": 5
+      },
+      "reproduksi": "Login lewat tunnel.",
+      "harapan": "Location relatif; cookie Secure lewat X-Forwarded-Proto; laju membaca X-Forwarded-For.",
+      "sumber_harapan": "ADR 0022 d-day",
+      "jenis_cek": "manual",
+      "otomasi": null,
+      "asal": {
+        "repo": "farrez30/d-day",
+        "jalur": "docs/decisions/0022-akses-sementara-lewat-tunnel.md"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22",
+        "risiko_sisa": "Belum ada tes untuk redirect relatif."
+      }
+    },
+    {
+      "id": "TK-077",
+      "judul": "JWKS tidak terjangkau dibalas 401",
+      "domain": "jaringan-server",
+      "stack": [
+        "next"
+      ],
+      "rujukan": [
+        "CWE-755"
+      ],
+      "pemicu": "GitHub JWKS mati saat reporter mengirim hasil.",
+      "kenapa_gagal": "Gagal verifikasi sama dengan token tidak sah; reporter berhenti mencoba.",
+      "dampak": {
+        "s": 4,
+        "o": 3,
+        "d": 6
+      },
+      "reproduksi": "JWKS palsu yang gagal.",
+      "harapan": "503 supaya reporter mencoba lagi; kid asing ambil ulang paling cepat semenit sekali.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "http",
+      "otomasi": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/ci-terima.test.ts"
+      },
+      "asal": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/ci-oidc.test.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-078",
+      "judul": "Rahasia kosong membuka gerbang",
+      "domain": "jaringan-server",
+      "stack": [
+        "next"
+      ],
+      "rujukan": [
+        "CWE-287",
+        "CWE-1390"
+      ],
+      "pemicu": "CRON_SECRET atau secret webhook tidak diisi.",
+      "kenapa_gagal": "Rahasia kosong berarti fitur mati; perbandingan dengan string kosong lolos.",
+      "dampak": {
+        "s": 9,
+        "o": 3,
+        "d": 7
+      },
+      "reproduksi": "Panggil cron dan webhook tanpa rahasia terkonfigurasi.",
+      "harapan": "Selalu menolak; hanya Bearer yang persis sama.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/cron-jenis.test.ts"
+      },
+      "asal": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/repo-webhook.test.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-079",
+      "judul": "App mulai dingin tanpa jaringan",
+      "domain": "jaringan-server",
+      "stack": [
+        "next"
+      ],
+      "rujukan": [
+        "SFDIPOT:Platform"
+      ],
+      "pemicu": "context.setOffline(true) lalu buka halaman baru.",
+      "kenapa_gagal": "Pengguna selalu daring saat membuka app.",
+      "dampak": {
+        "s": 6,
+        "o": 6,
+        "d": 5
+      },
+      "reproduksi": "E2E offline dengan build produksi.",
+      "harapan": "Shell dari precache; catatan tersimpan belum tersinkron; tersinkron setelah daring.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "e2e",
+      "otomasi": {
+        "repo": "farrez30/jeda",
+        "jalur": "e2e/offline.spec.ts"
+      },
+      "asal": {
+        "repo": "farrez30/jeda",
+        "jalur": "e2e/offline.spec.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-080",
+      "judul": "BOM di nilai env DATABASE_URL",
+      "domain": "jaringan-server",
+      "stack": [
+        "node",
+        "postgres"
+      ],
+      "rujukan": [
+        "CWE-20"
+      ],
+      "pemicu": "Env didorong dari PowerShell atau ditempel dari dashboard.",
+      "kenapa_gagal": "Nilai env bersih; driver Neon menolak dengan 'not a valid URL'.",
+      "dampak": {
+        "s": 5,
+        "o": 4,
+        "d": 7
+      },
+      "reproduksi": "Set DATABASE_URL berawalan U+FEFF.",
+      "harapan": "BOM dibuang dan trim sebelum dipakai.",
+      "sumber_harapan": "AGENTS.base.md bagian jebakan",
+      "jenis_cek": "manual",
+      "otomasi": null,
+      "asal": {
+        "repo": "farrez30/AkarKita",
+        "jalur": "lib/db.server.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22",
+        "risiko_sisa": "Hanya komentar dan aturan; belum ada tes."
+      }
+    },
+    {
+      "id": "TK-081",
+      "judul": "Kode galat Postgres tersembunyi di cause",
+      "domain": "jaringan-server",
+      "stack": [
+        "express",
+        "postgres"
+      ],
+      "rujukan": [
+        "CWE-755"
+      ],
+      "pemicu": "Upgrade drizzle 0.45 membungkus galat pg.",
+      "kenapa_gagal": "err.code langsung berisi SQLSTATE; 409 berubah jadi 500.",
+      "dampak": {
+        "s": 5,
+        "o": 5,
+        "d": 6
+      },
+      "reproduksi": "Bungkus galat 23505 di beberapa lapis cause.",
+      "harapan": "pgErrorCode menelusuri cause; kode bukan SQLSTATE diabaikan.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "farrez30/ViralyticsV2",
+        "jalur": "apps/api/src/db/pg-errors.test.ts"
+      },
+      "asal": {
+        "repo": "farrez30/ViralyticsV2",
+        "jalur": "apps/api/src/db/pg-errors.test.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-082",
+      "judul": "HiOS tidak punya split screen",
+      "domain": "android",
+      "stack": [
+        "kotlin",
+        "android"
+      ],
+      "rujukan": [
+        "SFDIPOT:Platform"
+      ],
+      "pemicu": "FLAG_ACTIVITY_LAUNCH_ADJACENT di TECNO Pova 6 Android 15.",
+      "kenapa_gagal": "am supports-split-screen-multi-window true berarti bisa; Maps terbuka layar penuh.",
+      "dampak": {
+        "s": 6,
+        "o": 10,
+        "d": 3
+      },
+      "reproduksi": "Uji di HP: buka Maps berdampingan.",
+      "harapan": "Panel overlay jadi jalur utama; UI menangani terbuka layar penuh.",
+      "sumber_harapan": "uji di HP fase 0",
+      "jenis_cek": "perangkat",
+      "otomasi": null,
+      "asal": {
+        "repo": "farrez30/rideDeck-ayam",
+        "jalur": "docs/research/fase-0-hasil.md"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22",
+        "risiko_sisa": "Hanya diuji di satu HP."
+      }
+    },
+    {
+      "id": "TK-083",
+      "judul": "Foreground service lokasi dari latar di Android 15",
+      "domain": "android",
+      "stack": [
+        "kotlin",
+        "android"
+      ],
+      "rujukan": [
+        "MASVS-PLATFORM",
+        "SFDIPOT:Platform"
+      ],
+      "pemicu": "Memulai FGS lokasi saat app di latar.",
+      "kenapa_gagal": "Izin overlay cukup untuk memulai FGS dari latar.",
+      "dampak": {
+        "s": 7,
+        "o": 6,
+        "d": 5
+      },
+      "reproduksi": "Mulai layanan dari latar dan dari tombol dashboard.",
+      "harapan": "FGS lokasi dimulai dari latar depan dengan FOREGROUND_SERVICE_LOCATION.",
+      "sumber_harapan": "dokumentasi Android 15 (belum diverifikasi ke sumber primer), uji di HP",
+      "jenis_cek": "perangkat",
+      "otomasi": null,
+      "asal": {
+        "repo": "farrez30/rideDeck-ayam",
+        "jalur": "docs/research/kelayakan.md"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22",
+        "risiko_sisa": "Diverifikasi di satu HP (TECNO Pova 6); belum ada tes otomatis."
+      }
+    },
+    {
+      "id": "TK-084",
+      "judul": "Pembeku baterai HiOS menghentikan app",
+      "domain": "android",
+      "stack": [
+        "kotlin",
+        "android"
+      ],
+      "rujukan": [
+        "SFDIPOT:Platform"
+      ],
+      "pemicu": "Layar dikunci; sekitar 5 detik kemudian HiOS membekukan app walau ada FGS.",
+      "kenapa_gagal": "Foreground service menjamin app tetap hidup.",
+      "dampak": {
+        "s": 7,
+        "o": 7,
+        "d": 7
+      },
+      "reproduksi": "Uji 10 panduan fase 0.",
+      "harapan": "Mitigasi: matikan Power Saving Management, izinkan Auto-start, kunci di Recents.",
+      "sumber_harapan": "panduan uji fase 0",
+      "jenis_cek": "perangkat",
+      "otomasi": null,
+      "asal": {
+        "repo": "farrez30/rideDeck-ayam",
+        "jalur": "docs/research/fase-0-panduan-uji.md"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22",
+        "risiko_sisa": "Belum diuji (U) per fase-0-hasil.md."
+      }
+    },
+    {
+      "id": "TK-085",
+      "judul": "Edge-to-edge Android 15 menaruh layar di bawah status bar",
+      "domain": "android",
+      "stack": [
+        "kotlin",
+        "android"
+      ],
+      "rujukan": [
+        "WCAG 2.2 SC 1.4.10"
+      ],
+      "pemicu": "targetSdk 35 di layar 393dp.",
+      "kenapa_gagal": "Inset sistem diurus otomatis.",
+      "dampak": {
+        "s": 4,
+        "o": 8,
+        "d": 4
+      },
+      "reproduksi": "Buka layar Atur dan Rute di HP.",
+      "harapan": "Konten di dalam inset; ikon status bar kontras di tema siang.",
+      "sumber_harapan": "uji di HP fase 0",
+      "jenis_cek": "perangkat",
+      "otomasi": null,
+      "asal": {
+        "repo": "farrez30/rideDeck-ayam",
+        "jalur": "docs/research/fase-0-hasil.md"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22",
+        "risiko_sisa": "Diperbaiki dan dicek di satu HP; belum ada tes tangkapan layar."
+      }
+    },
+    {
+      "id": "TK-086",
+      "judul": "Sesi media senyap pemegang knob dipilih",
+      "domain": "android",
+      "stack": [
+        "kotlin",
+        "android"
+      ],
+      "rujukan": [
+        "SFDIPOT:Interfaces"
+      ],
+      "pemicu": "YiheeCam selalu punya sesi PLAYING tanpa metadata.",
+      "kenapa_gagal": "Sesi PLAYING pertama adalah musik.",
+      "dampak": {
+        "s": 4,
+        "o": 9,
+        "d": 4
+      },
+      "reproduksi": "Daftar sesi palsu dengan pemegang knob.",
+      "harapan": "Sesi senyap dan tanpa judul dilewati; tombol MEDIA diteruskan.",
+      "sumber_harapan": "ADR 0005 rideDeck",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "farrez30/rideDeck-ayam",
+        "jalur": "deck/src/test/kotlin/io/github/farrez30/ridedeck/deck/MediaPickTest.kt"
+      },
+      "asal": {
+        "repo": "farrez30/rideDeck-ayam",
+        "jalur": "docs/decisions/0005-media-knob-coexistence.md"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-087",
+      "judul": "Ganti sumber musik cepat dibalap app yang bangun telat",
+      "domain": "android",
+      "stack": [
+        "kotlin",
+        "android"
+      ],
+      "rujukan": [
+        "CWE-362"
+      ],
+      "pemicu": "Pilih YouTube Music lalu Spotify 1,7 detik kemudian.",
+      "kenapa_gagal": "Pilihan terakhir otomatis menang; app pertama merebut fokus audio.",
+      "dampak": {
+        "s": 4,
+        "o": 6,
+        "d": 6
+      },
+      "reproduksi": "Urutan pilihan cepat dengan app palsu.",
+      "harapan": "Pilihan terakhir menang sesudah 0,4 detik; penjaga 12 detik menjeda penyusup, bukan pemegang knob.",
+      "sumber_harapan": "ADR 0005 rideDeck (amandemen)",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "farrez30/rideDeck-ayam",
+        "jalur": "deck/src/test/kotlin/io/github/farrez30/ridedeck/deck/MusicSwitchTest.kt"
+      },
+      "asal": {
+        "repo": "farrez30/rideDeck-ayam",
+        "jalur": "docs/research/fase-0-hasil.md"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-088",
+      "judul": "Parsing notifikasi bergantung bahasa dan versi app",
+      "domain": "android",
+      "stack": [
+        "kotlin",
+        "android"
+      ],
+      "rujukan": [
+        "SFDIPOT:Interfaces"
+      ],
+      "pemicu": "Notifikasi panggilan WhatsApp dan navigasi Maps dalam bahasa Inggris atau Indonesia.",
+      "kenapa_gagal": "Bentuk notifikasi stabil; panggilan WA lewat PHONE_STATE.",
+      "dampak": {
+        "s": 5,
+        "o": 6,
+        "d": 6
+      },
+      "reproduksi": "Fixture notifikasi beda locale dan satuan.",
+      "harapan": "Allowlist paket; cadangan buka WhatsApp; jarak terbaca lintas bahasa.",
+      "sumber_harapan": "ADR 0004 rideDeck",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "farrez30/rideDeck-ayam",
+        "jalur": "deck/src/test/kotlin/io/github/farrez30/ridedeck/deck/CallsTest.kt"
+      },
+      "asal": {
+        "repo": "farrez30/rideDeck-ayam",
+        "jalur": "docs/decisions/0004-incoming-calls-cellular-and-whatsapp.md"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-089",
+      "judul": "Titik GPS tidak akurat dan lonjakan satu sampel",
+      "domain": "android",
+      "stack": [
+        "kotlin",
+        "android"
+      ],
+      "rujukan": [
+        "SFDIPOT:Data"
+      ],
+      "pemicu": "Pova 6 tanpa barometer; akurasi buruk.",
+      "kenapa_gagal": "Setiap titik GPS layak dipakai.",
+      "dampak": {
+        "s": 3,
+        "o": 8,
+        "d": 4
+      },
+      "reproduksi": "Rangkaian titik dengan lonjakan.",
+      "harapan": "Titik tak akurat diabaikan; kecepatan puncak median 3 titik.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "farrez30/rideDeck-ayam",
+        "jalur": "deck/src/test/kotlin/io/github/farrez30/ridedeck/deck/TripTest.kt"
+      },
+      "asal": {
+        "repo": "farrez30/rideDeck-ayam",
+        "jalur": "docs/research/kelayakan.md"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-090",
+      "judul": "HP dipegang setelah kalibrasi di dudukan",
+      "domain": "android",
+      "stack": [
+        "kotlin",
+        "android"
+      ],
+      "rujukan": [
+        "SFDIPOT:Data"
+      ],
+      "pemicu": "Kalibrasi kemiringan di dudukan lalu HP diangkat.",
+      "kenapa_gagal": "Orientasi HP tetap setelah kalibrasi; layar menampilkan Turun 383%.",
+      "dampak": {
+        "s": 3,
+        "o": 5,
+        "d": 3
+      },
+      "reproduksi": "Sudut di atas 20 derajat.",
+      "harapan": "Menampilkan Cek dudukan.",
+      "sumber_harapan": "uji di HP fase 0",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "farrez30/rideDeck-ayam",
+        "jalur": "deck/src/test/kotlin/io/github/farrez30/ridedeck/deck/LeanTest.kt"
+      },
+      "asal": {
+        "repo": "farrez30/rideDeck-ayam",
+        "jalur": "docs/research/fase-0-hasil.md"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-091",
+      "judul": "Migrasi yang sudah beku diubah isinya",
+      "domain": "kualitas-data",
+      "stack": [
+        "postgres"
+      ],
+      "rujukan": [
+        "SFDIPOT:Structure"
+      ],
+      "pemicu": "Menyunting berkas SQL yang sudah dijalankan di produksi.",
+      "kenapa_gagal": "Runner tahu isi berubah; ia baru tahu saat dijalankan berhari-hari kemudian.",
+      "dampak": {
+        "s": 8,
+        "o": 4,
+        "d": 8
+      },
+      "reproduksi": "Ubah satu komentar di migrasi lama.",
+      "harapan": "Checksum terkunci tidak cocok di PR; migrasi tidak hilang atau berganti nama.",
+      "sumber_harapan": "ADR 0016 coderoach-app",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/migrasi-kunci.test.ts"
+      },
+      "asal": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "src/db/migrasi.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-092",
+      "judul": "Checksum berbeda karena CRLF dan BOM",
+      "domain": "kualitas-data",
+      "stack": [
+        "postgres"
+      ],
+      "rujukan": [
+        "SFDIPOT:Platform"
+      ],
+      "pemicu": "Checkout Windows dengan core.autocrlf dan CI Linux.",
+      "kenapa_gagal": "Byte berkas sama di semua checkout.",
+      "dampak": {
+        "s": 5,
+        "o": 7,
+        "d": 6
+      },
+      "reproduksi": "Hitung checksum SQL yang sama dengan LF, CRLF, BOM.",
+      "harapan": "Sama untuk SQL yang sama; berbeda begitu isi atau komentar berubah.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/migrasi-runner.test.ts"
+      },
+      "asal": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "src/db/migrasi.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-093",
+      "judul": "Byte NUL membuat berkas sumber dianggap biner",
+      "domain": "kualitas-data",
+      "stack": [
+        "node"
+      ],
+      "rujukan": [
+        "SFDIPOT:Structure"
+      ],
+      "pemicu": "Pemisah kunci ditulis sebagai NUL mentah.",
+      "kenapa_gagal": "git memperlakukan berkas .ts sebagai teks; review PR menampilkan Binary files differ.",
+      "dampak": {
+        "s": 6,
+        "o": 2,
+        "d": 9
+      },
+      "reproduksi": "Pindai src, scripts, tests.",
+      "harapan": "Tidak ada NUL mentah; pakai escape \\u0000.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "statis",
+      "otomasi": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/berkas-teks.test.ts"
+      },
+      "asal": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/berkas-teks.test.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-094",
+      "judul": "Mengimpor berkas entri menjalankan seed",
+      "domain": "kualitas-data",
+      "stack": [
+        "node",
+        "postgres"
+      ],
+      "rujukan": [
+        "SFDIPOT:Structure"
+      ],
+      "pemicu": "Tes mengimpor fungsi dari src/db/seed.ts.",
+      "kenapa_gagal": "Impor hanya membaca; main() di level modul menjalankan seed dan process.exit(1).",
+      "dampak": {
+        "s": 7,
+        "o": 3,
+        "d": 7
+      },
+      "reproduksi": "Cari impor ke berkas yang memanggil main() di level modul.",
+      "harapan": "Tidak ada berkas yang mengimpor berkas entri.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "statis",
+      "otomasi": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/berkas-entri.test.ts"
+      },
+      "asal": {
+        "repo": "mwafiudin/coderoach-app",
+        "jalur": "tests/berkas-entri.test.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-095",
+      "judul": "Harness cek lulus tanpa memeriksa apa pun",
+      "domain": "kualitas-data",
+      "stack": [
+        "node"
+      ],
+      "rujukan": [
+        "SFDIPOT:Operations"
+      ],
+      "pemicu": "Fixture menunjuk folder yang tidak ada; 3 dari 4 blok dilewati.",
+      "kenapa_gagal": "Exit 0 berarti semua lulus.",
+      "dampak": {
+        "s": 7,
+        "o": 4,
+        "d": 10
+      },
+      "reproduksi": "Hapus folder fixture lalu jalankan.",
+      "harapan": "Gagal bila jumlah lulus di bawah MIN_EXPECTED_CHECKS; SKIP eksplisit.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "skrip-cek",
+      "otomasi": {
+        "repo": "farrez30/NDS-ETL",
+        "jalur": "scripts/parseCheck.ts"
+      },
+      "asal": {
+        "repo": "farrez30/NDS-ETL",
+        "jalur": "scripts/parseCheck.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-096",
+      "judul": "Tes tidak pernah ikut dijalankan",
+      "domain": "kualitas-data",
+      "stack": [
+        "node"
+      ],
+      "rujukan": [
+        "SFDIPOT:Operations"
+      ],
+      "pemicu": "Folder runtime/test tidak masuk include vitest.config.",
+      "kenapa_gagal": "Tes yang ada di repo pasti dijalankan gerbang; 99 tes tidak pernah jalan.",
+      "dampak": {
+        "s": 7,
+        "o": 4,
+        "d": 10
+      },
+      "reproduksi": "Bandingkan jumlah berkas tes dengan yang dilaporkan runner.",
+      "harapan": "Semua folder tes masuk include; jumlah minimum dijaga.",
+      "sumber_harapan": "jurnal d-day",
+      "jenis_cek": "manual",
+      "otomasi": null,
+      "asal": {
+        "repo": "farrez30/d-day",
+        "jalur": "docs/journal/2026-09-09.md",
+        "tanggal": "2026-09-09"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22",
+        "risiko_sisa": "Diperbaiki; belum ada penjaga jumlah berkas."
+      }
+    },
+    {
+      "id": "TK-097",
+      "judul": "String \"false\" dibaca truthy",
+      "domain": "kualitas-data",
+      "stack": [
+        "node"
+      ],
+      "rujukan": [
+        "CWE-704"
+      ],
+      "pemicu": "Portal mengirim is_summit dan is_ibo sebagai string \"false\".",
+      "kenapa_gagal": "Field boolean selalu boolean.",
+      "dampak": {
+        "s": 6,
+        "o": 4,
+        "d": 7
+      },
+      "reproduksi": "Fixture dengan string false.",
+      "harapan": "Menjadi boolean false.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "skrip-cek",
+      "otomasi": {
+        "repo": "farrez30/NDS-ETL",
+        "jalur": "scripts/parseCheck.ts"
+      },
+      "asal": {
+        "repo": "farrez30/NDS-ETL",
+        "jalur": "scripts/parseCheck.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-098",
+      "judul": "Sel kosong dilaporkan sebagai nol",
+      "domain": "kualitas-data",
+      "stack": [
+        "node"
+      ],
+      "rujukan": [
+        "SFDIPOT:Data"
+      ],
+      "pemicu": "170 dari 1.331 sel Active-PSP kosong (13 Agu 2026).",
+      "kenapa_gagal": "Kosong sama dengan nol.",
+      "dampak": {
+        "s": 7,
+        "o": 4,
+        "d": 8
+      },
+      "reproduksi": "Fixture dengan sel kosong.",
+      "harapan": "Kosong tidak pernah dilaporkan 0; median tanpa data null, bukan 0.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "skrip-cek",
+      "otomasi": {
+        "repo": "farrez30/NDS-ETL",
+        "jalur": "scripts/parseCheck.ts"
+      },
+      "asal": {
+        "repo": "farrez30/NDS-ETL",
+        "jalur": "scripts/parseCheck.ts",
+        "tanggal": "2026-08-13"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-099",
+      "judul": "Urutan kunci JSONB membuat versi palsu tiap tick",
+      "domain": "kualitas-data",
+      "stack": [
+        "postgres"
+      ],
+      "rujukan": [
+        "SFDIPOT:Data"
+      ],
+      "pemicu": "Membandingkan JSON.stringify dengan JSONB yang menyimpan kunci dalam urutannya sendiri.",
+      "kenapa_gagal": "Dua objek sama menghasilkan string sama.",
+      "dampak": {
+        "s": 4,
+        "o": 9,
+        "d": 6
+      },
+      "reproduksi": "Simpan params lalu bandingkan.",
+      "harapan": "Perbandingan kanonik; urutan larik tetap dihitung.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "farrez30/d-day",
+        "jalur": "runtime/test/params-file.test.ts"
+      },
+      "asal": {
+        "repo": "farrez30/d-day",
+        "jalur": "docs/journal/2026-09-10.md",
+        "tanggal": "2026-09-10"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-100",
+      "judul": "Bar bursa terpotong melanggar CHECK",
+      "domain": "kualitas-data",
+      "stack": [
+        "postgres"
+      ],
+      "rujukan": [
+        "SFDIPOT:Data"
+      ],
+      "pemicu": "Bursa mengirim 21 bar dengan closeTime sama dengan openTime dan volume 0.",
+      "kenapa_gagal": "Data bursa selalu memenuhi invarian kita; INSERT gagal tiap 4 jam.",
+      "dampak": {
+        "s": 6,
+        "o": 3,
+        "d": 6
+      },
+      "reproduksi": "Backfill dengan bar terpotong.",
+      "harapan": "Invarian closeTime >= openTime; dihitung sebagai terpotong.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "integrasi",
+      "otomasi": {
+        "repo": "farrez30/d-day",
+        "jalur": "runtime/test/backfill.test.ts"
+      },
+      "asal": {
+        "repo": "farrez30/d-day",
+        "jalur": "docs/journal/2026-09-09.md",
+        "tanggal": "2026-09-09"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-101",
+      "judul": "Spasi di ujung nama wilayah sumber",
+      "domain": "kualitas-data",
+      "stack": [
+        "node"
+      ],
+      "rujukan": [
+        "SFDIPOT:Data"
+      ],
+      "pemicu": "Data sumber berisi 'Kota Administrasi Jakarta Utara ' dengan spasi akhir.",
+      "kenapa_gagal": "Data referensi resmi bersih.",
+      "dampak": {
+        "s": 3,
+        "o": 3,
+        "d": 7
+      },
+      "reproduksi": "Cocokkan nama wilayah.",
+      "harapan": "Dinormalkan sebelum dicocokkan.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "farrez30/AkarKita",
+        "jalur": "tests/geo/wilayah.test.ts"
+      },
+      "asal": {
+        "repo": "farrez30/AkarKita",
+        "jalur": "tests/geo/wilayah.test.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-102",
+      "judul": "Nama berhuruf Unicode tebal lolos dari pencocokan duplikat",
+      "domain": "kualitas-data",
+      "stack": [
+        "express"
+      ],
+      "rujukan": [
+        "SFDIPOT:Data"
+      ],
+      "pemicu": "Nama KOL ditulis Mathematical Bold Unicode; spasi dibuang saat membandingkan handle.",
+      "kenapa_gagal": "Nama Latin hanya berupa huruf ASCII.",
+      "dampak": {
+        "s": 4,
+        "o": 6,
+        "d": 7
+      },
+      "reproduksi": "Fixture pasangan nama nyata.",
+      "harapan": "Dinormalkan NFKC sebelum dicocokkan; aksara non-Latin tetap.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "farrez30/ViralyticsV2",
+        "jalur": "apps/api/src/services/kol-merge-match.test.ts"
+      },
+      "asal": {
+        "repo": "farrez30/ViralyticsV2",
+        "jalur": "apps/api/src/services/kol-merge-match.test.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    },
+    {
+      "id": "TK-103",
+      "judul": "Alamat orang yang meninggal ikut terbuka",
+      "domain": "kualitas-data",
+      "stack": [
+        "next"
+      ],
+      "rujukan": [
+        "CWE-359"
+      ],
+      "pemicu": "Anggota keluarga ditandai meninggal.",
+      "kenapa_gagal": "Data orang meninggal bukan data pribadi; alamat dan nomor biasanya milik keluarga yang masih hidup.",
+      "dampak": {
+        "s": 6,
+        "o": 4,
+        "d": 6
+      },
+      "reproduksi": "Lihat profil anggota meninggal sebagai kerabat.",
+      "harapan": "Alamat dan telepon tetap tersembunyi.",
+      "sumber_harapan": "tes asal",
+      "jenis_cek": "unit",
+      "otomasi": {
+        "repo": "farrez30/AkarKita",
+        "jalur": "tests/privasi.test.ts"
+      },
+      "asal": {
+        "repo": "farrez30/AkarKita",
+        "jalur": "tests/privasi.test.ts"
+      },
+      "status": {
+        "pemilik": "farrez",
+        "diverifikasi": "2026-10-22"
+      }
+    }
+  ]
+}

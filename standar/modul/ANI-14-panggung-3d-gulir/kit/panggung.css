@@ -1,0 +1,42 @@
+/* ANI-14 panggung 3D terikat gulir.
+
+   Keadaan dasar (tanpa JS, kurangi gerak, perangkat lemah sebelum tombol
+   ditekan): poster di panggung, tombol muat terlihat, iframe tersembunyi.
+   Panggung dipin di bawah navigasi situs: --tinggi-nav wajib diisi halaman
+   bila navigasinya lengket, kalau tidak bagian atas panggung tertutup
+   (terjadi di galeri pola: 48 px di HP, diperbaiki dengan nilai per lebar). */
+
+.panggung-3d {
+  position: sticky;
+  top: var(--tinggi-nav, 0px);
+  height: calc(100vh - var(--tinggi-nav, 0px));
+  /* biome-ignore lint/suspicious/noDuplicateProperties: vh cadangan untuk browser tanpa svh */
+  height: calc(100svh - var(--tinggi-nav, 0px));
+  display: grid;
+  place-items: center;
+  overflow: clip;
+}
+.panggung-3d > img,
+.panggung-3d > iframe {
+  grid-area: 1 / 1;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  object-fit: contain;
+}
+.panggung-3d > .muat-3d {
+  grid-area: 1 / 1;
+  align-self: end;
+  margin-bottom: 1.5rem;
+  min-height: 44px;
+  padding: 0 1.1rem;
+  border-radius: 999px;
+  font: inherit;
+  cursor: pointer;
+}
+/* Iframe menutup poster hanya setelah halamannya selesai dimuat, supaya tidak
+   ada kotak kosong di antara keduanya. */
+[data-tampil] .panggung-3d > img,
+[data-dimuat] .panggung-3d > .muat-3d {
+  visibility: hidden;
+}

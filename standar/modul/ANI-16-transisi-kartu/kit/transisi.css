@@ -1,0 +1,23 @@
+/* ANI-16 transisi lintas dokumen (kartu katalog ke halaman detail).
+
+   Pasang berkas ini di KEDUA halaman (asal dan tujuan), lalu beri elemen yang
+   sama nama yang sama di kedua halaman, unik per halaman, mis.
+   style="view-transition-name: produk-12" pada foto kartu produk 12 dan pada
+   foto utama halaman detailnya.
+
+   Dukungan per Oktober 2026 (MDN browser-compat-data): Chrome 126, Safari
+   18.2. Firefox belum: navigasinya biasa, tanpa animasi, dan itu sah karena
+   halaman tujuan tetap utuh. Hanya aktif bila pembaca tidak meminta gerak
+   dikurangi; browser tidak mematikannya sendiri. */
+
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+}
+
+/* Durasi singkat: perpindahan kotak terasa sebagai kesinambungan, bukan
+   pertunjukan. Halaman boleh menimpa per nama lewat ::view-transition-group(). */
+::view-transition-group(*) {
+  animation-duration: 280ms;
+}
