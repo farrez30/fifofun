@@ -103,6 +103,9 @@ describe("pragma teks-ok", () => {
     // Pragma di ekor baris kode tidak menular ke baris berikutnya.
     expect(alasanPragma(b, 4)).toBeUndefined();
     expect(alasanPragma(["{/* teks-ok: nama tombol */}"], 0)).toBe("nama tombol");
+    // Komentar HTML boleh ditutup --> atau --!> (keduanya sah menurut parser HTML).
+    expect(alasanPragma(["<!-- teks-ok: nama merek -->"], 0)).toBe("nama merek");
+    expect(alasanPragma(["<!-- teks-ok: nama merek --!>"], 0)).toBe("nama merek");
   });
 });
 

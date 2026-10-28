@@ -26,6 +26,9 @@ Riset dan audit: `docs/riset/2026-10-alur-desain-pencil.md` di coderoach-app.
 
 ## Resep permintaan konten (Gemini membuat, Claude mengatur)
 
+Perangkat baru, agen selain Claude Code, dan project baru: `references/perangkat-baru.md`.
+Pembungkus CLI dan log kuota dicari lewat `CODEROACH_PEN_CLI` dan `CODEROACH_KUOTA_LOG`.
+
 Pembagian kerja dan angka jatah ada di `references/anggaran-konten.md` (ADR 0047). Setiap
 permintaan konten dijalankan ujung ke ujung dengan urutan tetap:
 

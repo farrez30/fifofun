@@ -157,7 +157,7 @@ const POLA_PRAGMA = new RegExp(`\\b${PRAGMA}\\b:?(.*)$`);
 export function alasanPragma(baris: readonly string[], i: number): string | undefined {
   const ambil = (b: string | undefined) => {
     const m = b?.match(POLA_PRAGMA);
-    return m ? m[1].replace(/\*\/\s*\}?\s*$|-->\s*$/, "").trim() : undefined;
+    return m ? m[1].replace(/\*\/\s*\}?\s*$|--!?>\s*$/, "").trim() : undefined;
   };
   const sendiri = ambil(baris[i]);
   if (sendiri !== undefined) return sendiri;

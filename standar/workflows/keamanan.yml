@@ -53,7 +53,7 @@ permissions:
 jobs:
   semgrep:
     name: Semgrep — pola kode
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     container:
       image: semgrep/semgrep:1.176.0@sha256:12672acdb0949e19f9f6a4c2b288edd0b404f268f0ca7738a2c06f372f50362e
     steps:
@@ -84,7 +84,7 @@ jobs:
 
   trivy:
     name: Trivy — dependensi, IaC, secret
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
@@ -116,7 +116,7 @@ jobs:
 
   gitleaks:
     name: Gitleaks — secret di riwayat
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     # Di event pull_request action ini membaca daftar commit PR lewat API
     # (pulls/{n}/commits). Tanpa izin ini jawabannya 403 dan job merah tanpa
     # memindai apa pun; dulu tertutup continue-on-error.
@@ -141,7 +141,7 @@ jobs:
 
   osv:
     name: OSV-Scanner — dependensi
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 

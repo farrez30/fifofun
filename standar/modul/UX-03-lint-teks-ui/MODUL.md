@@ -1,6 +1,6 @@
 ---
 kode: UX-03
-versi: 1.0.0
+versi: 1.0.1
 ---
 
 # UX-03 Lint teks UI
@@ -165,6 +165,7 @@ Di coderoach-app (`dd2a370` + perubahan kit ini):
 
 ## Riwayat versi
 
+- 1.0.1 (2026-10-28): alasan pragma di komentar HTML juga dibersihkan dari penutup `--!>`, bukan hanya `-->` (temuan CodeQL js/bad-tag-filter di fifofun).
 - 1.0.0 (2026-10-22): versi pertama, menyatukan sembilan implementasi
   (coderoach-app, AkarKita, d-day, Jeda, FiFoFun, Viralytics v2, coderoach,
   personal-portfolio-website-1, NDS-ETL). AST dari NDS-ETL, pemindai baris

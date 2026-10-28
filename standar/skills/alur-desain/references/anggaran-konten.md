@@ -119,8 +119,8 @@ Sesudah selesai, laporkan angka sebenarnya:
 - dari halaman Rate Limit AI Studio
 - dari saldo kredit Flow
 
-Lalu catat satu baris di log kuota laptop pemilik:
-`D:\Projects\ayam\_referensi\kuota-konten\log.csv`, kolom
+Lalu catat satu baris di log kuota perangkat itu, di path `CODEROACH_KUOTA_LOG`
+(`references/perangkat-baru.md`), kolom
 `tanggal,pekerjaan,alat,model,permintaan,token_masuk,token_keluar,kredit_flow,detik,hasil`.
 
 ## Disiplin token Claude
