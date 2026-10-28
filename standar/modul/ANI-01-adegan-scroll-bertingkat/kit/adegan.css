@@ -1,0 +1,213 @@
+/* ANI-01 adegan scroll bertingkat. Diangkat dari coderoach-referensi
+   demo/terurai/index.html.
+
+   Aturan pokoknya: semua yang membaca --p (langsung atau lewat turunannya)
+   hanya berlaku di bawah :root[data-tingkat="lapisan"|"urutan"], atribut yang
+   dipasang adegan.js. Tanpa JS, reduced-motion, atau tingkat diam, tidak ada
+   satu pun aturan gerak yang aktif: lapisan tampil di posisi aslinya (gambar
+   terurai) dan semua keterangan tampil sebagai daftar. adegan.test.mjs
+   menjaga aturan ini.
+
+   Gerak hanya translate, scale, dan opacity. Yang khusus per adegan (jendela
+   sorot --h-<nama>, posisi utuh --x/--y tiap [data-bagian], fokus kamera
+   --fokus-x/--fokus-y dan --sorot) ditulis di CSS halaman; contohnya di MODUL.md. */
+
+@property --p {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+.adegan {
+  /* Panjang gulir adegan saat dipin; anggaran --p 0..1 = tinggi ini - 1 layar. */
+  --tinggi-adegan: 500vh;
+  position: relative;
+  view-timeline-name: --adegan;
+}
+.panggung {
+  /* Fase dalam satuan --p. adegan.js membaca --terurai-awal/akhir dari sini
+     supaya kanvas urutan dan lapisan CSS memakai fase yang sama. */
+  --terurai-awal: 0.06;
+  --terurai-akhir: 0.36;
+  --muncul-awal: 0.07;
+  --muncul-panjang: 0.08;
+  --sorot-awal: 0.37;
+  --sorot-panjang: 0.04;
+  --redup-lain: 0.78;
+  --redup-urutan: 0.45;
+  --zoom: 0.32;
+  --dasar: 1;
+  --ruang-teks: 14rem;
+  position: relative;
+}
+.bingkai {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  overflow: clip;
+  /* Latar bingkai = latar section di semua tingkat (1.1): tepi kanvas yang
+     berbeda warna terlihat sebagai kotak saat bingkai bergerak. adegan.js
+     mengisinya dari manifest.latar; tanpa itu ikut latar halaman. */
+  background-color: var(--latar-bingkai, transparent);
+}
+/* Poster: bingkai pertama sebagai <img fetchpriority="high"> di markup, jadi
+   kandidat LCP adalah gambar biasa, bukan kanvas. Tampil di bawah kanvas dan
+   tertutup saat kanvas menggambar. */
+.poster {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* Indikator progres adegan (McKenna 2017: progres membantu cerita panjang).
+   Dekoratif bagi pembaca layar; status tingkat diumumkan terpisah. */
+.progres-adegan {
+  display: none;
+}
+:root:is([data-tingkat="lapisan"], [data-tingkat="urutan"]) .progres-adegan {
+  display: block;
+  position: absolute;
+  inset: auto 0 0;
+  height: 2px;
+  background: currentColor;
+  opacity: 0.5;
+  transform-origin: left center;
+  scale: var(--p) 1;
+}
+.kamera,
+.lapisan,
+.lapisan img,
+.urutan,
+.urutan canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.urutan {
+  display: none;
+}
+.keterangan ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+.keterangan li {
+  padding-top: 1rem;
+}
+
+/* ---------- Tingkat bergerak: lapisan dan urutan ---------- */
+
+:root:is([data-tingkat="lapisan"], [data-tingkat="urutan"]) .adegan {
+  height: var(--tinggi-adegan);
+}
+:root:is([data-tingkat="lapisan"], [data-tingkat="urutan"]) .panggung {
+  --e0: clamp(0, (var(--p) - var(--terurai-awal)) / (var(--terurai-akhir) - var(--terurai-awal)), 1);
+  /* Smoothstep, sama dengan haluskan() di gerak-scroll.js. */
+  --e: calc(var(--e0) * var(--e0) * (3 - 2 * var(--e0)));
+  --muncul: clamp(0, (var(--p) - var(--muncul-awal)) / var(--muncul-panjang), 1);
+  --fase-sorot: clamp(0, (var(--p) - var(--sorot-awal)) / var(--sorot-panjang), 1);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  /* biome-ignore lint/suspicious/noDuplicateProperties: vh cadangan untuk browser tanpa dvh */
+  height: 100dvh;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  align-content: center;
+  padding-block: 4rem 1.5rem;
+}
+:root:is([data-tingkat="lapisan"], [data-tingkat="urutan"]) .bingkai {
+  width: min(100%, (100dvh - var(--ruang-teks)) * 16 / 9);
+  margin: 0 auto;
+  align-self: center;
+}
+:root:is([data-tingkat="lapisan"], [data-tingkat="urutan"]) .kamera {
+  scale: calc(var(--dasar) * (1 + var(--zoom) * var(--sorot, 0)));
+  /* Bawa komponen yang disorot ke dekat tengah: geser = -skala x 0,85 x
+     (pusat komponen - pusat kanvas), dalam % kanvas. */
+  translate:
+    calc(var(--fokus-x, 0) * var(--dasar) * (1 + var(--zoom)) * -0.85 * 1%)
+    calc(var(--fokus-y, 0) * var(--dasar) * (1 + var(--zoom)) * -0.85 * 1%);
+}
+/* Lapisan dibuat di posisi terurai; --x/--y menggeser ke posisi utuh. Komponen
+   dalam (--dalam: 1) muncul saat cangkang terbuka; saat sorotan yang lain redup. */
+:root:is([data-tingkat="lapisan"], [data-tingkat="urutan"]) .bagian {
+  translate: calc(var(--x, 0) * (1 - var(--e)) * 1%) calc(var(--y, 0) * (1 - var(--e)) * 1%);
+  opacity: calc((1 - var(--dalam, 0) * (1 - var(--muncul))) * (1 - var(--fase-sorot) * var(--redup-lain) * (1 - var(--h, 0))));
+}
+:root:is([data-tingkat="lapisan"], [data-tingkat="urutan"]) .keterangan {
+  position: relative;
+  min-height: 7.5rem;
+}
+:root:is([data-tingkat="lapisan"], [data-tingkat="urutan"]) .keterangan ol {
+  display: block;
+}
+:root:is([data-tingkat="lapisan"], [data-tingkat="urutan"]) .keterangan li {
+  position: absolute;
+  inset: 0 0 auto;
+  opacity: var(--h, 0);
+  translate: 0 calc((1 - var(--h, 0)) * 0.75rem);
+}
+
+:root[data-tingkat="urutan"] .lapisan {
+  display: none;
+}
+:root[data-tingkat="urutan"] .urutan {
+  display: block;
+}
+/* Kanvas diredupkan dengan lapisan gelap ber-opacity, bukan filter, supaya
+   gerak tetap di jalur komposit. */
+:root[data-tingkat="urutan"] .urutan::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: calc(var(--fase-sorot) * var(--redup-urutan));
+}
+/* Sorot: potongan bingkai akhir di kotak komponen (dibuat adegan.js dari
+   manifest), tepinya dilembutkan mask radial supaya terasa lampu sorot. */
+:root[data-tingkat="urutan"] .sorot {
+  position: absolute;
+  z-index: 1;
+  left: calc(var(--x) * 1%);
+  top: calc(var(--y) * 1%);
+  width: calc(var(--w) * 1%);
+  height: calc(var(--t) * 1%);
+  background-image: var(--gambar);
+  background-repeat: no-repeat;
+  background-size: calc(10000% / var(--w)) calc(10000% / var(--t));
+  background-position: calc(var(--x) / (100 - var(--w)) * 100%) calc(var(--y) / (100 - var(--t)) * 100%);
+  -webkit-mask-image: radial-gradient(closest-side, #000 82%, transparent);
+  mask-image: radial-gradient(closest-side, #000 82%, transparent);
+  opacity: var(--h, 0);
+}
+
+/* Timeline native: --p ditulis gulir tanpa JS. Properti longhand supaya
+   minifier tidak meringkasnya jadi animation: none. Browser tanpa dukungan
+   (atau reduced-motion yang dipaksa ke lapisan) mendapat mesin ANI-03. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    :root:is([data-tingkat="lapisan"], [data-tingkat="urutan"]) .panggung {
+      animation-name: adegan-p;
+      animation-duration: 1ms;
+      animation-timing-function: linear;
+      animation-fill-mode: both;
+      animation-timeline: --adegan;
+      animation-range-start: contain 0%;
+      animation-range-end: contain 100%;
+    }
+  }
+}
+@keyframes adegan-p {
+  from {
+    --p: 0;
+  }
+  to {
+    --p: 1;
+  }
+}

@@ -1,0 +1,191 @@
+name: Keamanan
+
+# Empat scanner statis — semuanya open source, tanpa akun, tanpa Docker lokal:
+#   Semgrep      pola kode (SAST)
+#   Trivy        kerentanan dependensi, IaC, dan secret di working tree
+#   Gitleaks     secret di SELURUH riwayat git, termasuk yang sudah "dihapus"
+#   OSV-Scanner  dependensi vs database OSV
+#
+# Keluarannya SARIF, disimpan sebagai ARTIFACT (nama `sarif-*`) — bukan diunggah
+# ke code scanning. Code scanning di repo privat butuh GitHub Code Security
+# (berbayar), dan upload-nya menolak tanpa itu. Artifact-nya diunduh manusia
+# dari halaman run; belum ada tabel di coderoach-app yang menyerapnya, dan
+# menjanjikannya di komentar ini tidak membuatnya ada. Kalau nanti ada, yang
+# dikumpulkan temuannya — bukan skor gabungan: satu angka menyembunyikan persis
+# yang harus dilihat.
+#
+# Temuan TINGGI dan KRITIS memerahkan job; sedang dan rendah tetap hanya di
+# SARIF. Dulu semua scanner continue-on-error, dan artifact-nya tidak pernah
+# dibuka siapa pun. "Tinggi" per scanner:
+#   Semgrep      rule bertingkat ERROR
+#   Trivy        HIGH/CRITICAL yang sudah punya versi perbaikan
+#   Gitleaks     setiap secret — tidak ada secret yang tingkatnya rendah
+#   OSV-Scanner  CVSS >= 7.0, atau tanpa skor sama sekali (entri paket malware
+#                di OSV tidak membawa CVSS, dan justru itu yang harus berhenti)
+#
+# Temuan yang diterima dicatat di repo masing-masing, di berkas bawaan tiap
+# scanner, dan TIAP entri membawa alasan dan tanggal:
+#   Semgrep      `nosemgrep: <rule-id>` di baris temuannya, alasan + tanggal di
+#                komentar sebelahnya
+#   Trivy        .trivyignore — `# alasan, tanggal` di atas `<ID> exp:<tanggal>`
+#   Gitleaks     .gitleaksignore — fingerprint, dengan komentar `#` di atasnya
+#   OSV-Scanner  osv-scanner.toml — [[IgnoredVulns]] dengan reason + ignoreUntil
+# Berkasnya opsional: repo tanpa temuan yang diterima tidak perlu membuatnya.
+#
+# Tiap `uses:` dipin ke SHA commit, versinya di komentar. Tag bisa dipindah
+# pemilik action (atau siapa pun yang mencuri aksesnya) ke kode lain, dan job
+# ini membaca seluruh repo.
+#
+# Sumber kebenaran: standar/workflows/keamanan.yml di coderoach-app. Salinan di
+# .github/workflows/ ditulis PR sebar — perubahan diusulkan di sumbernya.
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  schedule:
+    # Senin 03:00 WIB. Database kerentanan bertambah tanpa ada yang push.
+    - cron: "0 20 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  semgrep:
+    name: Semgrep — pola kode
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep:1.176.0@sha256:12672acdb0949e19f9f6a4c2b288edd0b404f268f0ca7738a2c06f372f50362e
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      # Ruleset disebut eksplisit, bukan `--config auto`: auto memilih rules
+      # dengan mengirim metadata project ke registry, dan tidak bisa
+      # digabung dengan --metrics=off. Langkah ini hanya merah kalau semgrep
+      # gagal jalan; temuan semua tingkat masuk SARIF.
+      - run: >-
+          semgrep scan
+          --config p/default --config p/typescript
+          --sarif --output semgrep.sarif --metrics=off
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sarif-semgrep
+          path: semgrep.sarif
+          if-no-files-found: warn
+
+      # Jalan kedua, karena --severity menyaring seluruh keluaran: dipasang di
+      # langkah atas, SARIF kehilangan semua peringatannya.
+      - name: Gerbang — temuan ERROR memblokir
+        run: >-
+          semgrep scan
+          --config p/default --config p/typescript
+          --severity ERROR --error --metrics=off
+
+  trivy:
+    name: Trivy — dependensi, IaC, secret
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      # .trivyignore di akar repo dibaca Trivy sendiri kalau ada. Input
+      # `trivyignores` sengaja tidak dipakai: action-nya gagal kalau berkas
+      # yang disebut tidak ada, dan workflow ini disebar ke repo yang belum
+      # punya.
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scanners: vuln,secret,misconfig
+          format: sarif
+          output: trivy.sarif
+          severity: CRITICAL,HIGH
+          # Tanpa ini action-nya membuang `severity` begitu formatnya SARIF,
+          # dan exit-code ikut menyala untuk temuan sedang dan rendah.
+          limit-severities-for-sarif: true
+          # Kerentanan tanpa versi perbaikan tidak bisa ditindak — dicatat
+          # Trivy, tidak dimasukkan ke laporan.
+          ignore-unfixed: true
+          exit-code: "1"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: sarif-trivy
+          path: trivy.sarif
+          if-no-files-found: warn
+
+  gitleaks:
+    name: Gitleaks — secret di riwayat
+    runs-on: ubuntu-latest
+    # Di event pull_request action ini membaca daftar commit PR lewat API
+    # (pulls/{n}/commits). Tanpa izin ini jawabannya 403 dan job merah tanpa
+    # memindai apa pun; dulu tertutup continue-on-error.
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          # Seluruh riwayat. Secret yang sudah dihapus dari HEAD tetap ada di
+          # commit lama, dan itu justru yang paling sering lolos.
+          fetch-depth: 0
+
+      # Repo milik akun personal tidak memerlukan GITLEAKS_LICENSE. Artifact
+      # SARIF-nya diunggah action ini sendiri, dan job merah kalau ada secret.
+      # Versi gitleaks-nya bawaan action ini: 8.24.3.
+      - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: "false"
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "true"
+
+  osv:
+    name: OSV-Scanner — dependensi
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      # Action langsung, bukan workflow reusable-nya: yang reusable mengunggah
+      # ke code scanning lewat security-events: write, yang tidak tersedia di
+      # repo privat. Google menandai action ini "bisa berubah di patch minor",
+      # jadi versinya dipin penuh.
+      #
+      # continue-on-error di sini disengaja: osv-scanner keluar 1 untuk
+      # kerentanan setingkat apa pun dan tidak punya opsi ambang. Yang
+      # memutuskan adalah langkah gerbang di bawah; kalau scanner-nya gagal
+      # jalan, osv.sarif tidak ada dan gerbangnya ikut merah.
+      - uses: google/osv-scanner-action/osv-scanner-action@6e4298ebc4db23e847df9b2e2de2939d6f066c67 # v2.5.1
+        continue-on-error: true
+        with:
+          scan-args: |-
+            --recursive
+            --format=sarif
+            --output=osv.sarif
+            ./
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ !cancelled() }}
+        with:
+          name: sarif-osv
+          path: osv.sarif
+          if-no-files-found: warn
+
+      # Skor tiap kerentanan ada di rule SARIF-nya (security-severity). Yang
+      # sudah diterima di osv-scanner.toml tidak pernah sampai ke SARIF.
+      - name: Gerbang — CVSS 7 ke atas atau tanpa skor memblokir
+        if: ${{ !cancelled() }}
+        run: |
+          test -s osv.sarif || { echo "::error::osv.sarif tidak ada: OSV-Scanner gagal jalan"; exit 1; }
+          tinggi=$(jq -r '
+            .runs[]
+            | ([.tool.driver.rules[]? | {key: .id, value: (.properties["security-severity"] // "")}] | from_entries) as $skor
+            | .results[]?
+            | ($skor[.ruleId] // "") as $s
+            | select($s == "" or ($s | tonumber) >= 7)
+            | "\(.ruleId) (CVSS \(if $s == "" then "tidak ada" else $s end)): \(.message.text)"
+          ' osv.sarif)
+          if [ -n "$tinggi" ]; then
+            printf '%s\n' "$tinggi" | while IFS= read -r t; do echo "::error::$t"; done
+            exit 1
+          fi
+          echo "Tidak ada temuan OSV dengan CVSS 7 ke atas."

@@ -3,3 +3,15 @@
 *.jpg binary
 *.ico binary
 *.woff2 binary
+standar/hooks/** text eol=lf
+standar/modul/** text eol=lf
+standar/skills/** text eol=lf
+standar/agents/** text eol=lf
+.claude/agents/peneliti.md text eol=lf
+.claude/skills/modul/** text eol=lf
+.claude/skills/aset-visual-web/** text eol=lf
+.claude/skills/dewan-penilai/** text eol=lf
+.claude/skills/desain-uji/** text eol=lf
+.claude/skills/riset-ilmiah/** text eol=lf
+.claude/skills/cek-backlog-coderoach/** text eol=lf
+.claude/skills/alur-desain/** text eol=lf
