@@ -38,14 +38,27 @@ name: Keamanan
 #
 # Sumber kebenaran: standar/workflows/keamanan.yml di coderoach-app. Salinan di
 # .github/workflows/ ditulis PR sebar — perubahan diusulkan di sumbernya.
+#
+# Hemat menit (ADR 0056 coderoach-app): di PR yang siap (bukan draft) hanya
+# Semgrep dan Gitleaks. Trivy dan OSV memindai dependensi, jadi di PR hanya
+# untuk PR dependensi (Dependabot atau berlabel `dependencies`); keempatnya
+# jalan tiap malam di cabang bawaan. Push ke main tidak memicu apa pun:
+# kodenya sudah dipindai di PR dan dipindai ulang malam itu. Minggu 22-29 Okt
+# 2026 workflow ini memakan 48% menit tertagih coderoach-app; 689 dari 945
+# job-nya selesai di bawah semenit tetapi ditagih semenit penuh. Tiap job
+# dibatasi 15 menit: tanpa itu scanner yang macet ditagih sampai 360 menit.
 on:
-  push:
-    branches: [main, master]
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   schedule:
-    # Senin 03:00 WIB. Database kerentanan bertambah tanpa ada yang push.
-    - cron: "0 20 * * 0"
+    # Tiap malam 02.17 WIB. Database kerentanan bertambah tanpa ada yang push.
+    - cron: "17 19 * * *"
   workflow_dispatch:
+
+# Push beruntun ke PR yang sama membatalkan pemindaian lamanya.
+concurrency:
+  group: keamanan-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -54,6 +67,8 @@ jobs:
   semgrep:
     name: Semgrep — pola kode
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 15
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     container:
       image: semgrep/semgrep:1.176.0@sha256:12672acdb0949e19f9f6a4c2b288edd0b404f268f0ca7738a2c06f372f50362e
     steps:
@@ -85,6 +100,11 @@ jobs:
   trivy:
     name: Trivy — dependensi, IaC, secret
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 15
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.user.login == 'dependabot[bot]' ||
+      contains(github.event.pull_request.labels.*.name, 'dependencies')
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
@@ -106,6 +126,11 @@ jobs:
           # Trivy, tidak dimasukkan ke laporan.
           ignore-unfixed: true
           exit-code: "1"
+          # Tanpa actions/cache: di runner laptop, menyimpan database Trivy
+          # (±136 MB) ke cache GitHub tersangkut di 0 MB/s dan menahan antrean
+          # (28 Okt). Trivy menyimpan DB-nya di disk runner sendiri; di
+          # ubuntu-latest DB diunduh ulang, cukup beberapa detik.
+          cache: "false"
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ !cancelled() }}
@@ -117,6 +142,8 @@ jobs:
   gitleaks:
     name: Gitleaks — secret di riwayat
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 15
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     # Di event pull_request action ini membaca daftar commit PR lewat API
     # (pulls/{n}/commits). Tanpa izin ini jawabannya 403 dan job merah tanpa
     # memindai apa pun; dulu tertutup continue-on-error.
@@ -133,8 +160,14 @@ jobs:
       # Repo milik akun personal tidak memerlukan GITLEAKS_LICENSE. Artifact
       # SARIF-nya diunggah action ini sendiri, dan job merah kalau ada secret.
       # Versi gitleaks-nya bawaan action ini: 8.24.3.
+      #
+      # TMPDIR ke runner.temp, yang dikosongkan runner tiap job. Action ini
+      # mengunduh ke os.tmpdir()/gitleaks.tmp dan tidak pernah menghapusnya;
+      # di runner self-hosted yang tidak ephemeral, job berikutnya yang cache-nya
+      # meleset gagal "Destination file path ... already exists".
       - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
         env:
+          TMPDIR: ${{ runner.temp }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_ENABLE_COMMENTS: "false"
           GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "true"
@@ -142,6 +175,11 @@ jobs:
   osv:
     name: OSV-Scanner — dependensi
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 15
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.user.login == 'dependabot[bot]' ||
+      contains(github.event.pull_request.labels.*.name, 'dependencies')
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
@@ -157,8 +195,11 @@ jobs:
       - uses: google/osv-scanner-action/osv-scanner-action@6e4298ebc4db23e847df9b2e2de2939d6f066c67 # v2.5.1
         continue-on-error: true
         with:
+          # --allow-no-lockfiles: repo tanpa lockfile (jstack) membuat osv-scanner keluar 128
+          # tanpa menulis osv.sarif, lalu gerbang merah. Repo yang punya lockfile tidak berubah.
           scan-args: |-
             --recursive
+            --allow-no-lockfiles
             --format=sarif
             --output=osv.sarif
             ./
