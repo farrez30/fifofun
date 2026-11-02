@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { AppShell } from '@/components/app-shell'
 import { getUser } from '@/lib/auth/session'
 import { ImportForm } from './import-form'
+import { InfoTip } from '@/components/info-tip'
 
 export const metadata: Metadata = { title: 'Impor' }
 /* Blocks on runtime data by design; the why lives in src/app/page.tsx above `instant`. */
@@ -17,47 +18,34 @@ export default async function ImporPage() {
       title="Impor e-Statement"
       email={user.email ?? ''}
       current="/impor"
-      lead="Unggah e-Statement Mandiri untuk mengisi catatanmu, sekaligus memeriksa apakah pembukuan manualmu sudah benar."
     >
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <ImportForm />
 
-        <aside className="space-y-5 text-subhead text-ink-muted lg:border-l lg:border-line lg:pl-6">
+        {/* What a person worries about before uploading, said as the answer
+            only. How the checks work sits behind the info button. */}
+        <aside className="space-y-5 text-sm text-ink-muted lg:border-l lg:border-line lg:pl-6">
           <div>
-            <h2 className="text-subhead font-medium text-ink">Yang diperiksa</h2>
-            <p className="mt-1.5">
-              Setiap baris dicocokkan berlapis: jumlah dana masuk, jumlah dana keluar, saldo
-              awal ditambah selisihnya, dan rantai saldo baris demi baris.
-            </p>
-            <p className="mt-1.5">
-              Lapis terakhir itu yang membuat berkas bermasalah bisa ditunjuk barisnya, bukan
-              sekadar dinyatakan &ldquo;tidak cocok&rdquo;.
-            </p>
+            <div className="flex items-center gap-1">
+              <h2 className="text-sm font-medium text-ink">Kalau tidak cocok</h2>
+              <InfoTip label="Yang diperiksa">
+                <p>
+                  Setiap baris dicocokkan berlapis: jumlah dana masuk, jumlah dana keluar, saldo
+                  awal ditambah selisihnya, dan rantai saldo baris demi baris. Lapis terakhir itu
+                  yang membuat berkas bermasalah bisa ditunjuk barisnya.
+                </p>
+                <p className="mt-2">
+                  Dipakai .xlsx, bukan PDF: di .xlsx dana masuk dan keluar ada di kolom terpisah,
+                  di PDF keduanya berbagi satu kolom dan dibedakan akhiran D yang mudah hilang.
+                </p>
+              </InfoTip>
+            </div>
+            <p className="mt-1.5">Tidak ada satu pun transaksi yang disimpan.</p>
           </div>
 
           <div>
-            <h2 className="text-subhead font-medium text-ink">Kalau tidak cocok</h2>
-            <p className="mt-1.5">
-              Tidak ada satu pun transaksi yang disimpan. Angka yang salah di catatan keuangan
-              lebih merugikan daripada impor yang gagal, karena angka yang salah akan dipercaya.
-            </p>
-          </div>
-
-          <div>
-            <h2 className="text-subhead font-medium text-ink">Mengunggah dua kali</h2>
-            <p className="mt-1.5">
-              Aman. Setiap berkas dan setiap baris punya sidik jarinya sendiri, jadi berkas yang
-              sama tidak akan menggandakan apa pun.
-            </p>
-          </div>
-
-          <div>
-            <h2 className="text-subhead font-medium text-ink">Kenapa .xlsx, bukan PDF</h2>
-            <p className="mt-1.5">
-              Di .xlsx, dana masuk dan dana keluar ada di kolom terpisah. Di PDF keduanya
-              berbagi satu kolom dan dibedakan oleh akhiran{' '}
-              <span className="font-mono text-footnote">D</span> yang mudah hilang tanpa suara.
-            </p>
+            <h2 className="text-sm font-medium text-ink">Mengunggah dua kali</h2>
+            <p className="mt-1.5">Aman. Berkas yang sama tidak menggandakan apa pun.</p>
           </div>
         </aside>
       </div>

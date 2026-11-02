@@ -83,7 +83,7 @@ function Submit({ label, disabled = false }: { label: string; disabled?: boolean
       type="submit"
       disabled={disabled}
       aria-busy={pending}
-      className="h-11 rounded-sm bg-accent px-4 text-subhead font-medium text-paper transition-colors duration-150 hover:bg-accent-strong disabled:opacity-50"
+      className="h-11 rounded-sm bg-accent px-4 text-sm font-medium text-paper transition-colors duration-150 hover:bg-accent-strong disabled:opacity-50"
     >
       {pending ? 'Merapikan' : label}
     </button>
@@ -128,19 +128,19 @@ export function TidyPanel({ view, categories }: { view: TidyView; categories: Ca
     <section
       id="rapikan"
       aria-labelledby="rapikan-judul"
-      className="squircle rounded-md bg-sunken/40 p-4"
+      className="squircle rounded-md border border-line bg-surface p-4"
     >
-      <h2 id="rapikan-judul" className="text-subhead font-medium text-ink">
+      <h2 id="rapikan-judul" className="text-sm font-medium text-ink">
         {view.count} transaksi lama senilai {view.amount} ada di pos yang bukan tempatnya
       </h2>
-      <p className="mt-1 text-subhead text-ink-muted">
+      <p className="mt-1 text-sm text-ink-muted">
         Impor lama menebak kategori dari cara uangnya bergerak, bukan dari siapa yang dibayar, jadi
         setiap pembayaran QRIS jadi Makan/minum dan setiap tagihan jadi Belanja. Aturan yang
         sekarang tahu bedanya. Buka satu pindahan untuk memeriksa transaksinya sebelum menyetujui.
       </p>
 
       {view.moves.length > 0 ? (
-        <ul className="mt-3 space-y-2">
+        <ul className="mt-3 divide-y divide-line border-y border-line">
           {view.moves.map((move) => (
             <li key={move.key}>
               <Move
@@ -158,14 +158,14 @@ export function TidyPanel({ view, categories }: { view: TidyView; categories: Ca
       ) : null}
 
       {held > 0 || redirected > 0 ? (
-        <p className="mt-3 text-subhead text-ink">
+        <p className="mt-3 text-sm text-ink">
           {view.count - held} akan dipindahkan
           {held > 0 ? `, ${held} ditahan` : ''}
           {redirected > 0 ? `, ${redirected} dibelokkan ke pos lain` : ''}.
         </p>
       ) : null}
 
-      <p className="mt-3 text-subhead text-ink-muted">
+      <p className="mt-3 text-sm text-ink-muted">
         Hanya transaksi yang masih duduk di pos bawaan impor yang dipindahkan.
         {view.protectedCount > 0
           ? ` ${view.protectedCount} transaksi yang kategorinya pernah kamu tetapkan sendiri tidak disentuh.`
@@ -174,7 +174,7 @@ export function TidyPanel({ view, categories }: { view: TidyView; categories: Ca
           ? ` ${view.heldCount} transaksi yang pernah kamu tahan juga tidak ditawarkan lagi.`
           : ''}
       </p>
-      <p className="mt-2 text-subhead text-ink-muted">
+      <p className="mt-2 text-sm text-ink-muted">
         Perpindahan ini tidak bisa dibatalkan sekaligus. Yang salah bisa kamu ubah satu per satu
         dari halaman transaksinya.
       </p>
@@ -190,7 +190,7 @@ export function TidyPanel({ view, categories }: { view: TidyView; categories: Ca
           .map(([id, choice]) => (
             <input key={id} type="hidden" name={`pilih:${id}`} value={choice} />
           ))}
-        <label className="flex min-h-11 items-center gap-2 text-subhead text-ink">
+        <label className="flex min-h-11 items-center gap-2 text-sm text-ink">
           <input
             type="checkbox"
             name="confirm"
@@ -238,13 +238,14 @@ function Move({
   const moving = move.entries.filter((entry) => choices[entry.id] !== HOLD).length
 
   return (
-    <div className="squircle rounded-md bg-surface shadow-xs">
+    // A row of the section above, not a card of its own.
+    <div>
       <button
         type="button"
         onClick={onToggle}
         aria-expanded={open}
         aria-controls={bodyId}
-        className="flex min-h-11 w-full items-baseline justify-between gap-4 px-3 py-2.5 text-left"
+        className="flex min-h-11 w-full items-baseline justify-between gap-4 py-2.5 text-left"
       >
         <span className="min-w-0">
           <CategoryMark
@@ -257,25 +258,25 @@ function Move({
           {/* The last part is said in words rather than drawn as a caret, the
               way the report's disclosures say what opening one gives you. */}
           <MetaRow
-            className="mt-0.5 text-footnote text-ink-muted"
+            className="mt-0.5 text-xs text-ink-muted"
             parts={[`${move.count} transaksi`, `sekarang di ${move.from}`, open ? 'tutup' : 'lihat transaksinya']}
           />
         </span>
-        <span className="shrink-0 tabular-nums text-subhead text-ink">{move.amount}</span>
+        <span className="shrink-0 tabular-nums text-sm text-ink">{move.amount}</span>
       </button>
 
       {open ? (
-        <div id={bodyId} className="border-t border-line px-3 py-3">
+        <div id={bodyId} className="border-t border-line py-3">
           <ul className="space-y-2">
             {move.entries.map((entry) => (
               <li key={entry.id} className="border-b border-line/60 pb-2 last:border-0">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                  <span className="min-w-0 text-subhead text-ink">{entry.description}</span>
-                  <span className="tabular-nums text-subhead text-ink">{entry.amount}</span>
+                  <span className="min-w-0 text-sm text-ink">{entry.description}</span>
+                  <span className="tabular-nums text-sm text-ink">{entry.amount}</span>
                 </div>
                 <MetaRow
                   as="p"
-                  className="mt-0.5 text-footnote text-ink-muted"
+                  className="mt-0.5 text-xs text-ink-muted"
                   parts={[
                     <span key="at" className="tabular-nums">
                       {entry.occurredAt}

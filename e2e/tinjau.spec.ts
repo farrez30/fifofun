@@ -120,7 +120,7 @@ test.describe('antrean tinjau', () => {
     // The old headline summed both directions into one number and never said
     // what period it covered. Now it is two figures, never one, plus the
     // span the shown groups actually reach.
-    const headline = page.locator('.squircle.bg-sunken').first()
+    const headline = page.locator('[data-queue-headline]')
     await expect(headline).toContainText('Mei 2026 sampai Agu 2026')
     await expect(headline.getByText('Menunggu keluar')).toBeVisible()
     await expect(headline.getByText('Menunggu masuk')).toBeVisible()
