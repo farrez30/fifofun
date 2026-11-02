@@ -7,9 +7,9 @@
 export function SettingsSkeleton() {
   return (
     <div className="space-y-8" role="status" aria-busy="true" aria-label="Memuat pengaturan">
-      <div className="skeleton squircle shadow-xs h-64" />
-      <div className="skeleton squircle shadow-xs h-96" />
-      <div className="skeleton squircle shadow-xs h-52" />
+      <div className="skeleton squircle border border-line h-64" />
+      <div className="skeleton squircle border border-line h-96" />
+      <div className="skeleton squircle border border-line h-52" />
     </div>
   )
 }

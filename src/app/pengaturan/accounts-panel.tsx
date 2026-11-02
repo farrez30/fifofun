@@ -11,6 +11,7 @@ import type { AccountKind } from '@/lib/ledger/types'
 import { reorderAccounts, setAccountArchived } from './actions'
 import { AccountForm } from './account-form'
 import { useActionToast, withToast } from '@/components/use-action-toast'
+import { InfoTip } from '@/components/info-tip'
 
 /**
  * Every account, including the ones put away.
@@ -83,10 +84,19 @@ export function AccountsPanel({ accounts }: { accounts: AccountView[] }) {
 
   return (
     <section aria-labelledby="akun" className="@container scroll-mt-8">
-      <h2 id="akun" className="text-title3 font-semibold tracking-title3 text-ink">
-        Akun
-      </h2>
-      <p className="mt-1 text-subhead text-ink-muted">
+      <div className="flex items-center gap-1">
+        <h2 id="akun" className="text-sm font-medium text-ink">
+          Akun
+        </h2>
+        <InfoTip label="Kunci impor">
+          <p>
+            Kunci impor menghubungkan baris e-statement dan pesan bot Telegram ke akun ini, jadi
+            namanya bebas diganti tanpa memutus impor. Yang tidak boleh pindah diam-diam adalah
+            kuncinya.
+          </p>
+        </InfoTip>
+      </div>
+      <p className="mt-1 text-sm text-ink-muted">
         {live.length} akun aktif
         {archived.length > 0 ? `, ${archived.length} diarsipkan` : ''}.
       </p>
@@ -100,7 +110,7 @@ export function AccountsPanel({ accounts }: { accounts: AccountView[] }) {
         Every action here is its own form, so rendering both trees is safe: the
         hidden one cannot be submitted, and only the visible one is reachable.
       */}
-      <ul aria-label="Akun" className="mt-3 rows-inset squircle rounded-md bg-surface shadow-xs @4xl:hidden">
+      <ul aria-label="Akun" className="mt-3 rows-inset squircle rounded-md border border-line bg-surface @4xl:hidden">
         {scope(
           live.map((account) => (
             <SortableCard
@@ -121,12 +131,12 @@ export function AccountsPanel({ accounts }: { accounts: AccountView[] }) {
         ))}
       </ul>
 
-      <div className="relative mt-3 hidden overflow-x-auto squircle rounded-md bg-surface shadow-xs @4xl:block">
-        <table className="w-full min-w-[46rem] border-collapse text-subhead">
+      <div className="relative mt-3 hidden overflow-x-auto squircle rounded-md border border-line bg-surface @4xl:block">
+        <table className="w-full min-w-[46rem] border-collapse text-sm">
 
           <caption className="sr-only">Akun beserta kunci impor dan urutannya</caption>
           <thead>
-            <tr className="border-b border-line text-left text-caption1 uppercase tracking-wide text-ink-faint">
+            <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-faint">
               <th scope="col" className="w-0 py-2 pl-2 font-medium">
                 <span className="sr-only">Urutan</span>
               </th>
@@ -171,15 +181,12 @@ export function AccountsPanel({ accounts }: { accounts: AccountView[] }) {
       </div>
 
 
-      <p className="mt-2 text-footnote text-ink-muted">
+      <p className="mt-2 text-xs text-ink-muted">
         Seret pegangan di kiri untuk mengubah urutan akun di tabel saldo dan setiap pilihan akun.
-        Kunci impor menghubungkan baris e-statement dan pesan bot Telegram ke akun ini, jadi
-        namanya bebas diganti tanpa memutus impor. Yang tidak boleh pindah diam-diam adalah
-        kuncinya.
       </p>
 
-      <details className="mt-3 squircle rounded-md bg-surface shadow-xs">
-        <summary className="cursor-pointer px-4 py-3 text-subhead text-accent">Tambah akun</summary>
+      <details className="mt-3 squircle rounded-md border border-line bg-surface">
+        <summary className="cursor-pointer px-4 py-3 text-sm text-accent">Tambah akun</summary>
         <div className="border-t border-line p-4">
           <AccountForm />
         </div>
@@ -218,7 +225,7 @@ function Row({ account, open, onToggle, reorder }: RowProps) {
         <th scope="row" className="whitespace-nowrap px-4 py-2.5 text-left font-normal text-ink">
           <AccountMark name={account.name} kind={account.kind} logo={account.logoUrl} />
           {account.archived ? (
-            <span className="ml-2 text-footnote text-ink-faint">(arsip)</span>
+            <span className="ml-2 text-xs text-ink-faint">(arsip)</span>
           ) : null}
         </th>
         <td className="whitespace-nowrap px-4 py-2.5 text-ink-muted">
@@ -227,7 +234,7 @@ function Row({ account, open, onToggle, reorder }: RowProps) {
           ) : (
             <>
               <code className="text-ink">{account.key}</code>
-              <span className="ml-1.5 text-footnote">
+              <span className="ml-1.5 text-xs">
                 {ACCOUNT_KEY_LABELS[account.key as AccountKey]}
               </span>
             </>
@@ -245,7 +252,7 @@ function Row({ account, open, onToggle, reorder }: RowProps) {
               type="button"
               onClick={onToggle}
               aria-expanded={open}
-              className="h-9 rounded-sm border border-line px-2.5 text-footnote text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
+              className="h-9 rounded-sm border border-line px-2.5 text-xs text-ink transition-colors duration-150 hover:border-line-strong hover:bg-fill-quaternary"
             >
               {open ? 'Tutup' : 'Ubah'}
           <span className="sr-only"> {account.name}</span>
@@ -256,7 +263,7 @@ function Row({ account, open, onToggle, reorder }: RowProps) {
       </tr>
 
       {open ? (
-        <tr className="border-b border-line bg-sunken last:border-0">
+        <tr className="border-b border-line last:border-0">
           <td colSpan={6} className="p-4">
             <AccountForm account={account} />
           </td>
@@ -278,11 +285,11 @@ function Card({ account, open, onToggle, reorder }: RowProps) {
           the card's edge inset while the lines below keep their full 16px. */}
       <div className={`flex items-center justify-between gap-1 ${reorder ? '-ml-3' : ''}`}>
         {reorder ? <DragHandle label={`Pindahkan ${account.name}`} handle={reorder.handle} /> : null}
-        <span className="min-w-0 flex-1 text-subhead text-ink">
+        <span className="min-w-0 flex-1 text-sm text-ink">
           <AccountMark name={account.name} kind={account.kind} logo={account.logoUrl} />
-          {account.archived ? <span className="ml-2 text-footnote text-ink-faint">(arsip)</span> : null}
+          {account.archived ? <span className="ml-2 text-xs text-ink-faint">(arsip)</span> : null}
         </span>
-        <span className="tnum shrink-0 font-mono text-subhead text-ink-muted">
+        <span className="tnum shrink-0 font-mono text-sm text-ink-muted">
           {formatIdr(BigInt(account.openingBalance))}
         </span>
       </div>
@@ -293,7 +300,7 @@ function Card({ account, open, onToggle, reorder }: RowProps) {
         what it says. Arsipkan, the rare one, waits inside the open card.
       */}
       <div className="mt-1 flex items-center justify-between gap-2">
-        <p className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5 text-footnote text-ink-muted">
+        <p className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs text-ink-muted">
           {account.key === '' ? (
             <span>tidak diimpor</span>
           ) : (
@@ -313,7 +320,7 @@ function Card({ account, open, onToggle, reorder }: RowProps) {
           type="button"
           onClick={onToggle}
           aria-expanded={open}
-          className="h-11 shrink-0 rounded-sm border border-line px-3 text-subhead text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
+          className="h-11 shrink-0 rounded-sm border border-line px-3 text-sm text-ink transition-colors duration-150 hover:border-line-strong hover:bg-fill-quaternary"
         >
           {open ? 'Tutup' : 'Ubah'}
           <span className="sr-only"> {account.name}</span>
@@ -338,7 +345,7 @@ function ArchiveButton({ account }: { account: AccountView }) {
     <form action={action} className="flex items-center gap-2">
       <input type="hidden" name="id" value={account.id} />
       <input type="hidden" name="archived" value={account.archived ? '0' : '1'} />
-      <SubmitButton className="inline-flex h-9 items-center rounded-sm border border-line px-2.5 text-footnote text-ink-muted transition-colors duration-150 hover:border-line-strong hover:text-ink">
+      <SubmitButton className="inline-flex h-9 items-center rounded-sm border border-line px-2.5 text-xs text-ink-muted transition-colors duration-150 hover:border-line-strong hover:text-ink">
         {account.archived ? 'Pakai lagi' : 'Arsipkan'}
         <span className="sr-only"> {account.name}</span>
       </SubmitButton>

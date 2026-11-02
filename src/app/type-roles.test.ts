@@ -55,6 +55,7 @@ const FOUR_STEP = [
   'src/app/catat/',
   'src/app/dana/',
   'src/app/impor/',
+  'src/app/pengaturan/',
   'src/app/rencana/',
   'src/app/tinjau/',
   'src/app/transaksi/',
