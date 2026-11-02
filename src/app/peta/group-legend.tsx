@@ -28,7 +28,7 @@ const GLOWS: { value: Glow['mode']; label: string }[] = [
 ]
 
 const CHIP =
-  'inline-flex h-11 items-center gap-2 rounded-full border px-3 text-footnote transition-colors duration-150 sm:h-9'
+  'inline-flex h-11 items-center gap-2 rounded-full border px-3 text-xs transition-colors duration-150 sm:h-9'
 
 export function GroupLegend({ groups, hidden, onToggle, onShowAll, glow, onGlow }: Props) {
   if (groups.length < 2) return null
@@ -59,7 +59,7 @@ export function GroupLegend({ groups, hidden, onToggle, onShowAll, glow, onGlow 
           )
         })}
       </div>
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-footnote text-ink-muted">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-ink-muted">
         <span>Cahaya</span>
         <div role="radiogroup" aria-label="Warna cahaya" className={SEGMENTED}>
           {GLOWS.map((option) => (
@@ -81,7 +81,7 @@ export function GroupLegend({ groups, hidden, onToggle, onShowAll, glow, onGlow 
             : 'Satu warna untuk semuanya: hanya menunjukkan di mana belanja paling padat.'}
         </span>
       </div>
-      <p className="flex flex-wrap items-center gap-x-3 text-footnote text-ink-muted">
+      <p className="flex flex-wrap items-center gap-x-3 text-xs text-ink-muted">
         <span>Ketuk kelompok untuk menyembunyikannya dari peta. Bagian Tempat di atas tetap mencantumkan semuanya.</span>
         {hidden.length > 0 ? (
           <button

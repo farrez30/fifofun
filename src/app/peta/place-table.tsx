@@ -24,7 +24,7 @@ interface Props {
   moveHref: (point: PlacePoint) => string
 }
 
-const LINK = 'inline-flex min-h-11 items-center px-2 text-subhead font-medium text-accent'
+const LINK = 'inline-flex min-h-11 items-center px-2 text-sm font-medium text-accent'
 
 function summary(total: number, matched: number | null): string {
   if (total === 0) return 'Belum ada tempat di pilihan ini. Taruh pedagang dari bagian Menunggu.'
@@ -36,26 +36,26 @@ function summary(total: number, matched: number | null): string {
 export function PlaceTable({ points, total, matched, moveHref }: Props) {
   return (
     <section aria-labelledby="tempat" className="@container">
-      <h2 id="tempat" tabIndex={-1} className="mb-1 text-subhead font-medium text-ink">
+      <h2 id="tempat" tabIndex={-1} className="mb-1 text-sm font-medium text-ink">
         Tempat
       </h2>
-      <p role={matched !== null ? 'status' : undefined} className="mb-3 text-footnote text-ink-muted">
+      <p role={matched !== null ? 'status' : undefined} className="mb-3 text-xs text-ink-muted">
         {summary(total, matched)}
       </p>
 
       {points.length > 0 ? (
         <>
-          <ul aria-label="Tempat" className="rows-inset squircle rounded-md bg-surface shadow-xs @5xl:hidden">
+          <ul aria-label="Tempat" className="rows-inset squircle rounded-md border border-line bg-surface @5xl:hidden">
             {points.map((point) => (
               <li key={point.pointId} className="px-4 py-3">
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className="min-w-0 flex-1 truncate text-subhead text-ink">
+                  <span className="min-w-0 flex-1 truncate text-sm text-ink">
                     {point.label}
-                    {point.period ? <span className="ml-1.5 text-footnote text-ink-muted">({point.period})</span> : null}
+                    {point.period ? <span className="ml-1.5 text-xs text-ink-muted">({point.period})</span> : null}
                   </span>
-                  <span className="tnum shrink-0 font-mono text-subhead text-ink">{point.total}</span>
+                  <span className="tnum shrink-0 font-mono text-sm text-ink">{point.total}</span>
                 </div>
-                <p className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-footnote text-ink-muted">
+                <p className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs text-ink-muted">
                   <span>{point.visits} kali</span>
                   <span aria-hidden="true" className="text-ink-faint">·</span>
                   <span>
@@ -74,7 +74,7 @@ export function PlaceTable({ points, total, matched, moveHref }: Props) {
                     </>
                   ) : null}
                 </p>
-                {point.address ? <p className="mt-0.5 truncate text-footnote text-ink-faint">{point.address}</p> : null}
+                {point.address ? <p className="mt-0.5 truncate text-xs text-ink-faint">{point.address}</p> : null}
                 <div className="mt-1 -ml-2 flex items-center gap-1">
                   <Link href={moveHref(point)} className={LINK} aria-label={`Pindahkan titik ${point.label}`}>
                     Pindahkan
@@ -85,11 +85,11 @@ export function PlaceTable({ points, total, matched, moveHref }: Props) {
             ))}
           </ul>
 
-          <div className="relative hidden overflow-x-auto squircle rounded-md bg-surface shadow-xs @5xl:block">
-            <table className="w-full text-subhead">
+          <div className="relative hidden overflow-x-auto squircle rounded-md border border-line bg-surface @5xl:block">
+            <table className="w-full text-sm">
               <caption className="sr-only">Tempat, dengan total, kunjungan, dan rata-rata per kunjungan</caption>
               <thead>
-                <tr className="border-b border-line text-left text-caption1 uppercase tracking-wide text-ink-faint">
+                <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-faint">
                   <th scope="col" className="px-4 py-2.5 font-medium">Tempat</th>
                   <th scope="col" className="px-4 py-2.5 text-right font-medium">Total</th>
                   <th scope="col" className="px-4 py-2.5 text-right font-medium">Kunjungan</th>
@@ -106,10 +106,10 @@ export function PlaceTable({ points, total, matched, moveHref }: Props) {
                     <th scope="row" className="max-w-64 px-4 py-2.5 text-left font-normal">
                       <span className="block truncate text-ink">
                         {point.label}
-                        {point.period ? <span className="ml-1.5 text-footnote text-ink-muted">({point.period})</span> : null}
+                        {point.period ? <span className="ml-1.5 text-xs text-ink-muted">({point.period})</span> : null}
                       </span>
                       {point.address ? (
-                        <span className="block truncate text-footnote text-ink-faint">{point.address}</span>
+                        <span className="block truncate text-xs text-ink-faint">{point.address}</span>
                       ) : null}
                     </th>
                     <td className="tnum whitespace-nowrap px-4 py-2.5 text-right font-mono text-ink">{point.total}</td>

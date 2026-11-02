@@ -15,7 +15,7 @@ import { parsePage } from '@/lib/paging'
 import { getCategories, getHousehold, getMerchantLocations, getPlaceEntries } from '@/lib/queries/household'
 import { sectionHref, sectionOf } from '@/lib/sections'
 import { getUser } from '@/lib/auth/session'
-import { LEAD, TITLE } from './copy'
+import { TITLE } from './copy'
 import { SECTIONS, filterParams, placingHref, readView } from './filter'
 import { ModeField } from './mode-switch'
 import { ForgetButton } from './forget-button'
@@ -32,7 +32,7 @@ export const instant = false
 
 type Params = Record<string, string | string[] | undefined>
 
-const LABEL = 'block text-subhead font-medium text-ink'
+const LABEL = 'block text-sm font-medium text-ink'
 const JAKARTA_MS = 7 * 60 * 60 * 1000
 
 /** Spending categories a payment at a counter can carry, grouped the way the report groups them. */
@@ -114,8 +114,8 @@ async function MapView({ params }: { params: Params }) {
             open it was the first phone screen of each of them. The summary
             line says what is applied, so folding it hides nothing.
           */
-          <details className="group squircle rounded-md bg-surface shadow-xs">
-            <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-4 py-2 text-subhead font-medium text-ink">
+          <details className="group squircle rounded-md border border-line bg-surface">
+            <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-4 py-2 text-sm font-medium text-ink">
               <CaretDown
                 aria-hidden="true"
                 className="size-4 shrink-0 text-ink-faint transition-transform duration-150 group-open:rotate-180"
@@ -173,13 +173,13 @@ async function MapView({ params }: { params: Params }) {
                 {filtered ? (
                   <Link
                     href={sectionHref('/peta', {}, section, SECTIONS[0])}
-                    className="inline-flex min-h-11 items-center px-2 text-subhead text-ink-muted underline underline-offset-2"
+                    className="inline-flex min-h-11 items-center px-2 text-sm text-ink-muted underline underline-offset-2"
                   >
                     Bersihkan
                   </Link>
                 ) : null}
 
-                <label className="ml-auto flex min-h-11 items-center gap-2 text-footnote text-ink-muted">
+                <label className="ml-auto flex min-h-11 items-center gap-2 text-xs text-ink-muted">
                   <input
                     type="checkbox"
                     name="tagihan"
@@ -215,11 +215,11 @@ async function MapView({ params }: { params: Params }) {
                   <Stat
                     label="Tanpa tempat"
                     sen={report.unplaceable}
-                    hint="Belanja online, transfer, VA, dan kasir yang tidak menyebut nama gerai."
+                    info="Belanja online, transfer, VA, dan kasir yang tidak menyebut nama gerai."
                   />
                 </div>
                 {mostVisited ? (
-                  <p className="mt-3 text-subhead text-ink-muted">
+                  <p className="mt-3 text-sm text-ink-muted">
                     Paling sering didatangi: <span className="text-ink">{mostVisited.label}</span>, {mostVisited.visits} kali.
                     {dearest && dearest.merchantKey !== mostVisited.merchantKey ? (
                       <>
@@ -245,7 +245,7 @@ async function MapView({ params }: { params: Params }) {
                 mapped={share(report.placed, report.spent)}
               />
 
-              <p className="max-w-2xl text-footnote text-ink-faint">
+              <p className="max-w-2xl text-xs text-ink-faint">
                 Peta digambar dari OpenFreeMap, yang hanya tahu area peta yang sedang dilihat, bukan transaksinya. Mencari
                 lokasi mengirim nama pedagang (tanpa nominal atau tanggal) ke OpenStreetMap lewat server app ini. Data peta
                 dari para kontributor OpenStreetMap.
@@ -260,14 +260,14 @@ async function MapView({ params }: { params: Params }) {
                 initialPage={parsePage(params.hal)}
               />
             {placeless.length > 0 ? (
-              <details className="squircle rounded-md bg-surface p-4 shadow-xs">
-                <summary className="flex min-h-11 cursor-pointer items-center text-subhead font-medium text-ink">
+              <details className="squircle rounded-md border border-line bg-surface p-4">
+                <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-ink">
                   Ditandai tanpa tempat ({placeless.length})
                 </summary>
                 <ul className="mt-2 divide-y divide-line">
                   {placeless.map((location) => (
                     <li key={location.id} className="flex items-center justify-between gap-3 py-1">
-                      <span className="truncate text-subhead text-ink-muted">{location.label}</span>
+                      <span className="truncate text-sm text-ink-muted">{location.label}</span>
                       <ForgetButton id={location.id} label={location.label} verb="Batalkan" what="tanda tanpa tempat" />
                     </li>
                   ))}
@@ -293,7 +293,7 @@ export default async function PetaPage({ searchParams }: { searchParams: Promise
   const params = await searchParams
 
   return (
-    <AppShell title={TITLE} email={user.email ?? ''} current="/peta" lead={LEAD}>
+    <AppShell title={TITLE} email={user.email ?? ''} current="/peta">
       {/*
         Keyed on the filters only. A view, a page or a search keeps what is on
         screen until the next one streams in, with the segment just tapped
