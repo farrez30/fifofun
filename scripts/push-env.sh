@@ -40,6 +40,13 @@ fi
 
 [ -f "$ENV_FILE" ] || { echo "no $ENV_FILE here"; exit 1; }
 
+# The everyday .env.local points at http://localhost. Pushed as is, a Vercel
+# deployment would sign plain cookies for an origin nobody visits.
+if grep -qE '^BETTER_AUTH_URL=["'"'"']?http://' "$ENV_FILE"; then
+  echo "BETTER_AUTH_URL di $ENV_FILE masih http; sunting dulu untuk $TARGET"
+  exit 1
+fi
+
 read_var() {
   # First match wins; strips one layer of surrounding quotes and any trailing CR.
   sed -n "s/^$1=//p" "$ENV_FILE" | head -1 | tr -d '\r' | sed -e 's/^"\(.*\)"$/\1/' -e "s/^'\(.*\)'$/\1/"
