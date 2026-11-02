@@ -14,6 +14,7 @@ import { reorderCategories, setCategoryArchived } from './actions'
 import { CategoryForm } from './category-form'
 import { useActionToast, withToast } from '@/components/use-action-toast'
 import { CaretDown } from '@phosphor-icons/react/dist/ssr/CaretDown'
+import { InfoTip } from '@/components/info-tip'
 
 /**
  * Every category, grouped by the direction it points.
@@ -116,10 +117,22 @@ export function CategoriesPanel({
 
   return (
     <section aria-labelledby="kategori" className="scroll-mt-8">
-      <h2 id="kategori" className="text-title3 font-semibold tracking-title3 text-ink">
-        Kategori
-      </h2>
-      <p className="mt-1 text-subhead text-ink-muted">
+      <div className="flex items-center gap-1">
+        <h2 id="kategori" className="text-sm font-medium text-ink">
+          Kategori
+        </h2>
+        <InfoTip label="Cashflow, warna, dan ikon">
+          <p>
+            Cashflow menentukan arah uang dan ikut tersimpan di setiap transaksi bersama sisi
+            akunnya, jadi tidak bisa diubah setelah kategorinya dipakai.
+          </p>
+          <p className="mt-2">
+            Warna dan ikon hanya penanda: yang tersimpan cuma derajat warnanya, terangnya mengikuti
+            tema.
+          </p>
+        </InfoTip>
+      </div>
+      <p className="mt-1 text-sm text-ink-muted">
         {live.length} kategori aktif di {groups.length} cashflow
         {archived.length > 0 ? `, ${archived.length} diarsipkan` : ''}.
       </p>
@@ -127,7 +140,7 @@ export function CategoriesPanel({
       <div className="mt-3 space-y-6">
         {groups.length > 1 ? (
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-            <label htmlFor={pickerId} className="text-subhead font-medium text-ink">
+            <label htmlFor={pickerId} className="text-sm font-medium text-ink">
               Cashflow
             </label>
             <select
@@ -150,8 +163,8 @@ export function CategoriesPanel({
 
         {/* Above the list, not under forty rows of it: the Dana, Anggaran and
             Tinjau empty states send people here to add one. */}
-        <details className="squircle rounded-md bg-surface shadow-xs">
-          <summary className="flex min-h-11 cursor-pointer items-center px-4 text-subhead text-accent">
+        <details className="squircle rounded-md border border-line bg-surface">
+          <summary className="flex min-h-11 cursor-pointer items-center px-4 text-sm text-accent">
             Tambah kategori
           </summary>
           <div className="border-t border-line p-4">
@@ -161,7 +174,7 @@ export function CategoriesPanel({
 
         {shownGroup ? (
           <div>
-            <h3 className="text-subhead font-medium text-ink">{CASHFLOW_LABELS[shownGroup.cashflow]}</h3>
+            <h3 className="text-sm font-medium text-ink">{CASHFLOW_LABELS[shownGroup.cashflow]}</h3>
             <Table
               rows={shownGroup.rows}
               siblings={categories}
@@ -178,8 +191,8 @@ export function CategoriesPanel({
             so a save re-rendering the panel never closes it on the row being
             edited inside. */}
         {archived.length > 0 ? (
-          <details className="group squircle rounded-md bg-surface shadow-xs">
-            <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-4 text-subhead font-medium text-ink">
+          <details className="group squircle rounded-md border border-line bg-surface">
+            <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-4 text-sm font-medium text-ink">
               <CaretDown
                 aria-hidden="true"
                 className="size-4 shrink-0 text-ink-faint transition-transform duration-150 group-open:rotate-180"
@@ -200,19 +213,13 @@ export function CategoriesPanel({
       </div>
 
 
-      <p className="max-w-2xl mt-3 text-footnote text-ink-muted">
+      <p className="max-w-2xl mt-3 text-xs text-ink-muted">
         Seret pegangan di kiri untuk mengubah urutan. Kelompok berpindah bersama isinya, dan isi
         sebuah kelompok hanya bisa diurutkan di dalam kelompok itu.
       </p>
 
-      <p className="max-w-2xl mt-3 text-footnote text-ink-muted">
-        Cashflow menentukan arah uang dan ikut tersimpan di setiap transaksi bersama sisi akunnya,
-        jadi tidak bisa diubah setelah kategorinya dipakai. Warna dan ikon hanya penanda: yang
-        tersimpan cuma derajat warnanya, terangnya mengikuti tema.
-      </p>
-
-      <details className="mt-3 squircle rounded-md bg-surface shadow-xs">
-        <summary className="cursor-pointer px-4 py-3 text-subhead text-ink-muted">
+      <details className="mt-3 squircle rounded-md border border-line bg-surface">
+        <summary className="cursor-pointer px-4 py-3 text-sm text-ink-muted">
           Nama yang dicari impor apa adanya
         </summary>
         <div className="border-t border-line p-4">
@@ -220,13 +227,13 @@ export function CategoriesPanel({
             {LOOKED_UP_NAMES.map((name) => (
               <li
                 key={name}
-                className="rounded-xs border border-line bg-sunken px-1.5 py-0.5 text-footnote text-ink"
+                className="rounded-xs border border-line px-1.5 py-0.5 font-mono text-xs text-ink"
               >
                 {name}
               </li>
             ))}
           </ul>
-          <p className="max-w-2xl mt-2 text-footnote text-ink-muted">
+          <p className="max-w-2xl mt-2 text-xs text-ink-muted">
             Kalau salah satu diganti nama, baris impor yang biasanya ke sana menunggu di Tinjau
             tanpa kategori. Itu bukan kerusakan, hanya pekerjaan tambahan sekali.
           </p>
@@ -302,7 +309,7 @@ function Table({ rows, siblings, editing, onToggle, caption, onReorder, onDragSt
           page and each one was its own sideways drag. */}
       <ul
         aria-label={caption}
-        className="mt-2 rows-inset squircle rounded-md bg-surface shadow-xs sm:hidden"
+        className="mt-2 rows-inset squircle rounded-md border border-line bg-surface sm:hidden"
       >
         {scope(
           top.map((row) => row.id),
@@ -332,12 +339,12 @@ function Table({ rows, siblings, editing, onToggle, caption, onReorder, onDragSt
         )}
       </ul>
 
-      <div className="relative mt-2 hidden overflow-x-auto squircle rounded-md bg-surface shadow-xs sm:block">
-      <table className="w-full min-w-[34rem] border-collapse text-subhead">
+      <div className="relative mt-2 hidden overflow-x-auto squircle rounded-md border border-line bg-surface sm:block">
+      <table className="w-full min-w-[34rem] border-collapse text-sm">
 
         <caption className="sr-only">{caption}</caption>
         <thead>
-          <tr className="border-b border-line text-left text-caption1 uppercase tracking-wide text-ink-faint">
+          <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-faint">
             <th scope="col" className="w-0 py-2 pl-2 font-medium">
               <span className="sr-only">Urutan</span>
             </th>
@@ -456,7 +463,7 @@ function Card({
         {reorder ? (
           <DragHandle label={`Pindahkan ${category.name}`} handle={reorder.handle} />
         ) : null}
-        <span className="min-w-0 flex-1 text-subhead text-ink">
+        <span className="min-w-0 flex-1 text-sm text-ink">
           <CategoryMark
             name={category.name}
             cashflow={category.cashflow}
@@ -475,14 +482,14 @@ function Card({
           type="button"
           onClick={onToggle}
           aria-expanded={open}
-          className="h-11 shrink-0 rounded-sm border border-line px-3 text-subhead text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
+          className="h-11 shrink-0 rounded-sm border border-line px-3 text-sm text-ink transition-colors duration-150 hover:border-line-strong hover:bg-fill-quaternary"
         >
           {open ? 'Tutup' : 'Ubah'}
           <span className="sr-only"> {category.name}</span>
         </button>
       </div>
 
-      <p className="mt-0.5 text-footnote text-ink-faint">
+      <p className="mt-0.5 text-xs text-ink-faint">
         {metaText([
           `${category.usage} transaksi`,
           isLookedUpByName(category.name) && 'dicari impor',
@@ -491,11 +498,11 @@ function Card({
       </p>
 
       {category.description ? (
-        <p className="mt-1 text-footnote text-ink-muted">{category.description}</p>
+        <p className="mt-1 text-xs text-ink-muted">{category.description}</p>
       ) : null}
 
       {billSummary(category) ? (
-        <p className="tnum mt-1 text-footnote text-ink-muted">{billSummary(category)}</p>
+        <p className="tnum mt-1 text-xs text-ink-muted">{billSummary(category)}</p>
       ) : null}
 
       {open ? (
@@ -536,18 +543,18 @@ function Row({ category, siblings, isGroup, open, onToggle, reorder }: RowProps)
             hue={category.hue === '' ? null : Number(category.hue)}
           />
           {isLookedUpByName(category.name) ? (
-            <span className="ml-2 text-footnote text-ink-faint">dicari impor</span>
+            <span className="ml-2 text-xs text-ink-faint">dicari impor</span>
           ) : null}
           {isGroup ? (
-            <span className="ml-2 text-footnote text-ink-faint">kelompok, tidak menampung transaksi</span>
+            <span className="ml-2 text-xs text-ink-faint">kelompok, tidak menampung transaksi</span>
           ) : null}
           {category.description ? (
-            <span className="mt-0.5 block text-footnote font-normal text-ink-muted">
+            <span className="mt-0.5 block text-xs font-normal text-ink-muted">
               {category.description}
             </span>
           ) : null}
           {billSummary(category) ? (
-            <span className="tnum mt-0.5 block text-footnote font-normal text-ink-muted">
+            <span className="tnum mt-0.5 block text-xs font-normal text-ink-muted">
               {billSummary(category)}
             </span>
           ) : null}
@@ -563,7 +570,7 @@ function Row({ category, siblings, isGroup, open, onToggle, reorder }: RowProps)
               type="button"
               onClick={onToggle}
               aria-expanded={open}
-              className="h-9 rounded-sm border border-line px-2.5 text-footnote text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
+              className="h-9 rounded-sm border border-line px-2.5 text-xs text-ink transition-colors duration-150 hover:border-line-strong hover:bg-fill-quaternary"
             >
               {open ? 'Tutup' : 'Ubah'}
           <span className="sr-only"> {category.name}</span>
@@ -574,7 +581,7 @@ function Row({ category, siblings, isGroup, open, onToggle, reorder }: RowProps)
       </tr>
 
       {open ? (
-        <tr className="border-b border-line bg-sunken last:border-0">
+        <tr className="border-b border-line last:border-0">
           <td colSpan={4} className="p-4">
             <CategoryForm category={category} siblings={siblings} />
           </td>
@@ -592,7 +599,7 @@ function ArchiveButton({ category }: { category: CategoryView }) {
     <form action={action} className="flex items-center gap-2">
       <input type="hidden" name="id" value={category.id} />
       <input type="hidden" name="archived" value={category.archived ? '0' : '1'} />
-      <SubmitButton className="inline-flex h-9 items-center rounded-sm border border-line px-2.5 text-footnote text-ink-muted transition-colors duration-150 hover:border-line-strong hover:text-ink">
+      <SubmitButton className="inline-flex h-9 items-center rounded-sm border border-line px-2.5 text-xs text-ink-muted transition-colors duration-150 hover:border-line-strong hover:text-ink">
         {category.archived ? 'Pakai lagi' : 'Arsipkan'}
         <span className="sr-only"> {category.name}</span>
       </SubmitButton>

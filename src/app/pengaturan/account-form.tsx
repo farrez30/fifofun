@@ -2,7 +2,14 @@
 
 import { useActionState, useId, useState } from 'react'
 import { useFormStatus } from 'react-dom'
-import { BUTTON_PRIMARY, CONTROL, CONTROL_INLINE, FieldLabel, FieldRow } from '@/components/field-base'
+import {
+  BUTTON_PRIMARY,
+  CONTROL,
+  CONTROL_INLINE,
+  CONTROL_TEXT,
+  FieldLabel,
+  FieldRow,
+} from '@/components/field-base'
 import { MoneyInput } from '@/components/money-input'
 import { PICKER_START } from '@/lib/brand'
 import { ACCOUNT_KEYS, ACCOUNT_KEY_LABELS } from '@/lib/ledger/settings'
@@ -78,7 +85,7 @@ export function AccountForm({ account }: { account?: AccountView }) {
         here would mean a seventh, one-off variant of a control everywhere
         else in the app the account form is not.
       */}
-      <div className="rows-inset squircle rounded-md bg-surface shadow-xs">
+      <div className="rows-inset squircle rounded-md border border-line bg-surface">
         <FieldRow htmlFor={ids.name} label="Nama akun">
           <input
             id={ids.name}
@@ -129,14 +136,14 @@ export function AccountForm({ account }: { account?: AccountView }) {
               onChange={(event) => setColor(event.target.value)}
               className="size-9 shrink-0 cursor-pointer rounded-sm border border-line bg-transparent p-0.5"
             />
-            <span className="tnum min-w-[4.5rem] font-mono text-footnote text-ink-muted">
+            <span className="tnum min-w-[4.5rem] font-mono text-xs text-ink-muted">
               {color || 'aksen'}
             </span>
             {color ? (
               <button
                 type="button"
                 onClick={() => setColor('')}
-                className="min-h-11 px-1 text-footnote text-ink-muted underline underline-offset-2 hover:text-ink"
+                className="min-h-11 px-1 text-xs text-ink-muted underline underline-offset-2 hover:text-ink"
               >
                 Tanpa warna
               </button>
@@ -155,7 +162,7 @@ export function AccountForm({ account }: { account?: AccountView }) {
               type="file"
               name="logo"
               accept="image/png,image/jpeg,image/webp,image/gif"
-              className="min-w-0 max-w-[13rem] text-body text-ink-muted file:mr-2 file:min-h-11 file:cursor-pointer file:rounded-sm file:border file:border-line file:bg-paper file:px-2.5 file:text-subhead file:text-ink"
+              className={`min-w-0 max-w-[13rem] ${CONTROL_TEXT} text-ink-muted file:mr-2 file:min-h-11 file:cursor-pointer file:rounded-sm file:border file:border-line file:bg-paper file:px-2.5 file:text-sm file:text-ink`}
             />
           </span>
         </FieldRow>
@@ -243,7 +250,7 @@ export function AccountForm({ account }: { account?: AccountView }) {
             rows={3}
             className={`${CONTROL} h-auto py-2`}
           />
-          <p className="text-footnote text-ink-muted">
+          <p className="text-xs text-ink-muted">
             Dipakai saat impor untuk membedakan top-up ke dompetmu sendiri dari uang yang kamu
             kirim ke orang lain. Tanpa ini, semua top-up terhitung pengeluaran.
           </p>
@@ -251,7 +258,7 @@ export function AccountForm({ account }: { account?: AccountView }) {
       ) : null}
 
       {account ? (
-        <p className="text-footnote text-ink-muted">
+        <p className="text-xs text-ink-muted">
           Mengubah saldo awal menggeser saldo akun ini di semua bulan. Untuk dompet yang sudah
           berjalan, pakai Sesuaikan saldo di Ringkasan supaya selisihnya tercatat sebagai
           transaksi.

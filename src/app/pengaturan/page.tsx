@@ -118,7 +118,6 @@ export default async function PengaturanPage({
       title="Pengaturan"
       email={user.email ?? ''}
       current="/pengaturan"
-      lead="Akun dan kategori yang dipakai semua halaman. Nama boleh diganti kapan saja: yang berubah tampilannya, bukan angkanya."
     >
       <Suspense fallback={<SettingsSkeleton />}>
         <Settings section={section} cashflow={cashflow} />

@@ -115,7 +115,7 @@ export function CategoryForm({ category, cashflow, siblings }: Props) {
         its field with `aria-describedby`, since the field itself no longer
         has room to carry it.
       */}
-      <div className="rows-inset squircle rounded-md bg-surface shadow-xs">
+      <div className="rows-inset squircle rounded-md border border-line bg-surface">
         <FieldRow htmlFor={ids.name} label="Nama kategori" invalid={fieldErrors.name}>
           <input
             id={ids.name}
@@ -201,13 +201,13 @@ export function CategoryForm({ category, cashflow, siblings }: Props) {
         {isLookedUpByName(category?.name ?? '') || twins.length > 0 ? (
           <div className="space-y-1">
             {isLookedUpByName(category?.name ?? '') ? (
-              <p id={footerIds.name} className="text-footnote text-ink-muted">
+              <p id={footerIds.name} className="text-xs text-ink-muted">
                 Nama ini dicari impor apa adanya. Kalau diganti, baris yang biasanya masuk ke sini
                 akan menunggu di Tinjau tanpa kategori sampai kamu memberinya kategori atau aturan.
               </p>
             ) : null}
             {twins.length > 0 ? (
-              <p className="text-footnote text-ink-muted">
+              <p className="text-xs text-ink-muted">
                 Pos seperti ini berpasangan dengan{' '}
                 {twins.map((twin) => CASHFLOW_LABELS[twin]).join(' atau ')}, dan keduanya diganti
                 nama bersama-sama.
@@ -215,14 +215,14 @@ export function CategoryForm({ category, cashflow, siblings }: Props) {
             ) : null}
           </div>
         ) : null}
-        <p id={footerIds.cashflow} className="text-footnote text-ink-muted">
+        <p id={footerIds.cashflow} className="text-xs text-ink-muted">
           {CASHFLOW_HELP[flow]}
         </p>
-        <p id={footerIds.description} className="text-footnote text-ink-muted">
+        <p id={footerIds.description} className="text-xs text-ink-muted">
           Kalimat ini muncul di bawah pilihan kategori saat mencatat dan meninjau. Tulis aturan
           batasnya, bukan mengulang namanya: kapan sesuatu masuk ke sini, bukan ke pos sebelah.
         </p>
-        <p id={footerIds.parent} className="text-footnote text-ink-muted">
+        <p id={footerIds.parent} className="text-xs text-ink-muted">
           {hasChildren
             ? 'Kategori ini sendiri sebuah kelompok, jadi tidak bisa dimasukkan ke kelompok lain. Kelompok tidak menampung transaksi; yang dijumlahkan adalah isinya.'
             : parents.length === 0
@@ -233,7 +233,7 @@ export function CategoryForm({ category, cashflow, siblings }: Props) {
 
       {flow === 'bills' ? (
         <div className="space-y-3">
-          <div className="rows-inset squircle rounded-md bg-surface shadow-xs">
+          <div className="rows-inset squircle rounded-md border border-line bg-surface">
             <FieldRow
               htmlFor={ids.dueDay}
               label="Jatuh tempo"
@@ -265,15 +265,15 @@ export function CategoryForm({ category, cashflow, siblings }: Props) {
       ) : null}
 
       <fieldset>
-        <legend className="text-subhead font-medium text-ink">Ikon</legend>
+        <legend className="text-sm font-medium text-ink">Ikon</legend>
         <div className="mt-2 flex flex-wrap gap-1">
           {/* An icon chosen by accident has to be removable, the same way the
               hue below has "Ikuti warna bawaan". */}
           <label
-            className={`inline-flex size-11 cursor-pointer items-center justify-center rounded-sm border text-footnote transition-colors duration-150 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent ${
+            className={`inline-flex size-11 cursor-pointer items-center justify-center rounded-sm border text-xs transition-colors duration-150 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent ${
               icon === ''
                 ? 'border-accent bg-accent-wash text-ink'
-                : 'border-line text-ink-muted hover:border-line-strong hover:bg-sunken'
+                : 'border-line text-ink-muted hover:border-line-strong hover:bg-fill-quaternary'
             }`}
           >
             <input
@@ -300,7 +300,7 @@ export function CategoryForm({ category, cashflow, siblings }: Props) {
                 className={`inline-flex size-11 cursor-pointer items-center justify-center rounded-sm border transition-colors duration-150 has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent ${
                   icon === option
                     ? 'border-accent bg-accent-wash'
-                    : 'border-line hover:border-line-strong hover:bg-sunken'
+                    : 'border-line hover:border-line-strong hover:bg-fill-quaternary'
                 }`}
               >
                 <input
@@ -320,7 +320,7 @@ export function CategoryForm({ category, cashflow, siblings }: Props) {
       </fieldset>
 
       <fieldset>
-        <legend className="text-subhead font-medium text-ink">Warna</legend>
+        <legend className="text-sm font-medium text-ink">Warna</legend>
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
           {PRESET_HUES.map((preset) => (
             <button
@@ -351,21 +351,21 @@ export function CategoryForm({ category, cashflow, siblings }: Props) {
           <button
             type="button"
             onClick={() => setHue('')}
-            className="h-9 rounded-sm border border-line px-2.5 text-footnote text-ink-muted transition-colors duration-150 hover:border-line-strong hover:text-ink"
+            className="h-9 rounded-sm border border-line px-2.5 text-xs text-ink-muted transition-colors duration-150 hover:border-line-strong hover:text-ink"
           >
             Ikuti warna bawaan
           </button>
         </div>
 
-        <p className="mt-2 flex items-center gap-2 text-subhead text-ink">
-          <span className="text-footnote text-ink-muted">Tampilnya:</span>
+        <p className="mt-2 flex items-center gap-2 text-sm text-ink">
+          <span className="text-xs text-ink-muted">Tampilnya:</span>
           <CategoryMark
             name={name || 'Kategori baru'}
             cashflow={flow}
             icon={icon || null}
             hue={hue === '' ? null : Number(hue)}
           />
-          <span className="text-footnote text-ink-faint">
+          <span className="text-xs text-ink-faint">
             {hue === ''
               ? `bawaan ${categoryHue({ name: name || 'Kategori baru', hue: null })} derajat`
               : `${hue} derajat`}

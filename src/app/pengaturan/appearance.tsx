@@ -1,8 +1,5 @@
 import { cookies } from 'next/headers'
-import { Moon } from '@phosphor-icons/react/dist/ssr/Moon'
-import { Sun } from '@phosphor-icons/react/dist/ssr/Sun'
 import { Check } from '@phosphor-icons/react/dist/ssr/Check'
-import { Circle } from '@phosphor-icons/react/dist/ssr/Circle'
 import { setAppearance } from './actions'
 
 /**
@@ -26,14 +23,9 @@ import { setAppearance } from './actions'
  */
 
 const OPTIONS = [
-  {
-    value: 'system',
-    label: 'Ikuti sistem',
-    glyph: Circle,
-    hint: 'Berubah sendiri saat HP berganti mode.',
-  },
-  { value: 'light', label: 'Terang', glyph: Sun, hint: 'Kertas terang, tinta gelap.' },
-  { value: 'dark', label: 'Gelap', glyph: Moon, hint: 'Latar hitam, tinta terang.' },
+  { value: 'system', label: 'Ikuti sistem', hint: 'Berubah sendiri saat HP berganti mode.' },
+  { value: 'light', label: 'Terang', hint: null },
+  { value: 'dark', label: 'Gelap', hint: null },
 ] as const
 
 export async function Appearance() {
@@ -43,15 +35,15 @@ export async function Appearance() {
   return (
     <section aria-labelledby="tampilan" className="space-y-3">
       <div>
-        <h2 id="tampilan" className="text-title3 font-semibold tracking-title3 text-ink">
+        <h2 id="tampilan" className="text-sm font-medium text-ink">
           Tampilan
         </h2>
-        <p className="mt-1 text-subhead text-ink-muted">
+        <p className="mt-1 text-sm text-ink-muted">
           Berlaku di perangkat ini saja. Anggota rumah tangga lain memilih sendiri.
         </p>
       </div>
 
-      <ul className="rows-inset squircle rounded-md bg-surface shadow-xs">
+      <ul className="rows-inset squircle rounded-md border border-line bg-surface">
         {OPTIONS.map((option) => {
           const active = option.value === current
 
@@ -69,14 +61,11 @@ export async function Appearance() {
                   aria-current={active ? 'true' : undefined}
                   className="flex min-h-14 w-full items-center gap-3 px-4 py-2 text-left transition-colors duration-150 active:bg-fill-quaternary"
                 >
-                  <option.glyph
-                    aria-hidden="true"
-                    weight={active ? 'fill' : 'regular'}
-                    className={`size-5 shrink-0 ${active ? 'text-accent' : 'text-ink-faint'}`}
-                  />
                   <span className="min-w-0 flex-1">
-                    <span className="block text-subhead text-ink">{option.label}</span>
-                    <span className="block text-footnote text-ink-muted">{option.hint}</span>
+                    <span className="block text-sm text-ink">{option.label}</span>
+                    {option.hint ? (
+                      <span className="block text-xs text-ink-muted">{option.hint}</span>
+                    ) : null}
                   </span>
                   {/*
                     A tick rather than a colour, and the word beside it for a
