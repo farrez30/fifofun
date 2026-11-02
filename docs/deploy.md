@@ -12,9 +12,12 @@ Semua perintah dijalankan dari akar repo.
 
 - Akun Vercel, sudah tertaut ke GitHub.
 - Project Neon `fifofun` (`silent-forest-61541759`, org VCC, Singapura, PG17).
-  Branch `main` untuk produksi, `dev` untuk pengembangan; `.env.local` menunjuk
-  `dev`, jadi seed dan migrasi coba-coba dari laptop tidak menyentuh data
-  sungguhan.
+  Branch `main` untuk produksi, `dev` untuk deployment pratinjau dan percobaan.
+  `.env.local` boleh menunjuk salah satunya. Menunjuk `dev` berarti seed dan
+  migrasi coba-coba dari laptop tidak menyentuh data sungguhan; menunjuk `main`
+  berarti setiap simpan di localhost menulis ke data asli, dan `pnpm db:seed`
+  tidak boleh dijalankan sama sekali. Mana yang dipakai di mesin mana adalah
+  keputusan pemilik, bukan default.
 - Repo sudah terdorong ke `origin`, dan `pnpm build` hijau di mesin sendiri.
 
 ## Region
@@ -34,9 +37,10 @@ hapus kuncinya dari berkas.
 
 | Variabel | Environment | Dari mana |
 | --- | --- | --- |
-| `DATABASE_POOL_URL` | Production, Preview | `npx neonctl connection-string main --project-id silent-forest-61541759 --pooled` |
-| `BETTER_AUTH_URL` | Production, Preview | origin deployment itu sendiri, tanpa garis miring di ujung |
-| `BETTER_AUTH_SECRET` | Production, Preview | 32 byte acak; menggantinya mengeluarkan semua orang |
+| `DATABASE_POOL_URL` | Production | `npx neonctl connection-string main --project-id silent-forest-61541759 --pooled` |
+| `DATABASE_POOL_URL` | Preview | sama, tetapi branch `dev` (lihat [Pratinjau](#pratinjau-dan-branch-dev)) |
+| `BETTER_AUTH_URL` | Production, Preview | Production: domain produksi. Preview: satu origin https tetap, misalnya alias `fifofun-git-main-…` |
+| `BETTER_AUTH_SECRET` | Production, Preview | 32 byte acak, berbeda per environment; menggantinya mengeluarkan semua orang |
 | `NEXT_PUBLIC_SITE_URL` | Production | domain final, tanpa garis miring di ujung |
 | `TELEGRAM_BOT_TOKEN` | Production | @BotFather |
 | `TELEGRAM_WEBHOOK_SECRET` | Production | string acak panjang buatan sendiri |
@@ -60,8 +64,38 @@ keempatnya, atau kosongkan keempatnya: tanpa `TELEGRAM_WEBHOOK_SECRET`
 endpoint-nya menolak semua permintaan dengan 503, yang memang perilaku yang
 diinginkan.
 
-**`BETTER_AUTH_URL` harus persis origin yang dibuka orang.** Better Auth menolak
-permintaan dari origin lain, jadi deployment pratinjau butuh nilainya sendiri.
+**`BETTER_AUTH_URL` tidak harus sama dengan URL yang dibuka orang.** Tidak ada
+route `/api/auth` di app ini; masuk dan keluar lewat server action di
+[`src/lib/auth/gerbang.ts`](../src/lib/auth/gerbang.ts), yang menyusun
+permintaannya sendiri ke Better Auth dengan header `origin` dari variabel ini.
+Jadi satu nilai cukup untuk semua URL pratinjau. Yang penting skemanya: https di
+Vercel (cookie sesi diberi awalan `__Secure-`), http hanya untuk localhost, dan
+nilainya sama dengan port yang dipakai `pnpm dev` di mesin itu.
+
+## Pratinjau dan branch dev
+
+Deployment pratinjau membaca branch Neon `dev`, bukan `main`. URL pratinjau
+adalah pintu publik kedua, dan kalau ia menunjuk `main`, setiap PR yang setengah
+jadi bisa menulis ke data asli.
+
+`dev` dibuat sebagai salinan `main` dan tidak ikut berubah sesudahnya. Untuk
+menyegarkannya:
+
+```bash
+npx neonctl branches reset dev --parent --project-id silent-forest-61541759
+```
+
+Reset ikut menyalin `auth.sessions`, termasuk sesi produksi yang sedang hidup.
+Hapus isinya di `dev` sesudah reset; secret pratinjau berbeda, tetapi token sesi
+produksi tidak perlu ada di branch yang lebih longgar:
+
+```bash
+psql "$(npx neonctl connection-string dev --project-id silent-forest-61541759)" -c "delete from auth.sessions"
+```
+
+Pratinjau dilindungi Vercel Authentication (Settings → Deployment Protection),
+jadi hanya akun Vercel pemilik yang bisa membukanya. Jangan matikan selama `dev`
+berisi salinan data asli.
 
 ## Jalur A — integrasi Git (rekomendasi)
 
@@ -121,6 +155,12 @@ bash scripts/push-env.sh production
 ```bash
 bash scripts/push-env.sh preview
 ```
+
+Skrip ini mendorong apa pun yang ada di `.env.local`, padahal `.env.local` yang
+dipakai sehari-hari menunjuk localhost dan salah satu branch Neon. Sebelum
+menjalankannya, sunting dulu supaya nilainya untuk environment tujuan:
+`BETTER_AUTH_URL` https, `DATABASE_POOL_URL` branch `main` untuk production dan
+`dev` untuk preview. Skrip menolak `BETTER_AUTH_URL` yang masih http.
 
 Variabel Telegram sengaja hanya didorong ke `production`. Deployment pratinjau
 adalah URL publik kedua ke baris yang sama, dan webhook menulis dengan kunci
@@ -196,6 +236,11 @@ sandi lamanya. Sesi tidak ikut: semua orang masuk sekali lagi.
 
 Data yang dicatat di Neon setelah langkah 4 tidak ikut mundur kalau jalan mundur
 itu dipakai, jadi putuskan dalam hitungan jam, bukan hari.
+
+Perpindahan ini sudah selesai pada 21–22 Oktober 2026. Per 2 November 2026
+project Supabase lama tidak bisa dihubungi lagi, jadi jalan mundur di langkah 5
+sudah tidak ada: Neon `main` adalah satu-satunya salinan data, dan cadangannya
+adalah urusan Neon.
 
 ## Setelah deploy pertama
 
