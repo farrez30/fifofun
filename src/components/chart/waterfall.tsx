@@ -192,14 +192,11 @@ function Row({
 
   return (
     <li className={`${COLUMNS} items-center`}>
-      {/* Held at the Tailwind scale rather than the Dynamic Type roles the
-          rest of this file moved to: the label column is 104px below `sm`,
-          already the tightest budget in the app, and `charts.spec.ts`
-          ("fits a phone without hiding the amounts off the side") measures
-          it at 320px. `text-sm`/`text-xs` are one pixel taller
-          than `text-sm`/`text-xs` and that pixel was enough to clip a real
-          figure. Metric-identical `caption1`/`caption2` do not exist at 14px,
-          so this stays put rather than shrinking the type to fit. */}
+      {/* The label column is 104px below `sm`, already the tightest budget
+          in the app, and `charts.spec.ts` ("fits a phone without hiding the
+          amounts off the side") measures it at 320px. One pixel more line
+          height clipped a real figure here once, so the leading is pinned
+          rather than left to the size's default. */}
       <div className="min-w-0 py-1">
         <p
           className={`truncate text-sm leading-5 ${anchor ? 'font-medium text-ink' : 'text-ink'}`}

@@ -11,7 +11,7 @@ import { type ReactNode } from 'react'
  */
 
 /*
-  17px on a phone, 14px from the small breakpoint up.
+  16px on a phone, 14px from the small breakpoint up.
 
   The floor is not a preference. iOS Safari zooms the whole viewport when a
   focused control measures under 16px, and there is no way to decline it from
@@ -19,10 +19,10 @@ import { type ReactNode } from 'react'
   does not govern it. Every data entry screen in this app was doing that on
   every tap.
 
-  It used to say `text-base`, which is 16 and clears the floor by nothing at
-  all. `text-body` is Apple's own body role at 17, so the control now names its
-  size rather than picking the smallest number that happens to work, and there
-  is a pixel of room before the zoom comes back.
+  It was `text-body`, Apple's 17px body role, while the app followed Dynamic
+  Type. ADR 0007 moved the app to a four-step Tailwind scale and those roles
+  left `globals.css`, so the control now says `text-base`: exactly the floor,
+  which is all the zoom asks for.
 
   The floor is still easy to lose, because 14px is the right size everywhere
   else and `text-sm` is what anyone would reach for. `e2e/mobile.spec.ts` reads
@@ -41,7 +41,7 @@ import { type ReactNode } from 'react'
  * wherever something has to match is the whole reason it is named — the
  * floor it names is the same floor the comment below explains.
  */
-export const CONTROL_TEXT = 'text-body sm:text-sm'
+export const CONTROL_TEXT = 'text-base sm:text-sm'
 
 export const CONTROL =
   `h-11 w-full rounded-sm border border-transparent bg-fill-tertiary px-3 ${CONTROL_TEXT} text-ink transition-colors duration-150 placeholder:text-ink-faint focus:border-accent focus:bg-surface`
