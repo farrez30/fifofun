@@ -29,19 +29,18 @@ export default async function JoinPage() {
     <main id="main" className="grid min-h-dvh place-items-center px-6 py-12">
       <div className="w-full max-w-sm">
         <div className="mb-8">
-          <p className="font-mono text-caption1 uppercase tracking-widest text-ink-faint">FiFoFun</p>
-          <h1 className="mt-2 text-title1 font-bold tracking-title1 text-ink">
+          <p className="font-mono text-xs uppercase tracking-widest text-ink-faint">FiFoFun</p>
+          <h1 className="mt-2 text-xl font-semibold text-ink">
             Masukkan kode undanganmu
           </h1>
-          <p className="mt-2 text-subhead text-ink-muted">
-            Akun ini belum tergabung ke rumah tangga mana pun, jadi belum ada catatan yang bisa
-            ditampilkan. Kode undangan diterbitkan oleh anggota yang sudah ada di dalamnya.
+          <p className="mt-2 text-sm text-ink-muted">
+            Akun ini belum tergabung ke rumah tangga mana pun.
           </p>
         </div>
 
         <JoinForm />
 
-        <p className="mt-8 border-t border-line pt-4 text-footnote text-ink-faint">
+        <p className="mt-8 border-t border-line pt-4 text-xs text-ink-faint">
           Tidak punya kodenya? Undangan hanya bisa dibuat dari dalam rumah tangga yang dituju,
           dan berlaku sekali pakai.
         </p>

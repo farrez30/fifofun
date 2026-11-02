@@ -50,7 +50,6 @@ export default async function InvitesPage() {
       title="Undangan"
       email={user.email ?? ''}
       current="/undangan"
-      lead="Tanpa kode undangan tidak ada akun baru yang bisa dibuat, dan itu yang menjaga catatan rumah tangga ini tetap milik orang yang kamu izinkan saja."
     >
       <InvitesPanel invites={invites} now={new Date().toISOString()} />
     </AppShell>
