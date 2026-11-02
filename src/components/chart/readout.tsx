@@ -62,8 +62,8 @@ export function ChartReadout({ children }: { children: ReactNode }) {
               className="material pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-[calc(100%+10px)] whitespace-nowrap rounded-md px-2.5 py-1.5 shadow-lg"
               style={{ left: readout.x, top: readout.y }}
             >
-              <p className="text-footnote font-medium text-ink">{readout.label}</p>
-              <p className="tnum font-mono text-footnote text-ink-muted">{readout.value}</p>
+              <p className="text-xs font-medium text-ink">{readout.label}</p>
+              <p className="tnum font-mono text-xs text-ink-muted">{readout.value}</p>
             </div>,
             document.body,
           )

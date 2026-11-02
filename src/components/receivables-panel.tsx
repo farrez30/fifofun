@@ -1,5 +1,6 @@
 import type { ReceivableReview, ReceivableState } from '@/lib/ledger/receivables'
 import { formatIdr } from '@/lib/money'
+import { InfoTip } from '@/components/info-tip'
 
 /**
  * Money lent out and not yet back.
@@ -27,9 +28,9 @@ export function ReceivablesPanel({ review, staleAfter = 30 }: Props) {
 
   if (receivables.length === 0) {
     return (
-      <div className="squircle rounded-md bg-surface shadow-xs p-6">
-        <p className="text-subhead text-ink">Tidak ada piutang yang tercatat.</p>
-        <p className="mt-2 text-subhead text-ink-muted">
+      <div className="squircle rounded-md border border-line bg-surface p-6">
+        <p className="text-sm text-ink">Tidak ada piutang yang tercatat.</p>
+        <p className="mt-2 text-sm text-ink-muted">
           Catat uang yang kamu talangi sebagai Piutang Baru, dan pelunasannya sebagai Piutang
           Cair dengan nama kategori yang sama. Sisanya dihitung sendiri.
         </p>
@@ -38,14 +39,22 @@ export function ReceivablesPanel({ review, staleAfter = 30 }: Props) {
   }
 
   return (
-    <div className="squircle rounded-md bg-surface shadow-xs">
+    <div className="squircle rounded-md border border-line bg-surface">
       <div className="border-b border-line p-4">
-        <p className="text-subhead font-medium text-ink">
-          {open.length === 0
-            ? `Semua piutang sudah kembali, ${formatIdr(returned)}.`
-            : `${formatIdr(outstanding)} masih di tangan orang lain, dari ${open.length} piutang.`}
-        </p>
-        <p className="mt-1 text-subhead text-ink-muted">
+        <div className="flex items-start gap-1">
+          <p className="min-w-0 flex-1 text-sm font-medium text-ink">
+            {open.length === 0
+              ? `Semua piutang sudah kembali, ${formatIdr(returned)}.`
+              : `${formatIdr(outstanding)} masih di tangan orang lain, dari ${open.length} piutang.`}
+          </p>
+          <InfoTip label="Cara sisa piutang dihitung">
+            <p>
+              Sisa piutang dihitung dari selisih Piutang Baru dan Piutang Cair pada kategori yang
+              sama, jadi nama tidak perlu diubah saat lunas.
+            </p>
+          </InfoTip>
+        </div>
+        <p className="mt-1 text-sm text-ink-muted">
           Total ditalangi {formatIdr(lent)}, sudah kembali {formatIdr(returned)}.
         </p>
       </div>
@@ -60,13 +69,13 @@ export function ReceivablesPanel({ review, staleAfter = 30 }: Props) {
                 {style.glyph}
               </span>
 
-              <span className="min-w-0 flex-1 text-subhead text-ink">{item.name}</span>
+              <span className="min-w-0 flex-1 text-sm text-ink">{item.name}</span>
 
-              <span className="tnum shrink-0 font-mono text-subhead text-ink">
+              <span className="tnum shrink-0 font-mono text-sm text-ink">
                 {item.outstanding > 0n ? formatIdr(item.outstanding) : formatIdr(item.lent)}
               </span>
 
-              <span className="w-full text-footnote text-ink-muted">
+              <span className="w-full text-xs text-ink-muted">
                 {style.label}
                 {item.state === 'partial'
                   ? `, ${formatIdr(item.returned)} dari ${formatIdr(item.lent)}`
@@ -82,13 +91,11 @@ export function ReceivablesPanel({ review, staleAfter = 30 }: Props) {
         })}
       </ul>
 
-      <p className="border-t border-line p-4 text-footnote text-ink-muted">
-        Sisa piutang dihitung dari selisih Piutang Baru dan Piutang Cair pada kategori yang sama,
-        jadi nama tidak perlu diubah saat lunas.
-        {stale.length > 0
-          ? ` ${stale.length} piutang sudah lewat ${staleAfter} hari tanpa pelunasan.`
-          : ''}
-      </p>
+      {stale.length > 0 ? (
+        <p className="border-t border-line p-4 text-xs text-ink-muted">
+          {stale.length} piutang sudah lewat {staleAfter} hari tanpa pelunasan.
+        </p>
+      ) : null}
     </div>
   )
 }

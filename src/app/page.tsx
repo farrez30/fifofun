@@ -98,9 +98,7 @@ function EmptyState() {
         </Link>
       }
     >
-      Unggah e-Statement Mandiri dalam format .xlsx untuk mengisi catatanmu. Setiap baris
-      dicocokkan dengan saldo yang dicetak bank, jadi kalau ada yang tidak pas kamu akan tahu
-      barisnya yang mana.
+      Unggah e-Statement Mandiri dalam format .xlsx untuk mengisi catatanmu.
     </Unavailable>
   )
 }
@@ -290,7 +288,7 @@ async function Dashboard({ akun }: { akun: string }) {
   return (
     <div className="space-y-10">
       <section aria-labelledby="ringkasan-bulan">
-        <h2 id="ringkasan-bulan" className="mb-3 text-subhead font-medium text-ink">
+        <h2 id="ringkasan-bulan" className="mb-3 text-sm font-medium text-ink">
           Bulan terakhir tercatat
           <span className="ml-2 font-normal text-ink-muted">{latest.month}</span>
         </h2>
@@ -320,7 +318,7 @@ async function Dashboard({ akun }: { akun: string }) {
               emphasis
               previous={scopedPoints[scopedPoints.length - 2]?.closing}
               previousLabel={scopedPoints[scopedPoints.length - 2]?.month}
-              hint={`Saldo akhir ${latest.month} menurut catatan, termasuk perpindahan antar akun.`}
+              info={`Saldo akhir ${latest.month} menurut catatan, termasuk perpindahan antar akun.`}
             />
           ) : (
             <Stat
@@ -336,7 +334,7 @@ async function Dashboard({ akun }: { akun: string }) {
               emphasis
               previous={previous?.statement.sisaUang}
               previousLabel={previous?.month}
-              hint="Semua akun, turunan dari bulan sebelumnya. Berapa yang dipastikan bank ada di bagian Uangnya ada di mana."
+              info="Semua akun, turunan dari bulan sebelumnya. Berapa yang dipastikan bank ada di bagian Uangnya ada di mana."
             />
           )}
         </StatCarousel>
@@ -345,16 +343,16 @@ async function Dashboard({ akun }: { akun: string }) {
       {overdrawn.length > 0 || staleAdjustments.length > 0 || needsReview > 0 ? (
         <section
           aria-labelledby="perlu-perhatian"
-          className="border border-warn/40 bg-warn-wash p-4"
+          className="squircle rounded-md border border-line bg-surface p-4"
         >
-          <h2 id="perlu-perhatian" className="text-subhead font-medium text-ink">
+          <h2 id="perlu-perhatian" className="text-sm font-medium text-ink">
             <span aria-hidden="true" className="mr-1.5 text-warn">
               ▲
             </span>
             Perlu perhatian
           </h2>
 
-          <div className="mt-3 space-y-3 text-subhead">
+          <div className="mt-3 space-y-3 text-sm">
             {overdrawn.length > 0 ? (
               <div>
                 <p className="text-ink">
@@ -413,8 +411,10 @@ async function Dashboard({ akun }: { akun: string }) {
                 <p className="text-ink">
                   {needsReview} transaksi belum dipastikan kategorinya.
                 </p>
-                <p className="mt-0.5 text-ink-muted">
-                  Kategorinya diterka dari keterangan bank, dan yang belum yakin ditandai.
+                <p className="mt-0.5">
+                  <Link href="/tinjau" className="text-accent underline underline-offset-2">
+                    Tinjau sekarang
+                  </Link>
                 </p>
               </div>
             ) : null}
@@ -423,7 +423,7 @@ async function Dashboard({ akun }: { akun: string }) {
       ) : null}
 
       <section aria-labelledby="perjalanan">
-        <h2 id="perjalanan" className="mb-3 text-subhead font-medium text-ink">
+        <h2 id="perjalanan" className="mb-3 text-sm font-medium text-ink">
           Dari saldo awal ke sisa uang
           <span className="ml-2 font-normal text-ink-muted">{latest.month}</span>
         </h2>
@@ -434,7 +434,7 @@ async function Dashboard({ akun }: { akun: string }) {
       </section>
 
       <section aria-labelledby="saldo">
-        <h2 id="saldo" className="mb-3 text-subhead font-medium text-ink">
+        <h2 id="saldo" className="mb-3 text-sm font-medium text-ink">
           Uangnya ada di mana
         </h2>
         <Balances
@@ -450,7 +450,7 @@ async function Dashboard({ akun }: { akun: string }) {
 
       <section aria-labelledby="anggaran">
         <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-          <h2 id="anggaran" className="text-subhead font-medium text-ink">
+          <h2 id="anggaran" className="text-sm font-medium text-ink">
             Anggaran dan realisasi
             <span className="ml-2 font-normal text-ink-muted">{latest.month}</span>
           </h2>
@@ -459,7 +459,7 @@ async function Dashboard({ akun }: { akun: string }) {
               not an <a>: the bare anchor forced a full page load. */}
           <Link
             href={`/anggaran?bulan=${latest.month}`}
-            className="text-subhead text-accent underline underline-offset-2"
+            className="text-sm text-accent underline underline-offset-2"
           >
             Atur anggaran {formatMonthKey(latest.month)}
           </Link>
@@ -483,7 +483,7 @@ async function Dashboard({ akun }: { akun: string }) {
       </section>
 
       <section aria-labelledby="tagihan">
-        <h2 id="tagihan" className="mb-3 text-subhead font-medium text-ink">
+        <h2 id="tagihan" className="mb-3 text-sm font-medium text-ink">
           Tagihan rutin
           <span className="ml-2 font-normal text-ink-muted">{latest.month}</span>
         </h2>
@@ -492,7 +492,7 @@ async function Dashboard({ akun }: { akun: string }) {
 
       {receivables.receivables.length > 0 ? (
         <section aria-labelledby="piutang">
-          <h2 id="piutang" className="mb-3 text-subhead font-medium text-ink">
+          <h2 id="piutang" className="mb-3 text-sm font-medium text-ink">
             Piutang
           </h2>
           <ReceivablesPanel review={receivables} />
@@ -500,7 +500,7 @@ async function Dashboard({ akun }: { akun: string }) {
       ) : null}
 
       <section aria-labelledby="aliran">
-        <h2 id="aliran" className="mb-3 text-subhead font-medium text-ink">
+        <h2 id="aliran" className="mb-3 text-sm font-medium text-ink">
           Ke mana uangnya pergi
           <span className="ml-2 font-normal text-ink-muted">{latest.month}</span>
         </h2>
@@ -510,14 +510,10 @@ async function Dashboard({ akun }: { akun: string }) {
           caption={`Aliran uang ${latest.month}`}
           note={<FoldedCategories folded={flow.folded} into={flow.foldedInto} />}
         />
-        <p className="mt-2 text-footnote text-ink-muted">
-          Setiap kategori yang terpakai bulan ini punya pitanya sendiri, dengan warna yang sama
-          seperti di rincian bulan dan di antrean tinjau.
-        </p>
       </section>
 
       <section aria-labelledby="tren">
-        <h2 id="tren" className="mb-3 text-subhead font-medium text-ink">
+        <h2 id="tren" className="mb-3 text-sm font-medium text-ink">
           Tren {shownSeries.length} bulan
           <span className="ml-2 font-normal text-ink-muted">{scoped?.name ?? 'Semua akun'}</span>
         </h2>
@@ -551,7 +547,7 @@ async function Dashboard({ akun }: { akun: string }) {
             <BalanceTrend series={shownSeries} caption={balanceCaption} />
           )}
           {scoped && stalled.some((account) => account.accountId === scoped.id) ? (
-            <p className="text-footnote text-ink-muted">
+            <p className="text-xs text-ink-muted">
               Akun ini hampir tidak pernah mengeluarkan uang di catatan, jadi garisnya kemungkinan
               besar lebih tinggi daripada saldo sebenarnya.
             </p>
@@ -560,7 +556,7 @@ async function Dashboard({ akun }: { akun: string }) {
       </section>
 
       <section aria-labelledby="transaksi">
-        <h2 id="transaksi" className="mb-3 text-subhead font-medium text-ink">
+        <h2 id="transaksi" className="mb-3 text-sm font-medium text-ink">
           Transaksi terakhir
         </h2>
         {/* Eight, the last week or so of a normal household: a glance at what
@@ -573,11 +569,10 @@ async function Dashboard({ akun }: { akun: string }) {
           caption="Delapan transaksi terakhir"
           emptyText="Belum ada transaksi tercatat."
         />
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-          <p className="text-footnote text-ink-muted">Klik keterangannya untuk mengubahnya.</p>
+        <div className="mt-2 flex justify-end">
           {transactions.length > RECENT_ROWS ? (
-            <Link href="/laporan" className="inline-flex min-h-11 items-center text-subhead text-accent">
-              Lihat semua ({transactions.length.toLocaleString('id-ID')}) ›
+            <Link href="/laporan" className="inline-flex min-h-11 items-center text-sm text-accent">
+              Lihat semua ({transactions.length.toLocaleString('id-ID')})
             </Link>
           ) : null}
         </div>

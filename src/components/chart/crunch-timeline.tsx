@@ -41,9 +41,9 @@ export function CrunchTimeline({ projection, caption, onBirthYearChange }: Props
 
   if (years.length === 0) {
     return (
-      <figure className="squircle rounded-md bg-surface shadow-xs p-6">
-        <figcaption className="text-subhead font-medium text-ink">{caption}</figcaption>
-        <p className="mt-2 text-subhead text-ink-muted">
+      <figure className="squircle rounded-md border border-line bg-surface p-6">
+        <figcaption className="text-sm font-medium text-ink">{caption}</figcaption>
+        <p className="mt-2 text-sm text-ink-muted">
           Tambahkan rencana anak untuk melihat sebaran biayanya per tahun.
         </p>
       </figure>
@@ -56,10 +56,10 @@ export function CrunchTimeline({ projection, caption, onBirthYearChange }: Props
   const labels = children.map((child) => child.label)
 
   return (
-    <figure className="squircle rounded-md bg-surface shadow-xs p-4">
+    <figure className="squircle rounded-md border border-line bg-surface p-4">
       <figcaption className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
-        <span className="text-subhead font-medium text-ink">{caption}</span>
-        <span className="flex flex-wrap items-center gap-3 text-footnote text-ink-muted">
+        <span className="text-sm font-medium text-ink">{caption}</span>
+        <span className="flex flex-wrap items-center gap-3 text-xs text-ink-muted">
           {labels.map((label, index) => (
             <span key={label} className="flex items-center gap-1.5">
               <span
@@ -104,7 +104,7 @@ export function CrunchTimeline({ projection, caption, onBirthYearChange }: Props
             return (
               <div key={year.year} className="flex min-w-6 flex-1 flex-col items-center gap-1">
                 <span
-                  className={`text-caption2 leading-none ${crunch ? 'text-over' : 'text-transparent'}`}
+                  className={`text-xs leading-none ${crunch ? 'text-over' : 'text-transparent'}`}
                   aria-hidden="true"
                 >
                   ▲
@@ -138,7 +138,7 @@ export function CrunchTimeline({ projection, caption, onBirthYearChange }: Props
 
                 <span
                   aria-hidden="true"
-                  className={`text-caption2 tabular-nums ${crunch ? 'font-medium text-over' : 'text-ink-faint'}`}
+                  className={`text-xs tabular-nums ${crunch ? 'font-medium text-over' : 'text-ink-faint'}`}
                 >
                   {String(year.year).slice(2)}
                 </span>
@@ -165,7 +165,7 @@ export function CrunchTimeline({ projection, caption, onBirthYearChange }: Props
       </ChartReadout>
 
       {onBirthYearChange ? (
-        <p className="mt-1 text-footnote text-ink-muted">
+        <p className="mt-1 text-xs text-ink-muted">
           Seret penanda tahun lahir, atau pilih salah satunya lalu pakai tombol panah. Puncak
           biayanya akan saling menjauh atau bertabrakan mengikuti jaraknya.
         </p>
@@ -176,10 +176,10 @@ export function CrunchTimeline({ projection, caption, onBirthYearChange }: Props
            carried the same three slots in the same order, so the sentence was a
            table row wearing prose, and the years never lined up to be compared. */
         <div className="mt-3 border-t border-line pt-3">
-          <p className="mb-2 text-subhead text-ink">
+          <p className="mb-2 text-sm text-ink">
             {crunchYears.length} tahun memikul dua biaya masuk sekaligus
           </p>
-          <dl className="space-y-1.5 text-subhead">
+          <dl className="space-y-1.5 text-sm">
             {crunchYears.map((year) => (
               <div key={year.year} className="flex flex-wrap items-baseline gap-x-3">
                 <dt className="tnum font-mono w-12 shrink-0 text-ink">{year.year}</dt>
@@ -194,7 +194,7 @@ export function CrunchTimeline({ projection, caption, onBirthYearChange }: Props
           </dl>
         </div>
       ) : (
-        <p className="mt-3 border-t border-line pt-3 text-subhead text-ink-muted">
+        <p className="mt-3 border-t border-line pt-3 text-sm text-ink-muted">
           Tidak ada tahun dengan dua biaya masuk sekaligus. Ini yang membuat jarak
           kelahiran terasa di keuangan, bukan totalnya.
         </p>

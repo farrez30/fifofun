@@ -3,6 +3,7 @@ import { formatJakarta } from '@/lib/datetime'
 import type { AccountMovement, BankReconciliation, StalledAccount } from '@/lib/ledger/monthly'
 import type { AccountKind } from '@/lib/ledger/types'
 import { formatIdr } from '@/lib/money'
+import { InfoTip } from '@/components/info-tip'
 
 /**
  * Where the money actually is, and how much of that the app can vouch for.
@@ -98,7 +99,7 @@ export function Balances({
             reconciliation.ok ? 'border-under/40 bg-under-wash' : 'border-over/40 bg-over-wash'
           }`}
         >
-          <p className="flex items-center gap-2 text-subhead font-medium text-ink">
+          <p className="flex items-center gap-2 text-sm font-medium text-ink">
             <span aria-hidden="true" className={reconciliation.ok ? 'text-under' : 'text-over'}>
               {reconciliation.ok ? '●' : '▲'}
             </span>
@@ -108,13 +109,13 @@ export function Balances({
           {/* Two labelled figures rather than one sentence containing both. The
               comparison is the point, and a reader can only compare two numbers
               they can see at once. */}
-          <dl className="mt-3 flex flex-wrap gap-x-10 gap-y-2 text-subhead">
+          <dl className="mt-3 flex flex-wrap gap-x-10 gap-y-2 text-sm">
             <div>
-              <dt className="text-footnote text-ink-faint">App menghitung</dt>
+              <dt className="text-xs text-ink-faint">App menghitung</dt>
               <dd className="tnum font-mono text-ink">{formatIdr(reconciliation.computed)}</dd>
             </div>
             <div>
-              <dt className="text-footnote text-ink-faint">
+              <dt className="text-xs text-ink-faint">
                 Bank mencetak
                 {statementDate ? ` per ${formatJakarta(statementDate, 'date')}` : ''}
               </dt>
@@ -122,7 +123,7 @@ export function Balances({
             </div>
             {reconciliation.ok ? null : (
               <div>
-                <dt className="text-footnote text-ink-faint">Selisih</dt>
+                <dt className="text-xs text-ink-faint">Selisih</dt>
                 <dd className="tnum font-mono text-over">
                   {formatIdr(reconciliation.difference)}
                 </dd>
@@ -130,7 +131,7 @@ export function Balances({
             )}
           </dl>
 
-          <p className="mt-3 text-footnote text-ink-muted">
+          <p className="mt-3 text-xs text-ink-muted">
             {reconciliation.ok
               ? 'Satu-satunya angka di halaman ini yang dicek ke sumber di luar app.'
               : 'Ada baris yang belum masuk atau salah terbaca.'}
@@ -140,7 +141,7 @@ export function Balances({
 
       {stalled.length > 0 ? (
         <div className="border border-warn/40 bg-warn-wash p-4">
-          <p className="flex items-baseline gap-2 text-subhead font-medium text-ink">
+          <p className="flex items-baseline gap-2 text-sm font-medium text-ink">
             <span aria-hidden="true" className="text-warn">
               ◆
             </span>
@@ -150,20 +151,23 @@ export function Balances({
             </span>
           </p>
 
-          <p className="mt-2 text-subhead text-ink-muted">
-            {stalled.length} akun menerima uang dan hampir tidak pernah mengeluarkannya:{' '}
-            <span className="text-ink">
-              {stalled.map((account) => account.name).join(', ')}
-            </span>
-            .
-          </p>
+          <div className="mt-2 flex items-start gap-1">
+            <p className="min-w-0 flex-1 text-sm text-ink-muted">
+              {stalled.length} akun menerima uang dan hampir tidak pernah mengeluarkannya:{' '}
+              <span className="text-ink">
+                {stalled.map((account) => account.name).join(', ')}
+              </span>
+              .
+            </p>
+            <InfoTip label="Kenapa saldonya tertahan">
+              <p>
+                E-statement Mandiri hanya merekam saat kamu top-up. Belanja dari e-wallet tidak lewat
+                Mandiri, jadi app tidak bisa melihatnya.
+              </p>
+            </InfoTip>
+          </div>
 
-          <p className="mt-2 text-subhead text-ink-muted">
-            E-statement Mandiri hanya merekam saat kamu top-up. Belanja dari e-wallet tidak lewat
-            Mandiri, jadi app tidak bisa melihatnya.
-          </p>
-
-          <p className="mt-2 text-footnote text-ink-muted">
+          <p className="mt-2 text-xs text-ink-muted">
             Nominal per akun ada di tabel bawah, ditandai ◆. Kalau kamu tahu saldo sebenarnya,
             Sesuaikan saldo mencatat selisihnya sebagai transaksi. Akun yang memang sudah tidak
             dipakai bisa diarsipkan di{' '}
@@ -178,16 +182,16 @@ export function Balances({
       <BalanceCards rows={balanceRows} />
 
       <div
-        className="relative hidden overflow-x-auto squircle rounded-md bg-surface shadow-xs @4xl:block"
+        className="relative hidden overflow-x-auto squircle rounded-md border border-line bg-surface @4xl:block"
         tabIndex={0}
         role="region"
         aria-label="Tabel saldo per akun, bisa digeser ke samping"
       >
 
-        <table className="w-full text-subhead">
+        <table className="w-full text-sm">
           <caption className="sr-only">Saldo tiap akun, dari saldo awal ditambah masuk dikurangi keluar</caption>
           <thead>
-            <tr className="border-b border-line text-left text-caption1 uppercase tracking-wide text-ink-faint">
+            <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-faint">
               <th scope="col" className="px-4 py-2.5 font-medium">
                 Akun
               </th>
@@ -218,10 +222,10 @@ export function Balances({
 
 function Split({ label, sen, hint }: { label: string; sen: bigint; hint: string }) {
   return (
-    <div className="squircle rounded-md bg-surface shadow-xs p-4">
-      <p className="text-footnote text-ink-faint">{label}</p>
-      <p className="mt-1.5 tnum font-mono text-title3 tracking-title3 text-ink">{formatIdr(sen)}</p>
-      <p className="mt-1 text-footnote text-ink-muted">{hint}</p>
+    <div className="squircle rounded-md border border-line bg-surface p-4">
+      <p className="text-xs text-ink-faint">{label}</p>
+      <p className="mt-1.5 tnum font-mono text-xl text-ink">{formatIdr(sen)}</p>
+      <p className="mt-1 text-xs text-ink-muted">{hint}</p>
     </div>
   )
 }

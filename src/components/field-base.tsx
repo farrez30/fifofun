@@ -70,7 +70,7 @@ export const CONTROL =
    instead of in the middle, and every outline this replaced had written
    `inline-flex items-center` out again to fix exactly that. */
 const BUTTON_BASE =
-  'inline-flex h-11 items-center justify-center rounded-full px-5 text-subhead font-medium transition-[background-color,color,transform] duration-150 ease-press active:scale-[0.97] disabled:opacity-40 disabled:active:scale-100'
+  'inline-flex h-11 items-center justify-center rounded-full px-5 text-sm font-medium transition-[background-color,color,transform] duration-150 ease-press active:scale-[0.97] disabled:opacity-40 disabled:active:scale-100'
 
 /** The one thing on the screen somebody came to press. */
 export const BUTTON_PRIMARY = `${BUTTON_BASE} bg-accent text-paper hover:bg-accent-strong`
@@ -105,7 +105,7 @@ export const BUTTON_PLAIN = `${BUTTON_BASE} px-2 text-accent hover:bg-fill-quate
 */
 export const SEGMENTED = 'inline-flex gap-0.5 rounded-lg bg-fill-tertiary p-0.5'
 export const SEGMENT =
-  'inline-flex h-11 items-center justify-center rounded-[7px] px-3 text-footnote font-medium text-ink-muted transition-colors duration-150 sm:h-9'
+  'inline-flex h-11 items-center justify-center rounded-[7px] px-3 text-xs font-medium text-ink-muted transition-colors duration-150 sm:h-9'
 export const SEGMENT_ON = 'bg-segment-on text-ink! shadow-xs'
 
 interface LabelProps {
@@ -120,7 +120,7 @@ export function FieldLabel({ htmlFor, children, hint, visuallyHidden = false }: 
   return (
     <label
       htmlFor={htmlFor}
-      className={visuallyHidden ? 'sr-only' : 'block text-subhead font-medium text-ink'}
+      className={visuallyHidden ? 'sr-only' : 'block text-sm font-medium text-ink'}
     >
       {children}
       {hint ? <span className="ml-2 font-normal text-ink-faint">{hint}</span> : null}
@@ -165,10 +165,10 @@ export function FieldRow({
 }) {
   return (
     <div className="grid min-h-14 grid-cols-[minmax(6rem,2fr)_3fr] items-center gap-3 px-4 py-2">
-      <label htmlFor={htmlFor} className="text-subhead text-ink">
+      <label htmlFor={htmlFor} className="text-sm text-ink">
         {label}
-        {hint ? <span className="mt-0.5 block text-footnote text-ink-muted">{hint}</span> : null}
-        {invalid ? <span className="mt-0.5 block text-footnote text-over">{invalid}</span> : null}
+        {hint ? <span className="mt-0.5 block text-xs text-ink-muted">{hint}</span> : null}
+        {invalid ? <span className="mt-0.5 block text-xs text-over">{invalid}</span> : null}
       </label>
       {children}
     </div>

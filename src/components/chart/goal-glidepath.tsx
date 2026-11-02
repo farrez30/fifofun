@@ -93,13 +93,13 @@ export function GoalGlidepath({
   if (invested !== null && invested.months === 0) {
     const surplus = startingBalance - target
     return (
-      <figure className="squircle rounded-md bg-surface shadow-xs p-4">
-        <figcaption className="text-subhead font-medium text-ink">{caption}</figcaption>
-        <p className="mt-2 text-subhead text-ink-muted">
+      <figure className="squircle rounded-md border border-line bg-surface p-4">
+        <figcaption className="text-sm font-medium text-ink">{caption}</figcaption>
+        <p className="mt-2 text-sm text-ink-muted">
           <Verdict path={path} />
         </p>
         {surplus > 0n ? (
-          <p className="mt-1 text-subhead text-ink-muted">
+          <p className="mt-1 text-sm text-ink-muted">
             Kelebihannya {formatIdr(surplus)}. Itu uang menganggur terhadap tujuan ini, dan
             lebih berguna dipindahkan ke tujuan berikutnya.
           </p>
@@ -170,9 +170,9 @@ export function GoalGlidepath({
   const labelEvery = Math.ceil(points.length / 9)
 
   return (
-    <figure className="squircle rounded-md bg-surface shadow-xs p-4">
-      <figcaption className="mb-1 text-subhead font-medium text-ink">{caption}</figcaption>
-      <p className="mb-4 text-footnote text-ink-muted">
+    <figure className="squircle rounded-md border border-line bg-surface p-4">
+      <figcaption className="mb-1 text-sm font-medium text-ink">{caption}</figcaption>
+      <p className="mb-4 text-xs text-ink-muted">
         <Verdict path={path} />
       </p>
 
@@ -182,7 +182,7 @@ export function GoalGlidepath({
             {scale.ticks.map((tick) => (
               <span
                 key={String(tick)}
-                className="absolute right-0 -translate-y-1/2 whitespace-nowrap text-caption2 leading-none text-ink-faint"
+                className="absolute right-0 -translate-y-1/2 whitespace-nowrap text-xs leading-none text-ink-faint"
                 style={{ top: `${yAt(tick)}%` }}
               >
                 {formatIdrCompact(tick)}
@@ -245,7 +245,7 @@ export function GoalGlidepath({
                 figure twice, a centimetre apart, reads as two different values. */}
             {scale.top === target ? null : (
               <span
-                className="absolute left-0 -translate-y-full pb-0.5 text-caption2 leading-none text-accent-strong"
+                className="absolute left-0 -translate-y-full pb-0.5 text-xs leading-none text-accent-strong"
                 style={{ top: `${targetY}%` }}
               >
                 Target {formatIdrCompact(target)}
@@ -268,7 +268,7 @@ export function GoalGlidepath({
                   }}
                 />
                 <span
-                  className="absolute translate-y-1.5 whitespace-nowrap text-caption2 leading-none text-under"
+                  className="absolute translate-y-1.5 whitespace-nowrap text-xs leading-none text-under"
                   style={{ top: `${targetY}%`, left: `${xAtMonth(invested.months) + 1}%` }}
                 >
                   {spanOf(path.monthsEarned ?? 0)} lebih cepat
@@ -349,7 +349,7 @@ export function GoalGlidepath({
                 <span
                   key={point.year}
                   aria-hidden="true"
-                  className="absolute top-0 whitespace-nowrap tabular-nums text-caption2 leading-none text-ink-faint"
+                  className="absolute top-0 whitespace-nowrap tabular-nums text-xs leading-none text-ink-faint"
                   style={{ left: `${pct}%`, transform: nudge(pct) }}
                 >
                   {index === 0 ? point.year : `'${String(point.year).slice(2)}`}
@@ -375,13 +375,13 @@ export function GoalGlidepath({
       </ChartReadout>
 
       {onYearsChange ? (
-        <p className="mt-1 text-footnote text-ink-muted">
+        <p className="mt-1 text-xs text-ink-muted">
           Seret penanda tahunnya, atau pilih lalu pakai tombol panah. Setoran bulanannya ikut
           berubah, dan begitu juga bagian yang tidak perlu kamu setorkan sendiri.
         </p>
       ) : null}
 
-      <p className="mt-3 border-t border-line pt-3 text-footnote text-ink-faint">
+      <p className="mt-3 border-t border-line pt-3 text-xs text-ink-faint">
         Imbal hasil {(annualRate * 100).toFixed(1).replace('.', ',')}% per tahun dipakai rata
         sepanjang jangka. Pasar tidak bergerak begitu. Ini proyeksi, bukan janji, dan tahun buruk
         yang jatuh dekat tenggat jauh lebih menyakitkan daripada yang jatuh di awal.

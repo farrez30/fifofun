@@ -4,6 +4,7 @@ import type { MonthlySeries } from '@/lib/ledger/monthly'
 import { formatIdr, formatIdrCompact } from '@/lib/money'
 import { nudge } from './axis'
 import { ChartReadout } from './readout'
+import { InfoTip } from '@/components/info-tip'
 
 /**
  * The balance at the end of each month, drawn as one line.
@@ -64,9 +65,9 @@ export function BalanceTrend({ series, caption }: Props) {
 
   if (!trend) {
     return (
-      <figure className="squircle rounded-md bg-surface shadow-xs p-6">
-        <figcaption className="text-subhead font-medium text-ink">{caption}</figcaption>
-        <p className="mt-2 text-subhead text-ink-muted">
+      <figure className="squircle rounded-md border border-line bg-surface p-6">
+        <figcaption className="text-sm font-medium text-ink">{caption}</figcaption>
+        <p className="mt-2 text-sm text-ink-muted">
           Perlu dua bulan tercatat sebelum ada arah yang bisa dibaca. Sekarang baru{' '}
           {series.length}.
         </p>
@@ -85,9 +86,19 @@ export function BalanceTrend({ series, caption }: Props) {
   const line = points.map((point, index) => `${xAt(index)},${yAt(point.balance)}`).join(' ')
 
   return (
-    <figure className="squircle rounded-md bg-surface shadow-xs p-4">
-      <figcaption className="mb-1 text-subhead font-medium text-ink">{caption}</figcaption>
-      <p className="mb-4 text-footnote text-ink-muted">
+    <figure className="squircle rounded-md border border-line bg-surface p-4">
+      <figcaption className="mb-1">
+        <div className="flex items-center gap-1">
+          <span className="text-sm font-medium text-ink">{caption}</span>
+          <InfoTip label="Yang dihitung">
+            <p>
+              Yang dihitung baru uang. Emas dan tanah belum bisa dicatat di app ini, jadi ini bukan
+              kekayaan bersih.
+            </p>
+          </InfoTip>
+        </div>
+      </figcaption>
+      <p className="mb-4 text-xs text-ink-muted">
         {formatIdrCompact(latest.balance)} pada akhir {labelFor(latest, null)}, {WORDS[direction]}{' '}
         {direction === 'datar'
           ? `sejak ${labelFor(points[0], null)}`
@@ -101,7 +112,7 @@ export function BalanceTrend({ series, caption }: Props) {
             {scale.ticks.map((tick) => (
               <span
                 key={String(tick)}
-                className="absolute right-0 -translate-y-1/2 whitespace-nowrap text-caption2 leading-none text-ink-faint"
+                className="absolute right-0 -translate-y-1/2 whitespace-nowrap text-xs leading-none text-ink-faint"
                 style={{ top: `${yAt(tick)}%` }}
               >
                 {formatIdrCompact(tick)}
@@ -189,7 +200,7 @@ export function BalanceTrend({ series, caption }: Props) {
                 <span
                   key={point.month}
                   aria-hidden="true"
-                  className="absolute top-0 whitespace-nowrap text-caption2 leading-none text-ink-faint"
+                  className="absolute top-0 whitespace-nowrap text-xs leading-none text-ink-faint"
                   style={{ left: `${pct}%`, transform: nudge(pct) }}
                 >
                   {labelFor(point, previous)}
@@ -201,17 +212,12 @@ export function BalanceTrend({ series, caption }: Props) {
       </ChartReadout>
 
       {cropped ? (
-        <p className="mt-3 text-footnote text-ink-muted">
+        <p className="mt-3 text-xs text-ink-muted">
           Sumbu tegaknya mulai dari {formatIdrCompact(scale.bottom)}, bukan nol, supaya selisih
           antar bulan kelihatan. Karena itu digambar sebagai garis: panjang batang dari lantai yang
           bukan nol akan membesar-besarkan selisihnya.
         </p>
       ) : null}
-
-      <p className="mt-2 text-footnote text-ink-faint">
-        Yang dihitung baru uang. Emas dan tanah belum bisa dicatat di app ini, jadi ini bukan
-        kekayaan bersih.
-      </p>
 
       {/* Wrapped, because a table ignores the one pixel width sr-only sets. */}
       <div className="sr-only">

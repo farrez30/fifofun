@@ -1,5 +1,6 @@
 import type { Adherence, AdherenceGroup } from '@/lib/planning/adherence'
 import { formatIdr, formatIdrCompact } from '@/lib/money'
+import { InfoTip } from '@/components/info-tip'
 
 /**
  * The framework's recommendation against what the household actually did.
@@ -63,9 +64,9 @@ export function AdherenceBullet({ adherence, observedIncome, caption }: Props) {
 
   if (income <= 0n) {
     return (
-      <figure className="squircle rounded-md bg-surface shadow-xs p-6">
-        <figcaption className="text-subhead font-medium text-ink">{caption}</figcaption>
-        <p className="mt-2 text-subhead text-ink-muted">
+      <figure className="squircle rounded-md border border-line bg-surface p-6">
+        <figcaption className="text-sm font-medium text-ink">{caption}</figcaption>
+        <p className="mt-2 text-sm text-ink-muted">
           Perbandingannya butuh penghasilan bulanan. Isi angkanya di atas, atau impor mutasi
           supaya terisi sendiri.
         </p>
@@ -90,10 +91,22 @@ export function AdherenceBullet({ adherence, observedIncome, caption }: Props) {
   const hypothetical = income !== observedIncome
 
   return (
-    <figure className="squircle rounded-md bg-surface shadow-xs">
+    <figure className="squircle rounded-md border border-line bg-surface">
       <div className="border-b border-line p-4">
-        <figcaption className="text-subhead font-medium text-ink">{caption}</figcaption>
-        <p className="mt-1 text-subhead text-ink-muted">
+        <figcaption>
+          <div className="flex items-center gap-1">
+          <span className="text-sm font-medium text-ink">{caption}</span>
+          <InfoTip label="Cara angka dibaca">
+            <p>
+              Angka kenyataannya median dari bulan-bulan yang sudah diimpor, bukan bulan terakhir,
+              supaya satu bonus atau satu premi tahunan tidak jadi vonis tentang rumah tangganya.
+              Pemetaannya lewat jenis cashflow yang kamu tetapkan sendiri, bukan tebakan atas nama
+              kategori.
+            </p>
+          </InfoTip>
+        </div>
+        </figcaption>
+        <p className="mt-1 text-sm text-ink-muted">
           {failing.length === 0
             ? `Semua pos ada di dalam batas yang ${framework.name} sebutkan.`
             : `${failing.length} dari ${groups.length} pos ada di luar batasnya. Yang paling besar: ${failing[0].labels.join(' dan ')}, ${formatIdrCompact(failing[0].gap)} ${failing[0].verdict === 'short' ? 'kurang' : 'lebih'}.`}
@@ -103,7 +116,7 @@ export function AdherenceBullet({ adherence, observedIncome, caption }: Props) {
             paragraph and not on the single glyphs elsewhere. The wash is the
             pattern the planner already uses for exactly this. */}
         {hypothetical ? (
-          <p className="mt-2 border border-warn/40 bg-warn-wash px-3 py-2 text-footnote text-ink">
+          <p className="mt-2 border border-warn/40 bg-warn-wash px-3 py-2 text-xs text-ink">
             <span aria-hidden="true" className="mr-1.5 text-warn">
               ▲
             </span>
@@ -120,18 +133,18 @@ export function AdherenceBullet({ adherence, observedIncome, caption }: Props) {
           return (
             <li key={group.keys.join('-')} className="p-4">
               <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                <span className="text-subhead text-ink">
+                <span className="text-sm text-ink">
                   {style.glyph ? (
                     <span aria-hidden="true" className={`mr-1.5 ${style.text}`}>
                       {style.glyph}
                     </span>
                   ) : null}
                   {group.labels.join(' + ')}
-                  <span className="ml-2 rounded-xs border border-line px-1.5 py-0.5 text-caption2 uppercase tracking-wide text-ink-muted">
+                  <span className="ml-2 rounded-xs border border-line px-1.5 py-0.5 text-xs uppercase tracking-wide text-ink-muted">
                     {BOUND_TAG[group.bound]} {Math.round(group.share * 100)}%
                   </span>
                 </span>
-                <span className="tnum font-mono text-subhead text-ink">
+                <span className="tnum font-mono text-sm text-ink">
                   {formatIdr(group.actual)}
                   {share ? <span className="ml-2 text-ink-faint">{share}</span> : null}
                 </span>
@@ -181,7 +194,7 @@ export function AdherenceBullet({ adherence, observedIncome, caption }: Props) {
                 />
               </div>
 
-              <p className={`mt-2 text-footnote ${style.text}`}>
+              <p className={`mt-2 text-xs ${style.text}`}>
                 <span className="text-ink-muted">
                   {BOUND_WORD[group.bound]} {formatIdr(group.recommended)}
                   {group.verdict === 'healthy'
@@ -193,7 +206,7 @@ export function AdherenceBullet({ adherence, observedIncome, caption }: Props) {
               </p>
 
               {group.combined ? (
-                <p className="mt-1 text-footnote text-ink-faint">
+                <p className="mt-1 text-xs text-ink-faint">
                   {group.labels.join(' dan ')} dibaca sebagai satu angka, karena catatanmu
                   memfilekan keduanya sebagai pengeluaran yang sama. Memisahkannya butuh
                   keputusanmu soal mana yang bisa dilepas, bukan tebakan aplikasi ini.
@@ -205,7 +218,7 @@ export function AdherenceBullet({ adherence, observedIncome, caption }: Props) {
       </ul>
 
       <div className="border-t border-line p-4">
-        <p className="text-subhead text-ink-muted">
+        <p className="text-sm text-ink-muted">
           {unassigned > 0n ? (
             <>
               {formatIdr(unassigned)} dari penghasilan bulan itu tidak masuk pos mana pun. Uang itu
@@ -221,12 +234,6 @@ export function AdherenceBullet({ adherence, observedIncome, caption }: Props) {
           ) : (
             <>Seluruh penghasilan bulan itu sudah masuk salah satu pos.</>
           )}
-        </p>
-        <p className="mt-2 text-footnote text-ink-muted">
-          Angka kenyataannya median dari bulan-bulan yang sudah diimpor, bukan bulan terakhir,
-          supaya satu bonus atau satu premi tahunan tidak jadi vonis tentang rumah tangganya.
-          Pemetaannya lewat jenis cashflow yang kamu tetapkan sendiri, bukan tebakan atas nama
-          kategori.
         </p>
       </div>
 

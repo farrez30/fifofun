@@ -123,7 +123,7 @@ export function MoneyInput({
             and what a person types is Rupiah with separators in it. */}
         {name ? <input type="hidden" name={name} value={value.toString()} /> : null}
       </div>
-      {note ? <p className="text-footnote text-ink-muted">{note}</p> : null}
+      {note ? <p className="text-xs text-ink-muted">{note}</p> : null}
     </div>
   )
 }

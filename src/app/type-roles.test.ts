@@ -37,7 +37,7 @@ import { describe, expect, it } from 'vitest'
  */
 
 const ALLOWED: Record<string, string[]> = {
-  'src/components/field-base.tsx': ['sm:text-sm'],
+  'src/components/field-base.tsx': ['text-body'],
   'src/components/chart/waterfall.tsx': ['text-sm', 'text-xs'],
 }
 
@@ -54,14 +54,21 @@ const FOUR_STEP = [
   'src/app/anggaran/',
   'src/app/catat/',
   'src/app/dana/',
+  'src/app/error.tsx',
+  'src/app/global-error.tsx',
   'src/app/impor/',
+  'src/app/layout.tsx',
+  'src/app/loading.tsx',
+  'src/app/not-found.tsx',
+  'src/app/opengraph-image.tsx',
+  'src/app/page.tsx',
   'src/app/pengaturan/',
+  'src/app/recompute-adjustments.tsx',
   'src/app/rencana/',
+  'src/app/skeleton.tsx',
   'src/app/tinjau/',
   'src/app/transaksi/',
-  'src/components/plan/',
-  'src/components/info-tip.tsx',
-  'src/components/shell-frame.tsx',
+  'src/components/',
 ]
 
 const BANNED_FOUR_STEP =

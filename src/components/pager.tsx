@@ -35,10 +35,10 @@ type Props = {
 } & ({ hrefFor: (page: number) => string; onPage?: never } | { onPage: (page: number) => void; hrefFor?: never })
 
 const STEP =
-  'inline-flex h-11 min-w-11 items-center justify-center gap-1 rounded-sm bg-fill-tertiary px-2.5 text-subhead font-medium text-ink transition-colors duration-150 hover:bg-fill-secondary'
+  'inline-flex h-11 min-w-11 items-center justify-center gap-1 rounded-sm bg-fill-tertiary px-2.5 text-sm font-medium text-ink transition-colors duration-150 hover:bg-fill-secondary'
 const NUMBER =
-  'tnum inline-flex size-11 items-center justify-center rounded-sm font-mono text-subhead text-ink-muted transition-colors duration-150 hover:bg-fill-tertiary hover:text-ink'
-const CURRENT = 'tnum inline-flex size-11 items-center justify-center rounded-sm bg-fill-tertiary font-mono text-subhead font-semibold text-ink'
+  'tnum inline-flex size-11 items-center justify-center rounded-sm font-mono text-sm text-ink-muted transition-colors duration-150 hover:bg-fill-tertiary hover:text-ink'
+const CURRENT = 'tnum inline-flex size-11 items-center justify-center rounded-sm bg-fill-tertiary font-mono text-sm font-semibold text-ink'
 
 export function Pager({ page, pages, label, hrefFor, onPage }: Props) {
   if (pages <= 1) return null
@@ -82,7 +82,7 @@ export function Pager({ page, pages, label, hrefFor, onPage }: Props) {
         <ol className="hidden items-center gap-0.5 sm:flex">
           {pageWindow(page, pages).map((n, index) =>
             n === null ? (
-              <li key={`gap-${index}`} aria-hidden="true" className="inline-flex w-6 justify-center text-subhead text-ink-faint">
+              <li key={`gap-${index}`} aria-hidden="true" className="inline-flex w-6 justify-center text-sm text-ink-faint">
                 …
               </li>
             ) : (
@@ -115,7 +115,7 @@ export function Pager({ page, pages, label, hrefFor, onPage }: Props) {
 
         {page < pages ? go(page + 1, `${STEP} relative`, forward, { rel: 'next' }) : placeholder(forward)}
       </div>
-      <p className="mt-1 hidden text-center text-footnote text-ink-muted sm:block">
+      <p className="mt-1 hidden text-center text-xs text-ink-muted sm:block">
         Halaman {page} dari {pages}
       </p>
     </nav>

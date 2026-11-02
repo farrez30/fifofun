@@ -170,9 +170,9 @@ export function Sankey({ nodes, links, height: fixedHeight, caption, note, id }:
 
   if (nodes.length === 0 || positive.length === 0) {
     return (
-      <figure className="squircle rounded-md bg-surface shadow-xs p-6">
-        <figcaption className="text-subhead font-medium text-ink">{caption}</figcaption>
-        <p className="mt-2 text-subhead text-ink-muted">
+      <figure className="squircle rounded-md border border-line bg-surface p-6">
+        <figcaption className="text-sm font-medium text-ink">{caption}</figcaption>
+        <p className="mt-2 text-sm text-ink-muted">
           Belum ada aliran uang yang bisa digambar untuk periode ini.
         </p>
       </figure>
@@ -323,8 +323,8 @@ export function Sankey({ nodes, links, height: fixedHeight, caption, note, id }:
   const prefix = id ?? `sankey-${caption.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
 
   return (
-    <figure className="sankey squircle rounded-md bg-surface shadow-xs p-4">
-      <figcaption className="mb-3 text-subhead font-medium text-ink">{caption}</figcaption>
+    <figure className="sankey squircle rounded-md border border-line bg-surface p-4">
+      <figcaption className="mb-3 text-sm font-medium text-ink">{caption}</figcaption>
 
       <ChartReadout>
         <div
@@ -498,7 +498,7 @@ export function FoldedCategories({
   if (folded.length === 0) return null
 
   return (
-    <details className="text-footnote">
+    <details className="text-xs">
       <summary className="cursor-pointer text-accent underline underline-offset-2">
         Lihat {folded.length} kategori yang digabung
       </summary>

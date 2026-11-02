@@ -87,7 +87,7 @@ function ReviewBadge({ review }: { review: Promise<number> }) {
       */}
       <span
         aria-hidden="true"
-        className="tnum absolute -right-2.5 -top-1 min-w-4 rounded-full bg-over px-1 text-center font-mono text-caption2 font-medium leading-4 text-paper"
+        className="tnum absolute -right-2.5 -top-1 min-w-4 rounded-full bg-over px-1 text-center font-mono text-xs font-medium leading-4 text-paper"
       >
         {count > 99 ? '99+' : count}
       </span>
@@ -284,7 +284,7 @@ export function MobileTabs({ current, email, review }: Props) {
                     </Suspense>
                   ) : null}
                 </span>
-                <span className={`text-caption2 ${tab.href === current ? 'font-medium' : ''}`}>
+                <span className={`text-xs ${tab.href === current ? 'font-medium' : ''}`}>
                   {tab.label}
                 </span>
                 {/* Pending dot in the gap between glyph and label. */}
@@ -334,7 +334,7 @@ export function MobileTabs({ current, email, review }: Props) {
                 weight={inSheet ? 'fill' : 'regular'}
                 className="size-6 shrink-0"
               />
-              <span className={`text-caption2 ${inSheet ? 'font-medium' : ''}`}>Lainnya</span>
+              <span className={`text-xs ${inSheet ? 'font-medium' : ''}`}>Lainnya</span>
             </button>
           </li>
         </ul>
@@ -408,10 +408,10 @@ export function MobileTabs({ current, email, review }: Props) {
 
           <div className="flex items-center justify-between gap-3 border-b border-line px-4 pb-3">
             <div className="min-w-0">
-              <h2 id="sheet-lainnya" className="text-subhead font-medium text-ink">
+              <h2 id="sheet-lainnya" className="text-sm font-medium text-ink">
                 Lainnya
               </h2>
-              <p className="truncate text-footnote text-ink-muted">{email}</p>
+              <p className="truncate text-xs text-ink-muted">{email}</p>
             </div>
             {/* The desktop equivalent lives in the sidebar's own account
                 row now (`AppShell`), so this is the sheet's own copy of the
@@ -447,7 +447,7 @@ export function MobileTabs({ current, email, review }: Props) {
                        frame, on top of the page it just opened. */
                     onNavigate={() => sheet.current?.close()}
                     aria-current={item.href === current ? 'page' : undefined}
-                    className={`flex min-h-14 items-center gap-3 px-4 text-subhead transition-colors duration-150 hover:bg-sunken ${
+                    className={`flex min-h-14 items-center gap-3 px-4 text-sm transition-colors duration-150 hover:bg-sunken ${
                       item.href === current ? 'font-medium text-accent' : 'text-ink'
                     }`}
                   >

@@ -48,7 +48,7 @@ export function SegmentNav({
       <ul className={`${SEGMENTED} w-full overflow-x-auto sm:w-auto`}>
         {segments.map((segment) => {
           const on = segment.key === current
-          const className = `${SEGMENT} ${on ? SEGMENT_ON : ''} relative w-full whitespace-nowrap focus-visible:outline-offset-[-2px] max-sm:px-2 sm:h-11! sm:px-4! sm:text-subhead!`
+          const className = `${SEGMENT} ${on ? SEGMENT_ON : ''} relative w-full whitespace-nowrap focus-visible:outline-offset-[-2px] max-sm:px-2 sm:h-11! sm:px-4! sm:text-sm!`
           const body = (
             <>
               {segment.label}
@@ -57,7 +57,7 @@ export function SegmentNav({
                 // a fainter grey failed contrast on the track and on the
                 // selected pill alike. The brackets are for the ear only, so
                 // the name is "Menunggu (168)" and not "Menunggu168".
-                <span className="tnum ml-1.5 font-mono text-caption1">
+                <span className="tnum ml-1.5 font-mono text-xs">
                   <span className="sr-only"> (</span>
                   {segment.count}
                   <span className="sr-only">)</span>
