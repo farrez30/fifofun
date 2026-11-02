@@ -102,46 +102,6 @@
   --spacing-safe-r: env(safe-area-inset-right, 0px);
 
   /*
-    iOS Dynamic Type at the default content size, as a set of extra roles.
-
-    Deliberately additive. Re-pointing Tailwind's own `--text-sm` from 14px to
-    Apple's nearest neighbour would move geometry the phone suite measures, in
-    every component at once and in one commit. These get adopted screen by
-    screen instead, and `--text-body` at 17px is what finally lets a form
-    control name its size rather than say `text-base` to dodge the iOS zoom.
-  */
-  --text-caption2: 0.6875rem;
-  --text-caption2--line-height: 0.8125rem;
-  --text-caption1: 0.75rem;
-  --text-caption1--line-height: 1rem;
-  --text-footnote: 0.8125rem;
-  --text-footnote--line-height: 1.125rem;
-  --text-subhead: 0.9375rem;
-  --text-subhead--line-height: 1.25rem;
-  --text-callout: 1rem;
-  --text-callout--line-height: 1.3125rem;
-  --text-body: 1.0625rem;
-  --text-body--line-height: 1.375rem;
-  --text-title3: 1.25rem;
-  --text-title3--line-height: 1.5625rem;
-  --text-title2: 1.375rem;
-  --text-title2--line-height: 1.75rem;
-  --text-title1: 1.75rem;
-  --text-title1--line-height: 2.125rem;
-  --text-large-title: 2.125rem;
-  --text-large-title--line-height: 2.5625rem;
-
-  /* Apple's tracking is a function of size: loose when small, tight when large. */
-  --tracking-caption2: 0.06em;
-  --tracking-caption1: 0.05em;
-  --tracking-footnote: 0.025em;
-  --tracking-subhead: 0.008em;
-  --tracking-title3: -0.008em;
-  --tracking-title2: -0.01em;
-  --tracking-title1: -0.014em;
-  --tracking-large-title: -0.016em;
-
-  /*
     The system palette. Light is Apple's accessible variant, dark is stock, for
     the reason in the header.
 
@@ -703,9 +663,8 @@
       1,5 rather than Apple's 17/22, which is about 1,29. Apple sets that
       ratio on a body role it applies deliberately; this is the document
       default, inherited by captions and table cells, and tightening it there
-      would move every box in the application at once. The Dynamic Type roles
-      in the token block carry their own line heights and win where they are
-      used.
+      would move every box in the application at once. Tailwind's text steps
+      carry their own line heights and win where they are used.
     */
     line-height: 1.5;
     /*

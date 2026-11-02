@@ -7,12 +7,9 @@ disebutkan di bagian [Apa yang menahan semua ini](#apa-yang-menahan-semua-ini).
 Teks yang dilihat pengguna diatur `docs/copywriting.md`, dan dokumen itu tidak
 diubah oleh apa pun di sini.
 
-**Sedang berpindah (ADR 0007).** Skala peran Dynamic Type di §2 dan kartu
-`shadow-xs` di §4 diganti modul demi modul oleh skala empat langkah
-(`text-xl`, `text-sm`, `text-xs`, plus `text-2xl` untuk satu angka vonis) dan
-kartu ber-border 1px. Berkas yang sudah
-pindah terdaftar di `FOUR_STEP` pada `src/app/type-roles.test.ts`. Kaca, ikon,
-aksen, dan font tidak ikut berubah. §2 dan §4 ditulis ulang di PR terakhir.
+Tipografi (§2) dan kartu (§4) mengikuti ADR 0007: skala empat langkah dan
+kartu ber-border 1px, menggantikan peran Dynamic Type dan kartu `shadow-xs`
+yang dipakai sebelumnya. Kaca, ikon, aksen, dan font tidak ikut berubah.
 
 ---
 
@@ -69,44 +66,45 @@ yang membuat yang ini bisa dikenali.
 Apple, jadi `--spacing` tidak disentuh. Yang berubah aturannya: langkah genap
 untuk layout, langkah ganjil untuk koreksi optis dan harus punya alasan.
 
-**Tipografi mengikuti peran Dynamic Type Apple**, diadopsi penuh di seluruh
-app, bukan lagi skala Tailwind. `text-caption2` sampai `text-large-title`
-ditambahkan ke `globals.css` sebagai peran tambahan, sengaja aditif: menimpa
-ulang `--text-sm` Tailwind sendiri akan menggeser geometri yang diukur
-`e2e/mobile.spec.ts` di setiap komponen sekaligus, dalam satu commit yang
-tidak bisa ditinjau. Diadopsi layar demi layar sebagai gantinya, lima commit
-berturutan, masing-masing dengan gate penuhnya sendiri.
+**Tipografi empat langkah plus satu angka vonis** (ADR 0007). Skala
+Tailwind sendiri, bukan lagi peran Dynamic Type:
 
-Peta perannya satu untuk seluruh app: `text-subhead` untuk teks berjalan dan
-baris daftar, `text-footnote` untuk keterangan dan catatan kaki,
-`text-caption1` (uppercase, `tracking-wide`) untuk header kolom tabel,
-`text-caption2` untuk chip kecil dan label tab bar, `text-title3` dengan
-`tracking-title3`-nya untuk judul seksi, `text-title1` untuk judul halaman.
-Angka mono ikut tangga yang sama: `text-title3` untuk figur biasa,
-`text-title2 font-semibold` untuk figur yang ditekankan — bukan skala bebas
-per komponen, supaya "angka besar di kartu" selalu berarti ukuran yang sama
-di mana pun ia muncul.
+| Peran | Kelas |
+|---|---|
+| Judul halaman | `text-xl font-semibold` |
+| Judul seksi, label form | `text-sm font-medium` |
+| Teks berjalan, baris daftar, sel tabel | `text-sm` |
+| Metadata, keterangan, header kolom, chip | `text-xs` (redup: `text-ink-muted`/`text-ink-faint`) |
+| Angka vonis, satu per layar | `text-2xl font-semibold` tabular |
 
-**Label tidak berteriak**, diperluas dari `Stat` (`src/components/money.tsx`)
-ke setiap ubin angka di app: label di atas sebuah figur (App menghitung,
-Selisih, Tercatat di app, dan sejenisnya) memakai `text-footnote
-text-ink-faint` kalimat biasa, bukan lagi `text-xs uppercase tracking-wide`.
-Huruf kapital semua menghapus legibilitas persis di tempat yang paling
-butuh — label yang memberi tahu angka mana yang sedang dibaca. Header kolom
-tabel tetap uppercase: perannya membedakan kolom, bukan menamai satu angka,
-jadi kapital di situ tidak bersaing dengan apa pun.
+Angka mono ikut tangga yang sama: `text-xl` untuk figur biasa di kartu,
+`text-sm` di baris, dan hanya satu `text-2xl` per layar, yaitu angka yang
+dicari orang saat membuka layar itu (Uang bisa dipakai di Beranda, rata-rata
+Sisa di Ringkasan, Tergambar di peta, nominal di Ubah transaksi, kode
+undangan baru). Ukuran kelima ini ditambahkan setelah mengukur Monarch,
+Copilot, YNAB, dan Rocket Money: keempatnya membuka layar dengan figur yang
+lebih besar dari teks isinya.
 
-Satu pengecualian bernama tersisa di skala lama: daftar langkah
-`src/components/chart/waterfall.tsx`, kolom labelnya 104px di bawah `sm` dan
-sudah diukur `charts.spec.ts` pada 320px. Menaikkan `text-sm`/`text-xs` ke
-`text-subhead`/`text-footnote` di situ terbukti memotong sebuah figur nyata;
-tidak ada peran Dynamic Type yang metriknya sama persis dengan 14px, jadi
-baris itu tetap di kelas lamanya dengan alasan tertulis di sebelahnya.
-`sm:text-sm` pada `CONTROL_TEXT` (`field-base.tsx`) adalah pengecualian
-kedua: 17px di HP turun ke 14px dari breakpoint kecil ke atas, keputusan yang
-sudah ada sejak field jadi fill. `src/app/type-roles.test.ts` menegakkan
-keduanya sebagai satu-satunya penyintas; kelas Tailwind lain yang muncul di
-mana pun di `src/**/*.tsx` menggagalkan `pnpm test`.
+**Label tidak berteriak.** Label di atas sebuah figur (`Stat` di
+`src/components/money.tsx` dan setiap ubin angka lain) memakai `text-xs
+text-ink-faint` kalimat biasa. Huruf kapital semua menghapus legibilitas
+persis di tempat yang paling butuh. Header kolom tabel tetap uppercase
+`tracking-wide`: perannya membedakan kolom, bukan menamai satu angka.
+
+**Definisi di balik tombol info.** Arti sebuah angka atau kolom, cara
+menghitungnya, dan cara membaca grafik pindah ke `InfoTip`
+(`src/components/info-tip.tsx`, popover native, bisa dibuka di HP tanpa
+hover). Kalimat tentang keadaan data (kenapa kolom kosong, apa yang berubah
+kalau disimpan, peringatan) tetap terlihat di samping datanya. `Stat` punya
+dua prop untuk itu: `hint` untuk keadaan, `info` untuk definisi. `InfoTip`
+tidak diletakkan di dalam `<p>` atau `<h2>`; judulnya dibungkus `flex` bersama
+tombolnya.
+
+Satu pengecualian bernama: `CONTROL_TEXT` (`field-base.tsx`) adalah
+`text-base sm:text-sm`, 16px di HP karena iOS Safari memperbesar layar saat
+kontrol di bawah 16px difokus. `src/app/type-roles.test.ts` menegakkannya
+sebagai satu-satunya penyintas; ukuran lain, peran Dynamic Type lama, atau
+ukuran berkurung di `src/**/*.tsx` menggagalkan `pnpm test`.
 
 ## 3. Material
 
@@ -154,13 +152,19 @@ Bentuknya kapsul, yang dijadikan default oleh iOS 26.
 
 **Field teks adalah fill, bukan border.** Itu wujud field di iOS, dan itu juga
 yang menahan form berisi delapan field terbaca sebagai delapan kotak.
-Ukurannya `text-body` (17px) di HP, yang sekaligus melewati lantai 16px yang
-memicu zoom iOS Safari dengan satu piksel kelonggaran.
+Ukurannya `text-base` (16px) di HP, tepat di lantai yang mencegah zoom iOS
+Safari, dan `text-sm` dari breakpoint kecil ke atas.
 
-**Kartu grouped.** `squircle rounded-md bg-surface shadow-xs` menggantikan
-`border border-line bg-surface` di 92 tempat. Separator di dalamnya dimulai di
-titik teks, bukan di tepi kartu (`.rows-inset`) — detail yang paling menentukan
-apakah sesuatu terbaca sebagai daftar atau sebagai tumpukan kotak.
+**Kartu datar ber-border** (ADR 0007). `squircle rounded-md border
+border-line bg-surface`, tanpa bayangan: bayangan hampir hilang di tema gelap,
+border terbaca sama di dua tema. Tidak ada kotak di dalam kartu: tidak ada
+`bg-sunken`, tidak ada kartu bersarang, tidak ada kotak peringatan berwarna di
+dalam kartu. Pemisah di dalamnya garis, `divide-y divide-line` atau
+`.rows-inset` yang dimulai di titik teks, bukan di tepi kartu. Lebih dari tiga
+angka sejajar jadi daftar atau tabel `tabular-nums`, bukan grid ubin.
+
+Yang tetap boleh: latar baki aksi geser (permukaan yang muncul di balik
+kartu), jalur batang data, thumb segmented control, dan sidebar (chrome).
 
 **Empty state punya satu bentuk**, `src/components/unavailable.tsx`, meniru
 `ContentUnavailableView`: glyph, judul, satu kalimat, satu aksi. Hanya untuk
@@ -215,7 +219,7 @@ seperti daftar Pengaturan lain, kontrolnya `CONTROL_INLINE` (tanpa fill/border
 sendiri, permukaannya sudah dibawa baris). Diterapkan di form akun, kategori,
 transaksi (form ubah) dan catat: field satu baris (nama, select, tanggal,
 jam, keterangan) jadi baris; kalimat penjelas tiap field pindah jadi footer
-di bawah kartu (`text-footnote text-ink-muted`, idiom footnote seksi Apple)
+di bawah kartu (`text-xs text-ink-muted`, idiom footnote seksi Apple)
 dan disambungkan `aria-describedby`, karena barisnya sendiri tidak lagi
 punya tempat untuk kalimat itu.
 
@@ -233,7 +237,7 @@ menghidupkan kembali masalah yang strip itu ada untuk menghindarinya.
 `components/plan/field.tsx` hidup di grid kalkulator (`sm:grid-cols-2/3/4`),
 bukan daftar grouped — pasangan label-kiri di sel selebar itu tidak terbaca.
 Keduanya tetap memakai resep bersama `field-base.tsx` (`CONTROL`, `SEGMENTED`
-untuk pemilih mode) dan peran Dynamic Type yang sama dengan form lain.
+untuk pemilih mode) dan skala yang sama dengan form lain.
 
 **Tabel atau daftar ditentukan lebar wadahnya, bukan lebar layar.** Setiap
 tabel yang punya versi daftar beralih lewat container query (`@container` di
@@ -404,8 +408,8 @@ di segmen Menunggu adalah tautan ke segmen Peta dengan pedagang itu terpilih
 **Ringkasan 3 Bulan (`/ringkasan`) dibaca orang lain, dari HP, di seberang
 meja.** Karena itu halaman ini sengaja membosankan: satu gulir, tanpa tab,
 tanpa grafik, tanpa panah tren, tanpa kalimat saran, dan tidak ada huruf di
-bawah 15px (`text-subhead`). Isinya hanya agregat; rincian transaksi tetap di
-Laporan. Tabelnya ARIA table di atas CSS grid, bukan `<table>`: di 390px label
+bawah 14px (`text-sm`; tidak ada `text-xs`). Isinya hanya agregat; rincian
+transaksi tetap di Laporan. Tabelnya ARIA table di atas CSS grid, bukan `<table>`: di 390px label
 baris tidak muat sebaris dengan empat angka, jadi label naik ke baris sendiri
 di atas angkanya, hal yang tidak bisa dilakukan baris tabel asli tanpa
 kehilangan semantiknya. Sel tidak memakai "Rp" (keterangan di atas tabel
@@ -416,8 +420,9 @@ tidak pernah jadi satu-satunya sinyal. Semua aturan hitungnya (7 kelompok,
 pengecualian pemasukan, penggantian keluarga dan patungan teman yang dinetkan, kategori "Pajak & STNK" ÷12,
 baris "Lewat dompet & tunai" = isi ulang dompet dikurangi semua yang tercatat
 keluar darinya) ada di
-`SUMMARY_CONFIG` (`src/lib/ledger/summary.ts`) dan halaman mencetak aturan yang
-dipakainya di catatan kaki. PDF dibuat di server dengan `@react-pdf/renderer`
+`SUMMARY_CONFIG` (`src/lib/ledger/summary.ts`); halaman menyebut pos yang
+terkena di catatan kaki tiap seksi, dan alasan aturannya di tombol info
+judul seksinya. PDF dibuat di server dengan `@react-pdf/renderer`
 dari `SummaryData` yang sama, tapi dengan tata letak A4 sendiri (label di
 samping angka, Tabungan dan Rencana berdampingan) agar selalu satu halaman;
 tesnya memakai Rencana sepanjang batas maksimal. Tombolnya membuka share sheet
@@ -449,7 +454,7 @@ kepala kelompok berpindah bersama isinya.
 ## 5. Grafik
 
 Kaca menyentuh tepat tiga hal, dan tidak satupun adalah mark: bingkai grafik
-jadi kartu grouped opaque, readout melayang boleh berkaca, handle `drag-axis`
+jadi kartu opaque ber-border, readout melayang boleh berkaca, handle `drag-axis`
 boleh berkaca. Plot, mark, ribbon dan gridline tetap datar dan opaque
 selamanya. Swift Charts milik Apple sendiri datar.
 
@@ -575,7 +580,7 @@ Tidak ada satupun jaminan yang diturunkan oleh restyle ini, dan beberapa naik.
 | Halaman tanpa shell lolos CSP dan axe atas build sungguhan | `e2e/pages/pages.spec.ts` (`pnpm test:e2e:pages`) |
 | sonner tetap tanpa suntikan `<style>` setelah upgrade | `src/components/use-action-toast.test.ts` ("sonner patch") |
 | Fisika gesture: proyeksi, rubber band, lantai tap | `swipe-actions.test.ts`, `use-swipe-tabs.test.ts`, `pull-to-refresh.test.ts` |
-| Skala Tailwind lama tidak diam-diam kembali, termasuk ukuran kurung siku | `src/app/type-roles.test.ts`, atas seluruh `src/**/*.tsx` |
+| Tidak ada ukuran di luar skala empat langkah, peran Dynamic Type lama, atau ukuran kurung siku | `src/app/type-roles.test.ts`, atas seluruh `src/**/*.tsx` |
 | Lima aturan copywriting.md yang bisa diperiksa pola: em dash, emoji, sapaan, `SESSION_EXPIRED` ditulis ulang, pesan server mentah | `src/app/copy.test.ts`, atas `src/app` dan `src/components` |
 
 **Catatan perkakas: repo ini tidak punya konfigurasi Prettier.** Menjalankan

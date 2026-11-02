@@ -18,7 +18,7 @@ import { SEGMENT, SEGMENT_ON, SEGMENTED } from '@/components/field-base'
  *
  * Full width on a phone, each view as wide as its label, like iOS; its natural
  * width from `sm` up, where it is also a size above the local segmented
- * controls (44px, subhead text): the map's own readings use the same recipe at
+ * controls (44px, small text): the map's own readings use the same recipe at
  * 36px, and a page's views and a map's reading are not the same rank of
  * choice. The focus ring is drawn inside the segment, because the track
  * scrolls sideways as a last resort and would clip a ring drawn outside.
