@@ -1,0 +1,6 @@
+{
+  "wslInheritsWindowsSettings": true,
+  "permissions": {
+    "disableBypassPermissionsMode": "disable"
+  }
+}

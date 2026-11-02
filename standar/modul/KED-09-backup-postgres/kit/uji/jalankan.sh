@@ -31,7 +31,7 @@ export PATH="$bin:$PATH"
 unset RESTIC_REPOSITORY RESTIC_PASSWORD_FILE AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY BACKUP_ENV PGB \
   RESTIC_TAG RESTIC_HOST RESTIC_SIMPAN RESTIC_WAJIB RESTIC_CEK PULIH_DARI SUMBER DB_URLS DB_KECUALI \
   BASIS SIMPAN_LOKAL_HARI HC_URL HC_URL_PULIH OPS_DIR PG_IMAGE PG_CONTAINER PG_SUPERUSER \
-  PULIH_TUNGGU CATATAN_PULIH PGPASSFILE
+  PULIH_TUNGGU CATATAN_PULIH PGPASSFILE PULIH_PRA_SQL
 
 lulus=0
 gagal=0
@@ -73,7 +73,7 @@ baru() {
   printf 'public.pesanan|7\n' >"$UJI_STATE/db/url/neondb"
   : >"$UJI_STATE/detak.log"
   : >"$UJI_STATE/panggilan.log"
-  unset PALSU_UKURAN PALSU_DF_KB PALSU_DUMP_RUSAK PALSU_DUMP_BOCOR PALSU_RESTORE_GAGAL PALSU_DOCKER_MATI
+  unset PALSU_UKURAN PALSU_DF_KB PALSU_DUMP_RUSAK PALSU_DUMP_BOCOR PALSU_RESTORE_GAGAL PALSU_DOCKER_MATI PALSU_PRA_GAGAL
 }
 env_docker() {
   cat >"$W/backup.env" <<EOF
@@ -268,6 +268,29 @@ if [[ "$UJI_BAGIAN" == semua || "$UJI_BAGIAN" == pulih ]]; then
     cek "pg_restore tanpa owner dan ACL" ada "--no-owner --no-acl --exit-on-error" "$UJI_STATE/panggilan.log"
     cek "container dan volumenya dihapus" bash -c 'grep -q "^docker rm -f -v $(cat "$1/wadah-uji")$" "$1/panggilan.log"' _ "$UJI_STATE"
     cek "detak start lalu ok" detak_sama "$HC_P/start $HC_P "
+    cek "tanpa PULIH_PRA_SQL tidak ada SQL tambahan" bukan ada "ON_ERROR_STOP" "$UJI_STATE/panggilan.log"
+
+    # Role yang dirujuk CREATE POLICY ... TO authenticated (FiFoFun) tidak ikut
+    # pg_dump; tanpa role itu pg_restore berhenti.
+    env_docker "PULIH_PRA_SQL='create role anon nologin; create role authenticated nologin;'"
+    : >"$UJI_STATE/panggilan.log"
+    jalan "$PULIH_SH"
+    cek "lulus dengan PULIH_PRA_SQL" ok_rc
+    cek "PULIH_PRA_SQL jalan sekali, setelah siap dan sebelum pg_restore" awk '
+      /^psql -U postgres -d postgres -qX -v ON_ERROR_STOP=1 -c .*create\\ role\\ authenticated/ { n++; if (!siap || restore) salah = 1 }
+      /^pg_isready -h 127.0.0.1/ { siap = 1 }
+      /^pg_restore / { restore = 1 }
+      END { exit !(n == 1 && !salah) }' "$UJI_STATE/panggilan.log"
+
+    export PALSU_PRA_GAGAL=1
+    : >"$UJI_STATE/detak.log"
+    : >"$UJI_STATE/panggilan.log"
+    jalan "$PULIH_SH"
+    cek "PULIH_PRA_SQL yang gagal menggagalkan uji dengan pesan jelas" bash -c '[[ $1 -ne 0 ]] && grep -q "PULIH_PRA_SQL gagal di container uji" "$2"' _ "$rc" "$W/keluar.txt"
+    cek "pg_restore tidak dijalankan bila PULIH_PRA_SQL gagal" bukan ada "pg_restore -U postgres" "$UJI_STATE/panggilan.log"
+    cek "container tetap dihapus dan ping fail" bash -c '[[ ! -d "$1/db/$(cat "$1/wadah-uji")" ]] && [[ "$(tr "\n" " " <"$2")" == "$3/start $3/fail " ]]' _ "$UJI_STATE" "$UJI_STATE/detak.log" "$HC_P"
+    unset PALSU_PRA_GAGAL
+    env_docker
 
     : >"$UJI_STATE/detak.log"
     printf 'public.Absen Foto|0\npublic.kas|490\n' >"$UJI_STATE/db/pg/laporta"

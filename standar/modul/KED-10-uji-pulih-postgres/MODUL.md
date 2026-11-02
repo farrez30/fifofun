@@ -1,6 +1,6 @@
 ---
 kode: KED-10
-versi: 1.1.0
+versi: 1.2.0
 ---
 
 # KED-10 Uji pulih Postgres
@@ -169,6 +169,7 @@ jadwalkan bersamaan dengan backup malam.
 | `RESTIC_CEK` | `--read-data-subset=10%` | `--read-data` untuk latihan pulih tahunan atau repositori kecil; `n/12` bergilir tiap bulan untuk menutup seluruh pack dalam setahun |
 | `RESTIC_TAG` | `pg` | sama dengan `RESTIC_TAG` di backup sumbernya |
 | `HC_URL_PULIH` | kosong | pemantau masing-masing |
+| `PULIH_PRA_SQL` | kosong | dump merujuk role yang tidak dibawa pg_dump, mis. policy RLS `TO authenticated` (Supabase, FiFoFun): `'create role anon nologin; create role authenticated nologin; create role service_role nologin;'`. Dijalankan sekali di container uji setelah siap dan sebelum `pg_restore`; gagal berarti uji gagal. Bukan tempat rahasia |
 
 Argumen membatasi database yang diuji: `uji-pulih.sh laporta`.
 
@@ -198,6 +199,11 @@ KED-09 dan KED-10 boleh naik ke `terbukti`.
   menerima salinan set lewat restic, bukan dilewati.
 
 ## Riwayat versi
+
+- 1.2.0 (2026-11-02): `PULIH_PRA_SQL` opsional untuk role yang dirujuk
+  `CREATE POLICY ... TO <role>`. `--no-acl` tidak melewati klausa itu, jadi
+  uji pulih FiFoFun berhenti di `role "authenticated" does not exist`.
+  Kosong = perilaku 1.1.0.
 
 - 1.1.0 (2026-10-22): uji pulih membuka salinan off-site (`PULIH_DARI=restic`
   bawaan: `restic check` lalu `restic restore`), bukan set lokal di disk yang

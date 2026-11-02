@@ -1,0 +1,25 @@
+{
+  // AI-08: kontainer agen untuk repo klien. Lihat standar/modul/AI-08-agen-dikurung/MODUL.md.
+  "name": "AI-08 agen dikurung",
+  "build": { "dockerfile": "Dockerfile" },
+  // NET_ADMIN dan NET_RAW hanya untuk firewall.sh; user node hanya boleh sudo skrip itu.
+  "runArgs": ["--cap-add=NET_ADMIN", "--cap-add=NET_RAW"],
+  "remoteUser": "node",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
+  "workspaceFolder": "/workspace",
+  "mounts": [
+    // Kredensial Claude Code di volume sendiri, tidak dari host.
+    "source=ai08-claude-${devcontainerId},target=/home/node/.claude,type=volume",
+    // Berkas rahasia repo ditutup berkas kosong, supaya `cat .env` pun tidak
+    // membacanya. Tambahkan baris serupa untuk nama berkas rahasia lain di repo.
+    "source=${localWorkspaceFolder}/.devcontainer/kosong,target=/workspace/.env,type=bind,readonly",
+    "source=${localWorkspaceFolder}/.devcontainer/kosong,target=/workspace/.env.local,type=bind,readonly"
+  ],
+  "postStartCommand": "sudo /usr/local/lib/ai08/firewall.sh",
+  "waitFor": "postStartCommand",
+  "customizations": {
+    "vscode": {
+      "extensions": ["anthropic.claude-code"]
+    }
+  }
+}
