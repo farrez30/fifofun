@@ -627,7 +627,8 @@ test.describe('tren saldo', () => {
     await expect(polyline).toHaveCount(1)
     await expect(polyline).toHaveAttribute('fill', 'none')
     await expect(page.locator('figure')).toContainText('bukan nol')
-    expect(await page.locator('svg polygon, svg path').count()).toBe(0)
+    // The info button's icon is an svg of its own; only the chart's count.
+    expect(await page.locator('svg:not(button svg) polygon, svg:not(button svg) path').count()).toBe(0)
   })
 
   test('keeps two years of markers off each other on a phone', async ({ page }) => {
@@ -659,7 +660,9 @@ test.describe('tren saldo', () => {
 
   test('never claims to be net worth while it only counts money', async ({ page }) => {
     await open(page, 'balance-trend')
-    const text = await page.locator('figure').innerText()
+    // A definition, so it sits in the caption's InfoTip (ADR 0007): in the
+    // figure, one tap away, rather than in the visible text.
+    const text = await page.locator('figure').textContent()
     expect(text).toContain('bukan kekayaan bersih')
   })
 

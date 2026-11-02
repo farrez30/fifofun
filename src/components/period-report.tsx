@@ -8,6 +8,7 @@ import { SOURCE_LABELS } from '@/lib/ledger/edit'
 import { metaText } from '@/lib/meta'
 import { formatIdr } from '@/lib/money'
 import { CONTROL } from '@/components/field-base'
+import { InfoTip } from '@/components/info-tip'
 
 /**
  * The filter form and its answer.
@@ -100,7 +101,7 @@ function appliedFilters(raw: Props['raw']): string {
   other form in the app stood at 44. Six controls is also the densest form here,
   so it is the worst place to be the exception.
 */
-const LABEL = 'block text-subhead font-medium text-ink'
+const LABEL = 'block text-sm font-medium text-ink'
 
 /** One row of the report: a name, a share, a figure, and a bar for the share. */
 function Line({
@@ -117,15 +118,15 @@ function Line({
   return (
     <>
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <span className="text-subhead text-ink">
+        <span className="text-sm text-ink">
           {name}
-          <span className="ml-2 text-footnote text-ink-faint">{note}</span>
+          <span className="ml-2 text-xs text-ink-faint">{note}</span>
         </span>
         <span className="flex items-baseline gap-3">
-          <span className="tnum text-footnote text-ink-faint">
+          <span className="tnum text-xs text-ink-faint">
             {share.toFixed(1).replace('.', ',')}%
           </span>
-          <span className="tnum font-mono text-subhead text-ink">{formatIdr(total)}</span>
+          <span className="tnum font-mono text-sm text-ink">{formatIdr(total)}</span>
         </span>
       </div>
 
@@ -148,14 +149,14 @@ function Merchants({ line }: { line: CategoryTotal }) {
 
   return (
     <details className="mt-1">
-      <summary className="flex min-h-11 cursor-pointer list-none items-center text-footnote text-ink-muted underline underline-offset-2 marker:content-none">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center text-xs text-ink-muted underline underline-offset-2 marker:content-none">
         Ke mana perginya
       </summary>
       <ul className="mt-1.5 space-y-1">
         {line.merchants.map((merchant) => (
           <li
             key={merchant.label}
-            className="flex flex-wrap items-baseline justify-between gap-x-3 text-footnote"
+            className="flex flex-wrap items-baseline justify-between gap-x-3 text-xs"
           >
             <span className="text-ink-muted">
               {merchant.label}
@@ -176,8 +177,8 @@ export function PeriodReport({ summary, raw, categories, accounts, ledgerSize, f
 
   return (
     <div className="space-y-6">
-      <details className="group squircle rounded-md bg-surface shadow-xs">
-        <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-4 py-2 text-subhead font-medium text-ink">
+      <details className="group squircle rounded-md border border-line bg-surface">
+        <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-4 py-2 text-sm font-medium text-ink">
           <CaretDown
             aria-hidden="true"
             className="size-4 shrink-0 text-ink-faint transition-transform duration-150 group-open:rotate-180"
@@ -270,7 +271,7 @@ export function PeriodReport({ summary, raw, categories, accounts, ledgerSize, f
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <button
               type="submit"
-              className="h-11 rounded-sm bg-accent px-4 text-subhead font-medium text-paper transition-colors duration-150 hover:bg-accent-strong"
+              className="h-11 rounded-sm bg-accent px-4 text-sm font-medium text-paper transition-colors duration-150 hover:bg-accent-strong"
             >
               Terapkan
             </button>
@@ -282,13 +283,13 @@ export function PeriodReport({ summary, raw, categories, accounts, ledgerSize, f
                  finger needs. */
               <a
                 href="/laporan"
-                className="inline-flex min-h-11 items-center rounded-sm px-2 text-subhead text-ink-muted underline underline-offset-2"
+                className="inline-flex min-h-11 items-center rounded-sm px-2 text-sm text-ink-muted underline underline-offset-2"
               >
                 Bersihkan
               </a>
             ) : null}
 
-            <label className="ml-auto flex items-center gap-2 text-footnote text-ink-muted">
+            <label className="ml-auto flex items-center gap-2 text-xs text-ink-muted">
               <input
                 type="checkbox"
                 name="titipan"
@@ -302,37 +303,45 @@ export function PeriodReport({ summary, raw, categories, accounts, ledgerSize, f
         </form>
       </details>
 
-      <div className="squircle rounded-md bg-surface shadow-xs p-4">
-        <p className="text-subhead font-medium text-ink">
-          {summary.matched === 0
-            ? 'Tidak ada transaksi yang cocok dengan pilihan ini.'
-            : `${summary.matched} transaksi dari ${ledgerSize} tercatat.`}
-        </p>
+      <div className="squircle rounded-md border border-line bg-surface p-4">
+        <div className="flex items-start gap-1">
+          <p className="min-w-0 flex-1 text-sm font-medium text-ink">
+            {summary.matched === 0
+              ? 'Tidak ada transaksi yang cocok dengan pilihan ini.'
+              : `${summary.matched} transaksi dari ${ledgerSize} tercatat.`}
+          </p>
+          <InfoTip label="Yang tidak dihitung">
+            <p>
+              Perpindahan antar akunmu sendiri tidak dihitung sebagai masuk maupun keluar, supaya
+              satu kali top-up tidak terbaca dua kali.
+            </p>
+          </InfoTip>
+        </div>
 
         {summary.span ? (
-          <p className="mt-1 text-subhead text-ink-muted">
+          <p className="mt-1 text-sm text-ink-muted">
             {formatJakarta(summary.span.from, 'date')} sampai {formatJakarta(summary.span.to, 'date')}.
           </p>
         ) : (
-          <p className="mt-1 text-subhead text-ink-muted">
+          <p className="mt-1 text-sm text-ink-muted">
             Coba lebarkan rentang tanggalnya, atau kosongkan salah satu pilihan.
           </p>
         )}
 
         {summary.matched > 0 ? (
           <dl className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="squircle rounded-md bg-sunken p-3">
-              <dt className="text-footnote text-ink-faint">Masuk</dt>
-              <dd className="tnum mt-1 font-mono text-title3 tracking-title3 text-under">{formatIdr(summary.inflow)}</dd>
+            <div>
+              <dt className="text-xs text-ink-faint">Masuk</dt>
+              <dd className="tnum mt-1 font-mono text-xl text-under">{formatIdr(summary.inflow)}</dd>
             </div>
-            <div className="squircle rounded-md bg-sunken p-3">
-              <dt className="text-footnote text-ink-faint">Keluar</dt>
-              <dd className="tnum mt-1 font-mono text-title3 tracking-title3 text-ink">{formatIdr(summary.outflow)}</dd>
+            <div>
+              <dt className="text-xs text-ink-faint">Keluar</dt>
+              <dd className="tnum mt-1 font-mono text-xl text-ink">{formatIdr(summary.outflow)}</dd>
             </div>
-            <div className="squircle rounded-md bg-sunken p-3">
-              <dt className="text-footnote text-ink-faint">Selisih</dt>
+            <div>
+              <dt className="text-xs text-ink-faint">Selisih</dt>
               <dd
-                className={`tnum mt-1 font-mono text-title3 tracking-title3 ${summary.net < 0n ? 'text-over' : 'text-under'}`}
+                className={`tnum mt-1 font-mono text-xl ${summary.net < 0n ? 'text-over' : 'text-under'}`}
               >
                 {summary.net < 0n ? '−' : ''}
                 {formatIdr(summary.net < 0n ? -summary.net : summary.net)}
@@ -340,11 +349,6 @@ export function PeriodReport({ summary, raw, categories, accounts, ledgerSize, f
             </div>
           </dl>
         ) : null}
-
-        <p className="max-w-2xl mt-3 text-footnote text-ink-muted">
-          Perpindahan antar akunmu sendiri tidak dihitung sebagai masuk maupun keluar, supaya satu
-          kali top-up tidak terbaca dua kali.
-        </p>
       </div>
     </div>
   )
@@ -358,7 +362,7 @@ const DRILL_ROW = 'flex min-h-11 items-baseline justify-between gap-3 p-3 transi
 const DRILL_LINE = '-mx-1 flex min-h-11 flex-col justify-center rounded-sm px-1 py-0.5 transition-colors duration-150 hover:bg-fill-quaternary'
 
 function NothingMatched() {
-  return <p className="text-subhead text-ink-muted">Tidak ada transaksi yang cocok dengan saringan ini.</p>
+  return <p className="text-sm text-ink-muted">Tidak ada transaksi yang cocok dengan saringan ini.</p>
 }
 
 /**
@@ -373,17 +377,17 @@ export function CashflowBreakdown({ summary, drill }: { summary: PeriodSummary; 
 
   return (
     <section aria-labelledby="per-cashflow">
-      <h2 id="per-cashflow" className="mb-3 text-subhead font-medium text-ink">
+      <h2 id="per-cashflow" className="mb-3 text-sm font-medium text-ink">
         Per cashflow
       </h2>
-      <ul className="rows-inset squircle rounded-md bg-surface shadow-xs">
+      <ul className="rows-inset squircle rounded-md border border-line bg-surface">
         {summary.byCashflow.map((line) => (
           <li key={line.cashflow}>
             <Link href={drill({ cashflow: line.cashflow })} className={DRILL_ROW}>
-              <span className="text-subhead text-ink">{line.label}</span>
+              <span className="text-sm text-ink">{line.label}</span>
               <span className="flex items-baseline gap-3">
-                <span className="text-footnote text-ink-faint">{line.count} transaksi</span>
-                <span className="tnum font-mono text-subhead text-ink">{formatIdr(line.total)}</span>
+                <span className="text-xs text-ink-faint">{line.count} transaksi</span>
+                <span className="tnum font-mono text-sm text-ink">{formatIdr(line.total)}</span>
                 <CaretRight aria-hidden="true" className="size-3.5 self-center text-ink-faint" />
               </span>
             </Link>
@@ -406,10 +410,18 @@ export function CategoryBreakdown({ summary, drill }: { summary: PeriodSummary; 
 
   return (
     <section aria-labelledby="per-kategori">
-      <h2 id="per-kategori" className="mb-3 text-subhead font-medium text-ink">
-        Per kategori
-      </h2>
-      <ul className="rows-inset squircle rounded-md bg-surface shadow-xs">
+      <div className="mb-3 flex items-center gap-1">
+        <h2 id="per-kategori" className="text-sm font-medium text-ink">
+          Per kategori
+        </h2>
+        <InfoTip label="Cara persentase dihitung">
+          <p>
+            Persentasenya dihitung terhadap arah kategori itu sendiri: kategori pengeluaran
+            dibandingkan dengan total keluar, kategori pemasukan dengan total masuk.
+          </p>
+        </InfoTip>
+      </div>
+      <ul className="rows-inset squircle rounded-md border border-line bg-surface">
         {summary.byGroup.map((group) => (
           <li key={`${group.cashflow} ${group.group}`} className="p-3">
             {group.categories.length > 1 ? (
@@ -428,7 +440,7 @@ export function CategoryBreakdown({ summary, drill }: { summary: PeriodSummary; 
                     text in it: a disclosure the size of its own label is
                     the smallest thing on the page and the one most often
                     reached for on a phone. */}
-                <summary className="flex min-h-11 cursor-pointer list-none items-center text-footnote text-accent underline underline-offset-2 marker:content-none">
+                <summary className="flex min-h-11 cursor-pointer list-none items-center text-xs text-accent underline underline-offset-2 marker:content-none">
                   {group.categories.length} pos di dalamnya
                 </summary>
                 <ul className="mt-2 space-y-2 border-l border-line pl-3">
@@ -448,10 +460,6 @@ export function CategoryBreakdown({ summary, drill }: { summary: PeriodSummary; 
           </li>
         ))}
       </ul>
-      <p className="mt-2 max-w-2xl text-footnote text-ink-muted">
-        Persentasenya dihitung terhadap arah kategori itu sendiri: kategori pengeluaran
-        dibandingkan dengan total keluar, kategori pemasukan dengan total masuk.
-      </p>
     </section>
   )
 }

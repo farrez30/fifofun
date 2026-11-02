@@ -10,11 +10,11 @@ export function DashboardSkeleton() {
           read as the page changing its mind when the real one lands. */}
       <div className="flex gap-3 overflow-hidden sm:grid sm:grid-cols-2 lg:grid-cols-4">
         {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="skeleton squircle shadow-xs h-24 w-[85%] shrink-0 sm:w-auto" />
+          <div key={i} className="skeleton squircle border border-line h-24 w-[85%] shrink-0 sm:w-auto" />
         ))}
       </div>
-      <div className="skeleton squircle shadow-xs h-64" />
-      <div className="skeleton squircle shadow-xs h-80" />
+      <div className="skeleton squircle border border-line h-64" />
+      <div className="skeleton squircle border border-line h-80" />
     </div>
   )
 }

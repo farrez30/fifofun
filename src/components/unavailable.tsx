@@ -39,15 +39,15 @@ export function Unavailable({
   const Title = heading ? 'h2' : 'p'
 
   return (
-    <div className="squircle rounded-md bg-surface p-10 text-center shadow-xs">
+    <div className="squircle rounded-md border border-line bg-surface p-10 text-center">
       {/*
         Hidden from assistive technology on purpose. It repeats the title in a
         picture, and a screen reader that announced both would say the same
         thing twice before reaching the sentence that actually helps.
       */}
       <Glyph aria-hidden="true" weight="light" className="mx-auto size-10 text-ink-faint" />
-      <Title className="mt-3 text-title3 font-semibold tracking-title3 text-ink">{title}</Title>
-      <div className="mx-auto mt-2 max-w-md text-subhead text-ink-muted">{children}</div>
+      <Title className="mt-3 text-sm font-semibold text-ink">{title}</Title>
+      <div className="mx-auto mt-2 max-w-md text-sm text-ink-muted">{children}</div>
       {action ? <div className="mt-5">{action}</div> : null}
     </div>
   )

@@ -68,7 +68,7 @@ export function AppShell({ title, email, current, lead, children }: Props) {
         lead={lead}
         account={
           <form action={signOut} className="space-y-0.5">
-            <p className="truncate px-2.5 text-footnote text-ink-muted sr-only lg:not-sr-only lg:collapsed:sr-only">
+            <p className="truncate px-2.5 text-xs text-ink-muted sr-only lg:not-sr-only lg:collapsed:sr-only">
               {email}
             </p>
             <button type="submit" className={`${SIDEBAR_ROW} ${SIDEBAR_ROW_OFF} w-full`}>

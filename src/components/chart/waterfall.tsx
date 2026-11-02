@@ -9,6 +9,7 @@ import type { MonthlyStatement } from '@/lib/ledger/monthly'
 import { formatIdr, formatIdrCompact } from '@/lib/money'
 import { Money, SignedMoney } from '@/components/money'
 import { nudge } from './axis'
+import { InfoTip } from '@/components/info-tip'
 
 /**
  * How Saldo awal became Sisa uang.
@@ -56,9 +57,9 @@ export function Waterfall({ statement, caption }: Props) {
 
   if (steps.length === 2 && steps[0].total === 0n && steps[1].total === 0n) {
     return (
-      <figure className="squircle rounded-md bg-surface shadow-xs p-6">
-        <figcaption className="text-subhead font-medium text-ink">{caption}</figcaption>
-        <p className="mt-2 text-subhead text-ink-muted">
+      <figure className="squircle rounded-md border border-line bg-surface p-6">
+        <figcaption className="text-sm font-medium text-ink">{caption}</figcaption>
+        <p className="mt-2 text-sm text-ink-muted">
           Belum ada uang yang bergerak bulan ini, jadi tidak ada yang bisa diurutkan.
         </p>
       </figure>
@@ -72,10 +73,19 @@ export function Waterfall({ statement, caption }: Props) {
   const change = closing.total - opening.total
 
   return (
-    <figure className="squircle rounded-md bg-surface shadow-xs p-4">
-      <figcaption className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <span className="text-subhead font-medium text-ink">{caption}</span>
-        <span className="text-footnote text-ink-muted">
+    <figure className="squircle rounded-md border border-line bg-surface p-4">
+      <figcaption className="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+        <div className="flex items-center gap-1">
+          <span className="text-sm font-medium text-ink">{caption}</span>
+          <InfoTip label="Arti warna dan panah">
+            <p>
+              Warnanya menandai jenis posnya, bukan baik atau buruknya. Uang yang masuk investasi
+              tetap keluar dari saldo, sama seperti uang belanja, dan arah tiap langkah dibaca dari
+              panah serta tandanya.
+            </p>
+          </InfoTip>
+        </div>
+        <span className="text-xs text-ink-muted">
           {formatIdrCompact(opening.total)} menjadi {formatIdrCompact(closing.total)},{' '}
           {change === 0n
             ? 'tidak berubah'
@@ -104,7 +114,7 @@ export function Waterfall({ statement, caption }: Props) {
             return (
               <span
                 key={String(tick)}
-                className={`absolute bottom-0 whitespace-nowrap text-caption2 leading-none text-ink-faint ${
+                className={`absolute bottom-0 whitespace-nowrap text-xs leading-none text-ink-faint ${
                   crowded ? 'hidden sm:block' : ''
                 }`}
                 style={{ left: `${pct}%`, transform: nudge(pct) }}
@@ -129,12 +139,6 @@ export function Waterfall({ statement, caption }: Props) {
           />
         ))}
       </ol>
-
-      <p className="mt-3 text-footnote text-ink-muted">
-        Warnanya menandai jenis posnya, bukan baik atau buruknya. Uang yang masuk investasi tetap
-        keluar dari saldo, sama seperti uang belanja, dan arah tiap langkah dibaca dari panah serta
-        tandanya.
-      </p>
 
       {/*
         Wrapped rather than marked directly: a table ignores the one pixel width
@@ -192,7 +196,7 @@ function Row({
           rest of this file moved to: the label column is 104px below `sm`,
           already the tightest budget in the app, and `charts.spec.ts`
           ("fits a phone without hiding the amounts off the side") measures
-          it at 320px. `text-subhead`/`text-footnote` are one pixel taller
+          it at 320px. `text-sm`/`text-xs` are one pixel taller
           than `text-sm`/`text-xs` and that pixel was enough to clip a real
           figure. Metric-identical `caption1`/`caption2` do not exist at 14px,
           so this stays put rather than shrinking the type to fit. */}

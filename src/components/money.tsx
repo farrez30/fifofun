@@ -1,3 +1,4 @@
+import { InfoTip } from '@/components/info-tip'
 import { formatIdr, formatIdrCompact } from '@/lib/money'
 
 /**
@@ -47,7 +48,10 @@ export function SignedMoney({ sen, direction, className = '', compact }: SignedM
 interface StatProps {
   label: string
   sen: bigint
+  /** A sentence about this month's data, kept visible under the figure. */
   hint?: string
+  /** What the figure means, behind an info button beside the label. */
+  info?: string
   emphasis?: boolean
   /**
    * The same figure a month earlier. The spreadsheet kept an "Income bulan
@@ -63,6 +67,7 @@ export function Stat({
   label,
   sen,
   hint,
+  info,
   emphasis = false,
   previous,
   previousLabel,
@@ -74,7 +79,7 @@ export function Stat({
       about what the card says, and the first restyle that dropped the border
       would have broken two assertions with a message about an empty locator.
     */
-    <div data-stat className="squircle rounded-md bg-surface p-4 shadow-xs">
+    <div data-stat className="squircle rounded-md border border-line bg-surface p-4">
       {/*
         The label stopped shouting.
 
@@ -86,15 +91,22 @@ export function Stat({
         read, which matters more here than anywhere, since this label is what
         tells you which figure you are looking at.
 
-        And the card lost its border for a radius and a shadow. In dark mode the
-        shadow is nearly invisible and is meant to be: the surface staircase
-        does the separating there, which is why the elevation tokens go darker
-        rather than lighter when the theme does.
+        The card is a hairline border rather than a shadow (ADR 0007): the
+        shadow vanished in dark mode, and a border reads the same in both.
       */}
-      <p className="text-footnote text-ink-faint">{label}</p>
+      {info ? (
+        <div className="flex items-center gap-1">
+          <p className="text-xs text-ink-faint">{label}</p>
+          <InfoTip label={`Arti ${label}`}>
+            <p>{info}</p>
+          </InfoTip>
+        </div>
+      ) : (
+        <p className="text-xs text-ink-faint">{label}</p>
+      )}
       <p
-        className={`mt-1.5 tnum font-mono tracking-title2 ${
-          emphasis ? 'text-title2 font-semibold text-ink' : 'text-title3 text-ink'
+        className={`mt-1.5 tnum font-mono ${
+          emphasis ? 'text-2xl font-semibold text-ink' : 'text-xl text-ink'
         }`}
       >
         {formatIdr(sen)}
@@ -102,7 +114,7 @@ export function Stat({
       {previous === undefined ? null : (
         <Change now={sen} before={previous} label={previousLabel} />
       )}
-      {hint ? <p className="mt-1 text-footnote text-ink-muted">{hint}</p> : null}
+      {hint ? <p className="mt-1 text-xs text-ink-muted">{hint}</p> : null}
     </div>
   )
 }
@@ -121,7 +133,7 @@ function Change({ now, before, label }: { now: bigint; before: bigint; label?: s
   const since = label ? `dari ${label}` : 'dari bulan sebelumnya'
 
   if (delta === 0n) {
-    return <p className="mt-1 text-footnote text-ink-faint">Sama persis {since}</p>
+    return <p className="mt-1 text-xs text-ink-faint">Sama persis {since}</p>
   }
 
   const size = delta < 0n ? -delta : delta
@@ -130,7 +142,7 @@ function Change({ now, before, label }: { now: bigint; before: bigint; label?: s
   const share = before > 0n ? Number((size * 100n) / before) : null
 
   return (
-    <p className="mt-1 text-footnote text-ink-muted">
+    <p className="mt-1 text-xs text-ink-muted">
       <span aria-hidden="true" className="mr-1 text-ink-faint">
         {delta > 0n ? '▲' : '▼'}
       </span>

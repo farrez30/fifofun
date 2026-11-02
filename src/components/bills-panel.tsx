@@ -1,5 +1,6 @@
 import type { BillsReview, BillState, BillStatus } from '@/lib/ledger/bills'
 import { formatIdr } from '@/lib/money'
+import { InfoTip } from '@/components/info-tip'
 
 /**
  * Which bills are settled this month, and what the rest will cost.
@@ -40,15 +41,15 @@ export function BillsPanel({ review }: Props) {
 
   if (bills.length === 0) {
     return (
-      <div className="squircle rounded-md bg-surface shadow-xs p-6">
-        <p className="text-subhead font-medium text-ink">Belum ada tagihan yang tercatat.</p>
-        <p className="mt-2 text-subhead text-ink-muted">
+      <div className="squircle rounded-md border border-line bg-surface p-6">
+        <p className="text-sm font-medium text-ink">Belum ada tagihan yang tercatat.</p>
+        <p className="mt-2 text-sm text-ink-muted">
           Impor tidak bisa menebak mana pembayaran yang berupa tagihan rutin. Listrik, internet,
           dan langganan biasanya mendarat di Belanja sampai ada yang memutuskan sebaliknya.
         </p>
         <a
           href="/tinjau"
-          className="mt-3 inline-block text-subhead text-accent underline underline-offset-2"
+          className="mt-3 inline-block text-sm text-accent underline underline-offset-2"
         >
           Pindahkan lewat antrean tinjau
         </a>
@@ -57,7 +58,7 @@ export function BillsPanel({ review }: Props) {
   }
 
   return (
-    <div className="squircle rounded-md bg-surface shadow-xs">
+    <div className="squircle rounded-md border border-line bg-surface">
       <div className="border-b border-line p-4">
         {/*
           Three cases, not two. A month with nothing due because everything was
@@ -65,17 +66,29 @@ export function BillsPanel({ review }: Props) {
           months are opposite situations, and the first version of this line
           reported the second one as "semua tagihan sudah dibayar, Rp0".
         */}
-        <p className="text-subhead font-medium text-ink">
-          {due.length > 0
-            ? `${due.length} tagihan belum dibayar, kira-kira ${formatIdr(outstanding)}.${
-                late > 0 ? ` ${late} sudah lewat jatuh tempo.` : ''
-              }`
-            : total > 0n
-              ? `Semua tagihan bulan ini sudah dibayar, ${formatIdr(total)}.`
-              : 'Belum ada tagihan yang tercatat keluar bulan ini.'}
-        </p>
+        <div className="flex items-start gap-1">
+          <p className="min-w-0 flex-1 text-sm font-medium text-ink">
+            {due.length > 0
+              ? `${due.length} tagihan belum dibayar, kira-kira ${formatIdr(outstanding)}.${
+                  late > 0 ? ` ${late} sudah lewat jatuh tempo.` : ''
+                }`
+              : total > 0n
+                ? `Semua tagihan bulan ini sudah dibayar, ${formatIdr(total)}.`
+                : 'Belum ada tagihan yang tercatat keluar bulan ini.'}
+          </p>
+          <InfoTip label="Cara status tagihan dibaca">
+            <p>
+              Statusnya dibaca dari catatan, bukan dicentang sendiri: sebuah tagihan disebut sudah
+              dibayar kalau ada uang yang benar-benar keluar untuk kategori itu bulan ini.
+            </p>
+            <p className="mt-2">
+              Nominal dan tanggal jatuh tempo diatur per tagihan di Pengaturan; tanpa itu, kolom
+              biasanya adalah median dari bulan-bulan tagihan itu dibayar.
+            </p>
+          </InfoTip>
+        </div>
 
-        <p className="mt-1 text-subhead text-ink-muted">
+        <p className="mt-1 text-sm text-ink-muted">
           {due.length > 0 ? (
             `Sudah keluar bulan ini ${formatIdr(total)}.`
           ) : total > 0n ? (
@@ -101,18 +114,18 @@ export function BillsPanel({ review }: Props) {
           return (
             <li key={bill.category} className="p-3">
               <div className="flex items-baseline justify-between gap-3">
-                <span className="flex min-w-0 flex-1 items-baseline gap-1.5 text-subhead text-ink">
+                <span className="flex min-w-0 flex-1 items-baseline gap-1.5 text-sm text-ink">
                   <span aria-hidden="true" className={style.text}>
                     {style.glyph}
                   </span>
                   <span className="min-w-0 truncate">{bill.category}</span>
                 </span>
-                <span className="tnum shrink-0 font-mono text-subhead text-ink">
+                <span className="tnum shrink-0 font-mono text-sm text-ink">
                   {bill.paid > 0n ? formatIdr(bill.paid) : <span className="text-ink-faint">–</span>}
                 </span>
               </div>
 
-              <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-footnote text-ink-muted">
+              <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs text-ink-muted">
                 <span>{style.label}</span>
                 <span aria-hidden="true" className="text-ink-faint">
                   ·
@@ -158,9 +171,9 @@ export function BillsPanel({ review }: Props) {
         aria-label="Tabel tagihan, bisa digeser ke samping"
       >
 
-        <table className="w-full min-w-lg border-collapse text-subhead">
+        <table className="w-full min-w-lg border-collapse text-sm">
           <thead>
-            <tr className="border-b border-line text-left text-caption1 uppercase tracking-wide text-ink-faint">
+            <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-faint">
               <th scope="col" className="px-4 py-2 font-medium">
                 Tagihan
               </th>
@@ -208,7 +221,7 @@ export function BillsPanel({ review }: Props) {
                       <>
                         {formatIdr(bill.usual)}
                         {bill.usualSource === 'set' ? (
-                          <span className="ml-1 font-sans text-footnote text-ink-faint">ditetapkan</span>
+                          <span className="ml-1 font-sans text-xs text-ink-faint">ditetapkan</span>
                         ) : null}
                       </>
                     ) : (
@@ -224,13 +237,6 @@ export function BillsPanel({ review }: Props) {
           </tbody>
         </table>
       </div>
-
-      <p className="border-t border-line p-4 text-footnote text-ink-muted">
-        Statusnya dibaca dari catatan, bukan dicentang sendiri: sebuah tagihan disebut sudah
-        dibayar kalau ada uang yang benar-benar keluar untuk kategori itu bulan ini. Nominal dan
-        tanggal jatuh tempo diatur per tagihan di Pengaturan; tanpa itu, kolom biasanya adalah
-        median dari bulan-bulan tagihan itu dibayar.
-      </p>
     </div>
   )
 }

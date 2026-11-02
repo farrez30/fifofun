@@ -35,8 +35,8 @@ export function Toaster() {
       toastOptions={{
         classNames: {
           toast: 'material squircle font-sans',
-          title: 'text-subhead font-medium',
-          description: 'text-footnote',
+          title: 'text-sm font-medium',
+          description: 'text-xs',
         },
       }}
     />

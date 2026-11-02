@@ -12,6 +12,7 @@ import { useRef, useState, type KeyboardEvent } from 'react'
 import { MonthDetailPanel } from '@/components/month-detail'
 import { SEGMENT, SEGMENT_ON, SEGMENTED } from '@/components/field-base'
 import type { MonthDetail } from '@/lib/ledger/month-detail'
+import { InfoTip } from '@/components/info-tip'
 
 /**
  * The interactive half of the income and spending chart.
@@ -188,9 +189,18 @@ export function CashflowChartView({
   const axis = mode === 'net' ? netTicks : ticks
 
   return (
-    <figure className="squircle rounded-md bg-surface shadow-xs p-4">
+    <figure className="squircle rounded-md border border-line bg-surface p-4">
       <figcaption className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <span className="text-subhead font-medium text-ink">{caption}</span>
+        <div className="flex items-center gap-1">
+          <span className="text-sm font-medium text-ink">{caption}</span>
+          <InfoTip label="Cara membaca">
+            <p>
+              {details.length > 0
+                ? 'Arahkan kursor untuk membaca angkanya. Klik atau tekan Enter pada sebuah bulan untuk menyematkan rinciannya di bawah grafik.'
+                : 'Arahkan kursor atau pakai tombol panah untuk membaca bulan tertentu.'}
+            </p>
+          </InfoTip>
+        </div>
 
         <div role="radiogroup" aria-label="Cara membaca grafik" className={SEGMENTED}>
           {MODES.map((option) => (
@@ -213,21 +223,21 @@ export function CashflowChartView({
       {active ? (
         <dl className="mb-3 flex flex-wrap items-baseline gap-x-6 gap-y-1 border-b border-line pb-3">
           <div className="flex items-baseline gap-2">
-            <dt className="text-footnote text-ink-faint">Bulan</dt>
-            <dd className="tnum font-mono text-subhead font-medium text-ink">{active.month}</dd>
+            <dt className="text-xs text-ink-faint">Bulan</dt>
+            <dd className="tnum font-mono text-sm font-medium text-ink">{active.month}</dd>
           </div>
           <div className="flex items-baseline gap-2">
-            <dt className="text-footnote text-ink-faint">Masuk</dt>
-            <dd className="tnum font-mono text-subhead text-under">{active.income.text}</dd>
+            <dt className="text-xs text-ink-faint">Masuk</dt>
+            <dd className="tnum font-mono text-sm text-under">{active.income.text}</dd>
           </div>
           <div className="flex items-baseline gap-2">
-            <dt className="text-footnote text-ink-faint">Keluar</dt>
-            <dd className="tnum font-mono text-subhead text-ink">{active.spending.text}</dd>
+            <dt className="text-xs text-ink-faint">Keluar</dt>
+            <dd className="tnum font-mono text-sm text-ink">{active.spending.text}</dd>
           </div>
           <div className="flex items-baseline gap-2">
-            <dt className="text-footnote text-ink-faint">Selisih</dt>
+            <dt className="text-xs text-ink-faint">Selisih</dt>
             <dd
-              className={`tnum font-mono text-subhead font-medium ${
+              className={`tnum font-mono text-sm font-medium ${
                 active.netNegative ? 'text-over' : 'text-under'
               }`}
             >
@@ -245,7 +255,7 @@ export function CashflowChartView({
           {gridlines(axis, split).map((line) => (
             <span
               key={line.key}
-              className="tnum absolute right-0 -translate-y-1/2 font-mono text-caption2 text-ink-faint"
+              className="tnum absolute right-0 -translate-y-1/2 font-mono text-xs text-ink-faint"
               style={{ bottom: `${line.bottom}%` }}
             >
               {line.text}
@@ -348,13 +358,13 @@ export function CashflowChartView({
                         than the radiogroup would otherwise hear twice. */}
                     <span
                       aria-hidden="true"
-                      className={`text-caption2 leading-none tabular-nums ${
+                      className={`text-xs leading-none tabular-nums ${
                         chosen ? 'font-medium text-ink' : 'text-ink-faint'
                       }`}
                     >
                       {month.label}
                     </span>
-                    <span aria-hidden="true" className="tnum text-caption2 leading-none text-ink-faint">
+                    <span aria-hidden="true" className="tnum text-xs leading-none text-ink-faint">
                       {month.startsYear ? month.year :' '}
                     </span>
                   </div>
@@ -365,7 +375,7 @@ export function CashflowChartView({
         </div>
       </div>
 
-      <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-footnote text-ink-muted">
+      <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-muted">
         {mode === 'side' ? (
           <>
             <Key className="bg-under" label="Masuk" />
@@ -382,12 +392,6 @@ export function CashflowChartView({
             <Key className="bg-over" label="Bulan yang tekor" />
           </>
         )}
-      </p>
-
-      <p className="mt-1 text-footnote text-ink-faint">
-        {details.length > 0
-          ? 'Arahkan kursor untuk membaca angkanya. Klik atau tekan Enter pada sebuah bulan untuk menyematkan rinciannya di bawah grafik.'
-          : 'Arahkan kursor atau pakai tombol panah untuk membaca bulan tertentu.'}
       </p>
 
       {detail ? <MonthDetailPanel detail={detail} /> : null}
