@@ -239,8 +239,9 @@ itu dipakai, jadi putuskan dalam hitungan jam, bukan hari.
 
 Perpindahan ini sudah selesai pada 21–22 Oktober 2026. Per 2 November 2026
 project Supabase lama tidak bisa dihubungi lagi, jadi jalan mundur di langkah 5
-sudah tidak ada: Neon `main` adalah satu-satunya salinan data, dan cadangannya
-adalah urusan Neon.
+sudah tidak ada: Neon `main` adalah satu-satunya salinan data hidup. Cadangannya
+dibuat pekerja backup Coderoach di PC pemilik (ADR 0006,
+`scripts/siapkan-cadangan.sh`).
 
 ## Setelah deploy pertama
 
