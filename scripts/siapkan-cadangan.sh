@@ -40,8 +40,12 @@ OWN=(DB_URLS BASIS CATATAN_PULIH RESTIC_TAG RESTIC_HOST HC_URL HC_URL_PULIH PULI
 PRA_SQL='create role anon nologin; create role authenticated nologin; create role service_role nologin;'
 
 tulis_env() {
-  local host="$1" restic_host tmp name n
+  local host="$1" restic_host tmp name n hc hc_pulih
   [[ -f "$BASE" ]] || { echo "tidak ada $BASE; pasang pekerja dulu (coderoach-app scripts/cadangan-neon/pasang.sh)" >&2; return 1; }
+  # FiFoFun's own health checks survive a rewrite; they are only ever read from
+  # the previous backup-fifofun.env, never from Coderoach's backup.env.
+  hc="$(grep -m1 "^HC_URL=" "$OUT" 2>/dev/null | tr -d '\r' || true)"
+  hc_pulih="$(grep -m1 "^HC_URL_PULIH=" "$OUT" 2>/dev/null | tr -d '\r' || true)"
   restic_host="$(sed -n "s/^RESTIC_HOST=['\"]\{0,1\}\([^'\"]*\)['\"]\{0,1\}\r\{0,1\}$/\1/p" "$BASE" | head -1)"
   [[ -n "$restic_host" ]] || { echo "RESTIC_HOST kosong di $BASE; snapshot dari container --rm butuh nama tetap" >&2; return 1; }
 
@@ -55,8 +59,8 @@ tulis_env() {
     echo "CATATAN_PULIH=/var/backups/pg/fifofun/uji-pulih.tsv"
     echo "RESTIC_TAG=fifofun-neon"
     echo "RESTIC_HOST=$restic_host"
-    echo "HC_URL=''"
-    echo "HC_URL_PULIH=''"
+    echo "${hc:-HC_URL=''}"
+    echo "${hc_pulih:-HC_URL_PULIH=''}"
     echo "PULIH_PRA_SQL='$PRA_SQL'"
   } >"$tmp"
 
