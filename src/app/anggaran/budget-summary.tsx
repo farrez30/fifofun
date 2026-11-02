@@ -1,13 +1,8 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { CalendarDots } from '@phosphor-icons/react/dist/ssr/CalendarDots'
 import { CaretDown } from '@phosphor-icons/react/dist/ssr/CaretDown'
 import { CaretUp } from '@phosphor-icons/react/dist/ssr/CaretUp'
-import { ChartPieSlice } from '@phosphor-icons/react/dist/ssr/ChartPieSlice'
-import { Clock } from '@phosphor-icons/react/dist/ssr/Clock'
-import { Percent } from '@phosphor-icons/react/dist/ssr/Percent'
-import { PiggyBank } from '@phosphor-icons/react/dist/ssr/PiggyBank'
 import { CategoryMark } from '@/components/marks'
 import { MetaRow } from '@/components/meta-row'
 import { useReservedHeight, useStuck } from '@/components/use-stuck'
@@ -117,41 +112,39 @@ export function BudgetSummary({ plan, lines }: Props) {
           compact ? 'p-3' : 'p-4'
         }`}
       >
-        <figcaption className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-subhead">
-          <span className="inline-flex items-center gap-1.5 font-medium text-ink">
-            <ChartPieSlice
-              aria-hidden="true"
-              weight="regular"
-              className="size-4 shrink-0 text-ink-muted"
-            />
-            Alokasi bulan ini
+        <figcaption className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-sm">
+          <span className="font-medium text-ink">Alokasi bulan ini</span>
+          {/* The one figure on the page set larger than the title (ADR 0007),
+              on its own row while open so a phone keeps the toggle in reach. */}
+          <span
+            className={`tnum font-mono text-ink ${
+              compact ? '' : 'order-last basis-full text-2xl font-semibold'
+            }`}
+          >
+            {formatIdr(total)}
+            {income !== null ? (
+              <span
+                className={`whitespace-nowrap font-sans text-sm font-normal text-ink-muted ${
+                  compact ? 'ml-2' : 'block'
+                }`}
+              >
+                {percentText(share(total, income))} dari pemasukan
+              </span>
+            ) : null}
           </span>
-          <span className="flex items-center gap-3">
-            <span className="tnum font-mono text-ink">
-              {formatIdr(total)}
-              {income !== null ? (
-                <span className="font-sans text-ink-muted">
-                  <span aria-hidden="true" className="mx-1.5 text-ink-faint">
-                    ·
-                  </span>
-                  {percentText(share(total, income))} dari pemasukan
-                </span>
-              ) : null}
-            </span>
-            <button
-              type="button"
-              onClick={() => setCollapsed(!compact)}
-              aria-expanded={!compact}
-              className="inline-flex min-h-11 items-center gap-1 rounded-sm px-2 text-footnote text-ink-muted transition-colors duration-150 hover:bg-sunken hover:text-ink"
-            >
-              {compact ? (
-                <CaretDown aria-hidden="true" weight="bold" className="size-3.5 shrink-0" />
-              ) : (
-                <CaretUp aria-hidden="true" weight="bold" className="size-3.5 shrink-0" />
-              )}
-              {compact ? 'Perbesar' : 'Kecilkan'}
-            </button>
-          </span>
+          <button
+            type="button"
+            onClick={() => setCollapsed(!compact)}
+            aria-expanded={!compact}
+            className="inline-flex min-h-11 items-center gap-1 rounded-sm px-2 text-xs text-ink-muted transition-colors duration-150 hover:bg-sunken hover:text-ink"
+          >
+            {compact ? (
+              <CaretDown aria-hidden="true" weight="bold" className="size-3.5 shrink-0" />
+            ) : (
+              <CaretUp aria-hidden="true" weight="bold" className="size-3.5 shrink-0" />
+            )}
+            {compact ? 'Perbesar' : 'Kecilkan'}
+          </button>
         </figcaption>
 
         {/*
@@ -191,12 +184,9 @@ export function BudgetSummary({ plan, lines }: Props) {
         </div>
 
         {compact ? (
-          <p className="mt-2 flex items-center gap-1.5 truncate text-footnote text-ink-muted">
+          <p className="mt-2 flex items-center gap-1.5 truncate text-xs text-ink-muted">
             {income === null ? (
-              <>
-                <ChartPieSlice aria-hidden="true" weight="regular" className="size-3.5 shrink-0" />
-                {segments.length} kategori terisi
-              </>
+              <>{segments.length} kategori terisi</>
             ) : past > 0n ? (
               <>
                 <span aria-hidden="true" className="text-over">
@@ -207,7 +197,6 @@ export function BudgetSummary({ plan, lines }: Props) {
               </>
             ) : (
               <>
-                <PiggyBank aria-hidden="true" weight="regular" className="size-3.5 shrink-0" />
                 sisa <span className="tnum font-mono text-ink">{formatIdr(left)}</span> (
                 {percentText(share(left, income))}) belum dialokasikan
               </>
@@ -216,7 +205,7 @@ export function BudgetSummary({ plan, lines }: Props) {
         ) : (
           <>
             {/* What the pointer is on, or the split when it is on nothing. */}
-            <p className="mt-2 min-h-5 text-footnote text-ink-muted">
+            <p className="mt-2 min-h-5 text-xs text-ink-muted">
               {active ? (
                 <MetaRow
                   parts={[
@@ -241,20 +230,17 @@ export function BudgetSummary({ plan, lines }: Props) {
                     ·
                   </span>
                   Bills <span className="tnum font-mono">{formatIdr(totalOf('bills'))}</span>
-                  {segments.length > 0 ? (
-                    <span className="ml-2 inline-block text-ink-faint">Arahkan kursor atau ketuk warnanya.</span>
-                  ) : null}
                 </>
               )}
             </p>
 
             {income === null ? (
-              <p className="mt-2 text-subhead text-ink-muted">
+              <p className="mt-2 text-sm text-ink-muted">
                 Pemasukan biasanya belum bisa dihitung, jadi garis pembandingnya belum ada.
                 Angkanya muncul setelah ada bulan dengan pemasukan tercatat.
               </p>
             ) : past > 0n ? (
-              <p className="mt-2 border border-over/40 bg-over-wash px-3 py-2 text-subhead text-ink">
+              <p className="mt-2 text-sm text-ink">
                 <span aria-hidden="true" className="mr-1 text-over">
                   ▲
                 </span>
@@ -262,12 +248,7 @@ export function BudgetSummary({ plan, lines }: Props) {
                 {percentText(share(past, income))}) melewati pemasukan biasanya ({plan.incomeText}).
               </p>
             ) : (
-              <p className="mt-2 flex flex-wrap items-baseline gap-x-1 text-subhead text-ink-muted">
-                <PiggyBank
-                  aria-hidden="true"
-                  weight="regular"
-                  className="size-4 shrink-0 translate-y-0.5"
-                />
+              <p className="mt-2 text-sm text-ink-muted">
                 Sisa <span className="tnum font-mono text-ink">{formatIdr(left)}</span> (
                 {percentText(share(left, income))}) dari pemasukan biasanya ({plan.incomeText})
                 belum dialokasikan.
@@ -286,9 +267,8 @@ export function BudgetSummary({ plan, lines }: Props) {
                   type="button"
                   onClick={() => setOpenList(!openList)}
                   aria-expanded={openList}
-                  className="inline-flex min-h-11 items-center gap-1.5 text-footnote text-ink-muted transition-colors duration-150 hover:text-ink"
+                  className="inline-flex min-h-11 items-center gap-1.5 text-xs text-ink-muted transition-colors duration-150 hover:text-ink"
                 >
-                  <Percent aria-hidden="true" weight="regular" className="size-3.5 shrink-0" />
                   Rincian {segments.length} kategori
                   {openList ? (
                     <CaretUp aria-hidden="true" weight="bold" className="size-3.5 shrink-0" />
@@ -299,7 +279,7 @@ export function BudgetSummary({ plan, lines }: Props) {
 
                 <ul className={openList ? 'reveal mt-1 space-y-1.5' : 'sr-only'}>
                   {ranked.map((line) => (
-                    <li key={line.id} className="text-footnote">
+                    <li key={line.id} className="text-xs">
                       <span className="flex flex-wrap items-baseline justify-between gap-x-2">
                         <CategoryMark
                           name={line.name}
@@ -337,29 +317,18 @@ export function BudgetSummary({ plan, lines }: Props) {
             {plan.pace && plan.totalProjectedText ? (
               <p
                 data-summary-pace
-                className="mt-2 flex flex-wrap items-baseline gap-x-1 border-t border-line pt-2 text-subhead text-ink-muted"
+                className="mt-2 border-t border-line pt-2 text-sm text-ink-muted"
               >
-                <Clock
-                  aria-hidden="true"
-                  weight="regular"
-                  className="size-4 shrink-0 translate-y-0.5"
-                />
-                Hari ke-{plan.pace.day} dari {plan.pace.days}
-                <span aria-hidden="true" className="text-ink-faint">
-                  ·
-                </span>
-                terpakai{' '}
+                Hari ke-{plan.pace.day} dari {plan.pace.days}, terpakai{' '}
                 <span className="tnum font-mono text-ink">
                   {formatIdr(BigInt(plan.totalActualSen))}
                 </span>
-                <span aria-hidden="true" className="text-ink-faint">
-                  ·
-                </span>
-                kalau ritmenya begini terus, sekitar{' '}
+                ; kalau ritmenya begini terus, sekitar{' '}
                 <span className="tnum font-mono text-ink">{plan.totalProjectedText}</span> sampai
                 akhir bulan
                 {projectedPast !== null ? (
                   <>
+                    ,{' '}
                     <span aria-hidden="true" className="text-warn">
                       ▲
                     </span>
@@ -380,13 +349,8 @@ export function BudgetSummary({ plan, lines }: Props) {
               month without being asked to say so.
             */}
             {plan.periodic.length > 0 ? (
-              <div data-summary-periodic className="mt-2 border-t border-line pt-2 text-subhead">
-                <p className="flex flex-wrap items-baseline gap-x-1 text-ink-muted">
-                  <CalendarDots
-                    aria-hidden="true"
-                    weight="regular"
-                    className="size-4 shrink-0 translate-y-0.5"
-                  />
+              <div data-summary-periodic className="mt-2 border-t border-line pt-2 text-sm">
+                <p className="text-ink-muted">
                   Pos yang datang setahun sekali, dihargai per bulan: sisihkan{' '}
                   <span className="tnum font-mono text-ink">{plan.periodicMonthlyText}</span>
                   {income !== null && periodicMonthly > 0n ? (
@@ -394,7 +358,7 @@ export function BudgetSummary({ plan, lines }: Props) {
                   ) : null}{' '}
                   tiap bulan supaya tidak mengagetkan saat jatuh tempo.
                 </p>
-                <ul className="mt-1 space-y-0.5 text-footnote text-ink-muted">
+                <ul className="mt-1 space-y-0.5 text-xs text-ink-muted">
                   {plan.periodic.map((cost) => (
                     <li key={cost.name}>
                       {cost.name} <span className="tnum font-mono">{cost.typicalText}</span> tiap{' '}
@@ -414,12 +378,7 @@ export function BudgetSummary({ plan, lines }: Props) {
                 empty space is read as a missing feature, and the honest
                 answer is that the ledger has not shown a yearly rhythm yet.
               */
-              <p className="mt-2 flex flex-wrap items-baseline gap-x-1 border-t border-line pt-2 text-footnote text-ink-muted">
-                <CalendarDots
-                  aria-hidden="true"
-                  weight="regular"
-                  className="size-3.5 shrink-0 translate-y-0.5"
-                />
+              <p className="mt-2 border-t border-line pt-2 text-xs text-ink-muted">
                 Belum ada pos yang polanya tahunan di catatanmu. Begitu satu biaya muncul dua kali
                 dengan jarak beberapa bulan, misalnya pajak kendaraan atau premi asuransi, angka
                 sisihan per bulannya akan muncul di sini.

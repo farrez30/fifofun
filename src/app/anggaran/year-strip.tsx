@@ -2,6 +2,7 @@
 
 import { useRef, useState, type KeyboardEvent } from 'react'
 import Link from 'next/link'
+import { InfoTip } from '@/components/info-tip'
 import type { BudgetYearView, YearMonthView } from '@/lib/ledger/budget-year'
 
 /**
@@ -30,9 +31,9 @@ export function YearStrip({ view }: { view: BudgetYearView }) {
 
   if (!view.hasAny) {
     return (
-      <figure className="squircle rounded-md bg-surface shadow-xs p-6">
-        <figcaption className="text-subhead font-medium text-ink">Setahun ke belakang</figcaption>
-        <p className="mt-2 text-subhead text-ink-muted">
+      <figure className="squircle rounded-md border border-line bg-surface p-6">
+        <figcaption className="text-sm font-medium text-ink">Setahun ke belakang</figcaption>
+        <p className="mt-2 text-sm text-ink-muted">
           Belum ada pengeluaran maupun anggaran di dua belas bulan ini, jadi belum ada yang bisa
           digambar. Strip ini terisi sendiri begitu bulan-bulannya punya catatan.
         </p>
@@ -62,8 +63,14 @@ export function YearStrip({ view }: { view: BudgetYearView }) {
   }
 
   return (
-    <figure className="squircle rounded-md bg-surface shadow-xs p-4">
-      <figcaption className="text-subhead font-medium text-ink">Setahun ke belakang</figcaption>
+    <figure className="squircle rounded-md border border-line bg-surface p-4">
+      <figcaption className="flex items-center gap-1 text-sm font-medium text-ink">
+        Setahun ke belakang
+        <InfoTip label="Cara membaca">
+          Garis hitamnya total anggaran bulan itu; bar yang melewatinya berarti bulannya jebol.
+          Kolom kosong berarti belum ada catatan, bukan nol.
+        </InfoTip>
+      </figcaption>
 
       <Readout month={selected ?? null} />
 
@@ -125,10 +132,6 @@ export function YearStrip({ view }: { view: BudgetYearView }) {
         })}
       </div>
 
-      <p className="mt-2 text-footnote text-ink-muted">
-        Garis hitamnya total anggaran bulan itu; bar yang melewatinya berarti bulannya jebol.
-        Kolom kosong berarti belum ada catatan, bukan nol.
-      </p>
 
       {/* Wrapped in a div: a bare sr-only table ignores the one pixel width it
           is given and would stretch the page sideways. */}
@@ -174,7 +177,7 @@ function Readout({ month }: { month: YearMonthView | null }) {
   if (!month) return null
 
   return (
-    <p className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-subhead">
+    <p className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm">
       <span className="font-medium text-ink">{month.label}</span>
       {month.hasData ? (
         <span className="text-ink-muted">

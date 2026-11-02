@@ -79,9 +79,9 @@ async function Budgets({ params }: { params: Record<string, string | string[] | 
 
   if (budgetable.length === 0) {
     return (
-      <div className="squircle rounded-md bg-surface shadow-xs p-6">
-        <p className="text-subhead font-medium text-ink">Belum ada kategori Spending atau Bills.</p>
-        <p className="mt-2 text-subhead text-ink-muted">
+      <div className="squircle rounded-md border border-line bg-surface p-6">
+        <p className="text-sm font-medium text-ink">Belum ada kategori Spending atau Bills</p>
+        <p className="mt-2 text-sm text-ink-muted">
           Anggaran ditetapkan per kategori pengeluaran.{' '}
           <a href="/pengaturan?bagian=kategori" className="text-accent underline underline-offset-2">
             Buat dulu satu di Pengaturan
@@ -154,7 +154,6 @@ export default async function AnggaranPage({
       title="Anggaran"
       email={user.email ?? ''}
       current="/anggaran"
-      lead="Tetapkan batas per kategori untuk satu bulan. Biasanya dan bulan lalu ada di samping kolomnya supaya angkanya tidak ditebak dari kosong."
     >
       <Suspense key={JSON.stringify(params)} fallback={<BudgetSkeleton />}>
         <Budgets params={params} />

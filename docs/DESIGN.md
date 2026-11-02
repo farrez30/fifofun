@@ -7,6 +7,13 @@ disebutkan di bagian [Apa yang menahan semua ini](#apa-yang-menahan-semua-ini).
 Teks yang dilihat pengguna diatur `docs/copywriting.md`, dan dokumen itu tidak
 diubah oleh apa pun di sini.
 
+**Sedang berpindah (ADR 0007).** Skala peran Dynamic Type di §2 dan kartu
+`shadow-xs` di §4 diganti modul demi modul oleh skala empat langkah
+(`text-xl`, `text-sm`, `text-xs`, plus `text-2xl` untuk satu angka vonis) dan
+kartu ber-border 1px. Berkas yang sudah
+pindah terdaftar di `FOUR_STEP` pada `src/app/type-roles.test.ts`. Kaca, ikon,
+aksen, dan font tidak ikut berubah. §2 dan §4 ditulis ulang di PR terakhir.
+
 ---
 
 ## 1. Posisi
