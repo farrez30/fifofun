@@ -103,11 +103,11 @@ function popupContent(point: PlacePoint, onMove: (pointId: string) => void): HTM
     return node
   }
 
-  add('p', point.label, 'text-subhead font-medium text-ink')
-  if (point.address) add('p', point.address, 'mt-0.5 text-footnote text-ink-muted line-clamp-2')
+  add('p', point.label, 'text-sm font-medium text-ink')
+  if (point.address) add('p', point.address, 'mt-0.5 text-xs text-ink-muted line-clamp-2')
 
   const figures = document.createElement('dl')
-  figures.className = 'mt-2 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-0.5 text-footnote'
+  figures.className = 'mt-2 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-0.5 text-xs'
   root.append(figures)
   const row = (term: string, value: string, mono = false) => {
     add('dt', term, 'text-ink-muted', figures)
@@ -118,11 +118,11 @@ function popupContent(point: PlacePoint, onMove: (pointId: string) => void): HTM
   row('Per kunjungan', point.average, true)
   if (point.topCategory) row('Kategori', point.topCategory)
   if (point.usualTime) row('Biasanya', point.usualTime)
-  add('p', point.span, 'mt-2 text-caption1 text-ink-faint')
+  add('p', point.span, 'mt-2 text-xs text-ink-faint')
 
   if (point.recent.length > 0) {
     const list = document.createElement('ul')
-    list.className = 'mt-2 space-y-0.5 border-t border-line pt-2 text-footnote'
+    list.className = 'mt-2 space-y-0.5 border-t border-line pt-2 text-xs'
     list.setAttribute('aria-label', 'Kunjungan terakhir')
     root.append(list)
     // Three, so the popup fits inside the map at its shortest; the table has the rest.
@@ -135,7 +135,7 @@ function popupContent(point: PlacePoint, onMove: (pointId: string) => void): HTM
     }
   }
 
-  const move = add('button', 'Pindahkan titik', 'mt-2 inline-flex min-h-11 items-center text-subhead font-medium text-accent')
+  const move = add('button', 'Pindahkan titik', 'mt-2 inline-flex min-h-11 items-center text-sm font-medium text-accent')
   move.setAttribute('type', 'button')
   move.addEventListener('click', () => onMove(point.pointId))
   return root
@@ -357,8 +357,8 @@ export function PlaceMap({ points, placing, draft, onPick, onMove, hidden, mode,
 
   if (failed) {
     return (
-      <div className="squircle flex h-[55vh] min-h-80 items-center justify-center rounded-md bg-surface p-6 text-center shadow-xs">
-        <p className="max-w-sm text-subhead text-ink-muted">
+      <div className="squircle flex h-[55vh] min-h-80 items-center justify-center rounded-md border border-line bg-surface p-6 text-center">
+        <p className="max-w-sm text-sm text-ink-muted">
           Peta tidak bisa digambar di perangkat ini. Semua tempat dan angkanya tetap ada di bagian
           Tempat.
         </p>
@@ -372,13 +372,13 @@ export function PlaceMap({ points, placing, draft, onPick, onMove, hidden, mode,
         ref={container}
         role="region"
         aria-label="Peta belanja. Angka yang sama ada di bagian Tempat."
-        className="place-map squircle h-[55vh] min-h-80 overflow-hidden rounded-md bg-sunken shadow-xs sm:h-[60vh]"
+        className="place-map squircle h-[55vh] min-h-80 overflow-hidden rounded-md border border-line bg-sunken sm:h-[60vh]"
       />
       {/* Opaque, not glass: it sits over the map, which DESIGN.md §3 keeps flat. */}
       {tilesFailed ? (
         <p
           role="status"
-          className="absolute inset-x-3 top-3 rounded-sm bg-surface px-3 py-2 text-footnote text-ink shadow-sm"
+          className="absolute inset-x-3 top-3 rounded-sm bg-surface px-3 py-2 text-xs text-ink shadow-sm"
         >
           Peta dasar dari OpenFreeMap gagal dimuat. Semua tempat dan angkanya tetap ada di bagian Tempat.
         </p>

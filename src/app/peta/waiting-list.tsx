@@ -63,10 +63,10 @@ export function WaitingList({ waiting, initialQuery = '', initialPage = 1 }: Pro
 
   return (
     <section aria-labelledby="belum-berlokasi">
-      <h2 id="belum-berlokasi" tabIndex={-1} className="mb-1 text-subhead font-medium text-ink">
+      <h2 id="belum-berlokasi" tabIndex={-1} className="mb-1 text-sm font-medium text-ink">
         Semua yang menunggu
       </h2>
-      <p className="max-w-2xl mb-3 text-footnote text-ink-muted">
+      <p className="max-w-2xl mb-3 text-xs text-ink-muted">
         {waiting.length === 0
           ? 'Semua pedagang di pilihan ini sudah ditaruh di peta.'
           : `${waiting.length} pedagang dibayar di kasir tapi belum punya titik, terbesar dulu. Toko online yang menerima QRIS bisa ditandai tanpa tempat.`}
@@ -91,7 +91,7 @@ export function WaitingList({ waiting, initialQuery = '', initialPage = 1 }: Pro
             className={CONTROL}
           />
           {needle ? (
-            <p role="status" className="mt-1 text-footnote text-ink-muted">
+            <p role="status" className="mt-1 text-xs text-ink-muted">
               {matching.length === 0 ? 'Tidak ada pedagang dengan nama itu.' : `${matching.length} pedagang cocok.`}
             </p>
           ) : null}
@@ -99,16 +99,16 @@ export function WaitingList({ waiting, initialQuery = '', initialPage = 1 }: Pro
       ) : null}
 
       {visible.length > 0 ? (
-        <ul className="squircle rows-inset divide-y divide-line rounded-md bg-surface shadow-xs">
+        <ul className="squircle rows-inset divide-y divide-line rounded-md border border-line bg-surface">
           {visible.map((merchant) => (
             <li key={merchant.key} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5">
               {/* A floor on the name's column, so on a phone the buttons wrap
                   under it instead of squeezing the name to a few letters. */}
               <div className="min-w-48 flex-1">
-                <p className="truncate text-subhead text-ink">{merchant.label}</p>
+                <p className="truncate text-sm text-ink">{merchant.label}</p>
                 <MetaRow
                   as="p"
-                  className="text-footnote text-ink-muted"
+                  className="text-xs text-ink-muted"
                   parts={[
                     <span key="total" className="tnum font-mono">{merchant.total}</span>,
                     `${merchant.visits} kali`,

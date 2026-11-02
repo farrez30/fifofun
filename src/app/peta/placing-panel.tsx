@@ -64,12 +64,12 @@ export function PlacingPanel({
   }, [merchantKey])
 
   return (
-    <section aria-labelledby="atur" className="squircle space-y-4 rounded-md bg-surface p-4 shadow-xs">
+    <section aria-labelledby="atur" className="squircle space-y-4 rounded-md border border-line bg-surface p-4">
       <div>
-        <h2 id="atur" ref={heading} tabIndex={-1} className="scroll-mt-4 text-subhead font-medium text-ink">
+        <h2 id="atur" ref={heading} tabIndex={-1} className="scroll-mt-4 text-sm font-medium text-ink">
           Menaruh {query}
         </h2>
-        <p className="mt-1 text-subhead text-ink-muted">
+        <p className="mt-1 text-sm text-ink-muted">
           Cari namanya di OpenStreetMap, atau klik langsung di peta. Titiknya bisa diseret sebelum disimpan.
         </p>
       </div>
@@ -124,7 +124,7 @@ function SearchPanel({ query, onChoose }: { query: string; onChoose: (candidate:
 
       {result?.ok ? (
         <div className="mt-3">
-          <p role="status" className="text-footnote text-ink-muted">
+          <p role="status" className="text-xs text-ink-muted">
             {result.message} {result.detail}
           </p>
           {result.candidates.length > 0 ? (
@@ -140,8 +140,8 @@ function SearchPanel({ query, onChoose }: { query: string; onChoose: (candidate:
                     }}
                     className={`w-full rounded-sm px-3 py-2 text-left transition-colors duration-150 ${chosen === index ? 'bg-accent-wash' : 'hover:bg-fill-quaternary'}`}
                   >
-                    <span className="block text-subhead text-ink">{candidate.label}</span>
-                    <span className="block text-footnote text-ink-muted line-clamp-2">{candidate.address}</span>
+                    <span className="block text-sm text-ink">{candidate.label}</span>
+                    <span className="block text-xs text-ink-muted line-clamp-2">{candidate.address}</span>
                   </button>
                 </li>
               ))}
@@ -183,7 +183,7 @@ function SaveForm({ merchantKey, locationId, validFrom, validTo, pending, label,
       {locationId ? <input type="hidden" name="id" value={locationId} /> : null}
 
       <div>
-        <label htmlFor="nama-tempat" className="block text-subhead font-medium text-ink">
+        <label htmlFor="nama-tempat" className="block text-sm font-medium text-ink">
           Nama di peta
         </label>
         <input
@@ -203,26 +203,26 @@ function SaveForm({ merchantKey, locationId, validFrom, validTo, pending, label,
         for every date.
       */}
       <details open={Boolean(validFrom || validTo)} className="rounded-sm bg-fill-quaternary px-3">
-        <summary className="flex min-h-11 cursor-pointer items-center text-subhead text-ink">
+        <summary className="flex min-h-11 cursor-pointer items-center text-sm text-ink">
           Hanya untuk periode tertentu
         </summary>
         <div className="grid grid-cols-1 gap-3 pb-3 sm:grid-cols-2">
           <label>
-            <span className="block text-footnote text-ink-muted">Berlaku dari</span>
+            <span className="block text-xs text-ink-muted">Berlaku dari</span>
             <input type="date" name="validFrom" defaultValue={validFrom ?? ''} className={CONTROL} />
           </label>
           <label>
-            <span className="block text-footnote text-ink-muted">Sampai</span>
+            <span className="block text-xs text-ink-muted">Sampai</span>
             <input type="date" name="validTo" defaultValue={validTo ?? ''} className={CONTROL} />
           </label>
         </div>
-        <p className="pb-3 text-footnote text-ink-muted">
+        <p className="pb-3 text-xs text-ink-muted">
           Contoh: token listrik untuk rumah lama sampai Des 2025, lalu kos baru sejak Jun 2026. Transaksi di luar
           periode mana pun kembali ke antrean.
         </p>
       </details>
 
-      <p className="text-footnote text-ink-muted" aria-live="polite">
+      <p className="text-xs text-ink-muted" aria-live="polite">
         {pending
           ? pending.address
             ? `Titik: ${pending.address}. Koordinat ${pending.lat.toFixed(5)}, ${pending.lng.toFixed(5)}.`

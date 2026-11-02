@@ -1,6 +1,7 @@
 import { HOME_COUNTRY, type OnlineReport, type OnlineRecipient } from '@/lib/ledger/online'
 import { formatIdr } from '@/lib/money'
 import { share } from './view-model'
+import { InfoTip } from '@/components/info-tip'
 
 /**
  * "Uang online ke mana": the money the map cannot draw, by who was paid and
@@ -20,10 +21,10 @@ function Row({ recipient }: { recipient: OnlineRecipient }) {
   return (
     <li className="px-4 py-3">
       <div className="flex items-baseline justify-between gap-3">
-        <span className="min-w-0 flex-1 truncate text-subhead text-ink">{recipient.label}</span>
-        <span className="tnum shrink-0 font-mono text-subhead text-ink">{formatIdr(recipient.total)}</span>
+        <span className="min-w-0 flex-1 truncate text-sm text-ink">{recipient.label}</span>
+        <span className="tnum shrink-0 font-mono text-sm text-ink">{formatIdr(recipient.total)}</span>
       </div>
-      <p className="mt-0.5 flex flex-wrap items-baseline gap-x-2 text-footnote text-ink-muted">
+      <p className="mt-0.5 flex flex-wrap items-baseline gap-x-2 text-xs text-ink-muted">
         <span className={biller && biller.country !== HOME_COUNTRY ? 'text-ink' : undefined}>{where}</span>
         <span aria-hidden="true" className="text-ink-faint">
           ·
@@ -50,10 +51,21 @@ export function OnlineList({ report }: { report: OnlineReport }) {
   return (
     <section aria-labelledby="uang-online" className="space-y-3">
       <div>
-        <h2 id="uang-online" className="text-subhead font-medium text-ink">
-          Uang online ke mana
-        </h2>
-        <p className="mt-1 text-subhead text-ink-muted">
+        <div className="flex items-center gap-1">
+          <h2 id="uang-online" className="text-sm font-medium text-ink">
+            Uang online ke mana
+          </h2>
+          <InfoTip label="Arti negara dan yang tidak dihitung">
+            <p>
+              Negara adalah tempat perusahaan menagih, bukan tempat barangnya dikirim: Google
+              menagih Indonesia dari Singapura.
+            </p>
+            <p className="mt-2">
+              Transfer ke orang, biaya bank, dan kiriman GoPay ke nomor HP tidak dihitung di sini.
+            </p>
+          </InfoTip>
+        </div>
+        <p className="mt-1 text-sm text-ink-muted">
           {report.total === 0n ? (
             'Tidak ada belanja atau tagihan online di pilihan ini.'
           ) : (
@@ -73,7 +85,7 @@ export function OnlineList({ report }: { report: OnlineReport }) {
       </div>
 
       {first.length > 0 ? (
-        <ul aria-label="Penerima uang online" className="squircle rows-inset rounded-md bg-surface shadow-xs">
+        <ul aria-label="Penerima uang online" className="squircle rows-inset rounded-md border border-line bg-surface">
           {first.map((recipient) => (
             <Row key={recipient.key} recipient={recipient} />
           ))}
@@ -81,8 +93,8 @@ export function OnlineList({ report }: { report: OnlineReport }) {
       ) : null}
 
       {rest.length > 0 ? (
-        <details className="squircle rounded-md bg-surface shadow-xs">
-          <summary className="flex min-h-11 cursor-pointer items-center px-4 text-subhead text-accent">
+        <details className="squircle rounded-md border border-line bg-surface">
+          <summary className="flex min-h-11 cursor-pointer items-center px-4 text-sm text-accent">
             {rest.length} penerima lainnya
           </summary>
           <ul className="rows-inset border-t border-line">
@@ -93,10 +105,6 @@ export function OnlineList({ report }: { report: OnlineReport }) {
         </details>
       ) : null}
 
-      <p className="text-footnote text-ink-faint">
-        Negara adalah tempat perusahaan menagih, bukan tempat barangnya dikirim: Google menagih Indonesia dari
-        Singapura. Transfer ke orang, biaya bank, dan kiriman GoPay ke nomor HP tidak dihitung di sini.
-      </p>
     </section>
   )
 }

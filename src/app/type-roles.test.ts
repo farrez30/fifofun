@@ -63,6 +63,7 @@ const FOUR_STEP = [
   'src/app/opengraph-image.tsx',
   'src/app/page.tsx',
   'src/app/pengaturan/',
+  'src/app/peta/',
   'src/app/recompute-adjustments.tsx',
   'src/app/rencana/',
   'src/app/skeleton.tsx',

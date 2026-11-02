@@ -43,7 +43,7 @@ export function ModeSwitch({ mode, points }: { mode: PlaceMode; points: readonly
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="peta-heading" className="text-subhead font-medium text-ink">
+        <h2 id="peta-heading" className="text-sm font-medium text-ink">
           Peta
         </h2>
         <div role="radiogroup" aria-label="Cara menimbang" className={SEGMENTED}>
@@ -61,7 +61,7 @@ export function ModeSwitch({ mode, points }: { mode: PlaceMode; points: readonly
           ))}
         </div>
       </div>
-      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-footnote text-ink-muted">
+      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-muted">
         <span
           aria-hidden="true"
           className="h-2 w-16 rounded-full bg-[linear-gradient(to_right,color-mix(in_oklch,var(--color-ink)_15%,transparent),var(--color-ink-muted),var(--color-ink))]"
@@ -72,7 +72,7 @@ export function ModeSwitch({ mode, points }: { mode: PlaceMode; points: readonly
       </p>
       {top.length > 0 ? (
         // Spoken on change, so a switch says what it did and not only that it happened.
-        <p aria-live="polite" className="text-subhead text-ink-muted">
+        <p aria-live="polite" className="text-sm text-ink-muted">
           <span className="text-ink">Teratas menurut {option?.label.toLowerCase()}:</span>{' '}
           {top.map((point, index) => (
             <span key={point.pointId}>

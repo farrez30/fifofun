@@ -30,24 +30,24 @@ interface Props {
 export function QueueCard({ next, remaining, mapped, placing, onPlace, onSkip }: Props) {
   if (remaining === 0) {
     return (
-      <section aria-labelledby="antrean" className="squircle rounded-md bg-surface p-4 shadow-xs">
-        <h2 id="antrean" className="text-subhead font-medium text-ink">
+      <section aria-labelledby="antrean" className="squircle rounded-md border border-line bg-surface p-4">
+        <h2 id="antrean" className="text-sm font-medium text-ink">
           Semua pedagang di pilihan ini sudah punya tempat
         </h2>
-        <p className="mt-1 text-subhead text-ink-muted">{mapped}% dari belanjanya tergambar di peta.</p>
+        <p className="mt-1 text-sm text-ink-muted">{mapped}% dari belanjanya tergambar di peta.</p>
       </section>
     )
   }
 
   return (
-    <section aria-labelledby="antrean" className="squircle rounded-md bg-surface p-4 shadow-xs">
+    <section aria-labelledby="antrean" className="squircle rounded-md border border-line bg-surface p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <h2 id="antrean" className="text-subhead font-medium text-ink">
+        <h2 id="antrean" className="text-sm font-medium text-ink">
           Antrean menaruh
         </h2>
         <MetaRow
           as="p"
-          className="text-footnote text-ink-muted"
+          className="text-xs text-ink-muted"
           parts={[
             <>
               <span className="tnum font-mono text-ink">{mapped}%</span> tergambar
@@ -74,11 +74,11 @@ export function QueueCard({ next, remaining, mapped, placing, onPlace, onSkip }:
       {next ? (
         <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2">
           <div className="min-w-48 flex-1">
-            <p className="text-footnote text-ink-muted">Berikutnya, terbesar dulu</p>
-            <p className="truncate text-subhead text-ink">{next.label}</p>
+            <p className="text-xs text-ink-muted">Berikutnya, terbesar dulu</p>
+            <p className="truncate text-sm text-ink">{next.label}</p>
             <MetaRow
               as="p"
-              className="text-footnote text-ink-muted"
+              className="text-xs text-ink-muted"
               parts={[
                 <span key="total" className="tnum font-mono">{next.total}</span>,
                 `${next.visits} kali`,
@@ -103,7 +103,7 @@ export function QueueCard({ next, remaining, mapped, placing, onPlace, onSkip }:
           </div>
         </div>
       ) : (
-        <p className="mt-3 text-subhead text-ink-muted">
+        <p className="mt-3 text-sm text-ink-muted">
           Semua yang tersisa sudah dilewati. Daftar lengkapnya ada di bagian Menunggu.
         </p>
       )}
