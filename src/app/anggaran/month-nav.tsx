@@ -32,7 +32,7 @@ export function MonthNav({ period, thisMonth }: { period: string; thisMonth: str
         <NavHint className="ml-1.5" />
       </Link>
 
-      <p aria-current="date" className="text-subhead font-medium text-ink">
+      <p aria-current="date" className="text-sm font-medium text-ink">
         {formatMonthKey(period)}
       </p>
 
@@ -56,7 +56,7 @@ export function MonthNav({ period, thisMonth }: { period: string; thisMonth: str
       )}
 
       <form action="/anggaran" method="get" className="flex items-center gap-2">
-        <label htmlFor="bulan" className="text-footnote text-ink-muted">
+        <label htmlFor="bulan" className="text-xs text-ink-muted">
           Buka bulan
         </label>
         <input

@@ -40,7 +40,7 @@ interface Props {
 
 /** One row in the sidebar — a route link here, the sign-out button in `AppShell`. */
 export const SIDEBAR_ROW =
-  'relative flex min-h-11 items-center gap-3 rounded-md px-2.5 text-subhead transition-colors duration-150 hover:bg-fill-quaternary active:bg-fill-tertiary'
+  'relative flex min-h-11 items-center gap-3 rounded-md px-2.5 text-sm transition-colors duration-150 hover:bg-fill-quaternary active:bg-fill-tertiary'
 export const SIDEBAR_ROW_ON = 'bg-fill-tertiary font-medium text-ink'
 export const SIDEBAR_ROW_OFF = 'text-ink-muted'
 /** Spoken always, seen only once the rail has room to print it. */
@@ -113,7 +113,7 @@ export function ShellFrame({ title, current, lead, account, tabs, navHint, child
         className="hidden border-r border-line bg-sunken pt-safe-t pl-safe-l [scrollbar-width:none] sm:sticky sm:top-0 sm:flex sm:h-dvh sm:w-14 sm:flex-col sm:self-start sm:overflow-x-hidden sm:overflow-y-auto lg:w-56 lg:collapsed:w-14 [&::-webkit-scrollbar]:hidden"
       >
         <div className="flex h-14 shrink-0 items-center justify-between px-3">
-          <p className="hidden truncate font-mono text-caption1 uppercase tracking-widest text-ink-faint lg:block lg:collapsed:hidden">
+          <p className="hidden truncate font-mono text-xs uppercase tracking-widest text-ink-faint lg:block lg:collapsed:hidden">
             FiFoFun
           </p>
           {/* Only at `lg` and up: below it the rail is forced regardless of
@@ -141,28 +141,17 @@ export function ShellFrame({ title, current, lead, account, tabs, navHint, child
       <div className="mx-auto w-full min-w-0 max-w-6xl px-4 pb-[calc(4.5rem+var(--spacing-safe-b))] pt-8 sm:px-6 sm:pb-8">
         <header className="mb-8 border-b border-line pb-5">
           {/*
-            A large title, which is the iOS navigation bar's resting state.
-
-            Apple sets this at 34px bold with tracking pulled in, below the bar
-            rather than inside it, and collapses it into the bar as the content
-            scrolls up. Only the resting half is here: the collapse wants the
-            scroll listener in `use-stuck.ts`, and that file's own comments record
-            what a dock that changes height did to scroll anchoring, so it is a
-            change that gets made deliberately rather than in passing.
-
-            The tracking is the part that is easy to skip and most of what makes
-            the difference. Apple's tracking is a function of size, tightening as
-            the type grows, and a 34px line set at the default spacing reads as a
-            heading somebody enlarged rather than as a title.
+            The page title, the top of the four-step scale (ADR 0007): 20px
+            semibold, the one size nothing else on the page uses.
           */}
           <h1
-            className={`text-title1 font-bold tracking-title1 text-ink ${
+            className={`text-xl font-semibold text-ink ${
               titled ? 'sr-only sm:not-sr-only' : 'mt-2'
             }`}
           >
             {title}
           </h1>
-          {lead ? <p className="mt-1 max-w-2xl text-subhead text-ink-muted">{lead}</p> : null}
+          {lead ? <p className="mt-1 max-w-2xl text-sm text-ink-muted">{lead}</p> : null}
         </header>
 
         {/*
@@ -191,7 +180,7 @@ export function ShellFrame({ title, current, lead, account, tabs, navHint, child
           {children}
         </main>
 
-        <footer className="mt-16 border-t border-line pt-5 text-footnote text-ink-faint">
+        <footer className="mt-16 border-t border-line pt-5 text-xs text-ink-faint">
           {/* Pengaturan and Undangan live in the sidebar's second group now,
               and in the sheet on a phone — never repeated a third time here. */}
           <ul className="flex flex-wrap gap-x-4 gap-y-1 sm:gap-4">

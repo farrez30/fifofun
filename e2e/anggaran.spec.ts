@@ -72,7 +72,7 @@ test.describe('anggaran', () => {
     page,
   }) => {
     await open(page, 'budget-table')
-    const toggle = page.getByRole('button', { name: /^Tampilkan \d+ kategori yang kosong$/ })
+    const toggle = page.getByRole('button', { name: /^\d+ kategori kosong$/ })
     await expect(toggle).toHaveAttribute('aria-expanded', 'false')
     const hidden = page.locator('form table tr[hidden]')
     const folded = await hidden.count()
@@ -80,7 +80,7 @@ test.describe('anggaran', () => {
     // Still inside the form, so saving cannot drop a budget nobody looked at.
     // (The fixture is not hydrated, so the button itself is not pressed here.)
     expect(await hidden.locator('input').count()).toBeGreaterThan(0)
-    await expect(toggle).toHaveText(`Tampilkan ${folded} kategori yang kosong`)
+    await expect(toggle).toHaveText(`${folded} kategori kosong`)
   })
 
   test('says nothing is known when there is no history at all', async ({ page }) => {
@@ -90,7 +90,7 @@ test.describe('anggaran', () => {
     expect(body).toContain('Belum ada anggaran untuk Jan 2026')
     expect((body.match(/tidak diketahui/g) ?? []).length).toBe(5)
     // Every row is quiet here, so none of them is folded: there is nothing else to show.
-    await expect(page.getByRole('button', { name: /kategori yang kosong/ })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: /kategori kosong/ })).toHaveCount(0)
     // Nothing spent yet, so there is no realisation column to draw at all.
     expect(await page.getByRole('columnheader', { name: 'Realisasi' }).count()).toBe(0)
   })
@@ -98,11 +98,11 @@ test.describe('anggaran', () => {
   test('offers to copy last month only when it would fill something in', async ({ page }) => {
     await open(page, 'budget-table')
     await expect(
-      page.getByRole('button', { name: /Salin anggaran Jun 2026/ }),
+      page.getByRole('button', { name: 'Salin dari Jun 2026' }),
     ).toBeVisible()
 
     await open(page, 'budget-table-empty')
-    expect(await page.getByRole('button', { name: /Salin anggaran/ }).count()).toBe(0)
+    expect(await page.getByRole('button', { name: /^Salin dari/ }).count()).toBe(0)
   })
 
   test('keeps the Biasanya column about history, never about a budget', async ({ page }) => {
@@ -110,7 +110,8 @@ test.describe('anggaran', () => {
     const header = page.getByRole('columnheader', { name: 'Biasanya' })
     await expect(header).toBeVisible()
 
-    // Said once, under the table, rather than repeated in every cell.
+    // Said once, behind the info button, rather than repeated in every cell.
+    await page.getByRole('button', { name: 'Arti kolom' }).click()
     await expect(page.getByText('median enam bulan sebelum Jul 2026')).toBeVisible()
   })
 

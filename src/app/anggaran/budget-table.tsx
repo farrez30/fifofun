@@ -3,7 +3,10 @@
 import { useActionState, useCallback, useState } from 'react'
 import { useFormStatus } from 'react-dom'
 import { CategoryMark } from '@/components/marks'
+import { CaretDown } from '@phosphor-icons/react/dist/ssr/CaretDown'
+import { CaretUp } from '@phosphor-icons/react/dist/ssr/CaretUp'
 import { BUTTON_PLAIN, BUTTON_PRIMARY, BUTTON_QUIET } from '@/components/field-base'
+import { InfoTip } from '@/components/info-tip'
 import { MoneyInput } from '@/components/money-input'
 import { formatMonthKey } from '@/lib/datetime'
 import { formatIdr } from '@/lib/money'
@@ -82,14 +85,28 @@ export function BudgetTable({ plan }: { plan: BudgetPlanView }) {
 
   return (
     <div className="space-y-3">
-      <p className="text-subhead font-medium text-ink">
-        {plan.budgeted > 0
-          ? `${plan.budgeted} kategori dianggarkan untuk ${label}, total ${plan.total}.`
-          : `Belum ada anggaran untuk ${label}.`}
-      </p>
+      <div className="flex items-center gap-1">
+        <p className="text-sm font-medium text-ink">
+          {plan.budgeted > 0
+            ? `${plan.budgeted} kategori dianggarkan untuk ${label}, total ${plan.total}.`
+            : `Belum ada anggaran untuk ${label}.`}
+        </p>
+        {/* The definitions the columns need, said once and out of the way:
+            on a phone the columns themselves are folded into each row. */}
+        <InfoTip label="Arti kolom">
+          <p>
+            Biasanya adalah median enam bulan sebelum {label}, bukan angka yang kamu tetapkan.
+          </p>
+          <p className="mt-2">
+            Bulan lalu memakai anggaran {formatMonthKey(plan.previous)} kalau ada; yang ditandai
+            ◆ adalah realisasinya.
+          </p>
+          <p className="mt-2">Realisasi tidak menghitung uang titipan.</p>
+        </InfoTip>
+      </div>
 
       {!plan.hasHistory ? (
-        <p className="text-subhead text-ink-muted">
+        <p className="text-sm text-ink-muted">
           Belum ada bulan sebelumnya untuk dijadikan patokan, jadi kolom Biasanya masih kosong.
           Angkanya akan terisi sendiri setelah satu bulan berjalan.
         </p>
@@ -130,11 +147,11 @@ export function BudgetTable({ plan }: { plan: BudgetPlanView }) {
         {/* `scroll-mt` on the fields: the allocation bar above is sticky, and
             without it a focused input can be scrolled to exactly where the bar
             covers it. */}
-        <div className="@container relative overflow-x-auto squircle rounded-md bg-surface shadow-xs [&_input]:scroll-mt-32">
-          <table className="w-full border-collapse text-subhead @5xl:min-w-[38rem]">
+        <div className="@container relative overflow-x-auto squircle rounded-md border border-line bg-surface [&_input]:scroll-mt-32">
+          <table className="w-full border-collapse text-sm @5xl:min-w-[38rem]">
             <caption className="sr-only">Anggaran {label} per kategori</caption>
             <thead>
-              <tr className="border-b border-line text-left text-caption1 uppercase tracking-wide text-ink-faint">
+              <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-faint">
                 <th scope="col" className="px-3 py-2 font-medium sm:px-4">
                   Kategori
                 </th>
@@ -164,12 +181,12 @@ export function BudgetTable({ plan }: { plan: BudgetPlanView }) {
               <tbody key={group.cashflow}>
                 <tr
                   hidden={!showQuiet && group.rows.every((line) => line.quiet)}
-                  className="border-b border-line bg-sunken"
+                  className="border-b border-line"
                 >
                   <th
                     scope="colgroup"
                     colSpan={columns}
-                    className="px-4 py-1.5 text-left text-footnote font-medium text-ink-muted"
+                    className="px-4 py-1.5 text-left text-xs font-medium text-ink-muted"
                   >
                     {CASHFLOW_LABELS[group.cashflow]}
                   </th>
@@ -199,43 +216,35 @@ export function BudgetTable({ plan }: { plan: BudgetPlanView }) {
             onClick={() => setShowQuiet((open) => !open)}
             className={BUTTON_PLAIN}
           >
-            {showQuiet
-              ? 'Sembunyikan kategori yang kosong'
-              : `Tampilkan ${quietCount} kategori yang kosong`}
+            {quietCount} kategori kosong
+            {showQuiet ? (
+              <CaretUp aria-hidden="true" weight="bold" className="ml-1 size-3.5 shrink-0" />
+            ) : (
+              <CaretDown aria-hidden="true" weight="bold" className="ml-1 size-3.5 shrink-0" />
+            )}
           </button>
         ) : null}
 
         <div className="flex flex-wrap items-center gap-3">
-          <Submit label={`Simpan anggaran ${label}`} />
-          <p className="text-footnote text-ink-muted">
+          <Submit label="Simpan" />
+          <p className="text-xs text-ink-muted">
             Kosongkan angkanya untuk menghapus anggaran kategori itu.
           </p>
+          <InfoTip label="Akibat menyimpan">
+            Begitu satu kategori saja diisi, Ringkasan menilai {label} dengan anggaran ini dan
+            kategori yang kosong dihitung tanpa anggaran.
+          </InfoTip>
         </div>
 
       </form>
 
       {plan.canCopy ? <CopyForm period={plan.period} from={plan.previous} /> : null}
 
-      <p className="text-footnote text-ink-muted">
-        Biasanya adalah median enam bulan sebelum {label}, bukan angka yang kamu tetapkan. Bulan
-        lalu memakai anggaran {formatMonthKey(plan.previous)} kalau ada; yang ditandai ◆ adalah
-        realisasinya.
-      </p>
-      <p className="text-footnote text-ink-muted">
-        Begitu satu kategori saja diisi, Ringkasan menilai {label} dengan anggaran ini dan
-        kategori yang kosong dihitung tanpa anggaran. Realisasi tidak menghitung uang titipan.
-      </p>
       {/* The row itself is not editable here, and the moment somebody notices
           that is while looking at a bill they no longer pay. */}
-      <p className="text-footnote text-ink-muted">
-        Barisnya sendiri diatur di{' '}
-        <a href="/pengaturan?bagian=kategori" className="text-accent underline underline-offset-2">
-          Pengaturan
-        </a>
-        : tambah kategori baru, ganti namanya, atau arsipkan yang sudah tidak dipakai. Yang
-        diarsipkan hilang dari bulan-bulan berikutnya dan dari daftar tagihan, sementara bulan
-        yang sudah lewat tetap memakai angkanya.
-      </p>
+      <a href="/pengaturan?bagian=kategori" className={BUTTON_PLAIN}>
+        Atur kategori
+      </a>
     </div>
   )
 }
@@ -327,7 +336,7 @@ function Row({
         {/* What this row is asking of the month's income. A figure on its own
             cannot say whether it is a lot; a share can. */}
         {income !== null && income > 0n && amount > 0n ? (
-          <span className="mt-1 block text-caption1 text-ink-muted">
+          <span className="mt-1 block text-xs text-ink-muted">
             {Math.round(Number((amount * 10_000n) / income) / 100)}% dari pemasukan
           </span>
         ) : null}
@@ -356,7 +365,7 @@ function Row({
                 ) : null}
               </span>
               {actual.pct > 0 ? (
-                <span className="mt-0.5 block font-sans text-footnote text-ink-muted">
+                <span className="mt-0.5 block font-sans text-xs text-ink-muted">
                   {Math.round(actual.pct)}% dari anggaran
                   {actual.overByText ? (
                     <>
@@ -398,7 +407,8 @@ function Row({
 }
 
 /**
- * The three columns a phone has no room for, under the name instead.
+ * The three columns a phone has no room for, under the name instead, one line
+ * each: side by side they wrapped mid-figure in the narrow name column.
  *
  * Hidden from the small breakpoint up, where the columns themselves are back
  * and repeating them would say everything twice.
@@ -423,7 +433,7 @@ function Context({
   pace: MonthPace | null
 }) {
   return (
-    <span className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-caption1 text-ink-muted @5xl:hidden">
+    <span className="mt-1 flex flex-col gap-0.5 text-xs text-ink-muted @5xl:hidden">
       <span>
         biasanya{' '}
         {line.usual ? (
@@ -433,10 +443,6 @@ function Context({
             {hasHistory ? 'belum pernah muncul' : 'tidak diketahui'}
           </span>
         )}
-      </span>
-
-      <span aria-hidden="true" className="text-ink-faint">
-        ·
       </span>
 
       <span>
@@ -460,9 +466,6 @@ function Context({
 
       {hasData ? (
         <>
-          <span aria-hidden="true" className="text-ink-faint">
-            ·
-          </span>
           <span>
             realisasi{' '}
             {actual ? (
@@ -548,10 +551,9 @@ function CopyForm({ period, from }: { period: string; from: string }) {
     <form action={action} className="flex flex-wrap items-center gap-3">
       <input type="hidden" name="period" value={period} />
       <input type="hidden" name="from" value={from} />
-      <Submit
-        tone="quiet"
-        label={`Salin anggaran ${formatMonthKey(from)} ke kategori yang masih kosong`}
-      />
+      <Submit tone="quiet" label={`Salin dari ${formatMonthKey(from)}`} />
+      {/* What a money action touches stays said, next to the button. */}
+      <p className="text-xs text-ink-muted">Hanya mengisi kategori yang masih kosong.</p>
     </form>
   )
 }
