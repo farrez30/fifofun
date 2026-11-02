@@ -45,7 +45,7 @@ export function SharePdf({ end }: { end: string }) {
         Bagikan sebagai PDF
       </button>
       {problem ? (
-        <p role="alert" className="text-subhead text-over">
+        <p role="alert" className="text-sm text-over">
           {problem}
         </p>
       ) : null}

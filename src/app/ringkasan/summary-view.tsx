@@ -1,6 +1,7 @@
 import type { SummaryLine } from '@/lib/ledger/summary'
 import type { SummaryData } from './data'
 import { cell, money, monthShort, period } from './format'
+import { InfoTip } from '@/components/info-tip'
 
 /**
  * The summary itself: aggregates only, numbers and labels only.
@@ -16,14 +17,14 @@ import { cell, money, monthShort, period } from './format'
  */
 
 const SECTION = 'space-y-3'
-const HEADING = 'text-title3 font-semibold text-ink'
-const NOTE = 'text-subhead text-ink-muted'
+const HEADING = 'text-sm font-medium text-ink'
+const NOTE = 'text-sm text-ink-muted'
 
 function Figures({ label, months, rows, total }: { label: string; months: string[]; rows: SummaryLine[]; total: SummaryLine }) {
   const columns = [...months.map(monthShort), 'Rata-rata']
   return (
-    <div role="table" aria-label={label} className="squircle rounded-md bg-surface px-4 py-2 shadow-xs">
-      <div role="row" className="grid grid-cols-4 gap-x-2 border-b border-line py-2 text-subhead text-ink-muted">
+    <div role="table" aria-label={label} className="squircle rounded-md border border-line bg-surface px-4 py-2">
+      <div role="row" className="grid grid-cols-4 gap-x-2 border-b border-line py-2 text-sm text-ink-muted">
         {columns.map((column) => (
           <span key={column} role="columnheader" className="text-right">
             {column}
@@ -36,7 +37,7 @@ function Figures({ label, months, rows, total }: { label: string; months: string
           <div
             key={row.label}
             role="row"
-            className={`grid grid-cols-4 gap-x-2 py-2 text-subhead tnum ${isTotal ? 'border-t border-line-strong font-semibold text-ink' : 'border-t border-line text-ink first-of-type:border-t-0'}`}
+            className={`grid grid-cols-4 gap-x-2 py-2 text-sm tnum ${isTotal ? 'border-t border-line-strong font-semibold text-ink' : 'border-t border-line text-ink first-of-type:border-t-0'}`}
           >
             <span role="rowheader" className={`col-span-4 ${isTotal ? '' : 'font-medium'}`}>
               {row.label}
@@ -84,64 +85,90 @@ export function SummaryView({ data }: { data: SummaryData }) {
       : report.spending
 
   return (
-    <div className="space-y-10 text-subhead">
+    <div className="space-y-10 text-sm">
       <p className={NOTE}>
         {period(report.months)}. Semua angka dalam rupiah (Rp), rata-rata dari tiga bulan itu.
       </p>
 
       <section aria-labelledby="pemasukan" className={SECTION}>
-        <h2 id="pemasukan" className={HEADING}>
-          Pemasukan
-        </h2>
+        <div className="flex items-center gap-1">
+          <h2 id="pemasukan" className={HEADING}>
+            Pemasukan
+          </h2>
+          <InfoTip label="Yang tidak dihitung sebagai pemasukan">
+            <p>Uang yang bukan hasil kerja dan tidak bisa diandalkan tiap bulan.</p>
+          </InfoTip>
+        </div>
         <Figures label="Pemasukan per bulan" months={report.months} rows={report.income} total={report.incomeTotal} />
         <p className={NOTE}>
           Tidak dihitung sebagai pemasukan:{' '}
           {incomeExcluded.length > 0
             ? incomeExcluded.map((row) => `${row.label.toLowerCase()} (${money(row.total)})`).join(', ')
             : 'tidak ada'}
-          . Uang itu bukan hasil kerja dan tidak bisa diandalkan tiap bulan.
+          .
         </p>
       </section>
 
       <section aria-labelledby="pengeluaran" className={SECTION}>
-        <h2 id="pengeluaran" className={HEADING}>
-          Pengeluaran
-        </h2>
+        <div className="flex items-center gap-1">
+          <h2 id="pengeluaran" className={HEADING}>
+            Pengeluaran
+          </h2>
+          <InfoTip label="Cara pengeluaran dihitung">
+            <p>
+              Uang yang mengganti belanja mengurangi pengeluaran, karena belanjanya sudah tercatat:
+              uang itu mengganti, bukan penghasilan.
+            </p>
+            <p className="mt-2">
+              Isi ulang dompet digital dan uang tunai dihitung keluar di bulan diisi, karena belanja
+              di dalamnya tidak dicatat satu per satu. Pos tahunan dibagi rata per 12 bulan.
+            </p>
+          </InfoTip>
+        </div>
         <Figures label="Pengeluaran per kelompok" months={report.months} rows={spendingRows} total={report.spendingTotal} />
         <p className={NOTE}>
-          {report.netted.average > 0n
-            ? `${report.netted.label} mengurangi pengeluaran, karena belanjanya sudah tercatat di atas: uang itu mengganti, bukan penghasilan. `
-            : ''}
-          {report.unitemised
-            ? `${report.unitemised}: isi ulang dompet digital dan uang tunai dihitung keluar di bulan diisi, karena belanja di dalamnya tidak dicatat satu per satu. `
-            : ''}
-          {report.amortised.join(', ')} dibagi rata per 12 bulan. Tidak dihitung:{' '}
+          {report.unitemised ? `Dihitung saat diisi: ${report.unitemised}. ` : ''}
+          {report.amortised.length > 0 ? `Dibagi rata per 12 bulan: ${report.amortised.join(', ')}. ` : ''}
+          Tidak dihitung:{' '}
           {spendingExcluded.map((row) => `${row.label.toLowerCase()} (${money(row.total)})`).join(', ') || 'tidak ada'}.
         </p>
       </section>
 
       <section aria-labelledby="sisa" className={SECTION}>
-        <h2 id="sisa" className={HEADING}>
-          Sisa
-        </h2>
-        <dl className="grid grid-cols-2 gap-3">
-          {[...report.months.map((month, position) => ({ key: month, label: monthShort(month), value: report.remainder.values[position] })), { key: 'rata', label: 'Rata-rata', value: report.remainder.average }].map(
-            (tile) => (
-              <div key={tile.key} className="squircle rounded-md bg-surface px-4 py-3 shadow-xs">
-                <dt className={NOTE}>{tile.label}</dt>
-                <dd className={`mt-1 text-title2 font-semibold tnum ${tone(tile.value)}`}>{money(tile.value)}</dd>
-              </div>
-            ),
-          )}
+        <div className="flex items-center gap-1">
+          <h2 id="sisa" className={HEADING}>
+            Sisa
+          </h2>
+          <InfoTip label="Arti sisa">
+            <p>Pemasukan dikurangi pengeluaran, per bulan.</p>
+          </InfoTip>
+        </div>
+        {/* The average is the figure this page is read for; the three months
+            under it are the evidence, so they sit as rows rather than as
+            three more tiles competing with it. */}
+        <dl className="squircle divide-y divide-line rounded-md border border-line bg-surface px-4">
+          <div className="py-3">
+            <dt className={NOTE}>Rata-rata</dt>
+            <dd className={`mt-1 text-2xl font-semibold tnum ${tone(report.remainder.average)}`}>
+              {money(report.remainder.average)}
+            </dd>
+          </div>
+          {report.months.map((month, position) => (
+            <div key={month} className="flex items-baseline justify-between gap-4 py-3">
+              <dt className="text-ink-muted">{monthShort(month)}</dt>
+              <dd className={`tnum ${tone(report.remainder.values[position])}`}>
+                {money(report.remainder.values[position])}
+              </dd>
+            </div>
+          ))}
         </dl>
-        <p className={NOTE}>Pemasukan dikurangi pengeluaran, per bulan.</p>
       </section>
 
       <section aria-labelledby="tabungan" className={SECTION}>
         <h2 id="tabungan" className={HEADING}>
           Tabungan saat ini
         </h2>
-        <dl className="squircle divide-y divide-line rounded-md bg-surface px-4 shadow-xs">
+        <dl className="squircle divide-y divide-line rounded-md border border-line bg-surface px-4">
           {pots.map((pot) => (
             <div key={pot.name} className="flex items-baseline justify-between gap-4 py-3">
               <dt className="text-ink">{pot.name}</dt>
@@ -160,7 +187,7 @@ export function SummaryView({ data }: { data: SummaryData }) {
           Rencana
         </h2>
         {note ? (
-          <p className="squircle whitespace-pre-line rounded-md bg-surface px-4 py-3 text-body text-ink shadow-xs">{note}</p>
+          <p className="squircle whitespace-pre-line rounded-md border border-line bg-surface px-4 py-3 text-sm text-ink">{note}</p>
         ) : (
           <p className={NOTE}>Belum ditulis.</p>
         )}
