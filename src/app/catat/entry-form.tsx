@@ -118,12 +118,12 @@ export function EntryForm({ accounts, categories, defaults, entryKey }: Props) {
       <input type="hidden" name="clientId" value={clientId} />
 
       <fieldset>
-        <legend className="text-subhead font-medium text-ink">Arah uang</legend>
+        <legend className="text-sm font-medium text-ink">Arah uang</legend>
         <div className="mt-1.5 flex flex-wrap gap-2">
           {DIRECTION_CHOICES.map((choice) => (
             <label
               key={choice.value}
-              className={`inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-sm border border-line bg-paper px-3 text-subhead text-ink transition-colors duration-150 hover:border-line-strong ${choice.picked}`}
+              className={`inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-sm border border-line bg-paper px-3 text-sm text-ink transition-colors duration-150 hover:border-line-strong ${choice.picked}`}
             >
               <input
                 type="radio"
@@ -170,7 +170,7 @@ export function EntryForm({ accounts, categories, defaults, entryKey }: Props) {
         each group belongs to, and the longer sentences overran the row's
         control column on a phone.
       */}
-      <div className="rows-inset squircle rounded-md bg-surface shadow-xs">
+      <div className="rows-inset squircle rounded-md border border-line bg-surface">
         <FieldRow htmlFor={ids.category} label="Kategori" invalid={fieldErrors.categoryId}>
           <select
             id={ids.category}
@@ -241,7 +241,7 @@ export function EntryForm({ accounts, categories, defaults, entryKey }: Props) {
           settings page nobody has open while typing. */}
       {chosen?.description ? (
         <div className="px-4">
-          <p id={ids.kamus} data-kamus className="text-footnote text-ink-muted">
+          <p id={ids.kamus} data-kamus className="text-xs text-ink-muted">
             {chosen.description}
           </p>
         </div>

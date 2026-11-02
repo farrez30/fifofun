@@ -91,7 +91,7 @@ export function BalanceRows({ rows }: { rows: BalanceRow[] }) {
             </tr>
             {open === row.accountId ? (
               <tr>
-                <td id={panelId} colSpan={5} className="border-b border-line bg-sunken p-4">
+                <td id={panelId} colSpan={5} className="border-b border-line p-4">
                   <AdjustBalanceForm row={row} />
                 </td>
               </tr>
@@ -122,7 +122,7 @@ export function BalanceCards({ rows }: { rows: BalanceRow[] }) {
   return (
     <ul
       aria-label="Saldo tiap akun"
-      className="rows-inset squircle rounded-md bg-surface shadow-xs @4xl:hidden"
+      className="rows-inset squircle rounded-md border border-line bg-surface @4xl:hidden"
     >
       {rows.map((row) => {
         // Distinct from the table's, because both trees are in the document.
@@ -131,7 +131,7 @@ export function BalanceCards({ rows }: { rows: BalanceRow[] }) {
         return (
           <li key={row.accountId} className="p-3">
             <div className="flex items-baseline justify-between gap-3">
-              <span className="min-w-0 flex-1 text-subhead text-ink">
+              <span className="min-w-0 flex-1 text-sm text-ink">
                 {row.stalled ? (
                   <span aria-hidden="true" className="mr-1.5 text-warn">
                     ◆
@@ -139,10 +139,10 @@ export function BalanceCards({ rows }: { rows: BalanceRow[] }) {
                 ) : null}
                 <AccountMark name={row.name} kind={row.kind} logo={row.logoUrl} />
               </span>
-              <span className="tnum shrink-0 font-mono text-subhead text-ink">{row.closing}</span>
+              <span className="tnum shrink-0 font-mono text-sm text-ink">{row.closing}</span>
             </div>
 
-            <dl className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-footnote text-ink-muted">
+            <dl className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-ink-muted">
               <div className="flex gap-1.5">
                 <dt>Masuk</dt>
                 <dd className="tnum font-mono">{row.credit}</dd>
@@ -158,7 +158,7 @@ export function BalanceCards({ rows }: { rows: BalanceRow[] }) {
               aria-expanded={open === row.accountId}
               aria-controls={panelId}
               onClick={() => setOpen(open === row.accountId ? null : row.accountId)}
-              className="mt-2.5 h-11 w-full rounded-sm border border-line text-subhead text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken"
+              className="mt-2.5 h-11 w-full rounded-sm border border-line text-sm text-ink transition-colors duration-150 hover:border-line-strong hover:bg-fill-quaternary"
             >
               Sesuaikan saldo
             </button>
@@ -202,7 +202,7 @@ export function AdjustBalanceForm({ row }: { row: BalanceRow }) {
 
   return (
     <form action={action} noValidate className="space-y-3" aria-labelledby={titleId}>
-      <h3 id={titleId} className="text-subhead font-medium text-ink">
+      <h3 id={titleId} className="text-sm font-medium text-ink">
         Sesuaikan saldo {row.name}
       </h3>
 
@@ -216,7 +216,7 @@ export function AdjustBalanceForm({ row }: { row: BalanceRow }) {
           input between them is not a child of a definition list. */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <dl>
-          <dt className="text-footnote text-ink-faint">Tercatat di app</dt>
+          <dt className="text-xs text-ink-faint">Tercatat di app</dt>
           <dd className="tnum mt-1 font-mono text-ink">{row.closing}</dd>
         </dl>
 
@@ -231,8 +231,8 @@ export function AdjustBalanceForm({ row }: { row: BalanceRow }) {
         />
 
         <dl>
-          <dt className="text-footnote text-ink-faint">Selisih</dt>
-          <dd className="mt-1 text-subhead text-ink">
+          <dt className="text-xs text-ink-faint">Selisih</dt>
+          <dd className="mt-1 text-sm text-ink">
             {!touched ? (
               <span className="text-ink-muted">Isi saldo sebenarnya dulu</span>
             ) : delta === 0n ? (
@@ -248,12 +248,12 @@ export function AdjustBalanceForm({ row }: { row: BalanceRow }) {
       </div>
 
       <label className="block max-w-xs">
-        <span className="block text-subhead font-medium text-ink">Tanggal penyesuaian</span>
+        <span className="block text-sm font-medium text-ink">Tanggal penyesuaian</span>
         <input type="date" name="date" defaultValue={row.today} className={`${CONTROL} mt-1.5`} />
       </label>
 
       {row.reconciled ? (
-        <p className="border border-warn/40 bg-warn-wash p-3 text-subhead text-ink">
+        <p className="text-sm text-ink">
           <span aria-hidden="true" className="mr-1.5 text-warn">
             ▲
           </span>
@@ -266,7 +266,7 @@ export function AdjustBalanceForm({ row }: { row: BalanceRow }) {
         </p>
       ) : null}
 
-      <p className="text-footnote text-ink-muted">
+      <p className="text-xs text-ink-muted">
         Selisihnya dicatat sebagai transaksi{' '}
         {delta < 0n ? 'Penyesuaian Spending' : 'Penyesuaian Income'} pada tanggal itu, bukan sebagai
         perubahan saldo awal.
@@ -285,7 +285,7 @@ function Submit({ disabled }: { disabled: boolean }) {
       type="submit"
       disabled={disabled}
       aria-busy={pending}
-      className="h-11 rounded-sm bg-accent px-4 text-subhead font-medium text-paper transition-colors duration-150 hover:bg-accent-strong disabled:opacity-50"
+      className="h-11 rounded-sm bg-accent px-4 text-sm font-medium text-paper transition-colors duration-150 hover:bg-accent-strong disabled:opacity-50"
     >
       {pending ? 'Menyimpan' : 'Catat penyesuaian'}
     </button>

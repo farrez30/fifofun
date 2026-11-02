@@ -26,9 +26,9 @@ export function DeleteEntryButton({ id }: { id: string }) {
   useActionToast(result, pending, 'Menghapus…')
 
   return (
-    <details className="squircle rounded-md bg-surface shadow-xs p-4">
-      <summary className="cursor-pointer text-subhead text-ink-muted">Hapus transaksi</summary>
-      <p className="mt-2 text-footnote text-ink-muted">
+    <details className="squircle rounded-md border border-line bg-surface p-4">
+      <summary className="cursor-pointer text-sm text-ink-muted">Hapus transaksi</summary>
+      <p className="mt-2 text-xs text-ink-muted">
         Menghapus hanya menyembunyikan barisnya dari semua hitungan. Datanya tetap ada, dan baris
         dari e-Statement memang tidak bisa dihapus sama sekali.
       </p>

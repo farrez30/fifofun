@@ -30,7 +30,7 @@ export interface AccountOption {
 }
 
 export const CHIP =
-  'inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-sm border border-line bg-paper px-3 text-subhead text-ink transition-colors duration-150 hover:border-line-strong'
+  'inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-sm border border-line bg-paper px-3 text-sm text-ink transition-colors duration-150 hover:border-line-strong'
 export const PICKED_ACCENT = 'has-checked:border-accent has-checked:bg-accent-wash'
 /*
   The chip is the target, and it already stands 44px tall. The global touch
@@ -57,7 +57,7 @@ export function AccountChips({
 }) {
   return (
     <fieldset>
-      <legend className="text-subhead font-medium text-ink">
+      <legend className="text-sm font-medium text-ink">
         {legend}
       </legend>
       <div className="mt-1.5 flex flex-wrap gap-2">

@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
 import { AppShell } from '@/components/app-shell'
+import { InfoTip } from '@/components/info-tip'
 import { formatJakarta } from '@/lib/datetime'
 import { directionOf } from '@/lib/ledger/direction'
 import { formatIdr } from '@/lib/money'
@@ -81,28 +82,30 @@ async function Entry() {
         />
 
         <section aria-labelledby="catatan-terakhir">
-          <h2 id="catatan-terakhir" className="mb-3 text-subhead font-medium text-ink">
+          <h2 id="catatan-terakhir" className="mb-3 text-sm font-medium text-ink">
             Catatan manual terakhir
           </h2>
           <RecentEntries rows={rows} total={manual.total} />
         </section>
       </div>
 
-      <aside className="space-y-5 lg:border-l lg:border-line lg:pl-6">
+      {/* What a person worries about while typing, said as the answer only.
+          Why this page exists at all sits behind the info button. */}
+      <aside className="space-y-5 text-sm text-ink-muted lg:border-l lg:border-line lg:pl-6">
         <div>
-          <h2 className="text-subhead font-medium text-ink">Kenapa halaman ini ada</h2>
-          <p className="mt-1 text-subhead text-ink-muted">
-            E-Statement Mandiri hanya melihat rekening Mandiri. Belanja tunai dan belanja dari
-            e-wallet tidak pernah muncul di sana, jadi harus diketik.
-          </p>
-        </div>
-
-        <div className="border-t border-line pt-4">
-          <h2 className="text-subhead font-medium text-ink">Kalau ternyata lewat bank juga</h2>
-          <p className="mt-1 text-subhead text-ink-muted">
-            Saat statement berikutnya diimpor, catatan yang nominal dan akunnya sama akan
-            dipasangkan dengan baris banknya. Kamu yang memutuskan di halaman Tinjau, dan tidak ada
-            yang terhitung dua kali sebelum itu diputuskan.
+          <div className="flex items-center gap-1">
+            <h2 className="text-sm font-medium text-ink">Kalau ternyata lewat bank juga</h2>
+            <InfoTip label="Kenapa diketik">
+              <p>
+                E-Statement Mandiri hanya melihat rekening Mandiri. Belanja tunai dan belanja dari
+                e-wallet tidak pernah muncul di sana, jadi harus diketik.
+              </p>
+            </InfoTip>
+          </div>
+          <p className="mt-1.5">
+            Saat statement berikutnya diimpor, catatan yang nominal dan akunnya sama dipasangkan
+            dengan baris banknya. Tidak ada yang terhitung dua kali sebelum kamu memutuskannya di
+            Tinjau.
           </p>
         </div>
       </aside>
@@ -119,7 +122,6 @@ export default async function CatatPage() {
       title="Catat transaksi"
       email={user.email ?? ''}
       current="/catat"
-      lead="Untuk uang yang tidak lewat e-Statement: tunai, e-wallet, dan koreksi saldo. Yang lewat Mandiri akan dicocokkan sendiri saat statement berikutnya diimpor."
     >
       <Suspense fallback={<EntrySkeleton />}>
         <Entry />

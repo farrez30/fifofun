@@ -6,6 +6,7 @@ import { BUTTON_PRIMARY, CONTROL } from '@/components/field-base'
 import { MoneyInput } from '@/components/money-input'
 import { SPLIT_MAX, SPLIT_MIN, splitBlocker } from '@/lib/ledger/edit'
 import { optionGroups } from '@/lib/ledger/settings'
+import { InfoTip } from '@/components/info-tip'
 import { formatIdr } from '@/lib/money'
 import type { ActionResult } from '@/lib/actions'
 import { splitEntry } from '../actions'
@@ -70,8 +71,13 @@ export function SplitForm({
   }
 
   return (
-    <form action={action} className="space-y-3 squircle rounded-md bg-surface shadow-xs p-4">
-      <h2 className="text-subhead font-medium text-ink">Pisah jadi beberapa kategori</h2>
+    <form action={action} className="space-y-3 squircle rounded-md border border-line bg-surface p-4">
+      <div className="flex items-center gap-1">
+        <h2 className="text-sm font-medium text-ink">Pisah jadi beberapa kategori</h2>
+        <InfoTip label="Kenapa jumlahnya harus persis">
+          <p>Saldo dan rekonsiliasi dihitung dari nominal transaksi aslinya.</p>
+        </InfoTip>
+      </div>
       <input type="hidden" name="id" value={id} />
 
       <ol className="space-y-3">
@@ -121,7 +127,7 @@ export function SplitForm({
               type="button"
               onClick={() => setParts((current) => current.filter((_, at) => at !== index))}
               disabled={parts.length <= SPLIT_MIN}
-              className="h-10 rounded-sm border border-line px-2.5 text-footnote text-ink-muted transition-colors duration-150 hover:border-line-strong hover:text-ink disabled:opacity-30"
+              className="h-10 rounded-sm border border-line px-2.5 text-xs text-ink-muted transition-colors duration-150 hover:border-line-strong hover:text-ink disabled:opacity-30"
             >
               Hapus bagian
             </button>
@@ -134,12 +140,12 @@ export function SplitForm({
           type="button"
           onClick={() => setParts((current) => [...current, EMPTY])}
           disabled={parts.length >= SPLIT_MAX}
-          className="h-10 rounded-sm border border-line px-2.5 text-footnote text-ink transition-colors duration-150 hover:border-line-strong hover:bg-sunken disabled:opacity-30"
+          className="h-10 rounded-sm border border-line px-2.5 text-xs text-ink transition-colors duration-150 hover:border-line-strong hover:bg-fill-quaternary disabled:opacity-30"
         >
           Tambah bagian
         </button>
 
-        <p role="status" className="text-subhead text-ink-muted">
+        <p role="status" className="text-sm text-ink-muted">
           {status}
         </p>
       </div>
@@ -148,10 +154,9 @@ export function SplitForm({
         <Submit disabled={blocker !== null} />
       </div>
 
-      <p className="text-footnote text-ink-muted">
-        Bagian-bagiannya harus berjumlah persis {formatIdr(total)}, karena saldo dan rekonsiliasi
-        dihitung dari angka itu. Transaksi aslinya disembunyikan, bukan dihapus, dan bisa
-        digabungkan lagi kapan saja.
+      <p className="text-xs text-ink-muted">
+        Bagian-bagiannya harus berjumlah persis {formatIdr(total)}. Transaksi aslinya
+        disembunyikan, bukan dihapus, dan bisa digabungkan lagi kapan saja.
       </p>
     </form>
   )
