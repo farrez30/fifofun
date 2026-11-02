@@ -25,6 +25,7 @@ import { RulesList } from './rules-list'
 import { QueueSkeleton } from './skeleton'
 import { summariseQueue } from './summary'
 import { TidyPanel } from './tidy-panel'
+import { InfoTip } from '@/components/info-tip'
 
 export const metadata: Metadata = { title: 'Tinjau' }
 /* Blocks on runtime data by design; the why lives in src/app/page.tsx above `instant`. */
@@ -127,26 +128,19 @@ async function Queue({ options }: { options: QueueOptions }) {
       </div>
 
       <aside className="space-y-5 lg:border-l lg:border-line lg:pl-6">
-        <div>
-          <h2 className="text-subhead font-medium text-ink">Aturan yang sudah kamu buat</h2>
-          <p className="mt-1 text-subhead text-ink-muted">
-            Dijalankan berurutan dari atas. Yang pertama cocok yang menang.
-          </p>
+        <div className="flex items-center gap-1">
+          <h2 className="text-sm font-medium text-ink">Aturanmu</h2>
+          <InfoTip label="Cara aturan dijalankan">
+            <p>Dijalankan berurutan dari atas. Yang pertama cocok yang menang.</p>
+            <p className="mt-2">
+              Menghapus aturan tidak mengembalikan kategori yang sudah tersimpan. Aturan menentukan
+              cara membaca baris berikutnya, bukan menjadi kategorinya.
+            </p>
+          </InfoTip>
         </div>
 
         <RulesList rules={rules} />
 
-        <div className="border-t border-line pt-4">
-          <h2 className="text-subhead font-medium text-ink">Kenapa dikelompokkan</h2>
-          <p className="mt-1 text-subhead text-ink-muted">
-            Mutasi bank menulis lawan transaksi yang sama dengan catatan yang berbeda tiap kali.
-            Dikelompokkan menurut lawan transaksinya, satu keputusan menyelesaikan puluhan baris.
-          </p>
-          <p className="mt-2 text-subhead text-ink-muted">
-            Menghapus aturan tidak mengembalikan kategori yang sudah tersimpan. Aturan menentukan
-            cara membaca baris berikutnya, bukan menjadi kategorinya.
-          </p>
-        </div>
       </aside>
     </div>
   )
@@ -167,7 +161,6 @@ export default async function TinjauPage({
       title="Tinjau kategori"
       email={user.email ?? ''}
       current="/tinjau"
-      lead="Kategori dari impor adalah tebakan mesin. Di sini kamu yang memutuskan, dan keputusanmu berlaku ke transaksi berikutnya."
     >
       {/* Keyed so a new arrangement re-suspends rather than showing the old
           grouping while the new one is still being worked out. */}

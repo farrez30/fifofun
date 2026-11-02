@@ -24,7 +24,7 @@ export function RulesList({ rules }: { rules: RuleRow[] }) {
 
   if (rules.length === 0) {
     return (
-      <p className="text-subhead text-ink-muted">
+      <p className="text-sm text-ink-muted">
         Belum ada aturan. Aturan pertama dibuat saat kamu menyetujui satu kelompok di sebelah.
       </p>
     )
@@ -35,14 +35,14 @@ export function RulesList({ rules }: { rules: RuleRow[] }) {
 
       <ul id={listId} className="space-y-2">
         {shown.map((rule) => (
-          <li key={rule.id} className="squircle rounded-md bg-surface shadow-xs p-3">
+          <li key={rule.id} className="squircle rounded-md border border-line bg-surface p-3">
             <div className="flex items-baseline justify-between gap-3">
-              <p className="min-w-0 text-subhead text-ink">
+              <p className="min-w-0 text-sm text-ink">
                 <span className="truncate">{rule.pattern}</span>
               </p>
               <form action={action}>
                 <input type="hidden" name="ruleId" value={rule.id} />
-                <SubmitButton className="shrink-0 text-footnote text-ink-faint underline underline-offset-2 hover:text-over">
+                <SubmitButton className="shrink-0 text-xs text-ink-faint underline underline-offset-2 hover:text-over">
                   Hapus
                 </SubmitButton>
               </form>
@@ -50,11 +50,11 @@ export function RulesList({ rules }: { rules: RuleRow[] }) {
 
             <MetaRow
               as="p"
-              className="mt-0.5 text-footnote text-ink-muted"
+              className="mt-0.5 text-xs text-ink-muted"
               parts={[MATCH_LABELS[rule.matchType as MatchType], rule.categoryName ?? 'tanpa kategori']}
             />
 
-            <p className="mt-0.5 text-footnote text-ink-faint">
+            <p className="mt-0.5 text-xs text-ink-faint">
               {rule.hitCount === 0
                 ? 'Belum pernah cocok dengan satu transaksi pun.'
                 : `Sudah menyelesaikan ${rule.hitCount} transaksi.`}

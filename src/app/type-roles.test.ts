@@ -53,7 +53,9 @@ const BANNED = /\b(?:sm:|lg:)?text-(?:xs|sm|base|lg|xl|[2-9]xl)\b|\btext-\[[\d.]
 const FOUR_STEP = [
   'src/app/anggaran/',
   'src/app/dana/',
+  'src/app/impor/',
   'src/app/rencana/',
+  'src/app/tinjau/',
   'src/components/plan/',
   'src/components/info-tip.tsx',
   'src/components/shell-frame.tsx',

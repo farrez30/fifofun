@@ -74,7 +74,7 @@ function WaitStatus() {
   if (phase === 'checking') return null
 
   return (
-    <p role="status" aria-live="polite" className="text-subhead text-ink-muted">
+    <p role="status" aria-live="polite" className="text-sm text-ink-muted">
       {WAIT_MESSAGE[phase]}
     </p>
   )
@@ -139,7 +139,7 @@ export function ImportForm({ initialReport = null }: { initialReport?: ImportRep
         >
           <label
             htmlFor="statement"
-            className="cursor-pointer text-subhead font-medium text-accent underline underline-offset-2 hover:text-accent-strong"
+            className="cursor-pointer text-sm font-medium text-accent underline underline-offset-2 hover:text-accent-strong"
           >
             Pilih berkas e-Statement
           </label>
@@ -153,11 +153,11 @@ export function ImportForm({ initialReport = null }: { initialReport?: ImportRep
             onChange={(event) => setFilename(event.target.files?.[0]?.name ?? null)}
             className="sr-only"
           />
-          <p className="mt-2 text-subhead text-ink-muted">
+          <p className="mt-2 text-sm text-ink-muted">
             atau seret berkasnya ke sini. Format .xlsx dari Livin&apos;, maksimal 3 MB.
           </p>
           {filename ? (
-            <p className="mt-3 inline-block rounded-sm border border-line bg-sunken px-3 py-1.5 tnum font-mono text-footnote text-ink">
+            <p className="mt-3 tnum font-mono text-xs text-ink">
               {filename}
             </p>
           ) : null}
@@ -165,7 +165,7 @@ export function ImportForm({ initialReport = null }: { initialReport?: ImportRep
 
         {needsPassword ? (
           <div className="space-y-1.5">
-            <label htmlFor="statement-password" className="block text-subhead font-medium text-ink">
+            <label htmlFor="statement-password" className="block text-sm font-medium text-ink">
               Kata sandi berkas
             </label>
             <input
@@ -179,7 +179,7 @@ export function ImportForm({ initialReport = null }: { initialReport?: ImportRep
               aria-describedby="statement-password-hint"
               className={CONTROL}
             />
-            <p id="statement-password-hint" className="text-footnote text-ink-faint">
+            <p id="statement-password-hint" className="text-xs text-ink-faint">
               Yang diminta Excel saat membuka berkas ini. Dipakai sekali untuk membukanya, tidak
               disimpan.
             </p>
@@ -205,20 +205,20 @@ function Report({ report }: { report: ImportReport }) {
         report.ok ? 'border-under/40 bg-under-wash' : 'border-over/40 bg-over-wash'
       }`}
     >
-      <p className="flex items-start gap-2 text-subhead font-medium text-ink">
+      <p className="flex items-start gap-2 text-sm font-medium text-ink">
         <span aria-hidden="true" className={report.ok ? 'text-under' : 'text-over'}>
           {report.ok ? '●' : '▲'}
         </span>
         <span>
           {report.filename ? (
-            <span className="font-mono text-footnote text-ink-muted">{report.filename}</span>
+            <span className="font-mono text-xs text-ink-muted">{report.filename}</span>
           ) : null}
           {report.filename ? <br /> : null}
           {report.message}
         </span>
       </p>
 
-      {report.detail ? <p className="mt-2 text-subhead text-ink-muted">{report.detail}</p> : null}
+      {report.detail ? <p className="mt-2 text-sm text-ink-muted">{report.detail}</p> : null}
 
       {/*
         Both of the things that go wrong here are fixed on the same screen, and
@@ -226,7 +226,7 @@ function Report({ report }: { report: ImportReport }) {
         that names a place a reader cannot get to is a dead end.
       */}
       {report.needsSettings === 'akun' || report.walletUnmatched ? (
-        <p className="mt-2 text-subhead">
+        <p className="mt-2 text-sm">
           <a href="/pengaturan#akun" className="text-accent underline underline-offset-2">
             {report.needsSettings === 'akun'
               ? 'Pasang kunci impor di Pengaturan'
@@ -236,7 +236,7 @@ function Report({ report }: { report: ImportReport }) {
       ) : null}
 
       {report.ok && report.inserted !== undefined ? (
-        <dl className="mt-3 grid grid-cols-1 gap-3 border-t border-line pt-3 text-subhead sm:grid-cols-2 lg:grid-cols-4">
+        <dl className="mt-3 grid grid-cols-1 gap-3 border-t border-line pt-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
           <Pair label="Periode" value={`${report.period?.start} sampai ${report.period?.end}`} />
           <Pair label="Masuk" value={`${report.inserted} transaksi`} />
           <Pair
@@ -255,7 +255,7 @@ function Report({ report }: { report: ImportReport }) {
       ) : null}
 
       {report.duplicatesSuspected ? (
-        <p className="mt-3 border-t border-line pt-3 text-subhead text-ink">
+        <p className="mt-3 border-t border-line pt-3 text-sm text-ink">
           <span aria-hidden="true" className="mr-1.5 text-warn">
             ◆
           </span>
@@ -272,10 +272,10 @@ function Report({ report }: { report: ImportReport }) {
 
       {report.issues && report.issues.length > 0 ? (
         <div className="mt-3 border-t border-line pt-3">
-          <p className="text-subhead font-medium text-ink">
+          <p className="text-sm font-medium text-ink">
             Baris yang tidak cocok ({report.issues.length})
           </p>
-          <ul className="mt-2 space-y-1 text-subhead text-ink-muted">
+          <ul className="mt-2 space-y-1 text-sm text-ink-muted">
             {report.issues.slice(0, 8).map((issue, index) => (
               <li key={`${issue.sheetRow ?? issue.kind}-${index}`}>
                 {issue.sheetRow === undefined ? (
@@ -291,7 +291,7 @@ function Report({ report }: { report: ImportReport }) {
             ))}
           </ul>
           {report.issues.length > 8 ? (
-            <p className="mt-1 text-footnote text-ink-faint">
+            <p className="mt-1 text-xs text-ink-faint">
               dan {report.issues.length - 8} baris lain.
             </p>
           ) : null}
@@ -314,14 +314,14 @@ function Pair({
 }) {
   return (
     <div>
-      <dt className="text-footnote text-ink-faint">{label}</dt>
+      <dt className="text-xs text-ink-faint">{label}</dt>
       <dd className={`mt-0.5 text-ink ${mono ? 'tnum font-mono' : ''}`}>
         {value}
         {/* Nested inside <dd> rather than a sibling <p>: a <dl>'s own children
             (once <div>-wrapped) may only be dt/dd, and axe's definition-list
             check enforces it. This report is the first e2e fixture to render
             far enough to exercise that check. */}
-        {hint ? <span className="mt-0.5 block text-footnote font-normal text-ink-faint">{hint}</span> : null}
+        {hint ? <span className="mt-0.5 block text-xs font-normal text-ink-faint">{hint}</span> : null}
       </dd>
     </div>
   )

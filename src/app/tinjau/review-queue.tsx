@@ -112,36 +112,36 @@ export function ReviewQueue({ groups, categories, accounts, remaining, options }
 
   return (
     <div className="space-y-5">
-      <div className="squircle rounded-md bg-sunken p-4">
-        <p className="text-subhead text-ink">
+      <div data-queue-headline className="squircle rounded-md border border-line bg-surface p-4">
+        <p className="text-sm text-ink">
           <span className="tnum font-mono">{shown.count}</span> transaksi menunggu
           {rangeLabel ? `, ${rangeLabel}` : ''}.
         </p>
 
         <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1">
           <div>
-            <dt className="text-footnote text-ink-faint">Menunggu keluar</dt>
-            <dd className="text-subhead text-ink">
+            <dt className="text-xs text-ink-faint">Menunggu keluar</dt>
+            <dd className="text-sm text-ink">
               <SignedMoney sen={shown.out.total} direction="out" />
               <span className="ml-1 text-ink-faint">({shown.out.count})</span>
             </dd>
           </div>
           <div>
-            <dt className="text-footnote text-ink-faint">Menunggu masuk</dt>
-            <dd className="text-subhead text-ink">
+            <dt className="text-xs text-ink-faint">Menunggu masuk</dt>
+            <dd className="text-sm text-ink">
               <SignedMoney sen={shown.in.total} direction="in" />
               <span className="ml-1 text-ink-faint">({shown.in.count})</span>
             </dd>
           </div>
         </dl>
 
-        <p className="mt-2 text-subhead text-ink-muted">
+        <p className="mt-2 text-sm text-ink-muted">
           Terkumpul jadi {groups.length} kelompok: {out} keluar, {incoming} masuk.
           {topShare ? ` ${topShare}` : ''}
         </p>
 
         {shown.unseen > 0 ? (
-          <p className="mt-1 text-subhead text-ink-muted">
+          <p className="mt-1 text-sm text-ink-muted">
             {shown.unseen} transaksi lain tidak punya lawan yang bisa dikelompokkan, dan hanya
             terlihat kalau dikelompokkan{' '}
             <a
@@ -244,9 +244,9 @@ function GroupCard({
       <div
         role="status"
         aria-busy="true"
-        className="reveal squircle rounded-md bg-surface shadow-xs px-4 py-3"
+        className="reveal squircle rounded-md border border-line bg-surface px-4 py-3"
       >
-        <span className="text-subhead text-ink-muted">
+        <span className="text-sm text-ink-muted">
           Menyimpan {group.count} transaksi dari {label}
         </span>
       </div>
@@ -254,7 +254,7 @@ function GroupCard({
   }
 
   return (
-    <div className="squircle rounded-md bg-surface shadow-xs">
+    <div className="squircle rounded-md border border-line bg-surface">
       <button
         type="button"
         onClick={onToggle}
@@ -265,10 +265,10 @@ function GroupCard({
         <span className="min-w-0">
           <span className="flex items-baseline gap-1.5">
             <DirectionMark direction={group.direction} className="translate-y-0.5" />
-            <span className="block truncate text-subhead text-ink">{label}</span>
+            <span className="block truncate text-sm text-ink">{label}</span>
           </span>
           <MetaRow
-            className="mt-0.5 text-footnote text-ink-muted"
+            className="mt-0.5 text-xs text-ink-muted"
             parts={[
               `${group.count} transaksi`,
               spanOf(group),
@@ -280,17 +280,17 @@ function GroupCard({
           sen={group.total}
           direction={group.direction === 'in' ? 'in' : group.direction === 'out' ? 'out' : 'neutral'}
           compact
-          className="shrink-0 text-subhead"
+          className="shrink-0 text-sm"
         />
       </button>
 
       {open ? (
         <div id={`${headingId}-isi`} className="border-t border-line px-4 py-4">
           <div className="mb-4">
-            <p className="text-footnote text-ink-faint">
+            <p className="text-xs text-ink-faint">
               Contoh keterangannya
             </p>
-            <ul className="mt-1 space-y-0.5 text-subhead text-ink-muted">
+            <ul className="mt-1 space-y-0.5 text-sm text-ink-muted">
               {group.samples.map((sample) => (
                 <li key={sample} className="truncate">
                   {sample}
@@ -300,7 +300,7 @@ function GroupCard({
           </div>
 
           {settledSingles.length > 0 ? (
-            <p className="mb-3 text-subhead text-ink-muted">
+            <p className="mb-3 text-sm text-ink-muted">
               {group.kind === 'counterparty'
                 ? `${settledSingles.length} sudah kamu atur sendiri, ${Math.max(0, group.count - settledSingles.length)} sisanya ikut pilihan di atas.`
                 : `${settledSingles.length} sudah kamu atur sendiri.`}
@@ -325,13 +325,13 @@ function GroupCard({
                 </div>
               </div>
 
-              <details className="text-subhead">
+              <details className="text-sm">
                 <summary className="cursor-pointer text-ink-muted">
                   Pola yang dipakai: {MATCH_LABELS[matchType]} &ldquo;{pattern}&rdquo;
                 </summary>
                 <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
                   <label className="block">
-                    <span className="block text-subhead font-medium text-ink">
+                    <span className="block text-sm font-medium text-ink">
                       Pola
                     </span>
                     <input
@@ -343,7 +343,7 @@ function GroupCard({
                     />
                   </label>
                   <label className="block">
-                    <span className="block text-subhead font-medium text-ink">
+                    <span className="block text-sm font-medium text-ink">
                       Cara mencocokkan
                     </span>
                     <select
@@ -359,12 +359,12 @@ function GroupCard({
                     </select>
                   </label>
                 </div>
-                <p className="mt-2 text-footnote text-ink-muted">
+                <p className="mt-2 text-xs text-ink-muted">
                   Dicocokkan ke keterangan asli dari bank, bukan ke keterangan yang sudah dirapikan.
                 </p>
               </details>
 
-              <label className="flex items-start gap-2 text-subhead text-ink-muted">
+              <label className="flex items-start gap-2 text-sm text-ink-muted">
                 <input
                   type="checkbox"
                   name="remember"
@@ -377,7 +377,7 @@ function GroupCard({
               </label>
             </form>
           ) : (
-            <p className="text-subhead text-ink-muted">
+            <p className="text-sm text-ink-muted">
               Kelompok bulan tidak bisa disimpan sebagai aturan, karena sebuah bulan bukan pola yang
               bisa dicocokkan ke impor berikutnya. Atur barisnya satu per satu di bawah.
             </p>
@@ -423,7 +423,7 @@ function CategorySelect({
         className={
           compactLabel
             ? 'sr-only'
-            : 'block text-subhead font-medium text-ink'
+            : 'block text-sm font-medium text-ink'
         }
       >
         {label}
@@ -451,12 +451,12 @@ function CategorySelect({
         ))}
       </select>
       {chosen?.description ? (
-        <span data-kamus className="mt-1 block text-footnote text-ink-muted">
+        <span data-kamus className="mt-1 block text-xs text-ink-muted">
           {chosen.description}
         </span>
       ) : null}
       {empty ? (
-        <span className="mt-1 block text-footnote text-ink-muted">
+        <span className="mt-1 block text-xs text-ink-muted">
           Buat kategorinya di{' '}
           <a href="/pengaturan?bagian=kategori" className="text-accent underline underline-offset-2">
             Pengaturan
@@ -474,7 +474,7 @@ function Submit({ count }: { count: number }) {
     <button
       type="submit"
       aria-busy={pending}
-      className="h-11 w-full rounded-sm bg-accent px-5 text-subhead font-medium text-paper transition-colors duration-150 hover:bg-accent-strong disabled:opacity-50 sm:w-auto"
+      className="h-11 w-full rounded-sm bg-accent px-5 text-sm font-medium text-paper transition-colors duration-150 hover:bg-accent-strong disabled:opacity-50 sm:w-auto"
     >
       {pending ? 'Menyimpan' : `Terapkan ke ${count}`}
     </button>
@@ -510,7 +510,7 @@ function SingleRows({
 
   return (
     <details
-      className="group mt-4 border-t border-line pt-3 text-subhead"
+      className="group mt-4 border-t border-line pt-3 text-sm"
       open={categories.length === 0 || entries.length <= 8}
     >
       <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 text-ink [&::-webkit-details-marker]:hidden">
@@ -551,14 +551,14 @@ function SingleRows({
                     />
                     <span className="min-w-0 truncate">{entry.description}</span>
                   </p>
-                  <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-footnote text-ink-muted">
+                  <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-muted">
                     <span className="tnum">{formatJakarta(entry.occurredAt, 'datetime')}</span>
                     {account ? (
                       <AccountMark
                         name={account.name}
                         kind={account.kind}
                         logo={account.logoUrl}
-                        className="text-footnote text-ink"
+                        className="text-xs text-ink"
                       />
                     ) : (
                       <span>Akun tidak dikenal</span>
@@ -570,7 +570,7 @@ function SingleRows({
                 <SignedMoney
                   sen={entry.amount}
                   direction={signedDirection(entry.cashflow)}
-                  className="self-center text-subhead"
+                  className="self-center text-sm"
                 />
 
                 <div className="flex items-end gap-2">
@@ -583,7 +583,7 @@ function SingleRows({
                   />
                   <button
                     type="submit"
-                    className="h-11 shrink-0 border border-line-strong px-3 text-subhead text-ink transition-colors duration-150 hover:bg-sunken"
+                    className="h-11 shrink-0 border border-line-strong px-3 text-sm text-ink transition-colors duration-150 hover:bg-sunken"
                   >
                     Simpan
                   </button>
