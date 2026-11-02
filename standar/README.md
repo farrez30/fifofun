@@ -12,6 +12,7 @@ dua aturan yang berbeda.
 | `AGENTS.stub.md` | `AGENTS.md` awal untuk repo yang belum punya — dibuat PR sebar hanya kalau berkasnya belum ada. |
 | `hooks/commit-msg` | Menolak atribusi AI, dan menegakkan bentuk Conventional Commits. |
 | `workflows/keamanan.yml` | Semgrep + Trivy + Gitleaks + OSV-Scanner. Temuan tinggi/kritis memerahkan job; SARIF tetap disimpan sebagai artifact. Temuan yang diterima dicatat per repo di berkas bawaan tiap scanner, dengan alasan dan tanggal (daftarnya di komentar atas workflow). Disebar bersama yang lain. |
+| `workflows/merge-hijau.yml` | Me-merge PR begitu semua workflow PR-nya hijau, karena sesi agen tidak dibangunkan saat CI hijau (ADR 0066). Hanya repo farrez30: sebar memasangnya ke `.github/workflows/` di sana saja. Label `jangan-merge` menahan satu PR; variabel repo `MERGE_HIJAU=mati` mematikannya untuk repo yang butuh workflow push ke main sesudah merge. |
 | `RISET.md` | Standar riset: tingkat sumber N/A/B/C/D/X, daftar periksa 14 butir per paper, aturan paper Indonesia, akses legal, format register `docs/riset/sumber.json`. |
 | `modul/` | Katalog modul Rakit (ADR 0028): kit siap salin, `katalog.json`, dan `alat/lock.mjs`. Disebar utuh. |
 | `skills/<nama>/` | Skill Claude Code. Yang disebar hanya nama di `skills/SEBAR`; `arsitektur` tidak, karena menyuruh skrip yang hanya ada di repo ini. Tiap skill dicermin byte-identik ke `.claude/skills/<nama>/` dan membawa `evals/` (minimal 3 skenario, satu adversarial). |
@@ -53,11 +54,11 @@ ditolak dengan pesan yang tidak menyebut sebabnya.
    `AGENTS.base.md` untuk yang umum.
 4. Isi `CLAUDE.md` dengan `@AGENTS.md` saja. Satu berkas panduan, dibaca semua
    agen.
-5. Di laptop pemilik, skill lintas project (`aset-visual-web`) dipasang sekali
-   ke `~/.claude` lewat junction: `powershell -File scripts/pasang-skill.ps1
-   -Kering` dulu, lalu tanpa `-Kering`. Junction menunjuk ke checkout utama
-   coderoach-app, jadi yang disunting tetap satu tempat. Tujuan yang sudah ada
-   tidak ditimpa; `-Ganti` memindahkannya ke `~/.claude/_lama/`.
+5. Di perangkat Farrez, aturan global, rujukan, dan skill lintas project
+   datang dari kit Claude di `kit/` (`powershell -File kit/pasang.ps1 -Kering`
+   dulu, lalu tanpa `-Kering`; langkah lengkap di `kit/README.md`). Kit
+   menggantikan `scripts/pasang-skill.ps1`, yang hanya memasang
+   `aset-visual-web`.
 
 ## Cara menambah skill yang disebar
 

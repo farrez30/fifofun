@@ -1,6 +1,8 @@
 # Prompt siap pakai
 
-Isi bagian `<...>`. Prompt dipakai di agen pen.dev atau di Claude Code dengan MCP pencil.
+Isi bagian `<...>`. Prompt dipakai di agen pen.dev (app atau CLI) atau di Claude Code dengan MCP
+pencil. Di CLI, prompt panjang menjadi lampiran `--prompt-file` dan `--prompt` cukup satu kalimat
+yang menyebut lampirannya (`pen-dev.md`).
 Disusun dari prompt yang berhasil di proyek Wafi (Sep sampai Okt 2026). Yang belum pernah diuji
 ditandai **[belum diuji]**.
 
@@ -43,16 +45,41 @@ State: <daftar>. Platform: <web 1440 / mobile 390>. Pengguna: <persona>.
 Nama frame: [v0.1][WIP] <SCR-ID> <nama>, <state>.
 ```
 
-## B. Redesign website
+## B. Redesign website atau halaman baru, 3 arah
+
+Lewat CLI, teks di bawah menjadi lampiran `prompt.txt` (`--prompt-file`), aturan yang sama untuk
+semua halaman satu seri menjadi lampiran `aturan-bersama.txt`, dan `--prompt` cukup satu
+kalimat yang menyebut keduanya. Halaman lama dilampirkan sebagai tangkapan layar PNG.
 
 ```
-<frame baseline> Redesign halaman ini.
+<frame baseline atau "tangkapan terlampir: halaman-lama.png"> Redesign halaman ini.
 Pertahankan: logo, warna brand, tone <...>, struktur menu.
 Tujuan bisnis: <misalnya naikkan klik WhatsApp>. Audiens: <...>.
 Boleh diubah: hero, hierarki tipografi, layout section produk, CTA.
 Referensi: <gambar atau URL dari pustaka referensi>.
-Buat 3 arah berbeda, nama frame [v0.1][WIP] WEB Home, arah A/B/C.
+ISI: <judul, kalimat, dan angka yang boleh tampil; selain ini tidak ada teks lain>.
+Buat 3 arah, nama frame [v0.1][WIP] WEB <halaman>, arah A/B/C.
+
+Wajib:
+1. Ketiga arah memakai kerangka berbeda:
+   - A: <misalnya hero satu kolom rata tengah, judul besar; satu adegan utama di tengah; isi satu kolom>
+   - B: <misalnya hero dengan slot produk di tengah; adegan selebar layar; isi 2 kolom kartu>
+   - C: <misalnya hero dua kolom; isi zig-zag kiri-kanan dengan slot gambar besar>
+2. Adegan scroll digambar sebagai storyboard 3 sampai 4 keyframe berdampingan. Tiap keyframe
+   minimal 320 px tinggi dan menggambar bendanya dengan bentuk (kertas, ponsel, ikon), bukan
+   kotak berisi kalimat. Keterangan pendek di bawahnya ("0%: ...", "100%: ...").
+3. Jangan menambah teks yang tidak ada di ISI: alamat email, nomor rekening, nama orang, nama
+   tempat, angka. Ajakan menghubungi cukup tombol. Data karangan di storyboard diberi label
+   kecil "data contoh".
+4. Slot gambar berupa kotak abu-abu berlabel nama berkas tangkapan asli. Jangan menggambar UI
+   palsu yang menyamar sebagai tangkapan asli.
 ```
+
+Butir 1 sampai 3 lahir dari uji 28 Okt 2026 (halaman portofolio, Flash Lite): tanpa butir itu
+tiga arah keluar nyaris kembar, storyboard berupa kartu teks, dan agen menambah email serta
+nomor rekening karangan. Dengan butir itu sejak prompt pertama, revisi pertama menghasilkan
+kerangka yang berbeda dan isi karangan hilang. Kerangka A/B/C diisi sesuai halamannya, bukan
+disalin apa adanya.
 
 ## C. Deck review desain
 

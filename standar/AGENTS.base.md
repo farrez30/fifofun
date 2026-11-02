@@ -120,6 +120,37 @@ Sisi aplikasi:
   disengaja. (NDS-ETL, AkarKita)
 - **Jangan push tanpa diminta pemilik repo.** (AkarKita)
 
+## Ritme push dan menit CI
+
+Setiap push ke PR menjalankan seluruh CI, dan setiap job GitHub Actions
+ditagih minimal satu menit penuh. Diukur di coderoach-app 22–29 Okt 2026:
+3.423 menit tertagih seminggu, 1,7 kali kuota gratis sebulan. 62% dari push ke
+PR, 18% dari run yang dibatalkan oleh push berikutnya, 16% dari rerun
+(ADR 0056 di coderoach-app). Pola yang sama dilaporkan tim lain yang memakai
+agen AI: pemborosan terbesar adalah memverifikasi ulang hal yang sudah
+diverifikasi.
+
+- **Commit lokal sesering perlu, push sekali saat perubahannya utuh dan
+  `npm run check` lokal hijau.** Push "wip" atau "fix ci" berulang adalah
+  menit yang dibayar dua kali.
+- **Buka PR sebagai draft selama masih dikerjakan.** CI tidak jalan untuk
+  draft; "Ready for review" yang menjalankannya.
+- **Tidak menumpuk PR di atas PR**, dan tidak menggabungkan main ke cabang
+  berulang kali kecuali ada konflik atau perbaikan di main yang dibutuhkan.
+  Satu tumpukan enam PR dengan sinkronisasi berulang menghasilkan puluhan run
+  (T-0089, coderoach-app).
+- **CI merah karena mesin (runner, port, berkas sisa) diperbaiki di sumbernya**,
+  bukan di-rerun sampai hijau. Rerun melipattigakan waktu sampai merge
+  (Durieux dkk., MSR 2020) dan tes flaky menggerus penghematan batch
+  (Najafi dkk., FSE 2019).
+- **Workflow di repo privat dibentuk supaya hemat**: `pull_request` dengan
+  `types: [opened, synchronize, reopened, ready_for_review]` dan job yang
+  melewati draft, `concurrency` dengan `cancel-in-progress` untuk PR,
+  `timeout-minutes` di tiap job, `runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}`
+  (tidak di repo publik: runner sendiri akan menjalankan kode PR fork), dan
+  push ke main tidak mengulang tes yang sudah lulus di PR-nya. Contohnya
+  `ci.yml` dan `standar/workflows/keamanan.yml` di coderoach-app.
+
 ## Gate sebelum commit
 
 Satu perintah yang menjalankan seluruh gate, bernama sama di semua repo:

@@ -1,0 +1,81 @@
+name: Merge saat hijau
+
+# PR milik repo farrez30 di-merge begitu semua workflow PR-nya hijau (ADR 0066).
+# Izin tetapnya dari Farrez 30 Okt 2026; berkas ini yang menjalankannya, karena
+# sesi agen hanya dibangunkan saat CI gagal dan PR yang hijau diam sampai ada
+# yang ingat (farrez30/d-day#17, 2 Nov 2026).
+#
+# Bukan auto-merge bawaan GitHub: repo privat akun Free tidak punya required
+# checks, jadi auto-merge bawaan me-merge sebelum tes selesai. Bukan juga job di
+# dalam CI tiap repo: nama workflow dan job tes berbeda per repo, dan berkas ini
+# harus bisa disebar apa adanya.
+#
+# workflow_run selalu memakai berkas ini dari cabang utama, bukan dari PR, jadi
+# PR tidak bisa mengubah aturan merge-nya sendiri. Kode PR tidak pernah
+# di-checkout. Nama yang tidak ada di repo diabaikan GitHub.
+on:
+  workflow_run:
+    workflows: [CI, ci, Checks, Test, Keamanan]
+    types: [completed]
+
+permissions:
+  contents: read
+
+# CI dan Keamanan bisa selesai bersamaan. Yang kedua menunggu, lalu melihat PR
+# sudah tertutup dan berhenti, bukan gagal karena merge ganda.
+concurrency:
+  group: merge-hijau-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: false
+
+jobs:
+  merge:
+    # Repo mwafiudin di-merge pemiliknya. MERGE_HIJAU=mati untuk repo yang
+    # butuh workflow push ke main sesudah merge: merge lewat GITHUB_TOKEN tidak
+    # memicu workflow lain, jadi deploy atau migrasi on-push tidak akan jalan.
+    if: >-
+      github.repository_owner == 'farrez30' &&
+      vars.MERGE_HIJAU != 'mati' &&
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 3
+    permissions:
+      actions: read
+      contents: write
+      pull-requests: write
+    steps:
+      # Semua dibaca segar dari API, bukan dari payload pemicu: label atau
+      # status draft bisa berubah sejak run itu mulai. Butuh gh (ada di runner
+      # GitHub; runner sendiri wajib memasangnya).
+      - name: Merge commit yang diuji
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+          PR: ${{ github.event.workflow_run.pull_requests[0].number }}
+        run: |
+          set -euo pipefail
+          if [ -z "$PR" ]; then echo "dilewati: bukan PR dari repo ini"; exit 0; fi
+
+          alasan=$(gh api "repos/$REPO/pulls/$PR" --jq '
+            if .state != "open" then "sudah tertutup"
+            elif .draft then "draft"
+            elif .head.sha != env.SHA then "ada commit baru sesudah run ini"
+            elif .user.login == "dependabot[bot]" then "PR Dependabot"
+            elif any(.labels[]; .name == "jangan-merge") then "berlabel jangan-merge"
+            else "" end')
+          if [ -n "$alasan" ]; then echo "dilewati: $alasan"; exit 0; fi
+
+          # Run terakhir per workflow untuk commit ini. Keamanan saja belum
+          # cukup: repo tanpa workflow tes tidak di-merge otomatis.
+          status=$(gh api -X GET "repos/$REPO/actions/runs" -f head_sha="$SHA" -f event=pull_request -f per_page=100 --jq '
+            .workflow_runs | group_by(.workflow_id) | map(max_by(.created_at))
+            | if any(.[]; .status != "completed") then "belum semua selesai"
+              elif any(.[]; .conclusion as $c | ["success", "skipped", "neutral"] | index($c) | not) then "ada yang tidak hijau"
+              elif any(.[]; .name != "Keamanan" and .conclusion == "success") | not then "tidak ada workflow tes yang lulus"
+              else "hijau" end')
+          if [ "$status" != "hijau" ]; then echo "dilewati: $status"; exit 0; fi
+
+          # sha membuat GitHub menolak bila PR bergerak di antara cek dan merge.
+          gh api -X PUT "repos/$REPO/pulls/$PR/merge" -f merge_method=merge -f sha="$SHA" --jq .message

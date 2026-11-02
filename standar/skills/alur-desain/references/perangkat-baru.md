@@ -13,6 +13,10 @@ Skill ini tidak menulis path laptop tertentu. Setiap perangkat mengisi dua varia
 | `CODEROACH_PEN_CLI` | Skrip pembungkus pen.dev CLI | `C:\Users\<user>\.local\pen-cli\pen.ps1` | `~/.local/pen-cli/pen.sh` |
 | `CODEROACH_KUOTA_LOG` | Berkas log kuota konten | `D:\Projects\ayam\_referensi\kuota-konten\log.csv` | `~/coderoach/kuota-konten/log.csv` |
 
+Opsional: `CODEROACH_GEMINI_KEY` berisi path berkas key untuk `scripts/gemini.mjs`. Tanpa itu
+skrip memakai `gemini.key` di sebelah `CODEROACH_PEN_CLI`, lalu `~/.local/pen-cli/gemini.key`,
+jadi satu key dipakai pen.dev CLI dan skrip API.
+
 Agen yang tidak menemukan variabelnya bertanya ke pemilik perangkat, dan tidak menebak path.
 Memasang variabel lingkungan adalah keputusan pemilik perangkat; agen cukup menyebut nilainya.
 
