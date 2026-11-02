@@ -11,6 +11,8 @@ export default defineConfig({
   },
   test: {
     include: ['src/**/*.test.ts', 'scripts/**/*.test.ts'],
+    // These need a database; see vitest.db.config.mts.
+    exclude: ['**/node_modules/**', 'src/**/*.db.test.ts'],
     environment: 'node',
   },
 })
