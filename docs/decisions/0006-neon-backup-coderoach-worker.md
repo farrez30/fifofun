@@ -25,13 +25,30 @@ Recommended by Claude: 1.
 ## Decision (decided by: farrez)
 
 Option 1. Role `cadangan` on Neon `main` (login, `pg_read_all_data`,
-`BYPASSRLS`), entry `fifofun=...` in the worker's `DB_URLS`. Set up by
-`scripts/siapkan-cadangan.sh`; `--putar` rotates the password.
+`BYPASSRLS`), set up by `scripts/siapkan-cadangan.sh`, which also rotates the
+password when the role exists. How FiFoFun joins the worker changed the same
+day; see the amendment below.
 
 ## Reasoning (farrez)
 
 "Ikuti pola coderoach", then "Gabung pekerja coderoach". No further reason was
 given.
+
+## Amendment, 2 Nov 2026: a separate set (decided by: farrez)
+
+The first setup put `fifofun=...` in the Coderoach `DB_URLS`. Within hours a
+password rotation on the Coderoach side rewrote `pgpass`, the FiFoFun line was
+lost, and the whole set failed, Coderoach included. Two consequences had not
+been put to farrez when he chose: one restic tag for both, and one failing
+database failing the set. Asked again, he chose "Pisah tag dan set".
+
+FiFoFun now runs from its own `rahasia/backup-fifofun.env`, written by
+`scripts/siapkan-cadangan.sh` from the worker's `backup.env`: same repository,
+key and `RESTIC_HOST`; its own `DB_URLS`, `BASIS`, `CATATAN_PULIH`,
+`RESTIC_TAG=fifofun-neon`, and empty `HC_URL`/`HC_URL_PULIH` so a FiFoFun run can
+never mark a Coderoach check green. The schedule entry lives in the worker's
+`pasang-jadwal.ps1` (coderoach-app). Only the worker's own session edits
+`rahasia\`; other sessions hand it lines to add.
 
 ## Consequences
 
@@ -40,9 +57,10 @@ given.
   every row, including `auth.users` password hashes, and cannot write.
 - Personal finances and Coderoach business data share one restic repository and
   one key. Anyone who can restore one can read the other.
-- No backup runs until the Coderoach worker's secrets are filled (PR 148). While
-  `rahasia/pgpass` still holds a `<...>` template line, the worker skips the
-  whole file, so replace that line rather than the file.
+- `backup-fifofun.env` is a copy: after `backup.env` changes (a new B2 key, say),
+  run `bash scripts/siapkan-cadangan.sh --env-saja <host>` again.
+- FiFoFun has no health check of its own yet; a missed FiFoFun backup is only
+  visible in `restic snapshots --tag fifofun-neon`.
 - Backups stop on days the PC is off; the worker's health checks report it.
 - Revisit when someone other than farrez may restore Coderoach backups, when
   the worker moves to a VPS, or when the database outgrows a few GB.
