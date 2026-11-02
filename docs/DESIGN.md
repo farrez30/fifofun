@@ -560,6 +560,21 @@ Tidak ada satupun jaminan yang diturunkan oleh restyle ini, dan beberapa naik.
   memeriksa preferensinya sendiri.
 - Lantai 44pt, lantai 16px untuk input, dan `scroll-padding-bottom` tetap.
 
+## Referensi perapian (ADR 0007)
+
+Skala empat langkah dan kartu rata diturunkan dari enam produk yang diukur
+pada 2 Nov 2026. Catatan lengkapnya, termasuk yang tidak ditiru, ada di
+pustaka `coderoach-referensi` (`dipakai_di: fifofun`).
+
+| Referensi | Pola yang dipinjam |
+|---|---|
+| [Monarch, anggaran](https://www.monarch.com/features/budgeting) | Anggaran sebagai tabel Budget, Actual, Remaining dengan angka rata kanan dan tabular; minus memakai tanda, bukan warna saja |
+| [Copilot Money](https://www.copilot.money/) | Judul seksi kecil kapital lewat CSS dengan satu aksi di kanan; kalimat keadaan satu baris di atas data |
+| [YNAB](https://www.ynab.com/features) | Konteks target sebagai satu baris data di bawah bar: menjelaskan keadaan angka, bukan fungsi halaman |
+| [Rocket Money](https://www.rocketmoney.com/feature/create-a-budget) | Vonis sebagai kalimat yang dimulai angka; di 375px kolom pembanding turun jadi sub-baris |
+| [Linear](https://linear.app/docs/conceptual-model) | Patokan kepadatan: baris 40px, teks 13px, metadata 12px; aksen hanya untuk status dan aksi |
+| [Stripe Apps](https://docs.stripe.com/stripe-apps/style) | Tepat empat gaya teks, pemisah kartu lewat keyline netral |
+
 ## Apa yang menahan semua ini
 
 | Aturan | Yang menjaganya |
