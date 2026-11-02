@@ -12,10 +12,12 @@ name: Merge saat hijau
 #
 # workflow_run selalu memakai berkas ini dari cabang utama, bukan dari PR, jadi
 # PR tidak bisa mengubah aturan merge-nya sendiri. Kode PR tidak pernah
-# di-checkout. Nama yang tidak ada di repo diabaikan GitHub.
+# di-checkout. Nama yang tidak ada di repo diabaikan GitHub. Security ikut
+# karena FiFoFun menaruh check wajibnya (CodeQL, audit dependensi) di sana:
+# kalau ia selesai paling akhir dan tidak ada di daftar, merge tidak terpicu.
 on:
   workflow_run:
-    workflows: [CI, ci, Checks, Test, Keamanan]
+    workflows: [CI, ci, Checks, Test, Keamanan, Security]
     types: [completed]
 
 permissions:
@@ -67,15 +69,24 @@ jobs:
             else "" end')
           if [ -n "$alasan" ]; then echo "dilewati: $alasan"; exit 0; fi
 
-          # Run terakhir per workflow untuk commit ini. Keamanan saja belum
-          # cukup: repo tanpa workflow tes tidak di-merge otomatis.
+          # Run terakhir per workflow untuk commit ini. Pemindai (Keamanan,
+          # Security) saja belum cukup: repo tanpa workflow tes tidak di-merge
+          # otomatis.
           status=$(gh api -X GET "repos/$REPO/actions/runs" -f head_sha="$SHA" -f event=pull_request -f per_page=100 --jq '
             .workflow_runs | group_by(.workflow_id) | map(max_by(.created_at))
             | if any(.[]; .status != "completed") then "belum semua selesai"
               elif any(.[]; .conclusion as $c | ["success", "skipped", "neutral"] | index($c) | not) then "ada yang tidak hijau"
-              elif any(.[]; .name != "Keamanan" and .conclusion == "success") | not then "tidak ada workflow tes yang lulus"
+              elif any(.[]; .name != "Keamanan" and .name != "Security" and .conclusion == "success") | not then "tidak ada workflow tes yang lulus"
               else "hijau" end')
           if [ "$status" != "hijau" ]; then echo "dilewati: $status"; exit 0; fi
 
           # sha membuat GitHub menolak bila PR bergerak di antara cek dan merge.
-          gh api -X PUT "repos/$REPO/pulls/$PR/merge" -f merge_method=merge -f sha="$SHA" --jq .message
+          # 405 berarti proteksi cabang belum mengizinkan (check wajib di luar
+          # Actions belum lengkap); workflow berikutnya yang selesai mencoba lagi.
+          if hasil=$(gh api -X PUT "repos/$REPO/pulls/$PR/merge" -f merge_method=merge -f sha="$SHA" --jq .message 2>&1); then
+            echo "$hasil"
+          elif printf '%s' "$hasil" | grep -q "HTTP 405"; then
+            echo "dilewati: GitHub belum mengizinkan merge ($hasil)"
+          else
+            echo "$hasil" >&2; exit 1
+          fi

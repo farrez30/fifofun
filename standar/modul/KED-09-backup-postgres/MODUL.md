@@ -1,6 +1,6 @@
 ---
 kode: KED-09
-versi: 1.1.0
+versi: 1.1.1
 ---
 
 # KED-09 Backup Postgres
@@ -263,6 +263,10 @@ dengan `asal` menunjuk repo ops dan tanggal uji pulih itu.
   masukkan ke `DB_KECUALI`.
 
 ## Riwayat versi
+
+- 1.1.1 (2026-11-02): harness `uji/jalankan.sh` menagih `PULIH_PRA_SQL`
+  KED-10 1.2.0 (urutan, gagal, dan dilewati bila kosong). Skrip backup tidak
+  berubah.
 
 - 1.1.0 (2026-10-22): `restic backup` dan `forget` memakai
   `--group-by host,tags`; dengan bawaan host+paths retensi tidak pernah

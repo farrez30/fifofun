@@ -1705,7 +1705,7 @@
       "kapan_pakai": "Setiap aset AI yang tercatat lewat ANI-04.",
       "kapan_tidak": "Tanda tangan C2PA milik studio sendiri; itu menunggu pemicu: klien media atau iklan yang mensyaratkannya, atau regulasi label konten AI di Indonesia.",
       "catatan": "Usulan riset menyebutnya ANI-14, kode itu sudah terpakai. Dasar: spesifikasi C2PA 2.4, Trattner 2026, Feng 2023 (docs/riset/2026-10-22-web3-kriptografi.md bagian 7).",
-      "adr": "0066"
+      "adr": "0067"
     },
     {
       "kode": "API-01",
@@ -3526,7 +3526,7 @@
       ],
       "kapan_pakai": "Sistem yang mencatat jual beli aset kripto atas nama pemilik atau klien.",
       "catatan": "Tanpa kolom pajak, net P&L terbaca terlalu bagus. Dasar: PMK 50/2025 (docs/riset/2026-10-22-web3-kriptografi.md bagian 7).",
-      "adr": "0066"
+      "adr": "0067"
     },
     {
       "kode": "KEA-01",
@@ -4410,7 +4410,7 @@
       "kapan_pakai": "Pemicu: klien pertama dengan data kesehatan atau keuangan yang memintanya, atau persiapan audit ISO 27001.",
       "kapan_tidak": "Sebelum jalur pemulihan akun ada; akun yang terkunci tanpa jalan kembali lebih mahal dari phishing yang dicegah.",
       "catatan": "Dasar: W3C WebAuthn Level 3, Lassak dkk. 2024, Lyastani dkk. 2020 (docs/riset/2026-10-22-web3-kriptografi.md bagian 7).",
-      "adr": "0066"
+      "adr": "0067"
     },
     {
       "kode": "KEA-25",
@@ -4432,7 +4432,7 @@
       "kapan_pakai": "Persetujuan kontrak, brief, atau materi klien di dalam app.",
       "kapan_tidak": "Dokumen yang harus berlaku sebagai tanda tangan elektronik tersertifikasi; itu jalur PSrE (PP 71/2019), dengan pemicu perjanjian dipakai sebagai alat bukti.",
       "catatan": "Dasar: PP 71/2019 PSTE (docs/riset/2026-10-22-web3-kriptografi.md bagian 7).",
-      "adr": "0066"
+      "adr": "0067"
     },
     {
       "kode": "KEA-26",
@@ -4449,7 +4449,35 @@
       "asal": [],
       "kapan_pakai": "Setelah riset keamanan siber terbit, sebagai masukan rencana migrasi.",
       "catatan": "Usulan riset menulis T1; dicatat T0 karena templatnya belum ada. Dasar: NIST FIPS 203 (docs/riset/2026-10-22-web3-kriptografi.md bagian 7).",
-      "adr": "0066"
+      "adr": "0067"
+    },
+    {
+      "kode": "KEA-27",
+      "nama": "Akun studio tahan phishing",
+      "masalah": "Akun studio tahan phishing: passkey di setiap akun admin, faktor cadangan lemah dihapus, 2FA wajib di organisasi, recovery code offline, grant OAuth ditinjau tiap kuartal, daftar akun dan pemiliknya tercatat dan dicek tes",
+      "domain": "KEA",
+      "jenis": "kontrol",
+      "cakupan": [
+        "studio"
+      ],
+      "status": "sebagian",
+      "siap": "T3",
+      "bentuk": "templat",
+      "stack": [],
+      "asal": [
+        {
+          "repo": "mwafiudin/coderoach-app",
+          "jalur": [
+            "docs/keamanan/akun-studio.md",
+            "standar/modul/KEA-27-akun-tahan-phishing/kit/periksa-akun.test.mjs"
+          ],
+          "catatan": "kit Rakit"
+        }
+      ],
+      "perlu_di": [],
+      "catatan": "Usulan KEA-24 di riset keamanan siber, bernomor 27 karena 24 sampai 26 sudah dipakai ADR 0066. Keputusan D1 (2 Nov 2026): passkey tersinkron di password manager, tanpa security key hardware. Naik ke terbukti setelah semua baris daftar akun berstatus passkey",
+      "folder": "KEA-27-akun-tahan-phishing",
+      "versi": "1.0.0"
     },
     {
       "kode": "KED-01",
@@ -4782,7 +4810,7 @@
       ],
       "catatan": "Jalan ke produksi Coderoach OS 27 Okt 2026 (Neon ke B2, snapshot 69a61be8, dipulihkan KED-10). Naik ke terbukti setelah jadwal harian jalan seminggu dan retensi terlihat. Runbook: docs/runbook/pulih-produksi.md Lampiran E",
       "folder": "KED-09-backup-postgres",
-      "versi": "1.1.0"
+      "versi": "1.1.1"
     },
     {
       "kode": "KED-10",
@@ -4821,7 +4849,7 @@
         "KED-09"
       ],
       "folder": "KED-10-uji-pulih-postgres",
-      "versi": "1.1.0"
+      "versi": "1.2.0"
     },
     {
       "kode": "KED-11",
@@ -5067,7 +5095,7 @@
       "kapan_pakai": "Log audit yang mungkin dipakai sebagai bukti ke klien, auditor, atau pengadilan.",
       "kapan_tidak": "Log operasional biasa yang boleh dipangkas.",
       "catatan": "Lanjutan KED-02, yang belum ditegakkan di DB. Dasar: Crosby dan Wallach 2009, CONIKS, RFC 9162 (docs/riset/2026-10-22-web3-kriptografi.md bagian 7).",
-      "adr": "0066"
+      "adr": "0067"
     },
     {
       "kode": "INF-01",
@@ -5769,7 +5797,7 @@
         "farrez30/m6sControl-ayam"
       ],
       "catatan": "Atestasi ditambahkan dari docs/riset/2026-10-22-web3-kriptografi.md bagian 7 (Newman dkk. 2022, Sigstore).",
-      "adr": "0066"
+      "adr": "0067"
     },
     {
       "kode": "OBS-01",
@@ -8123,6 +8151,57 @@
       "catatan": "Lima aturan akuntabilitas Tencent Cloud Hackathon Indonesia 2026 adalah inti minimum; standar kita lebih luas."
     },
     {
+      "kode": "AI-08",
+      "nama": "Agen pengode dikurung",
+      "masalah": "Agen pengode dikurung: deny rule rahasia di repo, WSL 2 dengan sandbox wajib untuk repo internal, devcontainer dengan firewall default-tolak untuk repo klien, mode bypass dimatikan lewat managed settings; pemeriksa repo ikut",
+      "domain": "AI",
+      "jenis": "kode",
+      "cakupan": [
+        "repo",
+        "studio"
+      ],
+      "status": "sebagian",
+      "siap": "T3",
+      "bentuk": "salin",
+      "stack": [
+        "bash",
+        "claude-code",
+        "docker",
+        "wsl2"
+      ],
+      "asal": [
+        {
+          "repo": "mwafiudin/coderoach-app",
+          "jalur": [
+            "standar/modul/AI-08-agen-dikurung/kit/periksa-ai08.mjs",
+            "standar/modul/AI-08-agen-dikurung/kit/devcontainer/firewall.sh",
+            ".claude/settings.json"
+          ],
+          "catatan": "kit Rakit; firewall diuji di Docker Desktop 2 Nov 2026"
+        },
+        {
+          "repo": "farrez30/NDS-ETL",
+          "jalur": [
+            ".devcontainer/devcontainer.json",
+            ".devcontainer/firewall.sh",
+            ".claude/settings.json",
+            "scripts/periksa-ai08.mjs"
+          ],
+          "catatan": "repo klien; npm ci dan typecheck lolos di dalam kontainer berfirewall 2 Nov 2026"
+        }
+      ],
+      "perlu_di": [
+        "mwafiudin/coderoach-app",
+        "farrez30/NDS-ETL"
+      ],
+      "catatan": "Keputusan D3 riset keamanan siber (2 Nov 2026). Naik ke terbukti setelah sesi WSL 2 dan devcontainer NDS-ETL dipakai untuk tugas sungguhan",
+      "bergantung": [
+        "KEA-23"
+      ],
+      "folder": "AI-08-agen-dikurung",
+      "versi": "1.0.0"
+    },
+    {
       "kode": "JAM-01",
       "nama": "Penjaga yang menolak lulus tanpa memeriksa",
       "masalah": "Tes dan harness gagal bila jumlah yang diperiksa di bawah minimum atau ada yang dilewati diam-diam.",
@@ -9233,7 +9312,7 @@
     {
       "kode": "kriptografi-terapan",
       "nama": "Integritas data dan login tahan phishing",
-      "untuk": "Tahap 1 lini jasa keamanan (ADR 0066): app yang menyimpan bukti, persetujuan, atau uang dan perlu membuktikan datanya tidak diubah serta login-nya tahan phishing. Bukan smart contract atau dApp.",
+      "untuk": "Tahap 1 lini jasa keamanan (ADR 0067): app yang menyimpan bukti, persetujuan, atau uang dan perlu membuktikan datanya tidak diubah serta login-nya tahan phishing. Bukan smart contract atau dApp.",
       "wajib": [
         "KED-02",
         "KED-19",

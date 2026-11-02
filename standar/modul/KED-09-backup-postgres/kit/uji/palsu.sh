@@ -14,6 +14,7 @@
 #   PALSU_RESTORE_GAGAL nama db yang pg_restore-nya gagal
 #   PALSU_DOCKER_MATI  1 = semua perintah docker gagal seperti daemon mati
 #   PALSU_RESTIC_RUSAK 1 = restic check menemukan repositori rusak
+#   PALSU_PRA_GAGAL    1 = SQL "create role" (PULIH_PRA_SQL) ditolak
 #
 # Repositori restic palsu ada di UJI_STATE/restic/<n>: salinan jalur absolut
 # yang di-backup, dengan tag di <n>.tag. restore latest --tag menyalin
@@ -83,6 +84,9 @@ case "$nama" in
       *"query_to_xml"*)
         [[ -f "$S/db/$wadah/$db" ]] || { echo "psql: database \"$db\" does not exist" >&2; exit 2; }
         cat "$S/db/$wadah/$db"
+        ;;
+      *"create role"*)
+        if [[ "${PALSU_PRA_GAGAL:-}" == 1 ]]; then echo 'ERROR:  role "anon" already exists' >&2; exit 3; fi
         ;;
       *) echo "psql palsu: SQL tidak dikenal" >&2; exit 2 ;;
     esac

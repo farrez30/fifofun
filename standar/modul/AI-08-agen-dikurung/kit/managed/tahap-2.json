@@ -1,0 +1,11 @@
+{
+  "wslInheritsWindowsSettings": true,
+  "permissions": {
+    "disableBypassPermissionsMode": "disable"
+  },
+  "sandbox": {
+    "enabled": true,
+    "failIfUnavailable": true,
+    "allowUnsandboxedCommands": false
+  }
+}

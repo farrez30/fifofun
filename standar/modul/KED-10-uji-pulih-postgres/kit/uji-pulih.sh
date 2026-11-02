@@ -19,6 +19,10 @@
 #   PULIH_TUNGGU   detik menunggu container siap (bawaan 60)
 #   CATATAN_PULIH  berkas TSV riwayat uji (bawaan BASIS/uji-pulih.tsv)
 #   HC_URL_PULIH   URL ping pemantau untuk job ini (opsional)
+#   PULIH_PRA_SQL  SQL yang dijalankan sekali di container uji sebelum
+#                  pg_restore (opsional), mis. role yang dirujuk CREATE POLICY
+#                  ... TO <role>: pg_dump tidak membawanya dan --no-acl tidak
+#                  melewatinya. Jangan berisi rahasia.
 set -euo pipefail
 umask 077
 
@@ -38,6 +42,7 @@ BASIS="${BASIS:-/var/backups/pg}"
 PULIH_TUNGGU="${PULIH_TUNGGU:-60}"
 CATATAN_PULIH="${CATATAN_PULIH:-$BASIS/uji-pulih.tsv}"
 PULIH_DARI="${PULIH_DARI:-restic}"
+PULIH_PRA_SQL="${PULIH_PRA_SQL:-}"
 RESTIC_TAG="${RESTIC_TAG:-pg}"
 pgb="${PGB:+${PGB%/}/}"
 
@@ -153,6 +158,10 @@ for (( i = 0; i < PULIH_TUNGGU; i++ )); do
   sleep 1
 done
 (( siap == 1 )) || gagal "container uji tidak siap dalam ${PULIH_TUNGGU}s"
+if [[ -n "$PULIH_PRA_SQL" ]]; then
+  docker exec "$wadah" psql -U postgres -d postgres -qX -v ON_ERROR_STOP=1 -c "$PULIH_PRA_SQL" >/dev/null \
+    || gagal "PULIH_PRA_SQL gagal di container uji"
+fi
 
 [[ -f "$CATATAN_PULIH" ]] || printf 'waktu\tset\tdb\tstatus\tdetik_pulih\ttabel\tasal\tumur_set_menit\n' >"$CATATAN_PULIH"
 catat() {

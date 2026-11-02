@@ -1,0 +1,20 @@
+# Host yang boleh dijangkau dari kontainer AI-08, satu per baris.
+# Hanya HTTPS (443). Tambahkan host khusus project di bawah bagian "project",
+# dengan alasan singkat.
+
+# GitHub: git lewat HTTPS, API untuk gh, unduhan rilis dan release asset
+github.com
+api.github.com
+codeload.github.com
+objects.githubusercontent.com
+
+# Claude Code (code.claude.com/docs/en/network-config, dicek 2 Nov 2026)
+api.anthropic.com
+claude.ai
+claude.com
+platform.claude.com
+
+# Paket npm
+registry.npmjs.org
+
+# project
