@@ -17,24 +17,20 @@ export default async function LoginPage() {
     <main id="main" className="grid min-h-dvh place-items-center px-6 py-12">
       <div className="w-full max-w-sm">
         <div className="mb-8">
-          <p className="font-mono text-caption1 uppercase tracking-widest text-ink-faint">FiFoFun</p>
+          <p className="font-mono text-xs uppercase tracking-widest text-ink-faint">FiFoFun</p>
           {/* A large title, the same role the shell gives every other screen.
               This is the first thing anyone sees, and it was a rung smaller
               than the headings inside the application. */}
-          <h1 className="mt-2 text-title1 font-bold tracking-title1 text-ink">
+          <h1 className="mt-2 text-xl font-semibold text-ink">
             Masuk ke catatan keuanganmu
           </h1>
-          <p className="mt-2 text-subhead text-ink-muted">
-            Datamu hanya bisa dibaca oleh akun ini. Kebijakan di database yang
-            memastikannya, bukan kode aplikasi.
-          </p>
         </div>
 
         <LoginForm />
 
         {/* Reachable before signing up, not after. Someone should be able to
             read what happens to their data before handing any of it over. */}
-        <p className="mt-8 border-t border-line pt-4 text-footnote text-ink-faint">
+        <p className="mt-8 border-t border-line pt-4 text-xs text-ink-faint">
           Dengan membuat akun kamu menyetujui{' '}
           <Link href="/legal/ketentuan" className="underline underline-offset-2 hover:text-ink">
             Ketentuan Penggunaan

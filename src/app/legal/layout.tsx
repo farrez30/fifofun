@@ -12,12 +12,12 @@ export default function LegalLayout({ children }: LayoutProps<'/legal'>) {
       <header className="mb-8 border-b border-line pb-5">
         <Link
           href="/"
-          className="font-mono text-caption1 uppercase tracking-widest text-ink-faint hover:text-ink"
+          className="font-mono text-xs uppercase tracking-widest text-ink-faint hover:text-ink"
         >
           FiFoFun
         </Link>
         <nav aria-label="Halaman hukum" className="mt-4">
-          <ul className="flex gap-4 text-subhead">
+          <ul className="flex gap-4 text-sm">
             <li>
               <Link
                 href="/legal/privasi"
@@ -38,7 +38,7 @@ export default function LegalLayout({ children }: LayoutProps<'/legal'>) {
         </nav>
       </header>
 
-      <main id="main" className="space-y-6 text-body leading-relaxed text-ink-muted sm:text-subhead">
+      <main id="main" className="space-y-6 text-sm leading-relaxed text-ink-muted">
         {children}
       </main>
     </div>
