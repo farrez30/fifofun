@@ -230,6 +230,15 @@ describe('RLS through asUser', () => {
     expect(homes.map((h) => h.id)).toEqual([homeA])
   })
 
+  it("does not show another household's accounts", async () => {
+    await asService.rows(insertInto('accounts', { household_id: homeB, name: `Rahasia B ${run}`, kind: 'bank' }))
+    const rows = await asUser(userA).rows<{ household_id: string }>(
+      sql`SELECT household_id FROM public.accounts WHERE household_id = ANY(${sql.param([homeA, homeB])}::uuid[])`,
+    )
+    expect(rows.length).toBeGreaterThan(0)
+    expect(rows.filter((r) => r.household_id !== homeA)).toEqual([])
+  })
+
   it("refuses an insert into another household's accounts with 42501", async () => {
     const err = await asUser(userA)
       .rows(insertInto('accounts', { household_id: homeB, name: 'curi', kind: 'bank' }))

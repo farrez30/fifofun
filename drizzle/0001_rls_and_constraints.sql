@@ -75,7 +75,7 @@ begin
     execute format(
       'create policy %1$s_member_access on public.%1$s
          for all to authenticated
-         using (true)
+         using (household_id in (select public.current_user_households()))
          with check (household_id in (select public.current_user_households()))',
       target
     );
