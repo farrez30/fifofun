@@ -228,11 +228,11 @@ async function Report({ params }: { params: Record<string, string | string[] | u
   const transactionList = (
     <section aria-labelledby="daftar">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <h2 id="daftar" tabIndex={-1} className="text-subhead font-medium text-ink">
+        <h2 id="daftar" tabIndex={-1} className="text-sm font-medium text-ink">
           Daftar transaksi
         </h2>
         {monthStarts.length > 1 ? (
-          <label className="flex items-center gap-2 text-footnote text-ink-muted">
+          <label className="flex items-center gap-2 text-xs text-ink-muted">
             Lompat ke bulan
             <JumpSelect
               label="Lompat ke bulan"
@@ -259,10 +259,6 @@ async function Report({ params }: { params: Record<string, string | string[] | u
         pages={pages}
         hrefFor={(next) => `${pageHref('/laporan', plain, next)}#daftar`}
       />
-      <p className="mt-2 max-w-2xl text-footnote text-ink-muted">
-        Klik keterangannya untuk mengubah kategori, catatan, atau memisahkannya jadi beberapa
-        kategori.
-      </p>
     </section>
   )
 
@@ -318,7 +314,6 @@ export default async function LaporanPage({
       title="Laporan"
       email={user.email ?? ''}
       current="/laporan"
-      lead="Potong catatanmu menurut tanggal, cashflow, kategori, atau akun. Setiap pilihan tersimpan di alamat halaman, jadi bisa ditandai dan dikirim."
     >
       {/* Keyed on the filters only: a view or a page keeps the report on screen
           until the next one arrives, instead of flashing the skeleton. */}

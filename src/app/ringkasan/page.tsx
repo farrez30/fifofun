@@ -7,7 +7,7 @@ import { formatMonthKey } from '@/lib/datetime'
 import { monthsEnding } from '@/lib/ledger/summary'
 import { getHousehold } from '@/lib/queries/household'
 import { getUser } from '@/lib/auth/session'
-import { LEAD, TITLE } from './copy'
+import { TITLE } from './copy'
 import { loadSummary } from './data'
 import { NoteEditor } from './note-editor'
 import { SharePdf } from './share-pdf'
@@ -36,7 +36,7 @@ async function Summary({ params }: { params: Params }) {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <form method="get" className="flex flex-wrap items-end gap-3">
           <label>
-            <span className="block text-subhead font-medium text-ink">Tiga bulan sampai</span>
+            <span className="block text-sm font-medium text-ink">Tiga bulan sampai</span>
             <select name="sampai" defaultValue={data.end} className={`${CONTROL} mt-1 w-auto min-w-40`}>
               {data.choices.map((month) => (
                 <option key={month} value={month}>
@@ -65,7 +65,7 @@ export default async function RingkasanPage({ searchParams }: { searchParams: Pr
   const params = await searchParams
 
   return (
-    <AppShell title={TITLE} email={user.email ?? ''} current="/ringkasan" lead={LEAD}>
+    <AppShell title={TITLE} email={user.email ?? ''} current="/ringkasan">
       <Suspense key={JSON.stringify(params)} fallback={<SummarySkeleton />}>
         <Summary params={params} />
       </Suspense>

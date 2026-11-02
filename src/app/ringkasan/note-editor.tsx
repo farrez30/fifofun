@@ -17,13 +17,13 @@ export function NoteEditor({ note }: { note: string }) {
   useActionToast(result, saving)
 
   return (
-    <details className="squircle rounded-md bg-surface p-4 shadow-xs">
-      <summary className="flex min-h-11 cursor-pointer items-center text-subhead font-medium text-ink">
+    <details className="squircle rounded-md border border-line bg-surface p-4">
+      <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-ink">
         {note ? 'Ubah rencana' : 'Tulis rencana'}
       </summary>
       <form action={action} className="mt-3 space-y-3">
-        <label htmlFor="rencana-teks" className="block text-subhead text-ink-muted">
-          Beberapa baris singkat dengan kata-katamu sendiri. Hanya ini teks bebas di halaman ini.
+        <label htmlFor="rencana-teks" className="block text-sm text-ink-muted">
+          Beberapa baris singkat dengan kata-katamu sendiri.
         </label>
         <textarea
           id="rencana-teks"
