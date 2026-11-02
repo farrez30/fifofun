@@ -100,7 +100,6 @@ export default async function RencanaPage({
       title="Rencana"
       email={user.email ?? ''}
       current="/rencana"
-      lead="Setiap angka di sini membawa sumbernya. Yang datang dari OJK, BPS atau Kemenag ditandai sebagai itu; yang diturunkan di aplikasi ini ditandai sebagai itu juga. Jawabanmu sendiri bisa disimpan, dan akan terisi lagi saat halaman ini dibuka."
     >
       <Suspense fallback={<PlannerSkeleton />}>
         <PlannerData section={section} />

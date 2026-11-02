@@ -6,6 +6,7 @@ import { projectFamily, type ChildPlan } from '@/lib/planning/children'
 import { analyseSpacing, recommendSpacing } from '@/lib/planning/spacing'
 import { CHILD_SPACING, EDUCATION_SOURCE, type SchoolTrack } from '@/lib/planning/constants'
 import { NumberField, SelectField, SourceNote } from './field'
+import { InfoTip } from '@/components/info-tip'
 
 /**
  * The cost of children, and the case for spacing them.
@@ -124,7 +125,7 @@ export function ChildrenPanel({
       ) : null}
 
       {gaps.length > 0 ? (
-        <p className="text-subhead text-ink-muted">
+        <p className="text-sm text-ink-muted">
           Jarak saat ini {gaps.map((gap) => `${gap} tahun`).join(', ')}.{' '}
           {family.crunchYears.length === 0
             ? 'Tidak ada uang pangkal yang jatuh bersamaan.'
@@ -168,15 +169,22 @@ export function ChildrenPanel({
       ) : null}
 
       <div>
-        <h3 className="text-subhead font-medium text-ink">Jarak antar anak</h3>
-        <p className="mt-1 max-w-2xl text-subhead text-ink-muted">{recommendation.reason}</p>
+        <div className="flex items-center gap-1">
+          <h3 className="text-sm font-medium text-ink">Jarak antar anak</h3>
+          <InfoTip label="Cara menilai jarak">
+            Sisi kesehatan dikutip dari BKKBN, WHO dan USAID. Sisi biaya diturunkan di
+            aplikasi ini dari usia masuk TK 4, SD 6, SMP 12, SMA 15 dan kuliah 18: sebuah
+            jarak bertabrakan persis ketika ia sama dengan selisih dua usia itu.
+          </InfoTip>
+        </div>
+        <p className="mt-1 max-w-2xl text-sm text-ink-muted">{recommendation.reason}</p>
 
         {/* Cards below `sm`, the same split as the ledger. This is a table of
             verdicts, not a drawing, and it was being read one column at a time
             on a phone. */}
         <ul
           aria-label="Jarak antar anak"
-          className="mt-3 rows-inset squircle rounded-md bg-surface shadow-xs sm:hidden"
+          className="mt-3 divide-y divide-line border-y border-line sm:hidden"
         >
           {spacing.map((option) => {
             const style = VERDICT_STYLE[option.verdict]
@@ -184,22 +192,22 @@ export function ChildrenPanel({
             return (
               <li key={option.years} className={`px-3 py-2.5 ${chosen ? 'bg-accent-wash' : ''}`}>
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className="text-subhead text-ink">
+                  <span className="text-sm text-ink">
                     <span className="tnum font-mono">{option.years}</span> tahun
                     {chosen ? (
-                      <span className="ml-2 text-caption2 uppercase tracking-wide text-accent">
+                      <span className="ml-2 text-xs uppercase tracking-wide text-accent">
                         dipilih
                       </span>
                     ) : null}
                   </span>
                   <span
-                    className={`inline-flex shrink-0 items-center gap-1 rounded-xs border px-1.5 py-0.5 text-caption2 uppercase tracking-wide ${style.chip}`}
+                    className={`inline-flex shrink-0 items-center gap-1 rounded-xs border px-1.5 py-0.5 text-xs uppercase tracking-wide ${style.chip}`}
                   >
                     <span aria-hidden="true">{style.glyph}</span>
                     {style.label}
                   </span>
                 </div>
-                <div className="mt-1 text-footnote text-ink-muted">
+                <div className="mt-1 text-xs text-ink-muted">
                   {option.collisions.length === 0 ? (
                     'Tidak ada tabrakan uang pangkal'
                   ) : (
@@ -228,17 +236,17 @@ export function ChildrenPanel({
         </ul>
 
         <div
-          className="relative mt-3 hidden overflow-x-auto squircle rounded-md bg-surface shadow-xs sm:block"
+          className="relative mt-3 hidden overflow-x-auto border-y border-line sm:block"
           tabIndex={0}
           role="region"
           aria-label="Tabel jarak antar anak, bisa digeser ke samping"
         >
-          <table className="w-full text-subhead">
+          <table className="w-full text-sm">
             <caption className="sr-only">
               Penilaian setiap jarak kelahiran, dari sisi kesehatan dan biaya masuk sekolah
             </caption>
             <thead>
-              <tr className="border-b border-line text-left text-caption1 uppercase tracking-wide text-ink-faint">
+              <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-faint">
                 <th scope="col" className="px-4 py-2.5 font-medium">
                   Jarak
                 </th>
@@ -265,14 +273,14 @@ export function ChildrenPanel({
                     <th scope="row" className="whitespace-nowrap px-4 py-2.5 text-left font-normal text-ink">
                       <span className="tnum font-mono">{option.years}</span> tahun
                       {chosen ? (
-                        <span className="ml-2 text-caption2 uppercase tracking-wide text-accent">
+                        <span className="ml-2 text-xs uppercase tracking-wide text-accent">
                           dipilih
                         </span>
                       ) : null}
                     </th>
                     <td className="px-4 py-2.5">
                       <span
-                        className={`inline-flex items-center gap-1 rounded-xs border px-1.5 py-0.5 text-caption2 uppercase tracking-wide ${style.chip}`}
+                        className={`inline-flex items-center gap-1 rounded-xs border px-1.5 py-0.5 text-xs uppercase tracking-wide ${style.chip}`}
                       >
                         <span aria-hidden="true">{style.glyph}</span>
                         {style.label}
@@ -306,11 +314,6 @@ export function ChildrenPanel({
             confidence={CHILD_SPACING.healthMinimumYears.confidence}
             retrievedAt={CHILD_SPACING.healthMinimumYears.retrievedAt}
           />
-          <p className="text-footnote text-ink-muted">
-            Sisi kesehatan dikutip dari BKKBN, WHO dan USAID. Sisi biaya diturunkan di
-            aplikasi ini dari usia masuk TK 4, SD 6, SMP 12, SMA 15 dan kuliah 18: sebuah
-            jarak bertabrakan persis ketika ia sama dengan selisih dua usia itu.
-          </p>
           <SourceNote
             source={EDUCATION_SOURCE.source}
             url={EDUCATION_SOURCE.url}
@@ -335,14 +338,14 @@ function Figure({
   emphasis?: boolean
 }) {
   return (
-    <div className="squircle rounded-md bg-surface shadow-xs p-4">
-      <p className="text-footnote text-ink-faint">{label}</p>
+    <div>
+      <p className="text-xs text-ink-faint">{label}</p>
       <p
-        className={`mt-1.5 tnum font-mono text-ink ${emphasis ? 'text-title2 font-semibold tracking-title2' : 'text-title3 tracking-title3'}`}
+        className={`mt-1.5 tnum font-mono text-xl text-ink ${emphasis ? 'font-semibold' : ''}`}
       >
         {value}
       </p>
-      {hint ? <p className="mt-1 text-footnote text-ink-muted">{hint}</p> : null}
+      {hint ? <p className="mt-1 text-xs text-ink-muted">{hint}</p> : null}
     </div>
   )
 }

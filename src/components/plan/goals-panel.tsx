@@ -7,6 +7,7 @@ import { emergencyFundTarget, type HouseholdProfile } from '@/lib/planning/alloc
 import { GoalGlidepath } from '@/components/chart/goal-glidepath'
 import { MetaRow } from '@/components/meta-row'
 import { MoneyInput, NumberField, SourceNote } from './field'
+import { InfoTip } from '@/components/info-tip'
 
 /**
  * Goals, and what reaching them costs each month.
@@ -60,23 +61,24 @@ export function GoalsPanel({
 
   return (
     <div className="space-y-6">
-      <div className="squircle rounded-md bg-surface shadow-xs p-4">
-        <h3 className="text-subhead font-medium text-ink">Dana darurat</h3>
+      {/* The section is the card; nothing in it gets a second box. */}
+      <div>
+        <h3 className="text-sm font-medium text-ink">Dana darurat</h3>
         <div className="mt-3 flex flex-wrap items-baseline gap-x-6 gap-y-2">
-          <p className="tnum font-mono text-title2 font-semibold tracking-title2 text-ink">
+          <p className="tnum font-mono text-2xl font-semibold text-ink">
             {formatIdr(emergency.amount)}
           </p>
           <MetaRow
             as="p"
-            className="text-subhead text-ink-muted"
+            className="text-sm text-ink-muted"
             parts={[`${emergency.months} bulan pengeluaran`, emergency.rule]}
           />
         </div>
-        <p className="mt-2 max-w-2xl text-subhead text-ink-muted">{emergency.rationale}</p>
+        <p className="mt-2 max-w-2xl text-sm text-ink-muted">{emergency.rationale}</p>
       </div>
 
       <div>
-        <h3 className="text-subhead font-medium text-ink">Hitung tujuan apa pun</h3>
+        <h3 className="text-sm font-medium text-ink">Hitung tujuan apa pun</h3>
         <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
           <MoneyInput label="Target" value={target} onChange={onTargetChange} />
           <NumberField
@@ -122,13 +124,13 @@ export function GoalsPanel({
           />
         </div>
 
-        <div className="mt-3 squircle rounded-md bg-sunken p-4">
-          <p className="text-subhead text-ink">
+        <div className="mt-3 border-t border-line pt-3">
+          <p className="text-sm text-ink">
             <span className="font-medium">{instrument.instrument.label}</span> untuk jangka{' '}
             {years} tahun.
           </p>
-          <p className="mt-1 text-subhead text-ink-muted">{instrument.rationale}</p>
-          <p className="mt-2 text-footnote text-ink-faint">
+          <p className="mt-1 text-sm text-ink-muted">{instrument.rationale}</p>
+          <p className="mt-2 text-xs text-ink-faint">
             Rentang wajarnya {(instrument.instrument.min * 100).toFixed(1).replace('.', ',')}%
             sampai {(instrument.instrument.max * 100).toFixed(1).replace('.', ',')}% per tahun.
             Angka dasar dipakai untuk proyeksi, bukan janji.
@@ -145,13 +147,15 @@ export function GoalsPanel({
       </div>
 
       <div>
-        <h3 className="text-subhead font-medium text-ink">Haji</h3>
-        <p className="mt-1 max-w-2xl text-subhead text-ink-muted">
-          Haji bukan satu pembayaran besar, melainkan dua yang terpisah puluhan tahun. Setoran
-          awal membeli nomor antrean; pelunasannya baru jatuh tempo ketika tahun
-          keberangkatan tiba. Kebanyakan kalkulator menganggapnya satu angka, dan itu
-          menghasilkan saran yang salah, bukan sekadar angka yang kurang tepat.
-        </p>
+        <div className="flex items-center gap-1">
+          <h3 className="text-sm font-medium text-ink">Haji</h3>
+          <InfoTip label="Kenapa dua pembayaran">
+            Haji bukan satu pembayaran besar, melainkan dua yang terpisah puluhan tahun. Setoran
+            awal membeli nomor antrean; pelunasannya baru jatuh tempo ketika tahun
+            keberangkatan tiba. Kebanyakan kalkulator menganggapnya satu angka, dan itu
+            menghasilkan saran yang salah, bukan sekadar angka yang kurang tepat.
+          </InfoTip>
+        </div>
 
         <div className="mt-3 max-w-xs">
           <MoneyInput
@@ -161,7 +165,7 @@ export function GoalsPanel({
           />
         </div>
 
-        <ol className="mt-4 space-y-3">
+        <ol className="mt-4 divide-y divide-line">
           <Step
             index={1}
             title="Setoran awal, untuk masuk antrean"
@@ -200,7 +204,7 @@ export function GoalsPanel({
           />
         </ol>
 
-        <p className="mt-3 border border-line bg-accent-wash p-4 text-subhead text-ink">
+        <p className="mt-3 text-sm font-medium text-ink">
           {hajj.insight}
         </p>
 
@@ -229,19 +233,19 @@ function Step({
   detail: string
 }) {
   return (
-    <li className="flex gap-3 squircle rounded-md bg-surface shadow-xs p-4">
+    <li className="flex gap-3 py-3">
       <span
         aria-hidden="true"
-        className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-line text-caption1 tnum font-mono text-ink-muted"
+        className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-line text-xs tnum font-mono text-ink-muted"
       >
         {index}
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <p className="text-subhead font-medium text-ink">{title}</p>
-          <p className="tnum font-mono text-subhead text-ink">{amount}</p>
+          <p className="text-sm font-medium text-ink">{title}</p>
+          <p className="tnum font-mono text-sm text-ink">{amount}</p>
         </div>
-        <p className="mt-1 text-footnote text-ink-muted">{detail}</p>
+        <p className="mt-1 text-xs text-ink-muted">{detail}</p>
       </div>
     </li>
   )
@@ -259,14 +263,14 @@ function Figure({
   emphasis?: boolean
 }) {
   return (
-    <div className="squircle rounded-md bg-surface shadow-xs p-4">
-      <p className="text-footnote text-ink-faint">{label}</p>
+    <div>
+      <p className="text-xs text-ink-faint">{label}</p>
       <p
-        className={`mt-1.5 tnum font-mono text-ink ${emphasis ? 'text-title2 font-semibold tracking-title2' : 'text-title3 tracking-title3'}`}
+        className={`mt-1.5 tnum font-mono text-xl text-ink ${emphasis ? 'font-semibold' : ''}`}
       >
         {value}
       </p>
-      {hint ? <p className="mt-1 text-footnote text-ink-muted">{hint}</p> : null}
+      {hint ? <p className="mt-1 text-xs text-ink-muted">{hint}</p> : null}
     </div>
   )
 }

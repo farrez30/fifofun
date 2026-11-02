@@ -98,7 +98,6 @@ export default async function DanaPage() {
       title="Dana"
       email={user.email ?? ''}
       current="/dana"
-      lead="Tabungan, sinking fund dan tujuan, beserta laju setorannya. Targetnya boleh ditentukan dari tenggat, atau dari setoran per bulan yang kamu sanggup."
     >
       <Suspense fallback={<FundsSkeleton />}>
         <Funds />

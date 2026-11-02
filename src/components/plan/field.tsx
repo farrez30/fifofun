@@ -87,7 +87,7 @@ export function NumberField({
           <span aria-hidden="true">+</span>
         </button>
       </div>
-      {unit ? <p className="text-footnote text-ink-muted">{unit}</p> : null}
+      {unit ? <p className="text-xs text-ink-muted">{unit}</p> : null}
     </div>
   )
 }
@@ -134,7 +134,7 @@ export function SelectField<T extends string>({
         ))}
       </select>
       {selected?.description ? (
-        <p className="text-footnote text-ink-muted">{selected.description}</p>
+        <p className="text-xs text-ink-muted">{selected.description}</p>
       ) : null}
     </div>
   )
@@ -194,9 +194,9 @@ export function Toggle({
         className={`h-4 w-4 shrink-0 accent-[var(--color-accent)] ${chip ? '' : 'mt-0.5'}`}
       />
       <span>
-        <span className={`block text-ink ${chip ? 'text-footnote' : 'text-subhead'}`}>{label}</span>
+        <span className={`block text-ink ${chip ? 'text-xs' : 'text-sm'}`}>{label}</span>
         {description && !chip ? (
-          <span className="block text-footnote text-ink-muted">{description}</span>
+          <span className="block text-xs text-ink-muted">{description}</span>
         ) : null}
       </span>
     </label>
@@ -206,7 +206,6 @@ export function Toggle({
 interface SectionProps {
   id: string
   title: string
-  lead?: string
   /** Printed in the header band, so a long page has places rather than scroll depth. */
   index?: number
   /**
@@ -231,7 +230,7 @@ interface SectionProps {
  * one to the other while a person is typing in it, and rebuilding the subtree
  * would take the focus and the caret with it.
  */
-export function Section({ id, title, lead, index, variant = 'card', children }: SectionProps) {
+export function Section({ id, title, index, variant = 'card', children }: SectionProps) {
   const bar = variant === 'bar'
 
   return (
@@ -239,25 +238,24 @@ export function Section({ id, title, lead, index, variant = 'card', children }: 
       aria-labelledby={id}
       // Cleared by the dock, which is the tallest thing that can cover an
       // anchor when one is jumped to.
-      className={`scroll-mt-32 ${bar ? '' : 'squircle rounded-md bg-surface shadow-xs'}`}
+      className={`scroll-mt-32 ${bar ? '' : 'squircle rounded-md border border-line bg-surface'}`}
     >
       <div
         className={
           bar
             ? 'sr-only'
-            : 'flex items-baseline gap-3 border-b border-line bg-sunken px-4 py-3 sm:px-5'
+            : 'flex items-baseline gap-3 border-b border-line px-4 py-3 sm:px-5'
         }
       >
         {index === undefined ? null : (
-          <span aria-hidden="true" className="tnum font-mono text-caption1 text-ink-faint">
+          <span aria-hidden="true" className="tnum font-mono text-xs text-ink-faint">
             {String(index).padStart(2, '0')}
           </span>
         )}
         <div className="min-w-0">
-          <h2 id={id} className="text-title3 font-semibold tracking-title3 text-ink">
+          <h2 id={id} className="text-sm font-medium text-ink">
             {title}
           </h2>
-          {lead ? <p className="mt-1 max-w-2xl text-subhead text-ink-muted">{lead}</p> : null}
         </div>
       </div>
       <div className={bar ? 'space-y-2 px-3 py-2' : 'space-y-4 p-4 sm:p-5'}>{children}</div>
@@ -290,7 +288,7 @@ export function SourceNote({ source, url, confidence, retrievedAt }: SourceNoteP
   return (
     <MetaRow
       as="p"
-      className="text-footnote text-ink-faint"
+      className="text-xs text-ink-faint"
       parts={[
         <span key="confidence" className="text-ink-muted">
           {CONFIDENCE_LABEL[confidence]}
