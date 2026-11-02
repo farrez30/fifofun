@@ -4,6 +4,7 @@ import { formatIdr } from '@/lib/money'
 import { assessRatios, type FinancialSnapshot, type Verdict } from '@/lib/planning/ratios'
 import { MetaRow } from '@/components/meta-row'
 import { SourceNote } from './field'
+import { InfoTip } from '@/components/info-tip'
 
 /**
  * The five financial health ratios, read as a diagnosis rather than a scoreboard.
@@ -66,18 +67,25 @@ export function RatioPanel({ snapshot }: { snapshot: FinancialSnapshot }) {
 
   return (
     <div className="space-y-4">
-      <div className="squircle rounded-md bg-surface shadow-xs p-4">
+      {/* Inside the section's card already: no second box around any of this. */}
+      <div>
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-          <p className="text-subhead font-medium text-ink">
+          <p className="text-sm font-medium text-ink">
             {report.counts.danger > 0
               ? `${report.counts.danger} dari ${report.results.length} rasio ada di zona bahaya`
               : report.counts.warning > 0
                 ? `${report.counts.warning} dari ${report.results.length} rasio perlu diwaspadai`
                 : 'Kelima rasio ada di zona sehat'}
           </p>
-          <p className="text-footnote text-ink-faint">
-            Skor <span className="tnum font-mono text-subhead text-ink">{report.score}</span> dari 100
-          </p>
+          <div className="flex items-center gap-1">
+            <p className="text-xs text-ink-faint">
+              Skor <span className="tnum font-mono text-sm text-ink">{report.score}</span> dari 100
+            </p>
+            <InfoTip label="Cara skor dihitung">
+              Skornya rata-rata lima rasio, dengan sehat bernilai 100, waspada 60, dan bahaya 20.
+              Angka itu alat baca cepat, dan yang menentukan tindakan adalah baris di bawah.
+            </InfoTip>
+          </div>
         </div>
 
         {/*
@@ -98,13 +106,13 @@ export function RatioPanel({ snapshot }: { snapshot: FinancialSnapshot }) {
                   className="block rounded-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                 >
                   <span
-                    className={`flex h-7 items-center justify-center border text-caption2 sm:h-6 ${
+                    className={`flex h-7 items-center justify-center border text-xs sm:h-6 ${
                       style ? style.chip : 'border-line bg-sunken text-ink-faint'
                     }`}
                   >
                     <span aria-hidden="true">{style ? style.glyph : '–'}</span>
                   </span>
-                  <span className="mt-1 block truncate text-center text-caption2 text-ink-muted">
+                  <span className="mt-1 block truncate text-center text-xs text-ink-muted">
                     {SHORT_LABEL[result.threshold.id] ?? result.threshold.label}
                   </span>
                   <span className="sr-only">
@@ -116,29 +124,25 @@ export function RatioPanel({ snapshot }: { snapshot: FinancialSnapshot }) {
           })}
         </ul>
 
-        <p className="mt-3 text-footnote text-ink-muted">
-          Skornya rata-rata lima rasio, dengan sehat bernilai 100, waspada 60, dan bahaya 20.
-          Angka itu alat baca cepat, dan yang menentukan tindakan adalah baris di bawah.
-        </p>
       </div>
 
       {report.weakest ? (
-        <div className="squircle rounded-md bg-sunken p-4">
-          <p className="text-footnote text-ink-faint">Mulai dari sini</p>
-          <p className="mt-1 text-subhead font-medium text-ink">{report.weakest.threshold.label}</p>
-          <p className="mt-1 text-subhead text-ink-muted">{report.weakest.advice}</p>
+        <div className="border-t border-line pt-4">
+          <p className="text-xs text-ink-faint">Mulai dari sini</p>
+          <p className="mt-1 text-sm font-medium text-ink">{report.weakest.threshold.label}</p>
+          <p className="mt-1 text-sm text-ink-muted">{report.weakest.advice}</p>
         </div>
       ) : null}
 
-      <ul className="rows-inset squircle rounded-md bg-surface shadow-xs">
+      <ul className="divide-y divide-line border-t border-line">
         {report.results.map((result) => {
           const style = result.verdict ? VERDICT_STYLE[result.verdict] : null
           return (
-            <li key={result.threshold.id} id={`rasio-${result.threshold.id}`} className="scroll-mt-32 p-4">
+            <li key={result.threshold.id} id={`rasio-${result.threshold.id}`} className="scroll-mt-32 py-4">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <span className="text-subhead font-medium text-ink">{result.threshold.label}</span>
+                <span className="text-sm font-medium text-ink">{result.threshold.label}</span>
                 <span className="flex items-center gap-2">
-                  <span className="tnum font-mono text-subhead text-ink">
+                  <span className="tnum font-mono text-sm text-ink">
                     {/* A ratio with no denominator is unknown, not zero, and a
                         dash in a column of figures reads as zero. */}
                     {result.value === null ? (
@@ -149,7 +153,7 @@ export function RatioPanel({ snapshot }: { snapshot: FinancialSnapshot }) {
                   </span>
                   {style ? (
                     <span
-                      className={`inline-flex items-center gap-1 rounded-xs border px-1.5 py-0.5 text-caption2 uppercase tracking-wide ${style.chip}`}
+                      className={`inline-flex items-center gap-1 rounded-xs border px-1.5 py-0.5 text-xs uppercase tracking-wide ${style.chip}`}
                     >
                       <span aria-hidden="true">{style.glyph}</span>
                       {style.label}
@@ -158,10 +162,10 @@ export function RatioPanel({ snapshot }: { snapshot: FinancialSnapshot }) {
                 </span>
               </div>
 
-              <p className="mt-1.5 text-footnote text-ink-muted">{result.reading}</p>
+              <p className="mt-1.5 text-xs text-ink-muted">{result.reading}</p>
 
               {result.target ? (
-                <p className="mt-2 rounded-sm border border-line bg-sunken px-3 py-2 text-footnote text-ink">
+                <p className="mt-2 text-xs text-ink">
                   Untuk sampai sehat:{' '}
                   {result.target.direction === 'increase' ? 'tambah' : 'kurangi'}{' '}
                   <span className="tnum font-mono">{formatIdr(result.target.amount)}</span> pada{' '}
@@ -171,7 +175,7 @@ export function RatioPanel({ snapshot }: { snapshot: FinancialSnapshot }) {
 
               <MetaRow
                 as="p"
-                className="mt-2 text-caption2 text-ink-faint"
+                className="mt-2 text-xs text-ink-faint"
                 parts={[
                   result.threshold.formula,
                   `ambang ${display(result.threshold.healthy, result.threshold.unit)}`,
@@ -182,15 +186,17 @@ export function RatioPanel({ snapshot }: { snapshot: FinancialSnapshot }) {
         })}
       </ul>
 
-      <SourceNote
-        source="OJK sikapiuangmu, dengan ambang solvabilitas dari Principal Indonesia"
-        url="https://sikapiuangmu.ojk.go.id/"
-        confidence="regulator"
-      />
-      <p className="text-footnote text-ink-muted">
-        Standar rasio cicilan di Indonesia 30% datar. Aturan 28/36 yang beredar di internet
-        berasal dari pasar KPR Amerika dan sengaja tidak dipakai di sini.
-      </p>
+      <div className="flex items-center gap-1">
+        <SourceNote
+          source="OJK sikapiuangmu, dengan ambang solvabilitas dari Principal Indonesia"
+          url="https://sikapiuangmu.ojk.go.id/"
+          confidence="regulator"
+        />
+        <InfoTip label="Kenapa cicilan 30%">
+          Standar rasio cicilan di Indonesia 30% datar. Aturan 28/36 yang beredar di internet
+          berasal dari pasar KPR Amerika dan sengaja tidak dipakai di sini.
+        </InfoTip>
+      </div>
     </div>
   )
 }

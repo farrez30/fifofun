@@ -7,6 +7,7 @@ import { deriveLifestyle, scaleLifestyle, type MonthSpend } from '@/lib/planning
 import { childPlansFor, defaultPlan, planFields, type PlanValues } from '@/lib/planning/plan'
 import type { ActionResult } from '@/lib/actions'
 import type { FinancialSnapshot } from '@/lib/planning/ratios'
+import { InfoTip } from '@/components/info-tip'
 import { formatIdr } from '@/lib/money'
 import { AllocationPanel } from './allocation-panel'
 /*
@@ -208,7 +209,6 @@ export function Planner({ history, observedIncome, snapshot, currentYear, saved,
           id="rumah-tangga"
           variant={stuck ? 'bar' : 'card'}
           title="Titik berangkat"
-          lead="Semua angka di bawah sudah terisi dari mutasi yang kamu impor. Ubah apa pun untuk melihat akibatnya seketika, lalu simpan supaya tidak perlu diisi ulang."
         >
           <HouseholdInputs
             income={values.income}
@@ -232,14 +232,19 @@ export function Planner({ history, observedIncome, snapshot, currentYear, saved,
           />
 
           {!stuck && derived.outliers.length > 0 ? (
-            <div className="border border-warn/40 bg-warn-wash p-4">
-              <p className="text-subhead font-medium text-ink">
-                <span aria-hidden="true" className="mr-1.5 text-warn">
+            <div>
+              <div className="flex items-center gap-1 text-sm font-medium text-ink">
+                <span aria-hidden="true" className="mr-0.5 text-warn">
                   ▲
                 </span>
-                Bulan yang tidak normal, dan sengaja tidak dijadikan patokan
-              </p>
-              <ul className="mt-2 space-y-1 text-subhead text-ink-muted">
+                Bulan tidak normal
+                <InfoTip label="Kenapa tidak dijadikan patokan">
+                  Patokan gaya hidup memakai median, bukan rata-rata. Satu belanja besar yang masuk
+                  kategori sempit akan menaikkan rata-rata dan diam-diam mengesahkan pemborosan itu
+                  sebagai kebiasaan.
+                </InfoTip>
+              </div>
+              <ul className="mt-2 space-y-1 text-sm text-ink-muted">
                 {derived.outliers.slice(0, 4).map((outlier) => (
                   <li key={`${outlier.category}-${outlier.month}`}>
                     {outlier.category} pada {outlier.month} mencapai{' '}
@@ -249,11 +254,6 @@ export function Planner({ history, observedIncome, snapshot, currentYear, saved,
                   </li>
                 ))}
               </ul>
-              <p className="mt-2 text-footnote text-ink-muted">
-                Patokan gaya hidup memakai median, bukan rata-rata. Satu belanja besar yang masuk
-                kategori sempit akan menaikkan rata-rata dan diam-diam mengesahkan pemborosan itu
-                sebagai kebiasaan.
-              </p>
             </div>
           ) : null}
         </Section>
@@ -277,8 +277,7 @@ export function Planner({ history, observedIncome, snapshot, currentYear, saved,
       <div hidden={view !== 'alokasi'}>
         <Section
           id="alokasi"
-          title="Kalau penghasilanmu segini, pos ini sebaiknya berapa"
-          lead="Setiap angka membawa kerangka asalnya dan alasan mengapa ia batas bawah, batas atas, atau sekadar target."
+          title="Alokasi"
         >
           <AllocationPanel
             income={values.income}
@@ -295,7 +294,6 @@ export function Planner({ history, observedIncome, snapshot, currentYear, saved,
         <Section
           id="kesehatan"
           title="Kesehatan keuangan"
-          lead="Lima rasio yang dipakai OJK, dihitung dari catatanmu sendiri, lengkap dengan berapa yang harus bergerak agar sehat."
         >
           <RatioPanel snapshot={liveSnapshot} />
         </Section>
@@ -304,8 +302,7 @@ export function Planner({ history, observedIncome, snapshot, currentYear, saved,
       <div hidden={view !== 'anak'}>
         <Section
           id="anak"
-          title="Anak, dan jaraknya"
-          lead="Biaya anak digambar per tahun kalender, karena yang menentukan sebuah rencana bertahan bukan totalnya melainkan tahun terberatnya."
+          title="Biaya anak"
         >
           <ChildrenPanel
             plans={values.childPlans}
@@ -322,8 +319,7 @@ export function Planner({ history, observedIncome, snapshot, currentYear, saved,
       <div hidden={view !== 'gap'}>
         <Section
           id="gap"
-          title="Jarak ke gaya hidup yang dituju"
-          lead="Berapa tambahan penghasilan, atau berapa pengetatan pengeluaran, atau setengah dari masing-masing."
+          title="Jarak gaya hidup"
         >
           <GapPanel
             currentProfile={scaledCurrent}
@@ -343,7 +339,6 @@ export function Planner({ history, observedIncome, snapshot, currentYear, saved,
         <Section
           id="tujuan"
           title="Tujuan"
-          lead="Dana darurat, tujuan apa pun, dan haji yang ditangani sebagai dua pembayaran terpisah."
         >
           <GoalsPanel
             monthlyExpenses={scaledCurrent.total}

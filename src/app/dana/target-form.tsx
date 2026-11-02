@@ -87,7 +87,7 @@ export function TargetForm({
   const eta = months === null || asOf === '' ? null : addMonths(asOf, months)
 
   return (
-    <details className="mt-3 border-t border-line pt-2 text-footnote">
+    <details className="mt-3 border-t border-line pt-2 text-xs">
       <summary className="cursor-pointer text-accent underline underline-offset-2">
         {target === '' ? 'Tetapkan target' : 'Ubah target'}
       </summary>
@@ -124,7 +124,7 @@ export function TargetForm({
 
         {mode === 'tenggat' ? (
           <label className="flex flex-col gap-1">
-            <span className="text-footnote text-ink-muted">Dibutuhkan bulan</span>
+            <span className="text-xs text-ink-muted">Dibutuhkan bulan</span>
             <input
               type="month"
               name="month"

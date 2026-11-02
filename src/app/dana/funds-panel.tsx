@@ -3,6 +3,7 @@ import type { FundCashflow, FundProgress, FundsReview } from '@/lib/ledger/funds
 import { formatIdr, formatIdrCompact } from '@/lib/money'
 import { TargetForm } from './target-form'
 import { Coins } from '@phosphor-icons/react/dist/ssr/Coins'
+import { InfoTip } from '@/components/info-tip'
 import { Unavailable } from '@/components/unavailable'
 
 /**
@@ -94,9 +95,9 @@ export function FundsPanel({ review, idOf, caption, income, asOf }: Props) {
   }
 
   return (
-    <div className="squircle rounded-md bg-surface shadow-xs">
+    <div className="squircle rounded-md border border-line bg-surface">
       <div className="border-b border-line p-4">
-        <p className="text-subhead font-medium text-ink">
+        <p className="text-sm font-medium text-ink">
           {untouched
             ? 'Belum ada setoran yang tercatat masuk ke satu pos pun.'
             : behind.length > 0
@@ -105,7 +106,7 @@ export function FundsPanel({ review, idOf, caption, income, asOf }: Props) {
         </p>
 
         {untouched ? (
-          <p className="mt-1 text-subhead text-ink-muted">
+          <p className="mt-1 text-sm text-ink-muted">
             Impor mencatat setoran ke rekening tabungan sebagai transfer, karena di bank memang
             itu yang terjadi. Hanya kamu yang bisa bilang bahwa yang ke Reksadana adalah
             investasi.{' '}
@@ -116,16 +117,25 @@ export function FundsPanel({ review, idOf, caption, income, asOf }: Props) {
           </p>
         ) : null}
 
-        <p className="mt-1 text-subhead text-ink-muted">
-          {formatIdr(totalSaved)} terkumpul di {funds.length} pos
-          {/* The two totals cover different pots, and adding them into one
-              sentence would imply the saved figure is progress towards the
-              target figure when some of it belongs to pots with no target. */}
-          {targeted > 0
-            ? `. ${formatIdrCompact(totalTarget)} ditargetkan di ${targeted} di antaranya`
-            : ''}
-          . Angkanya dibaca dari catatan, bukan diketik: uang yang diambil lagi ikut dikurangi.
+        {/* The page's one verdict figure (ADR 0007). */}
+        <p className="mt-3 tnum font-mono text-2xl font-semibold text-ink">
+          {formatIdr(totalSaved)}
         </p>
+        <div className="mt-1 flex items-center gap-1">
+          <p className="text-sm text-ink-muted">
+            terkumpul di {funds.length} pos
+            {/* The two totals cover different pots, and adding them into one
+                sentence would imply the saved figure is progress towards the
+                target figure when some of it belongs to pots with no target. */}
+            {targeted > 0
+              ? `. ${formatIdrCompact(totalTarget)} ditargetkan di ${targeted} di antaranya`
+              : ''}
+          </p>
+          <InfoTip label="Sumber angka">
+            <p>Angkanya dibaca dari catatan, bukan diketik: uang yang diambil lagi ikut dikurangi.</p>
+            <p className="mt-2">{caption}</p>
+          </InfoTip>
+        </div>
       </div>
 
       <ul className="divide-y divide-line">
@@ -140,9 +150,6 @@ export function FundsPanel({ review, idOf, caption, income, asOf }: Props) {
         ))}
       </ul>
 
-      <p className="border-t border-line p-4 text-footnote text-ink-muted">
-        {caption}
-      </p>
     </div>
   )
 }
@@ -164,13 +171,13 @@ function Row({
   return (
     <li className="p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <span className="text-subhead text-ink">
+        <span className="text-sm text-ink">
           {fund.name}
-          <span className="ml-2 rounded-xs border border-line px-1.5 py-0.5 text-caption2 uppercase tracking-wide text-ink-muted">
+          <span className="ml-2 text-xs uppercase tracking-wide text-ink-faint">
             {KIND[fund.cashflow]}
           </span>
         </span>
-        <span className="tnum font-mono text-subhead text-ink">{formatIdr(fund.saved)}</span>
+        <span className="tnum font-mono text-sm text-ink">{formatIdr(fund.saved)}</span>
       </div>
 
       {share === null ? null : (
@@ -184,11 +191,11 @@ function Row({
               style={{ width: fund.saved > 0n ? `max(2px, ${share}%)` : '0' }}
             />
           </div>
-          <span className="tnum shrink-0 font-mono text-footnote text-ink-muted">{share}%</span>
+          <span className="tnum shrink-0 font-mono text-xs text-ink-muted">{share}%</span>
         </div>
       )}
 
-      <p className="mt-2 text-footnote text-ink-muted">
+      <p className="mt-2 text-xs text-ink-muted">
         {fund.target === null ? (
           'Belum ada target, jadi tidak ada sisa yang bisa dihitung.'
         ) : (
@@ -201,7 +208,7 @@ function Row({
         )}
       </p>
 
-      <p className={`mt-1 text-footnote ${verdict.tone}`}>
+      <p className={`mt-1 text-xs ${verdict.tone}`}>
         {verdict.glyph ? (
           <span aria-hidden="true" className="mr-1">
             {verdict.glyph}
@@ -218,7 +225,7 @@ function Row({
         in their head to do it. What is not known is printed as not known: a
         dash would read as zero, and zero is a different fact.
       */}
-      <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-caption1 sm:grid-cols-4">
+      <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:grid-cols-4">
         <Figure
           label="Biasanya"
           value={fund.monthlyRate > 0n ? `${formatIdrCompact(fund.monthlyRate)} / bln` : null}
@@ -252,7 +259,7 @@ function Row({
       </dl>
 
       {fund.withdrawn > 0n ? (
-        <p className="mt-1 text-footnote text-ink-faint">
+        <p className="mt-1 text-xs text-ink-faint">
           Sudah diambil lagi {formatIdr(fund.withdrawn)} dari pos ini.
         </p>
       ) : null}
