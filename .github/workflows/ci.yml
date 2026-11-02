@@ -143,6 +143,63 @@ jobs:
           path: playwright-report/
           retention-days: 7
 
+  database:
+    name: Migrations, access rules and queries on Postgres
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    # A throwaway Postgres on the runner, the same major version as the Neon
+    # project. Never a Neon branch: a CI run that holds a Neon credential is
+    # one malicious pull request away from reading the household's money.
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 15
+
+    env:
+      DATABASE_URL: postgres://neondb_owner:ci@localhost:5432/neondb
+
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # Connect as a role shaped like neondb_owner, not the superuser, or every
+      # missing grant would go unnoticed.
+      - name: Neon-like owner role
+        run: psql -v ON_ERROR_STOP=1 -h localhost -U postgres -f scripts/neon-like-roles.sql
+        env:
+          PGPASSWORD: postgres
+
+      - name: Migrate
+        run: pnpm db:migrate
+
+      # Production runs the prelude on every deploy, so it has to be a no-op
+      # the second time.
+      - name: Migrate again
+        run: pnpm db:migrate
+
+      - name: Access rules
+        run: pnpm db:verify
+
+      - name: Query layer
+        run: pnpm test:db
+
   audit:
     name: Dependency audit
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
