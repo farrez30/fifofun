@@ -63,8 +63,11 @@ never mark a Coderoach check green. The schedule entry lives in the worker's
   not carry. The first restore test failed on it; `PULIH_PRA_SQL` (KED-10 1.2.0)
   now creates `anon`, `authenticated` and `service_role` before `pg_restore`. A
   real restore needs `drizzle/prelude-neon.sql` first for the same reason.
-- FiFoFun has no health check of its own yet; a missed FiFoFun backup is only
-  visible in `restic snapshots --tag fifofun-neon`.
-- Backups stop on days the PC is off; the worker's health checks report it.
+- FiFoFun has its own healthchecks.io checks, `backup-fifofun` (1 day, 2 days
+  grace) and `uji-pulih-fifofun` (31 days, 1 day grace), tagged `fifofun` in the
+  coderoach project; email alerts. Their ping URLs live only in
+  `backup-fifofun.env`, and a rewrite by the script keeps them.
+- Backups stop on days the PC is off or Docker Desktop is not running; the
+  health checks report it.
 - Revisit when someone other than farrez may restore Coderoach backups, when
   the worker moves to a VPS, or when the database outgrows a few GB.

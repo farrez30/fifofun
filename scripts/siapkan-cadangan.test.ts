@@ -77,6 +77,19 @@ describe('siapkan-cadangan.sh --env-saja', () => {
     expect(env).not.toContain('hc-ping.com/coderoach')
   })
 
+  it('keeps FiFoFun health checks already in backup-fifofun.env when rewriting it', () => {
+    base(CODEROACH_ENV)
+    writeFileSync(
+      join(dir, 'rahasia', 'backup-fifofun.env'),
+      "HC_URL='https://hc-ping.com/fifofun-backup'\r\nHC_URL_PULIH='https://hc-ping.com/fifofun-pulih'\r\n",
+    )
+    run(['--env-saja', HOST])
+    const env = out()
+    expect(env).toMatch(/^HC_URL='https:\/\/hc-ping\.com\/fifofun-backup'$/m)
+    expect(env).toMatch(/^HC_URL_PULIH='https:\/\/hc-ping\.com\/fifofun-pulih'$/m)
+    expect(env).not.toContain('hc-ping.com/coderoach')
+  })
+
   it('creates the app roles before the restore test, since the policies name them', () => {
     base(CODEROACH_ENV)
     run(['--env-saja', HOST])
