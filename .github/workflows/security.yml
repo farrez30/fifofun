@@ -33,7 +33,7 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
 
       - uses: github/codeql-action/init@v4
         with:
@@ -51,7 +51,7 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
         with:
           # gitleaks compares against history, so a shallow clone would only ever
           # see the newest commit and miss a key committed last month.
