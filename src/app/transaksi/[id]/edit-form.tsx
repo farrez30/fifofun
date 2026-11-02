@@ -99,7 +99,7 @@ export function EditEntryForm({
       className="space-y-4"
       aria-labelledby={ids.heading}
     >
-      <h2 id={ids.heading} className="text-subhead font-medium text-ink">
+      <h2 id={ids.heading} className="sr-only">
         Ubah transaksi
       </h2>
       <input type="hidden" name="id" value={entry.id} />
@@ -112,7 +112,7 @@ export function EditEntryForm({
         Jam move in as rows of their own instead of a side-by-side pair —
         one control per line, like every other row here.
       */}
-      <div className="rows-inset squircle rounded-md bg-surface shadow-xs">
+      <div className="rows-inset squircle rounded-md border border-line bg-surface">
         <FieldRow htmlFor={ids.category} label="Kategori" invalid={fieldErrors.categoryId}>
           <select
             id={ids.category}
@@ -189,12 +189,12 @@ export function EditEntryForm({
       <div className="px-4">
         {entry.editable.category ? (
           chosen?.description ? (
-            <p id={ids.kamus} data-kamus className="text-footnote text-ink-muted">
+            <p id={ids.kamus} data-kamus className="text-xs text-ink-muted">
               {chosen.description}
             </p>
           ) : null
         ) : (
-          <p id={ids.kamus} className="text-footnote text-ink-muted">
+          <p id={ids.kamus} className="text-xs text-ink-muted">
             Perpindahan antar akun tidak punya kategori: yang dicatat adalah akun asal dan akun
             tujuannya.
           </p>
@@ -256,8 +256,8 @@ export function EditEntryForm({
           className="mt-0.5 size-4 shrink-0 accent-[var(--color-accent)]"
         />
         <span>
-          <span className="block text-subhead text-ink">Uang titipan</span>
-          <span className="block text-footnote text-ink-muted">
+          <span className="block text-sm text-ink">Uang titipan</span>
+          <span className="block text-xs text-ink-muted">
             Tidak dihitung sebagai pemasukan atau pengeluaran, tapi tetap menggerakkan saldo akun.
           </span>
         </span>

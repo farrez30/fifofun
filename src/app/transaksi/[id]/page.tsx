@@ -85,15 +85,14 @@ export default async function TransactionPage({
       title="Ubah transaksi"
       email={user.email ?? ''}
       current="/transaksi"
-      lead="Kategori, keterangan, dan catatan bisa diubah di semua transaksi. Nominal, tanggal, dan akun hanya pada catatan manual dan Telegram."
     >
       <div className="space-y-6">
         <EntrySummary detail={detail} accounts={accounts} />
 
         {row.deletedAt && !split ? (
-          <div className="squircle rounded-md bg-sunken p-4">
-            <p className="text-subhead font-medium text-ink">Transaksi ini sudah dihapus.</p>
-            <p className="mt-1 text-subhead text-ink-muted">
+          <div className="squircle rounded-md border border-line bg-surface p-4">
+            <p className="text-sm font-medium text-ink">Transaksi ini sudah dihapus</p>
+            <p className="mt-1 text-sm text-ink-muted">
               Datanya tetap tersimpan, hanya disembunyikan dari semua hitungan.
             </p>
             <RestoreEntryButton id={row.id} />
@@ -102,7 +101,7 @@ export default async function TransactionPage({
 
         {split ? (
           <section aria-labelledby="bagian" className="space-y-3">
-            <h2 id="bagian" className="text-subhead font-medium text-ink">
+            <h2 id="bagian" className="text-sm font-medium text-ink">
               Dipisah jadi {children.length} bagian
             </h2>
             <TransactionTable
@@ -112,7 +111,7 @@ export default async function TransactionPage({
               caption={`Bagian dari ${row.description}`}
               emptyText="Belum ada bagian."
             />
-            <p className="text-footnote text-ink-muted">
+            <p className="text-xs text-ink-muted">
               Transaksi aslinya disembunyikan selama dipisah. Menggabungkan kembali akan
               menyembunyikan bagian-bagiannya dan memunculkan lagi barisnya yang utuh.
             </p>

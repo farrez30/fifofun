@@ -62,7 +62,7 @@ export function RecentEntries({ rows, total }: { rows: RecentEntry[]; total: num
     <div className="@container space-y-2">
       <ul
         aria-label="Catatan manual terakhir"
-        className="rows-inset squircle rounded-md bg-surface shadow-xs @5xl:hidden"
+        className="rows-inset squircle rounded-md border border-line bg-surface @5xl:hidden"
       >
         {shown.map((row) => (
           <li key={row.id}>
@@ -71,7 +71,7 @@ export function RecentEntries({ rows, total }: { rows: RecentEntry[]; total: num
                 <>
                   <Link
                     href={`/transaksi/${row.id}`}
-                    className="flex h-full min-w-20 items-center justify-center border-l border-line bg-sunken px-4 text-subhead font-medium text-ink"
+                    className="flex h-full min-w-20 items-center justify-center border-l border-line bg-sunken px-4 text-sm font-medium text-ink"
                   >
                     Ubah
                     <span className="sr-only"> {row.description}</span>
@@ -82,17 +82,17 @@ export function RecentEntries({ rows, total }: { rows: RecentEntry[]; total: num
             >
               <Link
                 href={`/transaksi/${row.id}`}
-                className="flex min-h-14 items-center gap-2 px-3 py-2.5 transition-colors duration-150 hover:bg-sunken"
+                className="flex min-h-14 items-center gap-2 px-3 py-2.5 transition-colors duration-150 hover:bg-fill-quaternary"
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline justify-between gap-3">
-                    <span className="min-w-0 flex-1 truncate text-subhead text-ink">{row.description}</span>
+                    <span className="min-w-0 flex-1 truncate text-sm text-ink">{row.description}</span>
                     <span className="inline-flex shrink-0 items-center gap-1">
                       <DirectionMark direction={row.direction} />
-                      <span className="tnum font-mono text-subhead text-ink">{row.amount}</span>
+                      <span className="tnum font-mono text-sm text-ink">{row.amount}</span>
                     </span>
                   </div>
-                  <p className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-footnote text-ink-muted">
+                  <p className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs text-ink-muted">
                     <span className="tnum">{row.when}</span>
                     <span aria-hidden="true" className="text-ink-faint">
                       ·
@@ -107,7 +107,7 @@ export function RecentEntries({ rows, total }: { rows: RecentEntry[]; total: num
                       link inside a link is not a thing a tap can mean. The
                       detail page and Tinjau both carry the pairing. */}
                   {row.duplicateSuspected ? (
-                    <span className="mt-1.5 inline-block rounded-xs border border-warn/40 bg-warn-wash px-1.5 py-0.5 text-caption2 text-ink">
+                    <span className="mt-1.5 inline-block rounded-xs border border-warn/40 bg-warn-wash px-1.5 py-0.5 text-xs text-ink">
                       kemungkinan ganda
                     </span>
                   ) : null}
@@ -120,15 +120,15 @@ export function RecentEntries({ rows, total }: { rows: RecentEntry[]; total: num
       </ul>
 
       <div
-        className="relative hidden overflow-x-auto squircle rounded-md bg-surface shadow-xs @5xl:block"
+        className="relative hidden overflow-x-auto squircle rounded-md border border-line bg-surface @5xl:block"
         tabIndex={0}
         role="region"
         aria-label="Tabel catatan manual terakhir, bisa digeser ke samping"
       >
-        <table className="w-full text-subhead">
+        <table className="w-full text-sm">
           <caption className="sr-only">Catatan manual terakhir</caption>
           <thead>
-            <tr className="border-b border-line text-left text-caption1 uppercase tracking-wide text-ink-faint">
+            <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-ink-faint">
               <th scope="col" className="px-4 py-2.5 font-medium">
                 Waktu
               </th>
@@ -160,7 +160,7 @@ export function RecentEntries({ rows, total }: { rows: RecentEntry[]; total: num
                   {row.duplicateSuspected ? (
                     <a
                       href="/tinjau#kemungkinan-ganda"
-                      className="ml-2 inline-block rounded-xs border border-warn/40 bg-warn-wash px-1.5 py-0.5 text-caption2 text-ink"
+                      className="ml-2 inline-block rounded-xs border border-warn/40 bg-warn-wash px-1.5 py-0.5 text-xs text-ink"
                     >
                       kemungkinan ganda
                     </a>
@@ -191,14 +191,14 @@ export function RecentEntries({ rows, total }: { rows: RecentEntry[]; total: num
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-        <p className="text-footnote text-ink-muted">
+        <p className="text-xs text-ink-muted">
           Menghapus hanya menyembunyikan barisnya dari semua hitungan. Di ponsel, geser kartunya ke
           kiri untuk Ubah atau Hapus.
         </p>
         {total > shown.length ? (
           <Link
             href="/laporan?sumber=manual"
-            className="inline-flex min-h-11 items-center gap-1 text-subhead text-accent"
+            className="inline-flex min-h-11 items-center gap-1 text-sm text-accent"
           >
             Lihat semua ({total})
             <CaretRight aria-hidden="true" className="size-4" />

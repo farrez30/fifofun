@@ -30,25 +30,28 @@ export function EntrySummary({
   const to = row.toAccountId ? byId.get(row.toAccountId) : undefined
 
   return (
-    <section aria-labelledby="ringkasan" className="squircle rounded-md bg-surface shadow-xs p-4">
+    <section aria-labelledby="ringkasan" className="squircle rounded-md border border-line bg-surface p-4">
       <h2 id="ringkasan" className="sr-only">
         Transaksi ini
       </h2>
 
       <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <DirectionMark direction={directionOf(row.cashflow)} className="translate-y-0.5" />
-        <span className="text-body text-ink">{row.description}</span>
-        <SignedMoney sen={row.amount} direction={signedDirection(row.cashflow)} />
+        <span className="text-sm text-ink">{row.description}</span>
+        <SignedMoney
+          sen={row.amount}
+          direction={signedDirection(row.cashflow)}
+          className="text-2xl font-semibold"
+        />
       </p>
 
-      <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-2 text-subhead sm:grid-cols-2">
+      <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
         <Pair label="Waktu">{formatJakarta(row.occurredAt, 'datetime')}</Pair>
         <Pair label="Akun">
           {from && to ? (
             <span className="inline-flex flex-wrap items-center gap-1.5">
               <AccountMark name={from.name} kind={from.kind} logo={from.logoUrl} />
-              <span aria-hidden="true">→</span>
-              <span className="sr-only">ke</span>
+              <span className="text-ink-muted">ke</span>
               <AccountMark name={to.name} kind={to.kind} logo={to.logoUrl} />
             </span>
           ) : from || to ? (
@@ -80,10 +83,9 @@ export function EntrySummary({
       </dl>
 
       {isBankFact(row.source) ? (
-        <p className="mt-3 text-footnote text-ink-muted">
-          Nominal, tanggal, dan akun baris ini adalah fakta dari bank. Rekonsiliasi saldo
-          bergantung padanya, jadi ketiganya tidak bisa diubah atau dihapus di sini. Kalau satu
-          struk berisi beberapa kategori, pisahkan saja: jumlahnya tetap utuh.
+        <p className="mt-3 text-xs text-ink-muted">
+          Nominal, tanggal, dan akun baris ini fakta dari bank, jadi tidak bisa diubah atau dihapus
+          di sini. Kalau satu struk berisi beberapa kategori, pisahkan saja: jumlahnya tetap utuh.
         </p>
       ) : null}
     </section>
@@ -93,7 +95,7 @@ export function EntrySummary({
 function Pair({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <dt className="text-footnote text-ink-faint">{label}</dt>
+      <dt className="text-xs text-ink-faint">{label}</dt>
       <dd className="text-ink">{children}</dd>
     </div>
   )
