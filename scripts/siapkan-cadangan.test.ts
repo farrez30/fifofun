@@ -58,7 +58,7 @@ describe('siapkan-cadangan.sh --env-saja', () => {
     expect(r.status, r.stderr).toBe(0)
 
     const env = out()
-    for (const name of ['DB_URLS', 'BASIS', 'CATATAN_PULIH', 'RESTIC_TAG', 'RESTIC_HOST', 'HC_URL', 'HC_URL_PULIH']) {
+    for (const name of ['DB_URLS', 'BASIS', 'CATATAN_PULIH', 'RESTIC_TAG', 'RESTIC_HOST', 'HC_URL', 'HC_URL_PULIH', 'PULIH_PRA_SQL']) {
       expect(env.match(new RegExp(`^${name}=`, 'gm'))).toHaveLength(1)
     }
     expect(env).toContain(`DB_URLS='fifofun=postgresql://cadangan@${HOST}/neondb?sslmode=require'`)
@@ -75,6 +75,21 @@ describe('siapkan-cadangan.sh --env-saja', () => {
     expect(env).toMatch(/^HC_URL=''$/m)
     expect(env).toMatch(/^HC_URL_PULIH=''$/m)
     expect(env).not.toContain('hc-ping.com/coderoach')
+  })
+
+  it('creates the app roles before the restore test, since the policies name them', () => {
+    base(CODEROACH_ENV)
+    run(['--env-saja', HOST])
+    const line = out().match(/^PULIH_PRA_SQL='(.*)'$/m)?.[1] ?? ''
+    for (const role of ['anon', 'authenticated', 'service_role']) {
+      expect(line).toContain(`create role ${role} nologin;`)
+    }
+  })
+
+  it('does not inherit a restore hook meant for another set', () => {
+    base(`${CODEROACH_ENV}PULIH_PRA_SQL='drop schema public cascade;'\n`)
+    run(['--env-saja', HOST])
+    expect(out()).not.toContain('drop schema')
   })
 
   it('keeps the shared repository, keys and host so retention groups correctly', () => {

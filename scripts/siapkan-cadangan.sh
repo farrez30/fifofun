@@ -32,7 +32,12 @@ OUT="$WORKER/rahasia/backup-fifofun.env"
 # Every variable that would otherwise point FiFoFun at Coderoach's database,
 # folder, snapshots or health checks. Written explicitly even though the worker
 # sources only BACKUP_ENV, so a copied value can never leak through.
-OWN=(DB_URLS BASIS CATATAN_PULIH RESTIC_TAG RESTIC_HOST HC_URL HC_URL_PULIH)
+OWN=(DB_URLS BASIS CATATAN_PULIH RESTIC_TAG RESTIC_HOST HC_URL HC_URL_PULIH PULIH_PRA_SQL)
+
+# The 15 household policies are granted TO authenticated, a role pg_dump does
+# not carry, so the restore test (KED-10 1.2.0) creates the app roles first, as
+# drizzle/prelude-neon.sql does on a real database.
+PRA_SQL='create role anon nologin; create role authenticated nologin; create role service_role nologin;'
 
 tulis_env() {
   local host="$1" restic_host tmp name n
@@ -52,6 +57,7 @@ tulis_env() {
     echo "RESTIC_HOST=$restic_host"
     echo "HC_URL=''"
     echo "HC_URL_PULIH=''"
+    echo "PULIH_PRA_SQL='$PRA_SQL'"
   } >"$tmp"
 
   for name in "${OWN[@]}"; do
