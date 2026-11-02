@@ -43,6 +43,24 @@ const ALLOWED: Record<string, string[]> = {
 
 const BANNED = /\b(?:sm:|lg:)?text-(?:xs|sm|base|lg|xl|[2-9]xl)\b|\btext-\[[\d.]+(?:px|rem|em)\]/g
 
+/**
+ * Files already moved to the four-step scale of ADR 0007: `text-xl` for the
+ * page title, `text-sm` for section titles and body, `text-xs` for metadata,
+ * plus `text-2xl` for the one verdict figure a screen leads with.
+ * In these the roles above are the regression instead. The list grows one
+ * module per PR, and once it covers `src` the old rule and roles go.
+ */
+const FOUR_STEP = [
+  'src/app/anggaran/',
+  'src/components/info-tip.tsx',
+  'src/components/shell-frame.tsx',
+]
+
+const BANNED_FOUR_STEP =
+  /\b(?:sm:|lg:)?text-(?:base|lg|[3-9]xl|caption[12]|footnote|subhead|callout|body|headline|title[123]|large-title)\b|\btext-\[[\d.]+(?:px|rem|em)\]/g
+
+const onFourStep = (file: string) => FOUR_STEP.some((prefix) => file.startsWith(prefix))
+
 /** Block comments, then line comments — never a `://` a link happens to carry. */
 function stripComments(source: string): string {
   return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(?<!:)\/\/.*$/gm, '')
@@ -66,7 +84,7 @@ describe('the app keeps to its Dynamic Type roles', () => {
       const lines = source.split('\n')
 
       for (const [index, line] of lines.entries()) {
-        for (const match of line.matchAll(BANNED)) {
+        for (const match of line.matchAll(onFourStep(file) ? BANNED_FOUR_STEP : BANNED)) {
           const at = allowed.indexOf(match[0])
           if (at !== -1) {
             allowed.splice(at, 1)
