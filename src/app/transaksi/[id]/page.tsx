@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import { z } from 'zod'
 import { AppShell } from '@/components/app-shell'
 import { TransactionTable } from '@/components/transaction-table'
+import { backFrom, transactionHref } from '@/lib/back'
 import { formatJakarta } from '@/lib/datetime'
 import { compatibleCategories, editableFields } from '@/lib/ledger/edit'
 import { getAccounts, getCategories, getHousehold, getTransaction } from '@/lib/queries/household'
@@ -27,15 +28,21 @@ export const instant = false
  * renders an empty form is worse than arriving at one that explains itself.
  */
 
+/** A transaction reached with no origin (a pasted link) belongs to the ledger. */
+const LEDGER = { href: '/laporan', label: 'Laporan' }
+
 export default async function TransactionPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
   const user = await getUser()
   if (!user) redirect('/login')
 
   const { id } = await params
+  const back = backFrom((await searchParams).dari, LEDGER)
   // A path that is not a uuid never reaches the database: PostgREST answers a
   // malformed uuid with an error, and an error is not a missing page.
   if (!z.uuid().safeParse(id).success) notFound()
@@ -85,6 +92,7 @@ export default async function TransactionPage({
       title="Ubah transaksi"
       email={user.email ?? ''}
       current="/transaksi"
+      back={back}
     >
       <div className="space-y-6">
         <EntrySummary detail={detail} accounts={accounts} />
@@ -109,6 +117,7 @@ export default async function TransactionPage({
               accounts={live}
               categories={categories}
               caption={`Bagian dari ${row.description}`}
+              from={back === LEDGER ? `/transaksi/${row.id}` : transactionHref(row.id, back.href)}
               emptyText="Belum ada bagian."
             />
             <p className="text-xs text-ink-muted">

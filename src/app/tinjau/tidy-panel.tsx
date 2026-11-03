@@ -5,6 +5,7 @@ import { useFormStatus } from 'react-dom'
 import { CONTROL } from '@/components/field-base'
 import { CategoryMark } from '@/components/marks'
 import { MetaRow } from '@/components/meta-row'
+import { transactionHref } from '@/lib/back'
 import { directionOf, type Direction } from '@/lib/ledger/direction'
 import { optionGroups, type OptionGroup } from '@/lib/ledger/settings'
 import { HOLD } from '@/lib/ledger/tidy'
@@ -284,7 +285,7 @@ function Move({
                     `cocok dengan aturan “${entry.pattern}”`,
                     <a
                       key="open"
-                      href={`/transaksi/${entry.id}`}
+                      href={transactionHref(entry.id, '/tinjau')}
                       className="text-accent underline underline-offset-2"
                     >
                       buka transaksinya

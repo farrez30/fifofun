@@ -252,6 +252,7 @@ async function Report({ params }: { params: Record<string, string | string[] | u
         categories={categories}
         caption={`Transaksi terpilih, halaman ${page} dari ${pages}`}
         emptyText="Tidak ada transaksi yang cocok dengan saringan ini."
+        from={`${pageHref('/laporan', keep, page)}#daftar`}
       />
       <Pager
         label="Halaman daftar transaksi"

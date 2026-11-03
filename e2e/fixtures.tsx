@@ -2353,6 +2353,17 @@ const SHELL_FIXTURES: Record<string, ReactElement> = {
       />
     </AppShell>
   ),
+  // A page one level in: no tab lights, so the way back is the back link.
+  'shell-transaksi': (
+    <AppShell
+      title="Ubah transaksi"
+      email="rumah.tangga@contoh.com"
+      current="/transaksi"
+      back={{ href: '/laporan?kategori=Makan&hal=2#daftar', label: 'Laporan' }}
+    >
+      <p className="text-sm text-ink-muted">Isi halaman.</p>
+    </AppShell>
+  ),
   // What a route-level loading.tsx paints: the static chrome stand-in around a
   // page skeleton. Its tab bar and account pill face the same geometry, axe and
   // touch-floor sweeps as the real shell.

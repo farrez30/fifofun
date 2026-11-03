@@ -568,6 +568,7 @@ async function Dashboard({ akun }: { akun: string }) {
           categories={categories}
           caption="Delapan transaksi terakhir"
           emptyText="Belum ada transaksi tercatat."
+          from={akun ? `/?akun=${encodeURIComponent(akun)}#transaksi` : '/#transaksi'}
         />
         <div className="mt-2 flex justify-end">
           {transactions.length > RECENT_ROWS ? (

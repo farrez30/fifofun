@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { LegalFrame } from '../legal-frame'
 
 export const metadata: Metadata = {
   title: 'Kebijakan Privasi',
@@ -16,9 +17,9 @@ const UPDATED = '20 Agustus 2026'
  * repository, which is public. Where the app collects nothing, it says so
  * instead of reserving the right to collect it later.
  */
-export default function PrivacyPage() {
+export default async function PrivacyPage({ searchParams }: PageProps<'/legal/privasi'>) {
   return (
-    <>
+    <LegalFrame dari={(await searchParams).dari}>
       <div>
         <h1 className="text-xl font-semibold text-ink">Kebijakan Privasi</h1>
         <p className="mt-1 text-xs text-ink-faint">Terakhir diperbarui {UPDATED}</p>
@@ -120,7 +121,7 @@ export default function PrivacyPage() {
           dan isinya. Tanggal di atas menunjukkan revisi terakhir.
         </p>
       </Section>
-    </>
+    </LegalFrame>
   )
 }
 
