@@ -198,13 +198,17 @@ test.describe('the pages a stranger sees', () => {
   // streamed ahead of the page even on a hard load. The root one is the
   // signed-in app's frame, and it used to flash here with live links.
   // /gabung is left out: a stranger is redirected before anything renders.
+  //
+  // Without JavaScript the streamed fallback is never swapped out, so what
+  // stays on screen is exactly what a slow connection shows first. The DOM is
+  // asked rather than the HTML searched: the flight data in <script> carries
+  // every loading tree for client navigations and is never drawn.
+  test.use({ javaScriptEnabled: false })
+
   for (const path of ['/login', '/legal/privasi', '/legal/ketentuan', '/offline']) {
-    test(`${path} never streams the signed-in navigation`, async ({ request }) => {
-      const html = await (await request.get(path, { maxRedirects: 0 })).text()
-      // The flight data in <script> carries every loading tree for client
-      // navigations; only what is rendered as markup reaches the screen.
-      const markup = html.replace(/<script[\s\S]*?<\/script>/g, '')
-      expect(markup).not.toContain('aria-label="Halaman utama"')
+    test(`${path} never streams the signed-in navigation`, async ({ page }) => {
+      await page.goto(path)
+      await expect(page.locator('nav[aria-label="Halaman utama"]')).toHaveCount(0)
     })
   }
 })
