@@ -60,7 +60,7 @@ export default function Error({
           href="/"
           className="flex h-11 items-center rounded-sm border border-line px-5 text-sm text-ink transition-colors duration-150 hover:border-line-strong hover:bg-fill-quaternary"
         >
-          Kembali ke ringkasan
+          Kembali ke Ringkasan
         </a>
       </div>
 

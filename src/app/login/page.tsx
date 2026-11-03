@@ -32,11 +32,11 @@ export default async function LoginPage() {
             read what happens to their data before handing any of it over. */}
         <p className="mt-8 border-t border-line pt-4 text-xs text-ink-faint">
           Dengan membuat akun kamu menyetujui{' '}
-          <Link href="/legal/ketentuan" className="underline underline-offset-2 hover:text-ink">
+          <Link href="/legal/ketentuan?dari=%2Flogin" className="underline underline-offset-2 hover:text-ink">
             Ketentuan Penggunaan
           </Link>{' '}
           dan{' '}
-          <Link href="/legal/privasi" className="underline underline-offset-2 hover:text-ink">
+          <Link href="/legal/privasi?dari=%2Flogin" className="underline underline-offset-2 hover:text-ink">
             Kebijakan Privasi
           </Link>
           . Aplikasi ini tidak pernah meminta kredensial internet banking, PIN, atau OTP.

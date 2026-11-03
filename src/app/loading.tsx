@@ -12,8 +12,10 @@ import { DashboardSkeleton } from './skeleton'
  *
  * A route without its own loading file inherits the nearest one up the tree —
  * which is this one. For /impor and /undangan that is close enough (same
- * chrome, generic shape); /login and /legal/* do not use the shell at all, but
- * they are reached by redirect or hard navigation, where this never shows.
+ * chrome, generic shape). The pages a stranger sees (/login, /gabung, /legal,
+ * /offline) each have their own, blank one: every response is dynamic (the CSP
+ * nonce), so this fallback streams first even on a hard load, and it used to
+ * flash the signed-in navigation at people who are not signed in.
  */
 export default function HomeLoading() {
   return (

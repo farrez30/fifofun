@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { LegalFrame } from '../legal-frame'
 
 export const metadata: Metadata = {
   title: 'Ketentuan Penggunaan',
@@ -16,9 +17,9 @@ const UPDATED = '20 Agustus 2026'
  * combination is exactly what makes people stop checking, so the limit has to be
  * stated plainly rather than buried.
  */
-export default function TermsPage() {
+export default async function TermsPage({ searchParams }: PageProps<'/legal/ketentuan'>) {
   return (
-    <>
+    <LegalFrame dari={(await searchParams).dari}>
       <div>
         <h1 className="text-xl font-semibold text-ink">Ketentuan Penggunaan</h1>
         <p className="mt-1 text-xs text-ink-faint">Terakhir diperbarui {UPDATED}</p>
@@ -108,7 +109,7 @@ export default function TermsPage() {
       <Section title="Hukum yang berlaku">
         <p>Hukum Republik Indonesia.</p>
       </Section>
-    </>
+    </LegalFrame>
   )
 }
 

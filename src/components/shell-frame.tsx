@@ -1,6 +1,8 @@
 import Link from 'next/link'
+import { BackLink } from '@/components/back-link'
 import { MORE, NAV, type Destination, type NavHref } from '@/components/nav'
 import { SidebarToggle } from '@/components/sidebar-toggle'
+import type { Back } from '@/lib/back'
 
 /**
  * The markup of the signed-in frame, with the two parts that need data left
@@ -25,6 +27,11 @@ interface Props {
   title: string
   current: NavHref
   lead?: string
+  /**
+   * Set on a page one level in (a transaction), which no tab or sidebar row
+   * lights: without it the page reads as a dead end, most of all on a phone.
+   */
+  back?: Back
   /** The email + sign-out row at the foot of the sidebar, or a same-size stand-in. */
   account: React.ReactNode
   /** The phone's bottom bar, interactive or static. */
@@ -80,7 +87,7 @@ function NavRow({
   )
 }
 
-export function ShellFrame({ title, current, lead, account, tabs, navHint, children }: Props) {
+export function ShellFrame({ title, current, lead, back, account, tabs, navHint, children }: Props) {
   /* Below `sm` the heading would repeat the label the lit tab already shows,
      500px apart. It stays in the markup for the reader and the outline, and
      stays visible on any page that is not one of the tabs. */
@@ -140,13 +147,14 @@ export function ShellFrame({ title, current, lead, account, tabs, navHint, child
 
       <div className="mx-auto w-full min-w-0 max-w-6xl px-4 pb-[calc(4.5rem+var(--spacing-safe-b))] pt-8 sm:px-6 sm:pb-8">
         <header className="mb-8 border-b border-line pb-5">
+          {back ? <BackLink back={back} /> : null}
           {/*
             The page title, the top of the four-step scale (ADR 0007): 20px
             semibold, the one size nothing else on the page uses.
           */}
           <h1
             className={`text-xl font-semibold text-ink ${
-              titled ? 'sr-only sm:not-sr-only' : 'mt-2'
+              titled ? 'sr-only sm:not-sr-only' : back ? 'mt-1' : 'mt-2'
             }`}
           >
             {title}
@@ -186,7 +194,7 @@ export function ShellFrame({ title, current, lead, account, tabs, navHint, child
           <ul className="flex flex-wrap gap-x-4 gap-y-1 sm:gap-4">
             <li>
               <Link
-                href="/legal/privasi"
+                href={`/legal/privasi?dari=${encodeURIComponent(current)}`}
                 className="inline-flex min-h-11 items-center hover:text-ink sm:min-h-0"
               >
                 Kebijakan Privasi
@@ -194,7 +202,7 @@ export function ShellFrame({ title, current, lead, account, tabs, navHint, child
             </li>
             <li>
               <Link
-                href="/legal/ketentuan"
+                href={`/legal/ketentuan?dari=${encodeURIComponent(current)}`}
                 className="inline-flex min-h-11 items-center hover:text-ink sm:min-h-0"
               >
                 Ketentuan Penggunaan

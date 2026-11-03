@@ -6,6 +6,7 @@ import { NavProgress } from '@/components/nav-progress'
 import { SIDEBAR_LABEL, SIDEBAR_ROW, SIDEBAR_ROW_OFF, ShellFrame } from '@/components/shell-frame'
 import { countUnconfirmed } from '@/lib/queries/household'
 import type { NavHref } from '@/components/nav'
+import type { Back } from '@/lib/back'
 
 /**
  * The frame every signed-in page sits in.
@@ -43,10 +44,12 @@ interface Props {
   email: string
   current: NavHref
   lead?: string
+  /** A page one level in: where its back link goes. */
+  back?: Back
   children: React.ReactNode
 }
 
-export function AppShell({ title, email, current, lead, children }: Props) {
+export function AppShell({ title, email, current, lead, back, children }: Props) {
   /*
     Started, not awaited. Most pages render this shell before their data, so
     that the frame paints while the figures are still being fetched, and a
@@ -66,6 +69,7 @@ export function AppShell({ title, email, current, lead, children }: Props) {
         title={title}
         current={current}
         lead={lead}
+        back={back}
         account={
           <form action={signOut} className="space-y-0.5">
             <p className="truncate px-2.5 text-xs text-ink-muted sr-only lg:not-sr-only lg:collapsed:sr-only">

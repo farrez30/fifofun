@@ -3,6 +3,7 @@ import { CaretRight } from '@phosphor-icons/react/dist/ssr/CaretRight'
 import { SignedMoney } from '@/components/money'
 import { AccountMark, CategoryMark } from '@/components/marks'
 import { SwipeActionRow, TrayDelete } from '@/components/swipe-action-row'
+import { transactionHref } from '@/lib/back'
 import { formatJakarta } from '@/lib/datetime'
 import { signedDirection } from '@/lib/ledger/direction'
 import { editableFields } from '@/lib/ledger/edit'
@@ -52,6 +53,8 @@ interface Props {
   categories: TableCategory[]
   caption: string
   emptyText: string
+  /** The page the table is on, so a row's back link returns to it with its filters. */
+  from?: string
 }
 
 /** The name to print for a row, by the rule described at the top of the file. */
@@ -69,7 +72,7 @@ function categoryOf(row: TransactionRow, categories: Map<string, TableCategory>)
   }
 }
 
-export function TransactionTable({ rows, accounts, categories, caption, emptyText }: Props) {
+export function TransactionTable({ rows, accounts, categories, caption, emptyText, from }: Props) {
   const accountById = new Map(accounts.map((account) => [account.id, account]))
   const categoryById = new Map(categories.map((category) => [category.id, category]))
 
@@ -108,7 +111,7 @@ export function TransactionTable({ rows, accounts, categories, caption, emptyTex
                 actions={
                   <>
                     <Link
-                      href={`/transaksi/${row.id}`}
+                      href={transactionHref(row.id, from)}
                       className="flex h-full min-w-20 items-center justify-center border-l border-line bg-sunken px-4 text-sm font-medium text-ink"
                     >
                       Ubah
@@ -121,7 +124,7 @@ export function TransactionTable({ rows, accounts, categories, caption, emptyTex
                 {/* The whole card is the link. The description alone was a 20px
                     target, and it was the only way into a transaction. */}
                 <Link
-                  href={`/transaksi/${row.id}`}
+                  href={transactionHref(row.id, from)}
                   className="flex min-h-14 items-center gap-2 px-3 py-2.5 transition-colors duration-150 hover:bg-fill-quaternary"
                 >
                   <div className="min-w-0 flex-1">
@@ -207,7 +210,7 @@ export function TransactionTable({ rows, accounts, categories, caption, emptyTex
                   </td>
                   <td className="px-4 py-2.5 text-ink">
                     <Link
-                      href={`/transaksi/${row.id}`}
+                      href={transactionHref(row.id, from)}
                       className="underline-offset-2 hover:underline"
                     >
                       {row.description}

@@ -170,3 +170,45 @@ test.describe('a page that does not exist', () => {
     expect(violations.map((v) => v.id)).toEqual([])
   })
 })
+
+test.describe('the way back from the legal pages', () => {
+  test('returns to the page they were opened from, by its name', async ({ page }) => {
+    await page.goto('/legal/privasi?dari=%2Flogin')
+    const back = page.getByRole('link', { name: 'Kembali ke Masuk' })
+    await expect(back).toBeVisible()
+    await expect(back).toHaveAttribute('href', '/login')
+  })
+
+  test('is offered from the login page itself', async ({ page }) => {
+    await page.goto('/login')
+    await page.getByRole('link', { name: 'Kebijakan Privasi' }).click()
+    await expect(page.getByRole('link', { name: 'Kembali ke Masuk' })).toBeVisible()
+  })
+
+  test('falls back to the app, never to another site', async ({ page }) => {
+    for (const dari of ['', '?dari=%2F%2Fevil.example', '?dari=https%3A%2F%2Fevil.example']) {
+      await page.goto(`/legal/ketentuan${dari}`)
+      await expect(page.getByRole('link', { name: 'Kembali ke FiFoFun' })).toHaveAttribute('href', '/')
+    }
+  })
+})
+
+test.describe('the pages a stranger sees', () => {
+  // Every response is dynamic (the CSP nonce), so a route's loading fallback is
+  // streamed ahead of the page even on a hard load. The root one is the
+  // signed-in app's frame, and it used to flash here with live links.
+  // /gabung is left out: a stranger is redirected before anything renders.
+  //
+  // Without JavaScript the streamed fallback is never swapped out, so what
+  // stays on screen is exactly what a slow connection shows first. The DOM is
+  // asked rather than the HTML searched: the flight data in <script> carries
+  // every loading tree for client navigations and is never drawn.
+  test.use({ javaScriptEnabled: false })
+
+  for (const path of ['/login', '/legal/privasi', '/legal/ketentuan', '/offline']) {
+    test(`${path} never streams the signed-in navigation`, async ({ page }) => {
+      await page.goto(path)
+      await expect(page.locator('nav[aria-label="Halaman utama"]')).toHaveCount(0)
+    })
+  }
+})

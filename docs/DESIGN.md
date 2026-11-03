@@ -197,6 +197,21 @@ dan melipat navigasi tidak boleh menunggu semua transaksi diambil ulang.
 Opaque, bukan kaca: tidak ada yang bergulir di baliknya (§3). Ikon dan rute
 satu sumber di `nav.ts`; `tabs.ts` menurunkan bar HP darinya, bukan menyalin.
 
+**Halaman satu tingkat ke dalam punya tautan kembali di atas judul.** Detail
+transaksi dan halaman legal tidak menyalakan tab atau baris sidebar mana pun,
+jadi tanpa tautan itu halamannya buntu (temuan review produksi 3 Nov 2026).
+Satu pola, `BackLink` (`back-link.tsx`): chevron plus nama halaman asal
+("Laporan"), pembaca layar mendengar "Kembali ke Laporan", target 44px. Asalnya
+dibawa di alamat (`?dari=`, `transactionHref`), bukan `router.back()`: riwayat
+kosong saat tautan dibuka di tab baru, dan `history.back()` lalu tidak berbuat
+apa-apa. Filter, halaman, dan jangkar daftar asal ikut kembali. Tanpa `dari`,
+halaman kembali ke induk logisnya (`/laporan` untuk transaksi, `/` untuk
+legal). `backFrom` hanya menerima path aplikasi sendiri dari daftar `nav.ts`,
+jadi parameter ini bukan open redirect. Breadcrumb ditolak: hierarkinya hanya
+satu tingkat, dan GOV.UK Design System melarang memakai keduanya bersamaan.
+`src/app/back-link.test.ts` menggagalkan halaman baru di dalam shell yang
+bukan tujuan navigasi dan tidak memberi `back`.
+
 **Segmented control satu resep**, bukan tiga hand-rolled yang masing-masing
 mengisi segmen aktif dengan warna aksen solid. Itu tab, bukan segmented
 control Apple, yang seleksinya pil netral di atas track abu-abu — pola yang

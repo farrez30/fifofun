@@ -7,6 +7,7 @@ import { NotePencil } from '@phosphor-icons/react/dist/ssr/NotePencil'
 import { SubmitButton } from '@/components/submit-button'
 import { DirectionMark } from '@/components/marks'
 import { SwipeActionRow, TrayDelete } from '@/components/swipe-action-row'
+import { transactionHref } from '@/lib/back'
 import type { Direction } from '@/lib/ledger/direction'
 import { deleteEntry } from './actions'
 import type { ActionResult } from '@/lib/actions'
@@ -70,7 +71,7 @@ export function RecentEntries({ rows, total }: { rows: RecentEntry[]; total: num
               actions={
                 <>
                   <Link
-                    href={`/transaksi/${row.id}`}
+                    href={transactionHref(row.id, '/catat')}
                     className="flex h-full min-w-20 items-center justify-center border-l border-line bg-sunken px-4 text-sm font-medium text-ink"
                   >
                     Ubah
@@ -81,7 +82,7 @@ export function RecentEntries({ rows, total }: { rows: RecentEntry[]; total: num
               }
             >
               <Link
-                href={`/transaksi/${row.id}`}
+                href={transactionHref(row.id, '/catat')}
                 className="flex min-h-14 items-center gap-2 px-3 py-2.5 transition-colors duration-150 hover:bg-fill-quaternary"
               >
                 <div className="min-w-0 flex-1">
@@ -154,7 +155,7 @@ export function RecentEntries({ rows, total }: { rows: RecentEntry[]; total: num
               <tr key={row.id} className="border-b border-line last:border-0">
                 <td className="tnum whitespace-nowrap px-4 py-2 text-ink-muted">{row.when}</td>
                 <th scope="row" className="px-4 py-2 text-left font-normal text-ink">
-                  <a href={`/transaksi/${row.id}`} className="underline underline-offset-2 hover:text-accent">
+                  <a href={transactionHref(row.id, '/catat')} className="underline underline-offset-2 hover:text-accent">
                     {row.description}
                   </a>
                   {row.duplicateSuspected ? (
