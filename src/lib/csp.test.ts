@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { contentSecurityPolicy, MAP_TILES } from './csp'
+import { contentSecurityPolicy, MAP_TILES, PORTFOLIO, PORTFOLIO_DEV } from './csp'
 
 function directives(policy: string): Map<string, string[]> {
   return new Map(
@@ -34,5 +34,18 @@ describe('contentSecurityPolicy', () => {
     expect(policy.get('script-src')).toEqual(["'self'", "'nonce-n0nce'"])
     expect(policy.get('style-src-elem')).toEqual(["'self'", "'nonce-n0nce'"])
     expect(policy.has('upgrade-insecure-requests')).toBe(true)
+  })
+  it('lets only this origin and the portfolio frame the app in production', () => {
+    vi.stubEnv('NODE_ENV', 'production')
+    const ancestors = directives(contentSecurityPolicy('n0nce')).get('frame-ancestors')
+    expect(ancestors).toEqual(["'self'", PORTFOLIO])
+    expect(ancestors?.some((source) => source.includes('localhost'))).toBe(false)
+    expect(ancestors?.some((source) => source.includes('*'))).toBe(false)
+  })
+
+  it('also lets the local portfolio preview frame it in development', () => {
+    vi.stubEnv('NODE_ENV', 'development')
+    const ancestors = directives(contentSecurityPolicy('n0nce')).get('frame-ancestors')
+    expect(ancestors).toEqual(["'self'", PORTFOLIO, PORTFOLIO_DEV])
   })
 })

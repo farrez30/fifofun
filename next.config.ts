@@ -5,9 +5,9 @@ import type { NextConfig } from 'next'
  * policy needs a per-request nonce and lives in `proxy.ts` instead.
  */
 const securityHeaders = [
-  // The CSP already sets frame-ancestors, which supersedes this. It stays for
-  // the browsers that never implemented that directive.
-  { key: 'X-Frame-Options', value: 'DENY' },
+  // No X-Frame-Options: it can only say DENY or SAMEORIGIN, and the portfolio
+  // must be able to frame the app. frame-ancestors in the CSP (proxy.ts) is
+  // the rule, and every browser in use today honours it.
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   // Send the origin to other sites, the full path only to ourselves. A URL in
   // this app can carry a household id, which no third party needs.
