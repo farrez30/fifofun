@@ -4,6 +4,7 @@ import { useActionState } from 'react'
 import { useFormStatus } from 'react-dom'
 import { type AuthState, authenticate } from './actions'
 import { BUTTON_PRIMARY, BUTTON_QUIET, CONTROL } from '@/components/field-base'
+import { PasswordInput } from '@/components/password-input'
 import { useActionToast } from '@/components/use-action-toast'
 
 const EMPTY: AuthState = {}
@@ -66,10 +67,9 @@ export function LoginForm() {
         <label htmlFor="password" className="block text-sm font-medium text-ink">
           Kata sandi
         </label>
-        <input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           autoComplete="current-password"
           required
           minLength={8}

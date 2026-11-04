@@ -155,6 +155,14 @@ yang menahan form berisi delapan field terbaca sebagai delapan kotak.
 Ukurannya `text-base` (16px) di HP, tepat di lantai yang mencegah zoom iOS
 Safari, dan `text-sm` dari breakpoint kecil ke atas.
 
+**Kolom sandi selalu `PasswordInput`** (`components/password-input.tsx`).
+Tombol mata 44px (`Eye`/`EyeSlash` Phosphor, `ink-muted`) duduk di padding
+kanan field dan membalik isinya antara tersembunyi dan terlihat, karena sandi
+di sini ditempel dari password manager dan harus bisa dicek. Ketukan di mata
+tidak mengambil fokus dari field, jadi keyboard HP tetap terbuka.
+`password-input.test.ts` gagal bila ada `type="password"` mentah di luar
+komponen itu.
+
 **Kartu datar ber-border** (ADR 0007). `squircle rounded-md border
 border-line bg-surface`, tanpa bayangan: bayangan hampir hilang di tema gelap,
 border terbaca sama di dua tema. Tidak ada kotak di dalam kartu: tidak ada

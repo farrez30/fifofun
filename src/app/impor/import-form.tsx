@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef, useState } from 'react'
 import { useFormStatus } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { BUTTON_PRIMARY, CONTROL } from '@/components/field-base'
+import { PasswordInput } from '@/components/password-input'
 import { formatIdr } from '@/lib/money'
 import type { ImportReport } from './import-statement'
 import { uploadStatement } from './upload'
@@ -168,10 +169,9 @@ export function ImportForm({ initialReport = null }: { initialReport?: ImportRep
             <label htmlFor="statement-password" className="block text-sm font-medium text-ink">
               Kata sandi berkas
             </label>
-            <input
+            <PasswordInput
               id="statement-password"
               name="password"
-              type="password"
               // Not the app's own password, so the browser should not offer it.
               autoComplete="off"
               required

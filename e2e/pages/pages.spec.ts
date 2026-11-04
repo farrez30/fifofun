@@ -212,3 +212,33 @@ test.describe('the pages a stranger sees', () => {
     })
   }
 })
+
+test.describe('the eye on the password field', () => {
+  test('shows what was typed or pasted, and hides it again', async ({ page }) => {
+    await page.goto('/login')
+    const field = page.getByLabel('Kata sandi')
+    await field.fill('dari-bitwarden')
+    await expect(field).toHaveAttribute('type', 'password')
+    await expect(field).toHaveAttribute('autocomplete', 'current-password')
+
+    await page.getByRole('button', { name: 'Tampilkan sandi' }).click()
+    await expect(field).toHaveAttribute('type', 'text')
+    await expect(field).toHaveValue('dari-bitwarden')
+    // A tap on the eye leaves the caret, and a phone's keyboard, in the field.
+    await expect(field).toBeFocused()
+    const hide = page.getByRole('button', { name: 'Sembunyikan sandi' })
+    await expect(hide).toHaveAttribute('aria-pressed', 'true')
+
+    // From the keyboard too: Tab lands on the eye, Space flips it back.
+    await page.keyboard.press('Tab')
+    await expect(hide).toBeFocused()
+    await page.keyboard.press('Space')
+    await expect(field).toHaveAttribute('type', 'password')
+    const show = page.getByRole('button', { name: 'Tampilkan sandi' })
+    await expect(show).toHaveAttribute('aria-pressed', 'false')
+
+    const box = await show.boundingBox()
+    expect(box!.width).toBeGreaterThanOrEqual(44)
+    expect(box!.height).toBeGreaterThanOrEqual(44)
+  })
+})
