@@ -96,9 +96,9 @@ test.describe('the security policy the proxy attaches', () => {
     expect(scriptSrc).toMatch(/'nonce-[^']+'/)
   })
 
-  test('refuses to be framed, and refuses plugins', async ({ page }) => {
+  test('lets only the portfolio frame it, and refuses plugins', async ({ page }) => {
     const csp = await policy(page)
-    expect(csp).toContain("frame-ancestors 'none'")
+    expect(csp).toContain("frame-ancestors 'self' https://farrez.vercel.app;")
     expect(csp).toContain("object-src 'none'")
   })
 

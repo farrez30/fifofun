@@ -6,6 +6,14 @@
 /** Where the spending map's vector tiles come from. */
 export const MAP_TILES = 'https://tiles.openfreemap.org'
 
+/**
+ * The portfolio site shows this app live inside a frame. It is the only other
+ * origin allowed to embed it; the local preview port is allowed in development
+ * only, never in a production policy.
+ */
+export const PORTFOLIO = 'https://farrez.vercel.app'
+export const PORTFOLIO_DEV = 'http://localhost:3011'
+
 export function contentSecurityPolicy(nonce: string): string {
   const isDev = process.env.NODE_ENV === 'development'
 
@@ -77,7 +85,12 @@ export function contentSecurityPolicy(nonce: string): string {
     `object-src 'none'`,
     `base-uri 'self'`,
     `form-action 'self'`,
-    `frame-ancestors 'none'`,
+    /*
+      Framing is refused to everyone but the portfolio. Inside that frame the
+      app is a third-party context, so the session cookie (SameSite=Lax) is not
+      sent and the visitor sees the login page; that is fine for a showcase.
+    */
+    `frame-ancestors 'self' ${PORTFOLIO}${isDev ? ` ${PORTFOLIO_DEV}` : ''}`,
     ...(isDev ? [] : ['upgrade-insecure-requests']),
   ].join('; ')
 }
