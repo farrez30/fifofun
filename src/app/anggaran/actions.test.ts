@@ -29,7 +29,7 @@ vi.mock('next/cache', () => ({
   cacheLife: vi.fn(),
 }))
 
-const { saveBudgets, copyBudgets } = await import('./actions')
+const { saveBudgets, copyBudgets, saveWeeklyBudget } = await import('./actions')
 
 const BELANJA = '00000000-0000-4000-8000-0000000000c1'
 const WIFI = '00000000-0000-4000-8000-0000000000c2'
@@ -217,5 +217,102 @@ describe('copyBudgets', () => {
     const result = await copyBudgets(null, form({ period: '2026-08', from: '2026-07' }))
     expect(result.ok).toBe(false)
     expect(result.message).toContain('Tidak ada anggaran di Jul 2026')
+  })
+})
+
+describe('saveWeeklyBudget', () => {
+  const MONDAY = '2026-11-16'
+
+  it('writes a standing figure from that Monday, scoped to the household', async () => {
+    stub.queue({ id: BELANJA })
+    stub.queue([{ id: 'w1' }])
+
+    const result = await saveWeeklyBudget(
+      null,
+      form({ categoryId: BELANJA, weekStart: MONDAY, scope: 'seterusnya', amount: '35000000' }),
+    )
+
+    expect(result.ok).toBe(true)
+    expect(result.message).toBe('Anggaran mingguan disimpan, berlaku mulai 16 sampai 22 Nov 2026.')
+    expect(stub.calls[0].sql).toContain("cashflow IN ('spending', 'bills')")
+    expect(stub.calls[0].params).toEqual(['h1', BELANJA])
+    const write = stub.calls[1]
+    expect(write.sql).toContain('INSERT INTO public.weekly_budgets')
+    expect(write.sql).toContain('ON CONFLICT (household_id, category_id, week_start, ongoing)')
+    expect(write.params).toEqual(['h1', BELANJA, MONDAY, '35000000', true])
+  })
+
+  it('writes an exception for one week as not ongoing', async () => {
+    stub.queue({ id: BELANJA })
+    stub.queue([{ id: 'w1' }])
+
+    const result = await saveWeeklyBudget(
+      null,
+      form({ categoryId: BELANJA, weekStart: MONDAY, scope: 'minggu-ini', amount: '0' }),
+    )
+
+    // '0' reads as empty, so a zero exception is a removal, not a write.
+    expect(stub.calls[1].sql).toContain('DELETE FROM public.weekly_budgets')
+    expect(stub.calls[1].params).toEqual(['h1', BELANJA, MONDAY, false])
+    expect(result.message).toBe('Anggaran mingguan 16 sampai 22 Nov 2026 dihapus.')
+  })
+
+  it('removes the row when Hapus is pressed, whatever the field says', async () => {
+    stub.queue({ id: BELANJA })
+    stub.queue([{ id: 'w1' }])
+
+    await saveWeeklyBudget(
+      null,
+      form({ categoryId: BELANJA, weekStart: MONDAY, scope: 'seterusnya', amount: '35000000', hapus: '1' }),
+    )
+    expect(stub.calls[1].sql).toContain('DELETE FROM public.weekly_budgets')
+    expect(stub.calls[1].params).toEqual(['h1', BELANJA, MONDAY, true])
+  })
+
+  it('says nothing changed when there was nothing to remove', async () => {
+    stub.queue({ id: BELANJA })
+    stub.queue([])
+
+    const result = await saveWeeklyBudget(
+      null,
+      form({ categoryId: BELANJA, weekStart: MONDAY, scope: 'seterusnya', amount: '' }),
+    )
+    expect(result).toEqual({ ok: true, message: 'Tidak ada yang berubah.' })
+  })
+
+  it('refuses a category this household cannot budget', async () => {
+    stub.queue(null)
+
+    const result = await saveWeeklyBudget(
+      null,
+      form({ categoryId: GAJI, weekStart: MONDAY, scope: 'seterusnya', amount: '100' }),
+    )
+    expect(result.ok).toBe(false)
+    expect(stub.calls).toHaveLength(1)
+  })
+
+  it.each([
+    ['a Tuesday', { weekStart: '2026-11-17' }],
+    ['a date that does not exist', { weekStart: '2026-02-30' }],
+    ['no scope', { scope: 'selamanya' }],
+    ['a category that is not an id', { categoryId: 'Dating' }],
+    ['an amount that is not one', { amount: '35.000' }],
+  ])('refuses %s before touching the database', async (_name, override) => {
+    const result = await saveWeeklyBudget(
+      null,
+      form({ categoryId: BELANJA, weekStart: MONDAY, scope: 'seterusnya', amount: '100', ...override }),
+    )
+    expect(result.ok).toBe(false)
+    expect(stub.calls).toHaveLength(0)
+  })
+
+  it('says so when the session is gone', async () => {
+    signedIn.value = false
+    const result = await saveWeeklyBudget(
+      null,
+      form({ categoryId: BELANJA, weekStart: MONDAY, scope: 'seterusnya', amount: '100' }),
+    )
+    expect(result.ok).toBe(false)
+    expect(stub.calls).toHaveLength(0)
   })
 })

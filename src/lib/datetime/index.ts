@@ -128,7 +128,7 @@ export function parseDayMonthYear(
   return assertRealDate({ year, month, day }, raw)
 }
 
-const ID_MONTH_LABELS = [
+export const ID_MONTH_LABELS = [
   'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
   'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des',
 ]

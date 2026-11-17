@@ -356,6 +356,44 @@ export const budgets = pgTable(
 )
 
 /**
+ * What a week is allowed to cost, for the categories lived by the week.
+ *
+ * A row is either a standing figure (`ongoing`: from this Monday until a
+ * later standing row replaces it) or a one-week exception that leaves the
+ * standing figure in place for the weeks after. Weeks before the first
+ * standing row are unbudgeted, and so are weeks after a standing row of zero.
+ * Kept apart from `budgets` because a month and a week are different
+ * questions, and a household may ask both of the same category.
+ */
+export const weeklyBudgets = pgTable(
+  'weekly_budgets',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    householdId: uuid('household_id')
+      .notNull()
+      .references(() => households.id, { onDelete: 'cascade' }),
+    categoryId: uuid('category_id')
+      .notNull()
+      .references(() => categories.id, { onDelete: 'cascade' }),
+    /** The Monday the figure applies from, in Jakarta. */
+    weekStart: date('week_start').notNull(),
+    amount: bigint('amount', { mode: 'bigint' }).notNull(),
+    ongoing: boolean('ongoing').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  // A standing figure and an exception may share a Monday; two of either may not.
+  (table) => [
+    uniqueIndex('weekly_budgets_unique').on(
+      table.householdId,
+      table.categoryId,
+      table.weekStart,
+      table.ongoing,
+    ),
+  ],
+)
+
+/**
  * The planner's inputs, kept so a simulation survives a reload.
  *
  * One row per household: this is the household's own answer to "what are we

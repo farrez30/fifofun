@@ -14,6 +14,7 @@ import {
 } from '@/lib/actions'
 import { diffBudgets } from '@/lib/ledger/budget-plan'
 import { formatMonthKey } from '@/lib/datetime'
+import { formatWeek, isMonday } from '@/lib/ledger/carry'
 import { excludedSet, sql } from '@/db/query'
 
 /**
@@ -238,5 +239,84 @@ export async function copyBudgets(
     message: `${rows.length} anggaran disalin dari ${formatMonthKey(from.data)}.`,
     detail: 'Kategori yang sudah punya anggaran tidak ditimpa.',
     applied: rows.length,
+  }
+}
+
+/**
+ * A weekly budget for one category, from one Monday.
+ *
+ * `seterusnya` sets the standing figure from that week until another standing
+ * figure replaces it; `minggu-ini` is an exception for that week alone, after
+ * which the standing figure holds again. Hapus (or an emptied field) removes
+ * the row of that kind on that Monday, which is how an exception is taken back.
+ */
+export async function saveWeeklyBudget(
+  _previous: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const categoryId = z.uuid().safeParse(String(formData.get('categoryId') ?? ''))
+  if (!categoryId.success) return fail('Kategorinya belum dipilih.')
+  const weekStart = String(formData.get('weekStart') ?? '')
+  if (!isMonday(weekStart)) return fail('Mingguannya belum bisa dibaca.')
+  const scope = formData.get('scope')
+  if (scope !== 'seterusnya' && scope !== 'minggu-ini') return fail('Pilih berlaku untuk minggu yang mana.')
+  const ongoing = scope === 'seterusnya'
+  // Hapus submits the same form; it removes whatever the field says.
+  const removing = formData.get('hapus') === '1'
+  const amount = optionalSen.safeParse(removing ? '' : String(formData.get('amount') ?? ''))
+  if (!amount.success) return fail('Angkanya belum bisa dibaca.', amount.error.issues[0]?.message)
+
+  const ctx = await context()
+  if (!ctx) return fail(SESSION_EXPIRED)
+  const { db, householdId } = ctx
+
+  // Re-read for this household, as saveBudgets does: RLS alone would let a
+  // household budget its own Gaji.
+  const allowed = await db
+    .maybeOne<{ id: string }>(sql`
+      SELECT id FROM public.categories
+      WHERE household_id = ${householdId}
+        AND id = ${categoryId.data}
+        AND cashflow IN ('spending', 'bills')
+        AND archived_at IS NULL`)
+    .catch(() => null)
+  if (!allowed) return fail('Kategori ini tidak bisa diberi anggaran.')
+
+  const week = formatWeek(weekStart)
+
+  if (amount.data === null) {
+    try {
+      const removed = await db.rows(sql`
+        DELETE FROM public.weekly_budgets
+        WHERE household_id = ${householdId}
+          AND category_id = ${categoryId.data}
+          AND week_start = ${weekStart}
+          AND ongoing = ${ongoing}
+        RETURNING id`)
+      if (removed.length === 0) return { ok: true, message: 'Tidak ada yang berubah.' }
+    } catch (error) {
+      return writeFailed('anggaran', 'Anggaran mingguannya gagal dihapus.', error)
+    }
+    updateTag(budgetsTag(householdId))
+    return { ok: true, message: `Anggaran mingguan ${week} dihapus.`, applied: 1 }
+  }
+
+  try {
+    await db.rows(sql`
+      INSERT INTO public.weekly_budgets (household_id, category_id, week_start, amount, ongoing)
+      VALUES (${householdId}, ${categoryId.data}, ${weekStart}, ${amount.data.toString()}, ${ongoing})
+      ON CONFLICT (household_id, category_id, week_start, ongoing) DO UPDATE SET ${excludedSet(['amount'])}
+      RETURNING id`)
+  } catch (error) {
+    return writeFailed('anggaran', 'Anggaran mingguannya gagal disimpan.', error)
+  }
+
+  updateTag(budgetsTag(householdId))
+  return {
+    ok: true,
+    message: ongoing
+      ? `Anggaran mingguan disimpan, berlaku mulai ${week}.`
+      : `Anggaran khusus ${week} disimpan.`,
+    applied: 1,
   }
 }

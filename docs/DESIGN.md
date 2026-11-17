@@ -511,6 +511,19 @@ Satu bar komposisi bertumpuk (ceiling anggaran di `budget-summary.tsx`)
 sengaja dilewati: membulatkan tiap segmen dalam tumpukan membuat notch di
 antara segmen yang berdekatan, bukan satu bar yang rapi.
 
+**Sisa anggaran per kategori** (`src/app/anggaran/carry-chart.tsx`, ADR
+0009) memakai kolom dan pola sematan yang sama dengan strip setahun, dengan
+empat mark per kolom: batang terpakai (aksen, atau `over` bila lewat), garis
+tegas ink untuk anggaran efektif, garis putus-putus `ink-muted` untuk anggaran
+dasar, dan pita di antara keduanya, `under` 35% untuk sisa yang dibawa dan
+`over` 30% untuk minus yang memotong. Garis dasar dan pita hanya digambar bila
+bawaannya bukan nol, supaya kolom biasa tetap satu garis. Satu plafon dihitung
+dari ketiga cara sekaligus, jadi batang tidak berubah skala saat cara
+menutup periode diganti. Lewat tetap disandikan tiga kali: warna, batang yang
+melewati garis tegas, dan kata di readout serta tabel. Tabel pembanding memakai
+label cara yang pendek (Bawa, Tabung, Biarkan) agar muat 375px tanpa digeser;
+nama panjangnya untuk pembaca layar dan tombol info.
+
 **Roda 82 hue kategori dipertahankan.** Apple hanya punya sekitar sembilan hue
 yang layak grafik, dan arsitektur di `palette.ts` adalah bahwa hue itu
 *identitas, bukan makna*: ribbon Belanja, chip Belanja dan baris Belanja harus

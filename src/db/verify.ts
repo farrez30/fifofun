@@ -68,6 +68,10 @@ async function main(): Promise<void> {
       const [bcaB] = await tx<{ id: string }[]>`SELECT id FROM public.accounts WHERE household_id = ${hb.id}`
       await tx`INSERT INTO public.transactions (household_id, occurred_at, description, amount, cashflow, source, to_account_id)
                VALUES (${hb.id}, now(), 'gaji B', 1000000000, 'income', 'manual', ${bcaB?.id ?? null})`
+      const [datingB] = await tx<{ id: string }[]>`INSERT INTO public.categories (household_id, name, cashflow)
+               VALUES (${hb.id}, 'Dating B', 'spending') RETURNING id`
+      await tx`INSERT INTO public.weekly_budgets (household_id, category_id, week_start, amount)
+               VALUES (${hb.id}, ${datingB?.id ?? null}, '2026-11-16', 35000000)`
       const code = 'VERIFYCODE'
       const hash = createHash('sha256').update(code).digest('hex')
       await tx`INSERT INTO public.household_invites (household_id, code_hash, expires_at, created_by)
@@ -85,6 +89,16 @@ async function main(): Promise<void> {
         t`INSERT INTO public.accounts (household_id, name, kind) VALUES (${hb.id}, 'curi', 'bank')`)
       const upd = await tx`UPDATE public.transactions SET amount = 1 WHERE household_id = ${hb.id} RETURNING id`
       report(upd.length === 0, "cannot change household B's transactions", `${upd.length} row(s)`)
+      const weekly = await tx`SELECT id FROM public.weekly_budgets`
+      report(weekly.length === 0, "does not see household B's weekly budgets", `${weekly.length} row(s)`)
+      await refused(tx, 'writes a weekly budget into household B', '42501', (t) =>
+        t`INSERT INTO public.weekly_budgets (household_id, category_id, week_start, amount)
+          VALUES (${hb.id}, ${datingB?.id ?? null}, '2026-11-23', 1)`)
+      await owner(tx)
+      await refused(tx, 'stores a weekly budget on a Tuesday', '23514', (t) =>
+        t`INSERT INTO public.weekly_budgets (household_id, category_id, week_start, amount)
+          VALUES (${hb.id}, ${datingB?.id ?? null}, '2026-11-17', 1)`)
+      await as(tx, a.id)
       await refused(tx, 'deletes a household (no policy, no grant)', '42501', (t) => t`DELETE FROM public.households WHERE id = ${ha.id}`)
       await refused(tx, 'reads password hashes in auth.accounts', '42501', (t) => t`SELECT password FROM auth.accounts`)
       await refused(tx, 'reads auth.sessions', '42501', (t) => t`SELECT token FROM auth.sessions`)

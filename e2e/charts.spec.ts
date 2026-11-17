@@ -245,6 +245,72 @@ test.describe('setahun ke belakang', () => {
   })
 })
 
+test.describe('sisa anggaran per kategori', () => {
+  /*
+    Expected figures worked by hand from the fixture (Rp1,2 jt a month):
+    Feb 0,9 leaves 0,3; Mar 1,7 against 1,5 is over by 0,2; Apr 1,3 against
+    1,0 is over; May has no budget and breaks the chain; Jun 1,0 leaves 0,2;
+    Jul (running) 1,3 against 1,4 lives on the leftover.
+  */
+  test('draws each month in its own state under bawa', async ({ page }) => {
+    await open(page, 'budget-carry')
+    const states = await page
+      .locator('[data-carry-status]')
+      .evaluateAll((nodes) => nodes.map((n) => n.getAttribute('data-carry-status')))
+    expect(states).toEqual(['aman', 'lewat', 'lewat', 'tanpa-anggaran', 'aman', 'pakai-bawaan'])
+
+    // A leftover adds a green band (Mar, Jul), a minus takes a red one off
+    // (Apr). Jun starts fresh after May, so it has neither.
+    await expect(page.locator('[data-carry-band="tambah"]')).toHaveCount(2)
+    await expect(page.locator('[data-carry-band="potong"]')).toHaveCount(1)
+    // The base line is only drawn where it differs from the effective one.
+    await expect(page.locator('[data-carry-base]')).toHaveCount(3)
+    await expect(page.locator('[data-carry-effective]')).toHaveCount(5)
+
+    // An over bar reaches past its effective line.
+    const march = page.locator('[data-carry-period="2026-03"]')
+    const bar = await march.locator('[data-carry-used]').boundingBox()
+    const line = await march.locator('[data-carry-effective]').boundingBox()
+    expect(bar!.y).toBeLessThan(line!.y)
+  })
+
+  test('reads the running month out and compares the three policies', async ({ page }) => {
+    await open(page, 'budget-carry')
+    await expect(page.locator('[role="radio"][aria-checked="true"][data-carry-period]')).toHaveCount(1)
+    const readout = await page.locator('figure dl').first().innerText()
+    expect(readout).toContain('Jul 2026')
+    expect(readout).toContain('Rp1.400.000')
+    expect(readout).toContain('sisa lalu')
+    expect(readout).toContain('memakai sisa yang dibawa')
+
+    const rows = await page.locator('[data-carry-compare]').allInnerTexts()
+    expect(rows[0]).toMatch(/Bawa[\s\S]*2 dari 5[\s\S]*Rp1\.400\.000/)
+    expect(rows[1]).toMatch(/Tabung[\s\S]*3 dari 5[\s\S]*Rp1\.200\.000[\s\S]*Rp200\.000/)
+    expect(rows[2]).toMatch(/Biarkan[\s\S]*3 dari 5[\s\S]*Rp1\.200\.000/)
+    await expect(page.locator('[data-carry-compare="bawa"]')).toHaveAttribute('aria-current', 'true')
+  })
+
+  test('weekly with tabung: an exception week, savings that paid an overrun', async ({ page }) => {
+    await open(page, 'budget-carry-weekly')
+    const states = await page
+      .locator('[data-carry-status]')
+      .evaluateAll((nodes) => nodes.map((n) => n.getAttribute('data-carry-status')))
+    expect(states).toEqual(['tanpa-anggaran', 'tanpa-anggaran', 'aman', 'lewat', 'aman', 'aman'])
+    // 100 saved, 70 of it paid the overrun, then 100 more.
+    const tabung = await page.locator('[data-carry-compare="tabung"]').innerText()
+    expect(tabung).toMatch(/1 dari 4[\s\S]*Rp130\.000/)
+    // The weekly form opens on the running week.
+    await expect(page.locator('select[name="weekStart"]')).toHaveValue('2026-07-13')
+    await expect(page.getByText('Anggaran mingguan Kencan')).toBeVisible()
+  })
+
+  test('says what to do when a category has no weekly budget yet', async ({ page }) => {
+    await open(page, 'budget-carry-empty')
+    await expect(page.locator('[data-carry-period]')).toHaveCount(0)
+    await expect(page.getByText('Jajan belum punya anggaran mingguan.', { exact: false })).toBeVisible()
+  })
+})
+
 test.describe('perbandingan dengan bulan sebelumnya', () => {
   test('says which way each headline moved, and by how much', async ({ page }) => {
     await open(page, 'stats')
@@ -1627,6 +1693,8 @@ test.describe('lebar halaman', () => {
       'budget-table-overcommitted',
       'budget-table-periodic',
       'budget-year',
+      'budget-carry',
+      'budget-carry-weekly',
       'balance-restated',
     ]) {
       await open(page, fixture)
