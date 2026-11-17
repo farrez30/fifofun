@@ -53,6 +53,8 @@ import { summarisePeriod } from '@/lib/ledger/period'
 import { buildBudgetPlan, type BudgetCategory } from '@/lib/ledger/budget-plan'
 import { buildBudgetYear } from '@/lib/ledger/budget-year'
 import { YearStrip } from '@/app/anggaran/year-strip'
+import { CarryChart } from '@/app/anggaran/carry-chart'
+import { buildCarrySeries } from '@/lib/ledger/carry'
 import type { MonthCategoryTotals } from '@/lib/ledger/categories'
 import { EditEntryForm, type EntryView } from '@/app/transaksi/[id]/edit-form'
 import { SplitForm } from '@/app/transaksi/[id]/split-form'
@@ -658,6 +660,51 @@ const BUDGET_PLAN_PERIODIC = buildBudgetPlan({
   ],
   periodicNames: { 'c-pajak': 'Pajak Kendaraan', 'c-belanja': 'Belanja' },
 })
+
+/*
+  Six months of one category with every carry state: under (a leftover to
+  bring), over (a minus to take off), spending inside the leftover, a month
+  with no budget, and the running month. Weekly: a standing figure from the
+  third Monday, an exception on the fifth, and the running week.
+*/
+const CARRY_MONTHS = ['2026-02', '2026-03', '2026-04', '2026-05', '2026-06', '2026-07']
+const CARRY_WEEKS = ['2026-06-08', '2026-06-15', '2026-06-22', '2026-06-29', '2026-07-06', '2026-07-13']
+const CARRY_SERIES = buildCarrySeries({
+  categoryIds: ['c-kencan', 'c-jajan'],
+  months: CARRY_MONTHS,
+  weeks: CARRY_WEEKS,
+  thisMonth: '2026-07',
+  thisWeek: '2026-07-13',
+  monthlyUsed: [
+    { month: '2026-02', byCategory: { 'c-kencan': idr('900.000,00') } },
+    { month: '2026-03', byCategory: { 'c-kencan': idr('1.700.000,00') } },
+    { month: '2026-04', byCategory: { 'c-kencan': idr('1.300.000,00'), 'c-jajan': idr('80.000,00') } },
+    { month: '2026-05', byCategory: { 'c-kencan': idr('400.000,00') } },
+    { month: '2026-06', byCategory: { 'c-kencan': idr('1.000.000,00') } },
+    { month: '2026-07', byCategory: { 'c-kencan': idr('1.300.000,00') } },
+  ],
+  weeklyUsed: [
+    { month: '2026-06-22', byCategory: { 'c-kencan': idr('250.000,00') } },
+    { month: '2026-06-29', byCategory: { 'c-kencan': idr('420.000,00') } },
+    { month: '2026-07-06', byCategory: { 'c-kencan': idr('500.000,00') } },
+    { month: '2026-07-13', byCategory: { 'c-kencan': idr('150.000,00') } },
+  ],
+  monthlyBudgets: [
+    { period: '2026-02', categoryId: 'c-kencan', amount: idr('1.200.000,00') },
+    { period: '2026-03', categoryId: 'c-kencan', amount: idr('1.200.000,00') },
+    { period: '2026-04', categoryId: 'c-kencan', amount: idr('1.200.000,00') },
+    { period: '2026-06', categoryId: 'c-kencan', amount: idr('1.200.000,00') },
+    { period: '2026-07', categoryId: 'c-kencan', amount: idr('1.200.000,00') },
+  ],
+  weeklyBudgets: [
+    { categoryId: 'c-kencan', weekStart: '2026-06-22', amount: idr('350.000,00'), ongoing: true },
+    { categoryId: 'c-kencan', weekStart: '2026-07-06', amount: idr('600.000,00'), ongoing: false },
+  ],
+})
+const CARRY_CATEGORIES = [
+  { id: 'c-kencan', name: 'Kencan' },
+  { id: 'c-jajan', name: 'Jajan' },
+]
 
 /*
   A year with every state the strip distinguishes: months over their budget,
@@ -2136,6 +2183,33 @@ ${description}`,
   'budget-table-overcommitted': <BudgetTable plan={BUDGET_PLAN_OVER} />,
   'budget-table-periodic': <BudgetTable plan={BUDGET_PLAN_PERIODIC} />,
   'budget-year': <YearStrip view={BUDGET_YEAR} />,
+  'budget-carry': (
+    <CarryChart
+      categories={CARRY_CATEGORIES}
+      series={CARRY_SERIES}
+      initialCategory="c-kencan"
+      initialPer="bulan"
+      initialPolicy="bawa"
+    />
+  ),
+  'budget-carry-weekly': (
+    <CarryChart
+      categories={CARRY_CATEGORIES}
+      series={CARRY_SERIES}
+      initialCategory="c-kencan"
+      initialPer="minggu"
+      initialPolicy="tabung"
+    />
+  ),
+  'budget-carry-empty': (
+    <CarryChart
+      categories={CARRY_CATEGORIES}
+      series={CARRY_SERIES}
+      initialCategory="c-jajan"
+      initialPer="minggu"
+      initialPolicy="bawa"
+    />
+  ),
   'transaction-table': (
     <TransactionTable
       rows={TABLE_ROWS}

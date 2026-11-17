@@ -25,6 +25,11 @@ export interface RollupOptions {
    * counting it inflates both sides.
    */
   includePassThrough?: boolean
+  /**
+   * The bucket an entry falls in. The Jakarta calendar month by default; the
+   * weekly budget passes its Monday instead, so both share one filter.
+   */
+  periodOf?: (instant: Date) => string
 }
 
 type Entry = LedgerEntry & { categoryName?: string | null; isPassThrough?: boolean }
@@ -44,7 +49,9 @@ export function rollUpByMonthAndCategory(
     if (!wanted.has(entry.cashflow)) continue
     if (entry.isPassThrough && !options.includePassThrough) continue
 
-    const month = monthKeyToString(monthKeyOf(entry.occurredAt))
+    const month = options.periodOf
+      ? options.periodOf(entry.occurredAt)
+      : monthKeyToString(monthKeyOf(entry.occurredAt))
     const category = entry.categoryName ?? fallback
 
     const bucket = months.get(month) ?? {}

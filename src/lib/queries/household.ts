@@ -9,6 +9,7 @@ import { logoUrl } from '@/lib/brand'
 import type { AccountKind, CashflowType, EntrySource, LedgerEntry } from '@/lib/ledger/types'
 import type { PlaceEntry } from '@/lib/ledger/places'
 import type { AdjustmentRow } from '@/lib/ledger/adjustments'
+import type { WeeklyBudgetRow } from '@/lib/ledger/carry'
 import {
   childPlansFromJson,
   isKnownFramework,
@@ -958,19 +959,45 @@ export async function getBudgetRows(householdId: string, period: string): Promis
 export async function getBudgetsForPeriods(
   householdId: string,
   periods: string[],
-): Promise<{ period: string; amount: bigint }[]> {
+): Promise<{ period: string; categoryId: string; amount: bigint }[]> {
   'use cache: private'
   cacheTag(budgetsTag(householdId))
   cacheLife({ stale: 30 })
 
   const data = await read<Row[]>([], (db) =>
     db.rows(sql`
-      SELECT period, amount FROM public.budgets
+      SELECT period, category_id, amount FROM public.budgets
       WHERE household_id = ${householdId} AND period = ANY(${sql.param(periods)}::text[])`),
   )
   return data.map((row) => ({
     period: row.period as string,
+    categoryId: row.category_id as string,
     amount: toBigInt(row.amount),
+  }))
+}
+
+/**
+ * Every weekly budget row the household has, standing figures and one-week
+ * exceptions alike. Few rows (one per change), so all of them: resolving a
+ * week needs the latest standing row before it, however old.
+ */
+export async function getWeeklyBudgets(householdId: string): Promise<WeeklyBudgetRow[]> {
+  'use cache: private'
+  cacheTag(budgetsTag(householdId))
+  cacheLife({ stale: 30 })
+
+  // Falls back to none, so the page still renders before 0017 is applied.
+  const data = await read<Row[]>([], (db) =>
+    db.rows(sql`
+      SELECT category_id, week_start::text AS week_start, amount, ongoing
+      FROM public.weekly_budgets
+      WHERE household_id = ${householdId}`),
+  )
+  return data.map((row) => ({
+    categoryId: row.category_id as string,
+    weekStart: row.week_start as string,
+    amount: toBigInt(row.amount),
+    ongoing: row.ongoing === true,
   }))
 }
 

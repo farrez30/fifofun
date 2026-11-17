@@ -4,6 +4,14 @@ import { Suspense } from 'react'
 import { AppShell } from '@/components/app-shell'
 import { buildBudgetPlan, parseMonthParam, type BudgetCategory } from '@/lib/ledger/budget-plan'
 import { buildBudgetYear } from '@/lib/ledger/budget-year'
+import {
+  CARRY_POLICIES,
+  addWeeks,
+  buildCarrySeries,
+  pickDefaultCategory,
+  weekStartOf,
+  type CarryPolicy,
+} from '@/lib/ledger/carry'
 import { rollUpByMonthAndCategory } from '@/lib/ledger/categories'
 import { addMonths } from '@/lib/ledger/funds'
 import { computeMonthlySeries, monthKeyOf, monthKeyToString } from '@/lib/ledger/monthly'
@@ -15,9 +23,11 @@ import {
   getCategories,
   getHousehold,
   getOpeningBalance,
+  getWeeklyBudgets,
 } from '@/lib/queries/household'
 import { getUser } from '@/lib/auth/session'
 import { BudgetTable } from './budget-table'
+import { CarryChart, type CarryPer } from './carry-chart'
 import { MonthNav } from './month-nav'
 import { BudgetSkeleton } from './skeleton'
 import { YearStrip } from './year-strip'
@@ -54,7 +64,16 @@ async function Budgets({ params }: { params: Record<string, string | string[] | 
   // being edited. Deterministic order, so the private cache keys stably.
   const yearPeriods = Array.from({ length: 12 }, (_, i) => addMonths(period, i - 11))
 
-  const [transactions, categories, saved, previousSaved, openingBalance, yearBudgets] =
+  // The weekly window ends at the running week, or at the last Monday of a
+  // past month being looked at.
+  const thisWeek = weekStartOf(now)
+  const lastWeekOfPeriod = weekStartOf(
+    new Date(Date.parse(`${addMonths(period, 1)}-01T00:00:00+07:00`) - 1),
+  )
+  const lastWeek = period >= thisMonth ? thisWeek : lastWeekOfPeriod
+  const weekPeriods = Array.from({ length: 12 }, (_, i) => addWeeks(lastWeek, i - 11))
+
+  const [transactions, categories, saved, previousSaved, openingBalance, yearBudgets, weeklyBudgets] =
     await Promise.all([
       getAllTransactions(household.id),
       getCategories(household.id),
@@ -62,6 +81,7 @@ async function Budgets({ params }: { params: Record<string, string | string[] | 
       getBudgetRows(household.id, previous),
       getOpeningBalance(household.id),
       getBudgetsForPeriods(household.id, yearPeriods),
+      getWeeklyBudgets(household.id),
     ])
 
   // The same figure /dana calls typical: the median month of recorded income.
@@ -130,11 +150,38 @@ async function Budgets({ params }: { params: Record<string, string | string[] | 
 
   const year = buildBudgetYear({ periods: yearPeriods, history, budgets: yearBudgets })
 
+  const carry = buildCarrySeries({
+    categoryIds: budgetable.map((category) => category.id),
+    months: yearPeriods,
+    weeks: weekPeriods,
+    thisMonth,
+    thisWeek,
+    monthlyUsed: history,
+    weeklyUsed: rollUpByMonthAndCategory(byId, { periodOf: weekStartOf }),
+    monthlyBudgets: yearBudgets,
+    weeklyBudgets,
+  })
+  const asked = typeof params.kategori === 'string' ? params.kategori : null
+  const initialCategory =
+    (asked && carry.some((s) => s.categoryId === asked) ? asked : pickDefaultCategory(carry)) ??
+    budgetable[0].id
+  const initialPer: CarryPer = params.per === 'minggu' ? 'minggu' : 'bulan'
+  const initialPolicy: CarryPolicy = CARRY_POLICIES.includes(params.sisa as CarryPolicy)
+    ? (params.sisa as CarryPolicy)
+    : 'bawa'
+
   return (
     <div className="space-y-5">
       <MonthNav period={period} thisMonth={thisMonth} />
       <BudgetTable plan={plan} />
       <YearStrip view={year} />
+      <CarryChart
+        categories={budgetable.map((category) => ({ id: category.id, name: category.name }))}
+        series={carry}
+        initialCategory={initialCategory}
+        initialPer={initialPer}
+        initialPolicy={initialPolicy}
+      />
     </div>
   )
 }
